@@ -1,0 +1,23 @@
+{
+  "name": "pi-keysmith-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for pi-keysmith, a leader-key engine package for Pi.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "clean": "rimraf packages/*/dist tsconfig.tsbuildinfo packages/*/tsconfig.tsbuildinfo packages/*/tsconfig.build.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.72.1",
+    "@types/node": "^22.15.3",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,79 @@
+name: implementation
+mode: implementation
+authority: advise
+
+driver:
+  role: implementation-driver
+  prompt: ~/.agents-os/src/pairs/prompts/implementation-driver.md
+  model: fast
+  tools: default
+
+advisor:
+  role: implementation-alignment-advisor
+  prompt: ~/.agents-os/src/pairs/prompts/implementation-advisor.md
+  model: smart
+  tools: read, grep, find, ls
+  max_rechecks_after_rejection: 1
+  can_edit_files: false
+
+detector:
+  turn_boundary: true
+  triggers:
+    - task_alignment_claim
+    - completion_claim
+    - verification_claim
+    - changed_files_summary
+    - scope_drift_signal
+    - shortcut_taking_signal
+    - unrelated_change_signal
+
+intervention_rules:
+  - id: completion-without-verification
+    trigger: verification_claim
+    decision: steer
+    min_authority: advise
+    message: Require concrete command/output evidence before accepting completion claims.
+  - id: task-alignment-drift
+    trigger: task_alignment_claim
+    decision: steer
+    min_authority: advise
+    message: Compare current work to the assigned task, PRD, and acceptance criteria; steer if behavior or scope diverges.
+  - id: scope-drift
+    trigger: scope_drift_signal
+    decision: steer
+    min_authority: advise
+    message: Flag broadening beyond the requested vertical slice unless explicitly approved.
+  - id: unrelated-file-change
+    trigger: unrelated_change_signal
+    decision: steer
+    min_authority: advise
+    message: Require justification or rollback for unrelated changed files.
+  - id: missing-changed-files-summary
+    trigger: changed_files_summary
+    decision: note
+    min_authority: observe
+    message: Encourage concise changed-file summaries tied to task scope.
+  - id: shortcut-taking
+    trigger: shortcut_taking_signal
+    decision: steer
+    min_authority: advise
+    message: Flag skipped tests, unvalidated claims, fake TODO completion, or implementation shortcuts.
+
+output:
+  compact_result: true
+  include_full_trace: false
+
+artifacts:
+  root: .pi/artifacts/pairs
+  run_dir: .pi/artifacts/pairs/runs/<run-id>
+  index: .pi/artifacts/pairs/index.jsonl
+
+capabilities:
+  live_transport:
+    - pi-intercom
+    - local-socket
+  turn_boundary_events: required
+  tagged_message_injection: required
+  filesystem_polling: forbidden
+  advisor_can_edit_files: false
+  live_runtime_v1: true

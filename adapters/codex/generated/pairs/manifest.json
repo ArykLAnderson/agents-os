@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-05-06T09:50:04.568Z",
+  "scope": "global",
+  "pairs": [
+    {
+      "name": "implementation",
+      "mode": "implementation",
+      "authority": "advise",
+      "live": true,
+      "definition": "definitions/implementation.yml",
+      "driverPrompt": "prompts/implementation-driver.md",
+      "advisorPrompt": "prompts/implementation-advisor.md",
+      "artifactRoot": ".pi/artifacts/pairs",
+      "capabilities": {
+        "turnBoundaryEvents": "required",
+        "taggedMessageInjection": "required",
+        "filesystemPolling": "forbidden"
+      }
+    },
+    {
+      "name": "research",
+      "mode": "research",
+      "authority": "observe",
+      "live": true,
+      "definition": "definitions/research.yml",
+      "driverPrompt": "prompts/research-driver.md",
+      "advisorPrompt": "prompts/research-advisor.md",
+      "artifactRoot": ".pi/artifacts/pairs",
+      "capabilities": {
+        "turnBoundaryEvents": "required",
+        "taggedMessageInjection": "required",
+        "filesystemPolling": "forbidden"
+      }
+    },
+    {
+      "name": "tdd",
+      "mode": "tdd",
+      "authority": "gate",
+      "live": false,
+      "definition": "definitions/tdd.yml",
+      "driverPrompt": "prompts/tdd-driver.md",
+      "advisorPrompt": "prompts/tdd-advisor.md",
+      "artifactRoot": ".pi/artifacts/pairs",
+      "capabilities": {
+        "turnBoundaryEvents": "required",
+        "taggedMessageInjection": "required",
+        "filesystemPolling": "forbidden"
+      }
+    }
+  ]
+}

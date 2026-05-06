@@ -1,0 +1,31 @@
+{
+  "name": "pi-keysmith",
+  "version": "0.0.0",
+  "description": "Leader-key engine extension package for Pi.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "keywords": ["pi-package", "pi-extension", "leader-key", "which-key"],
+  "pi": {
+    "extensions": ["./dist/index.js"]
+  },
+  "scripts": {
+    "build": "rimraf dist tsconfig.build.tsbuildinfo && tsc -b tsconfig.build.json",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariozechner/pi-ai": "^0.72.1",
+    "pi-keysmith-sdk": "file:../pi-keysmith-sdk"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": ">=0.72.0"
+  }
+}

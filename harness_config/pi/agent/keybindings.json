@@ -1,0 +1,9 @@
+{
+  "tui.editor.deleteToLineStart": [],
+  "app.thinking.cycle": ["ctrl+n"],
+  "app.model.cycleForward": [],
+  "app.model.cycleBackward": [],
+  "app.session.toggleNamedFilter": [],
+  "app.models.toggleProvider": [],
+  "app.session.togglePath": []
+}

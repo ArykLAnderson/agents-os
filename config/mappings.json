@@ -1,0 +1,13 @@
+{
+  "inheritance": [
+    "global-root",
+    "project-root"
+  ],
+  "conflictSemantics": "replace-by-name via harness precedence; project root wins over global root",
+  "memory": "read-only generated bundles; manual reviewed imports only",
+  "adapters": {
+    "pi": "richest experimental target",
+    "codex": "immediate first-party fallback",
+    "opencode": "UI/editor experiment target"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "packages": [
+    "npm:pi-vim",
+    "~/.agents-os/plugins/pi-keysmith/packages/pi-keysmith",
+    "npm:pi-subagents",
+    "npm:pi-intercom",
+    "npm:pi-web-access",
+    "npm:@pi-lab/permissions",
+    "npm:pi-schedule-prompt",
+    "npm:pi-memory",
+    "npm:pi-markdown-preview",
+    "npm:pi-observability",
+    "npm:pi-model-cycler",
+    "npm:@kaiserlich-dev/pi-session-search"
+  ],
+  "skills": [
+    "~/.agents-os/adapters/pi/generated/skills"
+  ],
+  "lastChangelogVersion": "0.73.0",
+  "theme": "nord",
+  "piVim": {
+    "modeIndicatorPosition": "right",
+    "modeIndicatorColors": {
+      "insert": "frost1",
+      "normal": "frost3",
+      "ex": "aurora1"
+    },
+    "cursorColors": {
+      "insert": "frost1",
+      "normal": "frost3",
+      "ex": "aurora1"
+    }
+  },
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.4",
+  "defaultThinkingLevel": "low",
+  "prompts": [
+    "~/.agents-os/adapters/pi/generated/commands"
+  ],
+  "piKeysmith": {
+    "leader": "<space>",
+    "enabledWhen": [
+      "editor",
+      "vim.normal"
+    ],
+    "whichKeyDelayMs": 500,
+    "sequenceTimeoutMs": 2500,
+    "whichKeyKeyColor": "yellow"
+  }
+}

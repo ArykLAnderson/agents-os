@@ -1,0 +1,21 @@
+{
+  "name": "pi-keysmith-sdk",
+  "version": "0.0.0",
+  "description": "Public SDK types and helpers for pi-keysmith integrations.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "rimraf dist tsconfig.build.tsbuildinfo && tsc -b tsconfig.build.json",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run --passWithNoTests"
+  }
+}
+

@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/pi-keysmith-sdk" },
+    { "path": "./packages/pi-keysmith" }
+  ]
+}

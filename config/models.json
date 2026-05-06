@@ -1,0 +1,37 @@
+{
+  "aliases": {
+    "opus": "smart",
+    "sonnet": "fast",
+    "haiku": "cheap",
+    "planning": "smart",
+    "execution": "fast",
+    "review": "smart",
+    "quick": "cheap"
+  },
+  "adapters": {
+    "pi": {
+      "default": "fast",
+      "smart": "openai-codex/gpt-5.5:high",
+      "fast": "openai-codex/gpt-5.5:low",
+      "cheap": "openai-codex/gpt-5.5:minimal"
+    },
+    "codex": {
+      "default": "fast",
+      "smart": "gpt-5.5",
+      "fast": "gpt-5.5",
+      "cheap": "gpt-5.5"
+    },
+    "opencode": {
+      "default": "fast",
+      "smart": "gpt-5.5",
+      "fast": "gpt-5.5",
+      "cheap": "gpt-5.5"
+    },
+    "claude": {
+      "default": "fast",
+      "smart": "claude-opus-4-6",
+      "fast": "claude-sonnet-4-6",
+      "cheap": "claude-haiku-4-5"
+    }
+  }
+}

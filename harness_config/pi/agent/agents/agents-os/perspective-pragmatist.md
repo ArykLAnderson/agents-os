@@ -1,0 +1,1 @@
+/Users/aryk/.agents-os/adapters/pi/generated/agents/perspective-pragmatist.md

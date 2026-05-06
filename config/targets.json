@@ -1,0 +1,10 @@
+{
+  "targets": [
+    "pi",
+    "codex",
+    "opencode"
+  ],
+  "generatedHeader": "<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->",
+  "scope": "global",
+  "scopeRule": "Scope is inferred from the Agent OS root; src internals are identical across global and project roots."
+}
