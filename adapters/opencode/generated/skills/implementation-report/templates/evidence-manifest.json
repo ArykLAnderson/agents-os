@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "reportSubject": {
+    "title": "",
+    "issue": null,
+    "pullRequest": null,
+    "implementationCommit": "",
+    "reportDate": "YYYY-MM-DD",
+    "mode": "standard",
+    "audience": "mixed"
+  },
+  "claims": [
+    {
+      "id": "example-claim",
+      "claim": "Replace with one decision-relevant statement.",
+      "status": "verified",
+      "implementationSources": [
+        "path/to/source.ts:line-line"
+      ],
+      "runtimeEvidence": [
+        "relative/path/to/sanitized-evidence.json"
+      ],
+      "limitations": [
+        "State what this evidence does not prove."
+      ],
+      "reportSections": [
+        "result",
+        "verification"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "example-gap",
+      "claim": "Replace with an unverified or blocked claim.",
+      "status": "unverified",
+      "reason": "",
+      "evidence": [],
+      "nextAction": ""
+    }
+  ],
+  "sanitization": {
+    "performed": false,
+    "redactions": []
+  }
+}
