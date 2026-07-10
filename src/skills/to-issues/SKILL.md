@@ -191,7 +191,7 @@ If the user prefers local-only (no GitHub), write issues as individual markdown 
 ## Execution Modes
 
 After issues are published, they can be executed via:
-- **Single issue**: `/build <issue-number>` — one agent, one issue
+- **Single issue**: `/issue-executor <issue-number>` — one atomic issue worker
 - **Full PRD**: Orchestrator picks unblocked issues, spawns parallel agents
 - **First N**: Orchestrator runs the first N unblocked issues only
 

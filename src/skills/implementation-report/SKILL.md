@@ -9,7 +9,7 @@ argument-hint: "[issue | PR | commit | worktree] [--mode standard|showcase] [--a
 
 Turn completed work into a durable, self-contained HTML report that explains what changed, how it works, what proves it, and what remains incomplete.
 
-This skill runs **after implementation**. It is not a substitute for `/build`, `/doc-sync`, release notes, an RFC, or raw test logs.
+This skill runs **after implementation**. It is not a substitute for `issue-executor`, `slice-build`, `/doc-sync`, release notes, an RFC, or raw test logs.
 
 ## Defaults
 

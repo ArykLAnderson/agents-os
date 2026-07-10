@@ -64,7 +64,7 @@ For each change, present:
 ```
 
 **Rules for recommendations:**
-- If upstream adds something our pipeline already handles differently (e.g., inline TDD that our `/build` skill handles), **reject**.
+- If upstream adds something our pipeline already handles differently (e.g., inline single-issue TDD that our `issue-executor` skill handles), **reject**.
 - If upstream improves infrastructure we haven't customized (e.g., Docker, CI), **adopt**.
 - If upstream changes overlap with our customizations, **adapt** — take the improvement, preserve our conventions.
 - Never recommend adopting a change that would undo a decision from an ADR or PRD.
@@ -88,5 +88,5 @@ Summarize what was adopted, adapted, and rejected. If any adapted changes need t
 
 - **Don't blindly merge upstream.** Every change must be evaluated against our customizations.
 - **Don't lose local customizations.** If upstream changes a file we've heavily modified, the default is reject unless there's a clear improvement.
-- **Don't adopt upstream patterns that conflict with our skill system.** Our pipeline uses `/build`, `/debug`, `/verification` — upstream may have its own patterns.
+- **Don't adopt upstream patterns that conflict with our skill system.** Our pipeline uses `issue-executor`, `slice-build`, `/debug`, and `/verification` — upstream may have its own patterns.
 - **Don't update without presenting the diff first.** Always show the user what's changing.
