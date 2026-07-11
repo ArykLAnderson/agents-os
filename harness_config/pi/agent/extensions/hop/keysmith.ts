@@ -1,4 +1,4 @@
-import type { Disposable, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { Disposable, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { ParsedHopCommand } from "./index.ts";
 
 const KEYSMITH_SDK_PATH = `${process.env.HOME}/.agents-os/plugins/pi-keysmith/packages/pi-keysmith-sdk/dist/index.js`;

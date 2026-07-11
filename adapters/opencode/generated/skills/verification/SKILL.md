@@ -1,6 +1,6 @@
 ---
 name: verification
-description: "Evidence-based verification discipline. Blocks agents from claiming success without proof. Every claim must be backed by a command that was actually run, with output actually read. Loaded by build, debug, tdd, and any skill where an agent asserts something works."
+description: "Evidence-based verification discipline. Blocks agents from claiming success without proof. Every claim must be backed by a command that was actually run, with output actually read. Loaded by ticket-executor, implement-feature, diagnosing-bugs, tdd, and any workflow where an agent asserts something works."
 user_invocable: false
 ---
 

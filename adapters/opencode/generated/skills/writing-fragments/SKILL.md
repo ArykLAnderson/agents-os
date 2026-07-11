@@ -1,6 +1,6 @@
 ---
 name: writing-fragments
-description: Grilling session that mines the user for fragments — heterogeneous nuggets of writing (claims, vignettes, sharp sentences, half-thoughts) — and appends them to a single document as raw material for a future article. Use when the user wants to develop ideas before imposing structure, or mentions "fragments", "ideate", or "raw material" for writing.
+description: Writing, explore — mine raw fragments without imposing structure.
 user-invocable: true
 ---
 
@@ -8,11 +8,13 @@ user-invocable: true
 
 <what-to-do>
 
-Run a grilling session that produces fragments. Interview the user relentlessly about whatever they want to write about. Do not impose phases, outlines, or structure — that is explicitly out of scope.
+This is pure **explore**: widen what could be written without committing to structure. Run a grilling session that produces fragments. Structure belongs to the later exploit phase.
 
 As fragments emerge from either side of the conversation, append them to a single markdown file. The user will be editing this file during the session; always re-read it before writing so their edits are preserved.
 
 If the user did not pass a path, ask once where to save the document, then remember it for the rest of the session.
+
+Capture fragments from the first thing the user says, including the initial prompt.
 
 On first write, put a single H1 at the top with a working title (it can change later) and nothing else — no metadata, no TOC, no date.
 
@@ -33,6 +35,7 @@ Fragments are deliberately heterogeneous. Examples of what could be a fragment:
 - A quote, a piece of dialogue, an overheard line.
 - A list of related observations that hang together by feel.
 - A complaint, a confession, a punchline.
+- A **leading word** — a compact metaphor or coinage the whole piece can hang on. This is the most valuable fragment to land: it can shape the later structure, transitions, and title.
 
 The novelist's diary is the model: years of unstructured noticings that later get mined for raw material. Fragments are noticings.
 

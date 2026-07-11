@@ -1,6 +1,6 @@
 ---
 name: slice-build
-description: "Orchestrated executor for markdown vertical-slice tasklists. Use when the user wants to implement the next milestone/slice from a markdown checklist instead of GitHub Issues, especially global Agent OS/Pi infrastructure work. Explicit invocation: /slice-build [tasklist path] [--slice VS-N] [--task VS-NNN]"
+description: "Orchestrated executor for one local markdown milestone where tracker tickets are intentionally inappropriate, especially global Agent OS/Pi infrastructure work. Do not use for a feature ticket graph or keystone; use implement-feature. Explicit invocation: /slice-build [tasklist path] [--slice VS-N] [--task VS-NNN]"
 user_invocable: true
 argument_hint: "[tasklist path] [--slice VS-N] [--task VS-NNN]"
 ---
@@ -9,7 +9,7 @@ argument_hint: "[tasklist path] [--slice VS-N] [--task VS-NNN]"
 
 # Slice-Build: Markdown Vertical Slice Executor
 
-Execute one milestone from a markdown vertical-slice tasklist using a coordinator pattern. This skill is for Agent OS / Pi / infrastructure work where GitHub Issues are the wrong tracking substrate.
+Execute one milestone from a markdown vertical-slice tasklist using a coordinator pattern. This skill is for Agent OS / Pi / infrastructure work where tracker tickets are intentionally the wrong substrate. Accepted feature ticket graphs and keystones belong to `implement-feature`.
 
 ## Inputs
 

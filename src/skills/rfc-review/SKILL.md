@@ -7,6 +7,8 @@ argument-hint: "[path to RFC document]"
 
 # RFC Review: Fresh-Context Architecture Review
 
+Consult `domain-modeling` for terminology or domain-behavior conflicts and `codebase-design` for interface, seam, depth, and locality claims.
+
 Spawn relevant reviewer agents as fresh-context subagents to analyze an RFC document. Each reviewer examines the RFC independently and reports findings.
 
 ## Process
@@ -70,5 +72,5 @@ Each invocation spawns fresh-context reviewers — they don't carry context from
 
 - Always include architecture-reviewer. The others are conditional.
 - Reviewers are read-only — they report findings, they don't modify the RFC.
-- Keep the review focused on the design, not implementation details. Implementation belongs in the planning and `issue-executor` workflows.
+- Keep the review focused on the design, not implementation details. Implementation belongs in `ticket-executor` or `implement-feature` after planning/decomposition.
 - If the RFC is thin or vague, the primary finding should be "this RFC needs more detail in [sections]" rather than guessing what was intended.

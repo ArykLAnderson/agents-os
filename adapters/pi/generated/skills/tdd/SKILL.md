@@ -8,6 +8,8 @@ user-invocable: false
 
 # TDD: Test-Driven Development for AI Agents
 
+Use `codebase-design` to choose the highest seam that expresses the behavior. If repeated red-green cycles require shallow special cases or contract violations, invoke `zoom-out` before continuing.
+
 This skill encodes the red-green-refactor discipline adapted for AI-assisted development. Traditional micro-step TDD (one tiny test at a time) is inefficient for AI agents — the principles stay, but the step size adapts.
 
 ## The Cycle
@@ -61,7 +63,7 @@ When implementing against a spec file:
 ## When to Load This Skill
 
 This skill is relevant when:
-- `issue-executor` is implementing an issue that references spec files
+- `ticket-executor` is implementing a ticket that references spec files
 - The user asks to implement a feature with tests
 - A spec file with `// TODO: implement` markers exists
 - The user explicitly asks for TDD discipline

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { SessionManager } from "/opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/dist/core/session-manager.js";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { SessionManager } from "@earendil-works/pi-coding-agent";
 
 interface WritableSessionManager {
   _rewriteFile?: () => void;

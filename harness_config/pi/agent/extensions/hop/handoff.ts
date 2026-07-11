@@ -1,7 +1,7 @@
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import { complete, type Message } from "@mariozechner/pi-ai";
-import type { ExtensionCommandContext, SessionEntry } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { complete, type Message } from "@earendil-works/pi-ai";
+import type { ExtensionCommandContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { BorderedLoader, convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
 
 export const CONTINUE_NEXT_TASK_GOAL = "Continue with the next obvious task from the current conversation.";
 export const CUSTOM_GOAL_LABEL = "Custom goal...";

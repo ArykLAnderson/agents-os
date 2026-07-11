@@ -1,6 +1,6 @@
 ---
 name: writing-shape
-description: Take a markdown file of raw material and shape it into an article through a conversational session — drafting candidate openings, growing the piece paragraph by paragraph, arguing about format (lists, tables, callouts, quotes) at each step. Use when the user has a pile of notes, fragments, or a rough draft and wants help turning it into something publishable.
+description: Writing, exploit — shape fixed raw material into an article paragraph by paragraph.
 user-invocable: true
 ---
 
@@ -8,7 +8,7 @@ user-invocable: true
 
 The user has passed (or will pass) a markdown file of raw material. Treat it as the input pile — anything from a tidy list of fragments to a wall of unstructured prose to a transcript. The format does not matter. Read it end-to-end before doing anything else.
 
-Then run a shaping session that produces a separate article document. Do not edit the raw material file — it is read-only to this skill.
+Then run a shaping session that produces a separate article document. This is **exploit**: exploration is done, so commit to a structure and mine the fixed pile. Do not edit the raw material file.
 
 If the user did not say where to save the article, ask once and remember the path. The user will be editing the article file during the session; always re-read it before writing so their edits are preserved.
 
@@ -19,10 +19,15 @@ If the user did not say where to save the article, ask once and remember the pat
 ## The loop
 
 1. **Read the pile.** Read the input file in full. Form a sense of what's in it.
-2. **Draft 2–3 candidate openings.** Each opening should imply a different thesis or angle for the article. Show all of them. Force the user to pick or compose a hybrid. The chosen opening defines what the rest of the article must do.
-3. **Grow paragraph by paragraph.** After the opening lands, ask "given this opening, what does the reader need to hear next?" Pull material from the pile to answer. Argue about whether the next beat is a paragraph, a list, a table, a callout, a quote, a code block. Each format choice should be deliberate and defensible.
-4. **Append to the article file as you go.** Don't batch. Write each agreed paragraph or block immediately so the user can see the article taking shape.
-5. **Loop step 3 until the article is done.** The user decides when it's done.
+2. **Establish prerequisites.** Settle what the reader already knows. Everything else must be grounded before a later block leans on it.
+3. **Draft 2–3 candidate openings.** Each implies a different thesis or angle. The chosen opening defines what the rest must do.
+4. **Grow paragraph by paragraph.** The next block may lean only on grounded concepts and may ground new ones. Deliberately choose prose, list, table, callout, quote, or code.
+5. **Append as you go.** Write each agreed block immediately.
+6. **Loop until done.** The user decides when the article is complete.
+
+## Grounding
+
+A concept is grounded when the reader brings it as a prerequisite or an earlier block has introduced it. Track the grounded set. If the next move requires an ungrounded concept, ground it first or change the move. The central trade-off is how much knowledge to require up front versus teach inside the article.
 
 ## Conversational feel
 

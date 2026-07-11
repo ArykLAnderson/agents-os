@@ -7,6 +7,8 @@ argument-hint: "[feature or system name]"
 
 # RFC Write: Architecture Document Authoring
 
+Use established domain language. Invoke `domain-modeling` when the RFC exposes an unresolved concept; keep domain definitions in the glossary and implementation trade-offs in the RFC or ADR.
+
 Synthesize the current discovery conversation into a structured RFC/architecture document.
 
 ## Process

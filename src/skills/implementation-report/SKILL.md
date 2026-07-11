@@ -1,22 +1,22 @@
 ---
 name: implementation-report
-description: Create an evidence-backed, visually polished HTML report after implementation is complete. Use when the user asks for a developer report, implementation walkthrough, post-build report, founder-facing technical explanation, architecture report, or durable proof of completed work. Produces a reader-first narrative with screenshots, native Pi-generated architecture diagrams, verification evidence, explicit scope boundaries, risks, and next decisions.
+description: Create an evidence-backed, visually polished HTML report after implementation is complete. Use when the user asks for a developer report, implementation walkthrough, post-build report, founder-facing technical explanation, architecture report, durable proof of completed work, or when `implement-feature` requires its archival report bundle. Produces a reader-first narrative with screenshots, native Pi-generated architecture diagrams, verification evidence, scope/drift boundaries, risks, and next decisions.
 user-invocable: true
-argument-hint: "[issue | PR | commit | worktree] [--mode standard|showcase] [--audience founder|product|engineering|mixed] [--publish]"
+argument-hint: "[ticket | feature | PR | commit | worktree] [--mode standard|showcase] [--audience founder|product|engineering|mixed] [--publish] [--archive-feature <id>]"
 ---
 
 # Implementation Report
 
 Turn completed work into a durable, self-contained HTML report that explains what changed, how it works, what proves it, and what remains incomplete.
 
-This skill runs **after implementation**. It is not a substitute for `issue-executor`, `slice-build`, `/doc-sync`, release notes, an RFC, or raw test logs.
+This skill runs **after implementation**. It is not a substitute for `ticket-executor`, `implement-feature`, `slice-build`, `/doc-sync`, release notes, an RFC, or raw test logs.
 
 ## Defaults
 
 - **Mode:** `standard`
 - **Audience:** `mixed`, with user value before implementation detail
 - **Output:** self-contained HTML plus local assets and sanitized evidence
-- **Publishing:** never commit, push, open a PR, or upload unless the user explicitly asks or passes `--publish`
+- **Publishing:** never commit, push, open a PR, or upload unless the user explicitly asks, passes `--publish`, or `implement-feature` invokes archival finalization with that authority
 - **Evidence:** reuse trustworthy existing evidence before running new work
 - **Diagrams:** use Pi’s native `imagegen` tool from the installed image-generation plugin; never wrap Codex CLI or another model CLI to generate images
 
@@ -46,15 +46,28 @@ Use for milestones, vertical slices, founder reviews, or when requested explicit
 - Include glossary, risk analysis, and a detailed evidence index.
 - Use at most two focused read-only scouts when the implementation is broad: one implementation mapper and one audience/editorial reviewer. The parent remains the only report writer.
 
+### Feature archive
+
+Use when invoked by `implement-feature` or `--archive-feature`.
+
+- Use Showcase editorial/evidence quality.
+- Write the bundle to the canonical docs repository under its archived implementation-report convention.
+- Preserve initial and final spec, ticket, and graph snapshots with provenance.
+- Include ticket outcomes, verification, deep-review result, integration SHA, drift ledger, code/docs PR links, screenshots, diagrams, and sanitized evidence.
+- Label snapshots historical; never present them as canonical current requirements.
+- Open/update a separate docs PR when publication authority is present.
+
+Read [references/archive-bundles.md](references/archive-bundles.md) and use [templates/archive-manifest.json](templates/archive-manifest.json).
+
 ## Process
 
 ### 1. Anchor the report
 
 Resolve and record:
 
-- issue, PR, commit, branch, or completed worktree
+- ticket/feature/keystone, PR, commit, branch, or completed worktree
 - exact implementation commit
-- canonical specifications, ADRs, and project instructions
+- canonical specifications, ADRs, initial/final ticket graph, and project instructions
 - intended audience and mode
 - canonical report destination
 - whether publishing was requested
@@ -162,12 +175,14 @@ Create a portable package such as:
 
 ```text
 reports/
-  issue-123-implementation-report.html
-  assets/issue-123/
+  ticket-123-implementation-report.html
+  assets/ticket-123/
     screenshots/
     diagrams/
     evidence/
 ```
+
+For feature archives, use the canonical docs repository structure described in `references/archive-bundles.md`, including immutable initial/final input snapshots and structured outcomes.
 
 The HTML should:
 
@@ -216,13 +231,14 @@ Read [references/quality-gates.md](references/quality-gates.md) for the final ch
 
 ### 8. Publish only when authorized
 
-If `--publish` was passed or the user explicitly requested publication:
+If `--publish` was passed, the user explicitly requested publication, or `implement-feature` invoked authorized archival finalization:
 
 1. Confirm the work is in an allowed documentation worktree/branch.
 2. Stage only report-related files.
 3. Run final validation from the staged content.
 4. Commit using the repository’s conventions.
-5. Push and open a PR with report scope, evidence, validation, and known gaps.
+5. Push and open/update a docs PR with report scope, code integration SHA, evidence, drift summary, validation, and known gaps.
+6. When archiving a feature, return the docs PR URL and archive manifest to `implement-feature` so it can link them from the code PR.
 
 Otherwise, leave the report uncommitted and provide its local path.
 
@@ -250,8 +266,8 @@ Otherwise, leave the report uncommitted and provide its local path.
 
 When done, report concisely:
 
-- report path
-- implementation commit covered
+- report/archive path
+- implementation or feature integration commit covered
 - mode and audience
 - screenshots and diagrams included
 - verification performed

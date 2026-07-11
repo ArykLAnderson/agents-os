@@ -39,6 +39,11 @@ harness_config/pi/agent/sessions/
 harness_config/pi/agent/intercom/
 harness_config/pi/agent/run-history.jsonl
 harness_config/pi/agent/observability/history.jsonl
+harness_config/pi/agent/generated-images/
+harness_config/pi/agent/git/
+harness_config/pi/agent/npm/
+harness_config/pi/agent/mcp-cache.json
+harness_config/pi/agent/trust.json
 harness_config/pi/agent/settings.json.bak-*
 harness_config/pi/agent/*.bak
 harness_config/pi/web-search.json

@@ -1,4 +1,4 @@
-import type { Disposable, ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { Disposable, ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { consumePrefillArtifact, createPrefillArtifact, getHopArtifactRoot, readPrefillMarkdown } from "./artifacts.ts";
 import { generateHandoffDraft, resolveHandoffGoal } from "./handoff.ts";
 import { registerHopKeysmithActions } from "./keysmith.ts";

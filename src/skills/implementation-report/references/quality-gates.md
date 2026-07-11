@@ -75,9 +75,18 @@ Do not claim the report is complete until these gates are checked.
 - [ ] Print/PDF layout does not cut essential figures or tables unexpectedly.
 - [ ] Text equivalents preserve diagram meaning.
 
+## Feature archive
+
+- [ ] Archive is in the canonical docs repository, not the code feature branch.
+- [ ] Initial and final specs, ticket graph, and ticket snapshots are preserved.
+- [ ] Snapshots are labeled historical/non-canonical and include source provenance.
+- [ ] Structured ticket outcomes, verification, integration, drift, and PR links are included.
+- [ ] Manifest integration SHA matches the code PR head covered by the report.
+- [ ] Code PR links the current docs archive PR.
+
 ## Publication
 
-- [ ] Publication was explicitly authorized.
+- [ ] Publication was explicitly authorized or delegated by an authorized `implement-feature` run.
 - [ ] Only report-related files are staged.
 - [ ] Final validation ran after staging.
 - [ ] Commit/PR follows repository conventions.

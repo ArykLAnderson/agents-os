@@ -7,6 +7,8 @@ argument_hint: "[topic or context to grill about]"
 
 # Grill: Adversarial Alignment Protocol
 
+Load `domain-modeling` whenever the conversation challenges, coins, or changes domain language. That skill owns glossary and ADR thresholds; this skill owns the interview.
+
 Interview the user relentlessly about their idea until you reach a shared design concept. The goal is alignment, not a document. The conversation IS the asset.
 
 ## Process
