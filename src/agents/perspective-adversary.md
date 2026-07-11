@@ -1,7 +1,7 @@
 ---
 name: perspective-adversary
 description: Stress-tests proposals by actively seeking failure modes, hidden costs, and flawed assumptions. Use in deliberation councils or research sprints when rigorous challenge is needed.
-model: fast
+model: normal
 disallowedTools: Write, Edit, NotebookEdit
 color: Yellow
 maxTurns: 30

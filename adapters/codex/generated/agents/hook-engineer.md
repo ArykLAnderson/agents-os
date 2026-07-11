@@ -2,7 +2,7 @@
 name: "hook-engineer"
 description: "Generates and modifies the active agent harness TypeScript hooks and their settings.json wiring. Use when the user wants to create a new hook, modify an existing hook, add a new hook event handler, or change hook behavior."
 tools: "Read, Write, Edit, Glob, Grep, Bash"
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 color: "Orange"
 ---
 

@@ -1,10 +1,12 @@
 ---
 name: "code-quality-reviewer"
 description: "Reviews code for quality concerns — complexity, SOLID principles, duplication, readability, error handling, test coverage, and over-engineering. Runs quality-gates metrics. Read-only — cannot modify files."
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 disallowedTools: "Write, Edit, NotebookEdit"
 permissionMode: "plan"
 maxTurns: "40"
+skills: ""
+  - quality-gates: ""
 color: "Yellow"
 ---
 

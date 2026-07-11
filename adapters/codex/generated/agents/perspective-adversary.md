@@ -1,7 +1,7 @@
 ---
 name: "perspective-adversary"
 description: "Stress-tests proposals by actively seeking failure modes, hidden costs, and flawed assumptions. Use in deliberation councils or research sprints when rigorous challenge is needed."
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 disallowedTools: "Write, Edit, NotebookEdit"
 color: "Yellow"
 maxTurns: "30"

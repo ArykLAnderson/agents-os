@@ -1,7 +1,7 @@
 ---
 description: "Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files."
 mode: subagent
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true

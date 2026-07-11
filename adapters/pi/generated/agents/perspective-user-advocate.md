@@ -1,7 +1,7 @@
 ---
 name: "perspective-user-advocate"
 description: "Evaluates proposals from the end user's perspective — focusing on user needs, experience quality, accessibility, and whether the solution actually solves the user's problem. Use in product, API, and feature-scoping deliberations."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 tools: "read, grep, find, ls"
 ---
 

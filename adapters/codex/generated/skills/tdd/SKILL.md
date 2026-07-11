@@ -61,7 +61,7 @@ When implementing against a spec file:
 ## When to Load This Skill
 
 This skill is relevant when:
-- `/build` is executing a plan that references spec files
+- `issue-executor` is implementing an issue that references spec files
 - The user asks to implement a feature with tests
 - A spec file with `// TODO: implement` markers exists
 - The user explicitly asks for TDD discipline

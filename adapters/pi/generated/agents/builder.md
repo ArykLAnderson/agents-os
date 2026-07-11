@@ -1,7 +1,8 @@
 ---
 name: "builder"
 description: "Implements code changes from a plan or task description. Use when you need to write, edit, or execute code."
-model: "openai-codex/gpt-5.5:high"
+model: "openai-codex/gpt-5.6-sol:high"
+tools: "read, write, edit, grep, find, ls, bash"
 ---
 
 <!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->

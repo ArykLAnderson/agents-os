@@ -45,9 +45,6 @@ Choose the source path by artifact type:
 | Skill | `~/.agents-os/src/skills/<name>/SKILL.md` |
 | Skill support file | `~/.agents-os/src/skills/<name>/...` |
 | Command | `~/.agents-os/src/commands/<name>.md` |
-| Pair definition | `~/.agents-os/src/pairs/definitions/<name>.yml` |
-| Pair prompt | `~/.agents-os/src/pairs/prompts/<name>.md` |
-| Shared pair/runtime code | `~/.agents-os/src/pairs/...` |
 | Hook | `~/.agents-os/src/hooks/...` |
 | Source documentation for Agent OS runtime/usage | `~/.agents-os/src/docs/...` |
 
@@ -64,7 +61,7 @@ Required frontmatter:
 - `description`
 
 Common optional frontmatter:
-- `model` using Agent OS tiers or aliases (`cheap`, `fast`, `smart`)
+- `model` using Agent OS tiers or aliases (`cheap`, `fast`, `normal`, `smart`, `deep`)
 - `tools`
 - `memory`
 - `skills`
@@ -95,9 +92,9 @@ Rules:
 - Use `$ARGUMENTS` when the command takes user input
 - Do not add generated headers manually
 
-### Pair Definitions / Other Structured Artifacts
+### Other Structured Artifacts
 
-When creating pair definitions or other structured runtime artifacts:
+When creating structured runtime artifacts:
 - use the canonical `src/` subtree
 - follow existing local patterns exactly
 - keep target-specific implementation details isolated and clearly named

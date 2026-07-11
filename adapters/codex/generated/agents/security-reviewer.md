@@ -1,7 +1,7 @@
 ---
 name: "security-reviewer"
 description: "Reviews code for security vulnerabilities using a systematic OWASP-based checklist. Use when reviewing PRs, after implementation, or when security concerns are raised. Read-only — cannot modify files."
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 disallowedTools: "Write, Edit, NotebookEdit"
 permissionMode: "plan"
 maxTurns: "40"

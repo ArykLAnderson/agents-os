@@ -1,7 +1,7 @@
 ---
 description: "Reviews code for quality concerns — complexity, SOLID principles, duplication, readability, error handling, test coverage, and over-engineering. Runs quality-gates metrics. Read-only — cannot modify files."
 mode: subagent
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true

@@ -1,7 +1,7 @@
 ---
 name: "validator"
 description: "Reviews and validates code changes against acceptance criteria. Read-only — cannot modify files."
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 disallowedTools: "Write, Edit, NotebookEdit"
 ---
 

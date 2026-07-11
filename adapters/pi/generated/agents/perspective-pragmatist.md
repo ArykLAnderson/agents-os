@@ -1,7 +1,7 @@
 ---
 name: "perspective-pragmatist"
 description: "Evaluates proposals from a pragmatic lens — favoring simplicity, proven solutions, and shipping speed. Use in deliberation councils or research sprints when a grounded, practical viewpoint is needed."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 tools: "read, grep, find, ls"
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: validator
 description: Reviews and validates code changes against acceptance criteria. Read-only — cannot modify files.
-model: smart
+model: normal
 disallowedTools: Write, Edit, NotebookEdit
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: "perspective-adversary"
 description: "Stress-tests proposals by actively seeking failure modes, hidden costs, and flawed assumptions. Use in deliberation councils or research sprints when rigorous challenge is needed."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 tools: "read, grep, find, ls"
 ---
 

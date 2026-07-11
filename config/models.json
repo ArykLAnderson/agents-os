@@ -1,31 +1,40 @@
 {
   "aliases": {
-    "opus": "smart",
+    "opus": "deep",
     "sonnet": "fast",
     "haiku": "cheap",
     "planning": "smart",
-    "execution": "fast",
-    "review": "smart",
-    "quick": "cheap"
+    "execution": "normal",
+    "review": "normal",
+    "quick": "cheap",
+    "aggregation": "smart",
+    "coordination": "deep",
+    "research": "deep"
   },
   "adapters": {
     "pi": {
-      "default": "fast",
-      "smart": "openai-codex/gpt-5.5:high",
-      "fast": "openai-codex/gpt-5.5:low",
-      "cheap": "openai-codex/gpt-5.5:minimal"
+      "default": "normal",
+      "cheap": "openai-codex/gpt-5.6-luna:medium",
+      "fast": "openai-codex/gpt-5.6-terra:medium",
+      "normal": "openai-codex/gpt-5.6-terra:medium",
+      "smart": "openai-codex/gpt-5.6-sol:high",
+      "deep": "openai-codex/gpt-5.6-sol:high"
     },
     "codex": {
-      "default": "fast",
-      "smart": "gpt-5.5",
-      "fast": "gpt-5.5",
-      "cheap": "gpt-5.5"
+      "default": "normal",
+      "cheap": "gpt-5.6-luna",
+      "fast": "gpt-5.6-terra",
+      "normal": "gpt-5.6-sol",
+      "smart": "gpt-5.6-sol",
+      "deep": "gpt-5.6-sol"
     },
     "opencode": {
-      "default": "fast",
-      "smart": "gpt-5.5",
-      "fast": "gpt-5.5",
-      "cheap": "gpt-5.5"
+      "default": "normal",
+      "cheap": "gpt-5.6-luna",
+      "fast": "gpt-5.6-terra",
+      "normal": "gpt-5.6-sol",
+      "smart": "gpt-5.6-sol",
+      "deep": "gpt-5.6-sol"
     },
     "claude": {
       "default": "fast",

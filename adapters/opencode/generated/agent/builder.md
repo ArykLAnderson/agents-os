@@ -1,7 +1,7 @@
 ---
 description: "Implements code changes from a plan or task description. Use when you need to write, edit, or execute code."
-mode: primary
-model: "gpt-5.5"
+mode: subagent
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true

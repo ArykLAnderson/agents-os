@@ -9,6 +9,8 @@ argument-hint: <research question or topic>
 
 Use Pi subagents to investigate different dimensions of a question in parallel, then synthesize the findings. This skill is for the parent orchestrator. Do not ask child subagents to run subagents or use AgentOS team/task/message APIs.
 
+Model routing intent: track researchers should usually run at `normal` (or `fast` for narrow/mechanical tracks). For broad, ill-defined exploration, the final coordinator/synthesis pass should use the `deep` tier: it is responsible for integrating contradictions, making minor judgment calls, and surfacing important architectural/product decisions instead of burying them.
+
 ## Process
 
 ### 1. Understand the Question

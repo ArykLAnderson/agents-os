@@ -69,4 +69,14 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 
 **IMPORTANT**: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
 
+## Motion, Performance, and Accessibility
+
+- Use motion to clarify state, hierarchy, and causality—not as decoration.
+- Prefer composited properties such as `transform` and `opacity`; avoid animating layout properties like `width`, `height`, `top`, or `left`.
+- Use `will-change` sparingly and only around active animation windows.
+- Respect `prefers-reduced-motion`.
+- Gate hover-heavy effects with `@media (hover: hover) and (pointer: fine)`.
+- Prefer CSS transitions and keyframes before adding animation dependencies. In React, use a motion library only when it is already available or the interaction genuinely warrants it.
+- Keep utility-interface transitions brief and unobtrusive. Keyboard focus, selection, success, and error states must remain unmistakable without stealing attention.
+
 Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.

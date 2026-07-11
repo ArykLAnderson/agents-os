@@ -1,7 +1,7 @@
 ---
 name: "perspective-systems-thinker"
 description: "Evaluates proposals for integration effects, architectural coherence, and long-term systemic implications. Use in deliberation councils or research sprints when holistic analysis is needed."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 tools: "read, grep, find, ls"
 ---
 

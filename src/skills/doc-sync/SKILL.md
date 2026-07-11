@@ -1,6 +1,6 @@
 ---
 name: doc-sync
-description: Keep project documentation in sync with code changes. Updates API references, schema docs, and architectural overviews after implementation. Invoked by /build or standalone after manual changes.
+description: Keep project documentation in sync with code changes. Updates API references, schema docs, and architectural overviews after implementation. Invoked by issue-executor or standalone after manual changes.
 user-invocable: true
 argument-hint: "[optional: specific files or directory to check]"
 ---
@@ -31,7 +31,7 @@ Keep project documentation current with code changes. Focuses on interface-level
 
 ## Process
 
-1. **Determine what changed**: If invoked by `/build`, look at the changes made during implementation. If standalone, use `git diff` against the base branch (or `$ARGUMENTS` for specific files).
+1. **Determine what changed**: If invoked by `issue-executor`, look at the changes made during implementation. If standalone, use `git diff` against the base branch (or `$ARGUMENTS` for specific files).
 
 2. **Classify changes** against the three categories above. If everything falls in "never update," report "no doc updates needed" and stop.
 

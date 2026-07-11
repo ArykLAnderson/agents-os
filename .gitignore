@@ -20,6 +20,16 @@ adapters/pi/generated/skills/ea-briefing/
 adapters/pi/generated/skills/goals/
 adapters/pi/generated/skills/note/
 adapters/pi/generated/skills/research/
+adapters/*/generated/agents/executive-assistant.md
+adapters/*/generated/agents/personal-coach.md
+adapters/*/generated/agent/executive-assistant.md
+adapters/*/generated/agent/personal-coach.md
+adapters/*/generated/skills/coach/
+adapters/*/generated/skills/ea/
+adapters/*/generated/skills/ea-briefing/
+adapters/*/generated/skills/goals/
+adapters/*/generated/skills/note/
+adapters/*/generated/skills/research/
 
 plugins/pi-keysmith/progress.md
 

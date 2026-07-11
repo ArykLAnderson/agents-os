@@ -1,7 +1,7 @@
 ---
 description: "Reviews and validates code changes against acceptance criteria. Read-only — cannot modify files."
-mode: primary
-model: "gpt-5.5"
+mode: subagent
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true

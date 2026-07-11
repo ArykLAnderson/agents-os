@@ -1,7 +1,7 @@
 ---
 description: "Evaluates proposals for integration effects, architectural coherence, and long-term systemic implications. Use in deliberation councils or research sprints when holistic analysis is needed."
 mode: subagent
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true

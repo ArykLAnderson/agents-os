@@ -1,8 +1,8 @@
 ---
 name: "hook-engineer"
 description: "Generates and modifies the active agent harness TypeScript hooks and their settings.json wiring. Use when the user wants to create a new hook, modify an existing hook, add a new hook event handler, or change hook behavior."
-tools: "read, write, edit, find, grep, bash"
-model: "openai-codex/gpt-5.5:high"
+model: "openai-codex/gpt-5.6-sol:high"
+tools: "read, write, edit, glob, grep, bash"
 ---
 
 <!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->

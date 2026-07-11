@@ -1,7 +1,7 @@
 ---
 name: "architecture-reviewer"
 description: "Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files."
-model: "gpt-5.5"
+model: "gpt-5.6-sol"
 disallowedTools: "Write, Edit, NotebookEdit"
 permissionMode: "plan"
 maxTurns: "40"

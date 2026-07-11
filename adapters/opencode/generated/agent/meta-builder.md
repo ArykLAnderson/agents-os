@@ -1,7 +1,7 @@
 ---
 description: "Generates new the active agent harness agents and commands/skills from natural language descriptions. Also modifies existing ones. Use proactively when the user asks to create, update, or extend an agent, command, or skill."
-mode: primary
-model: "gpt-5.5"
+mode: subagent
+model: "gpt-5.6-sol"
 temperature: 0.3
 tools:
   read: true
@@ -73,7 +73,7 @@ Include: role statement, "Before Starting" section if needed, step-by-step workf
 ---
 name: kebab-case-name          # Required
 description: delegation trigger # Required
-model: fast                    # Optional (cheap/fast/smart)
+model: normal                  # Optional (cheap/fast/normal/smart/deep)
 tools: read, grep, find, ls     # Optional allowlist; use lowercase Pi tool names for Pi-ready agents
 permissionMode: default        # Optional
 background: false              # Optional

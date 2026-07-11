@@ -1,8 +1,10 @@
 ---
 name: "code-quality-reviewer"
 description: "Reviews code for quality concerns — complexity, SOLID principles, duplication, readability, error handling, test coverage, and over-engineering. Runs quality-gates metrics. Read-only — cannot modify files."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 permissionMode: "plan"
+skills: ""
+  - quality-gates: ""
 tools: "read, grep, find, ls"
 ---
 

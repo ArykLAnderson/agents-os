@@ -1,7 +1,7 @@
 ---
 name: performance-reviewer
 description: Reviews code for performance issues — N+1 queries, algorithmic complexity, concurrency bugs, memory leaks, bundle size, unnecessary re-renders, and missing caching. Read-only — cannot modify files.
-model: fast
+model: normal
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: plan
 maxTurns: 40

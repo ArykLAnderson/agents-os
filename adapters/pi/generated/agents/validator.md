@@ -1,7 +1,7 @@
 ---
 name: "validator"
 description: "Reviews and validates code changes against acceptance criteria. Read-only — cannot modify files."
-model: "openai-codex/gpt-5.5:high"
+model: "openai-codex/gpt-5.6-terra:medium"
 tools: "read, grep, find, ls"
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: "architecture-reviewer"
 description: "Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files."
-model: "openai-codex/gpt-5.5:low"
+model: "openai-codex/gpt-5.6-terra:medium"
 permissionMode: "plan"
 tools: "read, grep, find, ls"
 ---
