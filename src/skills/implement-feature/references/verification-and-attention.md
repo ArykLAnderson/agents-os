@@ -147,3 +147,28 @@ State explicitly when no material drift exists. Include the ledger in the PR rev
 Pause the affected ticket and dependency chain. Continue independent tickets only when their work cannot prejudice the unresolved decision.
 
 Block integration or finalization when the decision affects a shared contract, feature acceptance, security boundary, or required platform behavior.
+
+## Review ratchet and architectural recovery
+
+Treat these as review-ratchet signals:
+
+- a closure review reopens an accepted finding or the same invariant
+- remediation introduces a blocker in a new module, caller, trust boundary, or deployment seam
+- a reviewer requests work outside accepted ticket scope or dependency ownership
+- branch-shaped special cases multiply instead of restoring one contract
+
+Maintain `reviewRemediationCycles` per ticket. Increment it only when accepted review findings dispatch remediation and the next closure review fails to close the ticket. Rewording, reviewer fanout, or retries within the same remediation do not increment it. Two consecutive failed closure cycles mandate `zoom-out` before any third fixer; judgment may stop earlier.
+
+Fence the writer and affected dependency chain and preserve a durable recovery packet in `zoom-out.md` with:
+
+- ticket, coordinator/run, attempt, and writer-token identifiers
+- candidate/base/result SHAs and exact commit lineage
+- cycle counter and timestamps
+- review finding IDs, evidence, dispositions, and closure outcomes
+- boundary movement and affected modules/callers/trust/deployment seams
+- accepted objectives, intents, scope, ownership, dependencies, and constraints
+- finding classification as `local`, `later-ticket`, `intent-change`, or `rejected`
+- recommended reconciliation seam, preserved/changed contracts, redesign scope, risks, and consolidated verification plan
+- tracker state and fenced dependency chain
+
+Reset the counter only after a documented zoom-out recommendation is accepted, one coherent redesign cycle completes, and its consolidated closure review succeeds. A superficial green test, renamed finding, replacement writer, or local patch does not reset it. Recurrence after the redesign is `NEEDS ATTENTION`.

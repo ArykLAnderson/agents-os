@@ -73,9 +73,9 @@ Treat state as durable **intent and history**, not unquestionable truth:
 3. Reconcile against git, worktrees, child status, GitHub/PR state, and evidence.
 4. Mark it `DONE`, `READY TO INTEGRATE`, `INTEGRATED`, `BLOCKED`, `NEEDS ATTENTION`, `FAILED`, or `CANCELLED`.
 
-Every ticket attempt receives a unique attempt ID, recorded starting HEAD, and active-writer token. Before replacing a stalled writer, cancel/interrupt or explicitly fence the prior attempt and record that it no longer has commit authority. A writer must confirm its attempt ID and expected starting/current HEAD before editing and again before committing. Never allow two live attempts to write the same ticket branch/worktree.
+Every feature run receives a unique coordinator ID. Every ticket attempt receives a unique attempt ID, recorded starting HEAD, and active-writer token. Before replacing a stalled writer, cancel/interrupt or explicitly fence the prior attempt and record that it no longer has commit authority. A writer must confirm its attempt ID and expected starting/current HEAD before editing and again before committing. Never allow two live attempts to write the same ticket branch/worktree.
 
-On resume, reconcile every nonterminal state before launching new work.
+Local state alone is not a sufficient ownership signal. Publish and maintain a tracker-visible feature claim so other chats, machines, and work-selection passes can see that the keystone is active. On resume, reconcile every nonterminal state and tracker claim before launching new work.
 
 Read [references/state-and-recovery.md](references/state-and-recovery.md) and use the bundled state templates.
 
@@ -96,7 +96,21 @@ Capture immutable initial snapshots for the later report archive. Record canonic
 
 Do not reinterpret unchecked publication-template boxes as live tracker state when GitHub/local tracker evidence says the work already landed. Reconcile sources explicitly.
 
-### 2. Establish feature integration topology
+### 2. Claim the feature and reject duplicate execution
+
+Before creating worktrees or dispatching writers:
+
+1. Inspect the keystone/feature issue, child issues, open PRs, remote branches, shared coordinator state, and tracker comments/status for an existing implementation claim.
+2. Treat a claim renewed within the last 24 hours as fresh by default. If another fresh claim exists, do not start, resume, or dispatch the feature; report who/what claimed it, the last heartbeat, and continue looking for other work when work selection is the caller's goal.
+3. Never take over merely because a claim is older than 24 hours. Reconcile its coordinator/session status, PRs, branches, worktrees, commits, and latest tracker activity. If active work remains plausible, ask for direction or mark `NEEDS ATTENTION`. If the prior run is demonstrably abandoned, fence it, explain the takeover in the tracker, and issue a new coordinator ID.
+4. Publish a machine-readable claim comment on the keystone or primary feature issue before the first implementation side effect. Include coordinator ID, `IN PROGRESS`, UTC start and heartbeat timestamps, feature branch/worktree when known, durable state path, and the 24-hour freshness rule. Store the comment ID/URL in `feature.md` so the same comment can be edited rather than creating heartbeat noise.
+5. Apply the repository's existing in-progress project status or label when available. If the tracker has no equivalent and repository policy permits label management, create/use a plainly named `in-progress` label so ordinary issue lists expose active ownership without parsing comments. Do not invent a parallel status taxonomy when the tracker already has one; the claim comment remains the portable source of coordinator identity and freshness.
+6. Renew the claim at least once every 12 hours while active and at every meaningful phase boundary or ticket-wave integration. Update the tracker-visible state to `VERIFYING`, `REPORTING`, `PR READY`, `BLOCKED`, or `NEEDS ATTENTION` when applicable.
+7. When dispatching a ticket, publish the coordinator ID, ticket attempt ID, UTC assignment time, and active branch/worktree on that ticket using the same project-native status mechanism. Clear or finalize the ticket claim when it is integrated, cancelled, failed, or fenced.
+
+A work-discovery or keystone-review pass must perform this collision check before recommending a feature. Freshly claimed work is already underway, not available work.
+
+### 3. Establish feature integration topology
 
 Create or reuse:
 
@@ -108,7 +122,7 @@ Record target ref/SHA, feature branch, integration worktree, tracker URLs, and m
 
 Never implement directly in protected release worktrees. Never allow concurrent writers in the feature integration worktree.
 
-### 3. Select a bounded ticket wave
+### 4. Select a bounded ticket wave
 
 Find tickets whose dependencies are satisfied and whose contracts are stable enough to implement.
 
@@ -121,7 +135,7 @@ Choose a model-selected bounded wave:
 
 Record the chosen wave and rationale before dispatch.
 
-### 4. Dispatch ticket writers
+### 5. Dispatch ticket writers
 
 For each ticket:
 
@@ -133,7 +147,7 @@ For each ticket:
 
 The parent coordinates. It does not take over production implementation because a writer needs another pass.
 
-### 5. Reconcile writer results
+### 6. Reconcile writer results
 
 When a writer returns or stalls:
 
@@ -145,11 +159,11 @@ When a writer returns or stalls:
 - fence/cancel the old attempt before replacing it
 - replace it with a fresh writer when context or approach is corrupted
 
-Retry judgment is model-governed rather than a fixed count. Record every attempt and stop when retries repeat the same failure without new evidence or intent becomes uncertain.
+Retry judgment is model-governed, but review remediation has a deterministic floor. Record an explicit `reviewRemediationCycles` counter in ticket state; increment it when an accepted review finding causes a writer remediation and the subsequent closure review still does not close the ticket. Judgment may invoke `zoom-out` earlier, but no third fixer is permitted after two consecutive failed closure cycles.
 
 A writer result is not ticket completion.
 
-### 6. Review and remediate tickets
+### 7. Review and remediate tickets
 
 `implement-feature` owns independent ticket review.
 
@@ -159,6 +173,8 @@ A writer result is not ticket completion.
 4. Send accepted fixes back to the same ticket writer.
 5. Re-run affected verification.
 6. Account explicitly for rejected or conflicting findings.
+7. Before another fixer, invoke `zoom-out` when the counter reaches two failed closure cycles, a blocker moves to a new module/caller/trust/deployment seam, reviewer demand crosses ticket or dependency ownership, or special cases spread/reopen an invariant. Do not automatically accept a technically valid finding into the wrong ticket.
+8. Fence the active writer and affected dependency chain, snapshot candidate/review lineage, write durable `zoom-out.md`, and record tracker-visible recovery state. Authorize at most one coherent redesign cycle from the recommendation, then run one consolidated risk/closure review. Recurrence becomes `NEEDS ATTENTION`.
 
 Do not require unanimous reviewer approval. A ticket may advance when:
 
@@ -169,7 +185,7 @@ Do not require unanimous reviewer approval. A ticket may advance when:
 
 Mark the ticket `READY TO INTEGRATE` only after its acceptance evidence and review converge.
 
-### 7. Integrate every completed wave
+### 8. Integrate every completed wave
 
 After each wave reaches `READY TO INTEGRATE`, invoke `feature-integration`.
 
@@ -187,7 +203,7 @@ Record the integration SHA and mark included tickets `INTEGRATED`. Unlock the ne
 
 Do not give a broad merger agent authority to implement unrelated fixes, run the entire final lifecycle, or push scope outward.
 
-### 8. Diagnose verification failures before fixing
+### 9. Diagnose verification failures before fixing
 
 For ticket, integration, local acceptance, CI, or manual E2E failures, classify first:
 
@@ -205,7 +221,7 @@ Only feature-caused failures grant automatic fixer authority. Baseline or invest
 
 Classify discovered work as `mandatory-to-preserve-contract`, `optional-debt`, or `intent-change`. Only mandatory work may join the active graph automatically, with a bounded ticket contract and recorded graph revision. Optional debt is deferred; intent changes require the drift/attention policy. Create follow-up tickets with evidence, dependencies, scope, and verification plan.
 
-### 9. Remove invented requirements and track legitimate drift
+### 10. Remove invented requirements and track legitimate drift
 
 Compare integrated behavior against initial accepted specs/tickets throughout execution and at finalization.
 
@@ -220,7 +236,7 @@ Do not burden the human with obvious hallucinated scope.
 
 Maintain `drift.md` containing original requirement, final behavior, classification, rationale, evidence, authorization basis, affected tickets/contracts, verification, and canonical-doc update status. State explicitly when no drift exists.
 
-### 10. Build the feature verification plan
+### 11. Build the feature verification plan
 
 Before final verification, record a feature-specific plan combining:
 
@@ -236,7 +252,7 @@ Run the plan against the exact feature integration SHA. If fixes change HEAD, in
 
 The feature is not ready while substantive deep-review findings, undocumented platform gaps, or required manual acceptance remain unresolved.
 
-### 11. Create the archival implementation report
+### 12. Create the archival implementation report
 
 After integrated behavior is verified, invoke `implementation-report` in Showcase/archive mode.
 
@@ -256,7 +272,7 @@ If the current harness cannot invoke Pi’s native `imagegen`, hand the report s
 
 Read [references/report-and-finalization.md](references/report-and-finalization.md).
 
-### 12. Open the final feature PR
+### 13. Open the final feature PR
 
 Push the feature integration branch and open one feature-level PR to the target branch. Ticket PRs are unnecessary.
 
@@ -273,13 +289,14 @@ The PR body must include:
 
 Wait for PR checks and confirm they apply to the current head SHA. Route feature-caused failures through the diagnosis/fix/reverification loop.
 
-### 13. Reach `PR READY`
+### 14. Reach `PR READY`
 
 When the code PR and docs archive PR are current and required gates pass:
 
 - mark feature `PR READY`
 - transition integrated tickets to `DONE` and close all non-keystone tickets
 - comment each ticket with feature PR, integration SHA, evidence summary, and docs-report PR
+- update the tracker-visible claim to `PR READY`, link both PRs, and stop active heartbeats; use the repository's review status if available
 - update keystone checklist/status
 - keep the keystone open until merge
 
@@ -287,9 +304,9 @@ If later changes invalidate a closed ticket’s criteria, the code PR is closed/
 
 Default execution stops here.
 
-If the user cancels or the feature PR is intentionally abandoned, mark the feature `CANCELLED`, preserve the archive/state record, reopen affected tickets, update the keystone, and clean or retain branches/worktrees according to explicit repository policy.
+If the user cancels or the feature PR is intentionally abandoned, mark the feature `CANCELLED`, preserve the archive/state record, reopen affected tickets, update and release the tracker-visible claim, remove the active `in-progress` status/label when applicable, and clean or retain branches/worktrees according to explicit repository policy.
 
-### 14. Merge mode
+### 15. Merge mode
 
 When merge authority was granted:
 
@@ -299,8 +316,9 @@ When merge authority was granted:
 4. Merge or finalize the docs archive PR according to docs policy.
 5. Close the keystone after all landing criteria are satisfied.
 6. Record final target and docs SHAs.
-7. Clean ticket/feature worktrees and branches according to repository policy.
-8. Mark feature `DONE`.
+7. Finalize the tracker-visible claim as `DONE`, remove the active `in-progress` status/label when applicable, and retain the completion timestamp and landed PR/SHA in the claim comment.
+8. Clean ticket/feature worktrees and branches according to repository policy.
+9. Mark feature `DONE`.
 
 ## Needs Attention
 

@@ -28,24 +28,37 @@ If absent, quickly infer system layers from the codebase structure (`apps/`, `se
 
 Read the relevant domain glossary and ADRs. Invoke `domain-modeling` if decomposition reveals a terminology conflict rather than resolving it ad hoc.
 
-### 3. Identify Tracer-Bullet Vertical Slices
+### 3. Identify Features Before Tickets
 
-Group user stories and implementation decisions into **tracer-bullet vertical slices** — each slice fires a complete path through all relevant system layers, proving the integration works end-to-end. Prefer many thin slices over few thick ones.
+First partition the spec into **implementation features**. A feature is a coherent, independently releasable user or operator outcome that should be coordinated, integrated, verified, and shipped as one effort. **Each feature gets exactly one keystone.**
 
-**Vertical slice properties:**
-- Crosses multiple layers (schema + service + API + minimal UI where applicable)
-- Has clear acceptance criteria derived from user stories
-- Can be implemented and tested without other slices being complete
-- Produces observable behavior change (not just "add a database table")
-- Is independently demoable — someone can see it working without the other slices
+A broad spec may contain more than one feature, but parallel subsystems or workstreams inside one outcome are **tracks**, not features and not keystones. For example, entitlement, persistence, API, UI, and adapter tracks may all converge on one customer-visible feature.
 
-**Anti-horizontal-slicing rule:** Never create issues that live in a single layer. "Add all database tables" is horizontal — it builds infrastructure without proving anything works. "Add lexeme mastery tracking end-to-end" is vertical — it proves the full path. If you catch yourself grouping by layer (all schema, then all services, then all API), stop and regroup by behavior.
+**Feature boundary test:**
+- Completion produces a coherent outcome recognizable in domain/product language.
+- The outcome can be accepted and shipped independently of other proposed features.
+- Its acceptance criteria require the integrated contribution of multiple child tickets.
+- Running `implement-feature` for it should naturally produce one integration effort and one feature PR.
+- If two proposed keystones must both finish before either creates a meaningful outcome, merge them into one keystone and represent their work as parallel tracks.
+
+Most bounded specs should produce one keystone; broad specs commonly produce two or three. More than three is a warning to justify every boundary explicitly. Never create a keystone merely because work can run in parallel, belongs to a subsystem, or has its own dependency chain.
+
+Then decompose each feature into **tracer-bullet tickets**. Prefer tickets that fire a thin complete path through the relevant layers and prove observable behavior. Organize independently executable tickets into named parallel tracks beneath the feature when useful.
+
+**Tracer-bullet ticket properties:**
+- Has clear acceptance criteria derived from the feature stories.
+- Can land green and be tested without unfinished sibling branches.
+- Produces observable behavior or proves a durable integration seam.
+- Is small enough for roughly one agent-day.
+- Contributes directly to the parent keystone's integrated acceptance.
+
+**Anti-horizontal-slicing rule:** Do not create broad layer-completion tickets such as "add all database tables." Prefer behavior such as "assign and explain an entitlement through the operator path." A narrow enabling ticket is allowed when a deep seam or mechanical migration cannot safely cross all layers in one day, provided it lands green, proves its contract, names the feature track it enables, and blocks a later tracer-bullet integration ticket.
 
 **Wide-refactor exception:** A mechanical change whose blast radius cannot land green as a vertical slice should use expand–migrate–contract tickets. Add the new form beside the old, migrate callers in independently green batches, then delete the old form after all migrations. If batches cannot remain green independently, make them share an integration branch and block a final integrate-and-verify ticket.
 
-### 4. Decompose into Issues
+### 4. Decompose Features into Issues
 
-For each vertical slice, create one or more issues. Each issue is an **agent brief** — behavioral, durable, no file paths.
+For each feature, create child issues across its tracer-bullet tracks. Each issue is an **agent brief** — behavioral, durable, no file paths. Do not create child keystones for tracks.
 
 **Issue format:**
 
@@ -53,8 +66,9 @@ For each vertical slice, create one or more issues. Each issue is an **agent bri
 ## Title: [Imperative verb] [what]
 
 **Type:** HITL | AFK
-**Slice:** [Which vertical slice this belongs to]
-**Keystone:** #K (the keystone issue for this slice)
+**Feature:** [Parent implementation feature]
+**Track:** [Parallel workstream within the feature]
+**Keystone:** #K (the one keystone for this feature)
 **Blocks:** #N, #M (issue numbers that cannot start until this completes)
 **Blocked by:** #X, #Y (issues that must complete first)
 
@@ -85,10 +99,11 @@ Establish blocking relationships:
 - Schema/data model issues typically block service logic issues
 - Service logic issues typically block API/integration issues
 - Shared infrastructure (auth, config) blocks feature work
-- Issues within the same slice may have internal ordering
-- Issues across slices should be independent where possible
+- Issues within the same track may have internal ordering
+- Tracks under one keystone should run independently where possible and converge at integration
+- Separate features/keystones should be independently shippable; if they mutually block meaningful completion, reconsider the feature boundary
 
-Verify: **no circular dependencies**. If you find a cycle, restructure the slices.
+Verify: **no circular dependencies**. If you find a cycle, restructure the tickets or reconsider the feature boundary.
 
 ### 6. Triage Each Issue
 
@@ -108,10 +123,12 @@ Every issue starts as `ready` unless you flag it otherwise. If more than ~25% of
 ### 7. Present for Review
 
 Display the full decomposition as a numbered list with:
+- Proposed feature/keystone boundaries and why each is independently shippable
 - Issue title, role (HITL/AFK), and state (ready/needs-info)
 - Blocking relationships as a DAG (text or ASCII art)
-- Which vertical slice each issue belongs to
+- Which feature and parallel track each issue belongs to
 - Estimated complexity (S/M/L)
+- Total child-ticket and keystone counts
 
 If any issues are `needs-info`, list what's missing and whether it blocks other issues.
 
@@ -119,19 +136,19 @@ If any issues are `needs-info`, list what's missing and whether it blocks other 
 
 ### 8. Generate Keystone Issues
 
-For each vertical slice, generate a **keystone issue** — the integration coordination point for the slice. The keystone is created **after** all child issues (it needs their numbers).
+For each accepted **implementation feature**, generate exactly one **keystone issue**. The keystone coordinates the entire feature across all of its parallel tracks; it is not a track, subsystem, phase, or large child ticket. Create it **after** all child issues because it needs their numbers.
 
 **Keystone issue format:**
 
 ```markdown
-## Keystone: [Slice Name]
+## Keystone: [Feature Name]
 
-**Slice:** [slice name]
+**Feature:** [feature name]
 **spec:** [link to spec]
 **Status:** Open
 
 ### Purpose
-[1-2 sentences: what this slice proves end-to-end]
+[1-2 sentences: the independently releasable outcome this feature proves end-to-end]
 
 ### Child Issues
 - [ ] #N — [title]
@@ -139,7 +156,7 @@ For each vertical slice, generate a **keystone issue** — the integration coord
 - [ ] #P — [title]
 
 ### Acceptance Criteria
-- [ ] [Slice-level behavioral criterion — domain language, Given/When/Then]
+- [ ] [Feature-level behavioral criterion — domain language, Given/When/Then]
 - [ ] [Integration-level: verifies the slice works as a whole, not per-issue]
 
 ### Scope Boundaries
@@ -148,10 +165,10 @@ For each vertical slice, generate a **keystone issue** — the integration coord
 ```
 
 **Rules:**
-- 3-8 acceptance criteria per keystone. If you need more, the slice is too thick — split it.
+- 3-8 acceptance criteria per keystone. If you need more, sharpen the feature-level outcome before splitting; split only when the resulting features are independently meaningful and shippable.
 - AC should be in domain language from CONTEXT.md — no implementation details.
 - AC should be satisfiable only by the combined work of all child issues — no single child issue makes all AC pass.
-- Labels: `keystone`, `slice:<name>`, `spec-NNN`. Do NOT add `afk` or `hitl` — the keystone is a coordination artifact, not a work item.
+- Labels: `keystone`, `slice:<feature-name>`, `spec-NNN`. Existing trackers may retain `slice:` as the label namespace, but it identifies the feature boundary, not an internal workstream. Do NOT add `afk` or `hitl` — the keystone is a coordination artifact, not a work item.
 - The keystone is never assigned to a ticket writer. It is owned by the `implement-feature` coordinator; `feature-integration` only integrates completed waves and runs focused integration checks.
 
 **Keystone lifecycle:**
@@ -175,19 +192,21 @@ Create GitHub Issues using `gh issue create`:
 - After creation, update blocking references with actual issue numbers
 
 **Keystone issues last** (after all child issues have numbers):
-- Title: `Keystone: <Slice Name>`
+- Title: `Keystone: <Feature Name>`
 - Body: the keystone format from Step 8, with child issue numbers populated
-- Labels: `keystone`, `slice:<name>`, `spec-NNN`
+- Labels: `keystone`, `slice:<feature-name>`, `spec-NNN`
 - After creation, update child issues to fill in their `Keystone: #K` field
 
 For local tracking, write one file per ticket under the repository's existing issue convention, or `.scratch/<feature>/issues/` when none exists. Number files in dependency order and record blocking edges by ticket number/title.
 
 ## Anti-Patterns
 
-- **Don't create horizontal issues.** "Add all database tables" is horizontal. "Add lexeme mastery tracking end-to-end" is vertical.
+- **Don't create a keystone per track.** Parallel entitlement, persistence, adapter, API, or UI tracks belong under one feature keystone when they converge on one outcome.
+- **Don't mistake dependency chains for features.** A workstream having its own DAG does not make it independently shippable.
+- **Don't create broad horizontal issues.** "Add all database tables" is horizontal. "Add lexeme mastery tracking end-to-end" is vertical. Narrow independently green enabling seams are allowed only when they block an explicit integration ticket.
 - **Don't include file paths in issues.** They rot. Use behavioral descriptions and type interfaces.
 - **Don't create issues smaller than a meaningful behavior change.** Each issue should produce something observable.
-- **Don't create issues larger than ~1 day of agent work.** If an issue feels like it needs sub-tasks, it's probably two slices.
+- **Don't create issues larger than ~1 day of agent work.** If an issue feels like it needs sub-tasks, it is probably two tickets under the same feature.
 - **Don't skip the review step.** Always present the decomposition before publishing.
 
 ## Execution Modes

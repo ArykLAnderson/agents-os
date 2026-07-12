@@ -1,5 +1,11 @@
 import type { Disposable, ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { consumePrefillArtifact, createPrefillArtifact, getHopArtifactRoot, readPrefillMarkdown } from "./artifacts.ts";
+import {
+  consumePrefillArtifact,
+  createPrefillArtifact,
+  getHopArtifactRoot,
+  hasConsumedPrefillArtifact,
+  readPrefillMarkdown,
+} from "./artifacts.ts";
 import { generateHandoffDraft, resolveHandoffGoal } from "./handoff.ts";
 import { registerHopKeysmithActions } from "./keysmith.ts";
 import { cloneActiveBranch, createFreshDestinationSession } from "./sessions.ts";
@@ -257,12 +263,14 @@ export async function freshHandoff(ctx: ExtensionCommandContext, parsed: ParsedH
 
 async function bootstrapPrefill(ctx: ExtensionContext): Promise<void> {
   const prefillPath = process.env.PI_HOP_PREFILL;
+  delete process.env.PI_HOP_PREFILL;
   if (!prefillPath) return;
 
   let prompt: string;
   try {
     prompt = readPrefillMarkdown(prefillPath);
   } catch (error) {
+    if (hasConsumedPrefillArtifact(prefillPath)) return;
     const message = error instanceof Error ? error.message : String(error);
     ctx.ui.notify(`Hop prefill failed: ${message}`, "error");
     return;

@@ -61,6 +61,15 @@ Query the issue tracker and present three buckets, oldest first:
 
 Show counts and a one-line summary per issue. Let the maintainer pick.
 
+## Work discovery and active implementation claims
+
+Before recommending an issue or keystone as available work, inspect its labels/project status, open PRs, recent comments, and any machine-readable `<!-- agent-os:implement-feature-claim:v1 -->` comment.
+
+- Treat an `in-progress` status/label plus a claim heartbeat less than 24 hours old as actively owned. Identify it as already underway and skip it when looking for the next task.
+- A claim in `VERIFYING`, `REPORTING`, or `PR READY` is also unavailable work even if no writer is currently running.
+- Never treat an old timestamp alone as permission to restart. Reconcile recent commits, branches, PRs, worktrees when visible, and tracker activity. Flag ambiguous or apparently abandoned claims for maintainer attention rather than launching duplicate implementation.
+- Prefer another unclaimed ready issue when the request is simply to find work.
+
 ## Triage a specific issue
 
 1. **Gather context.** Read the full issue (body, comments, labels, reporter, dates). Parse any prior triage notes so you don't re-ask resolved questions. Explore the codebase using the project's domain glossary, respecting ADRs in the area. Read `.out-of-scope/*.md` and surface any prior rejection that resembles this issue.

@@ -35,8 +35,13 @@
     }
   },
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultModel": "gpt-5.6-sol-focused",
   "defaultThinkingLevel": "high",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
   "prompts": [
     "~/.agents-os/adapters/pi/generated/commands"
   ],
@@ -51,7 +56,6 @@
     "whichKeyKeyColor": "yellow"
   },
   "hideThinkingBlock": true,
-  "maxSubagentSpawnsPerSession": 500,
   "parallel": {
     "maxTasks": 20,
     "concurrency": 10

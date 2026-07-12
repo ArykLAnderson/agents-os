@@ -30,7 +30,7 @@ Every branch must be `READY TO INTEGRATE` under the owning `implement-feature` r
 3. Integrate the completed wave in dependency order.
 4. Delegate ordinary conflicts to `resolving-merge-conflicts`.
 5. Detect integration failures: broken contracts, crossed seams, duplicated domain logic, branch-shaped special cases, incompatible assumptions, or shallow patches needed only to make integration green.
-6. Invoke `zoom-out` when intentions conflict or local fixes spread across module contracts.
+6. Freeze integration and return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet when two consecutive review-driven remediation cycles fail closure, a blocker moves to a new module/caller/trust/deployment seam, reviewer demand crosses accepted ownership, or special cases spread/reopen an invariant. The owning coordinator invokes `zoom-out`; integration must not improvise or permit a third local repair.
 7. Classify redesign:
    - **Internal:** preserves user-visible behavior, accepted spec, ticket criteria, and domain meaning. The coordinator may authorize it.
    - **Potential intent drift:** appears unsupported, changes observable contracts, or has credible conflicting interpretations. Remove unsupported behavior by default; return a decision-ready finding only when credible evidence remains unresolved.

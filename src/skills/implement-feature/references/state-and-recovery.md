@@ -27,6 +27,38 @@ Only the `implement-feature` coordinator writes shared state.
 
 Child agents may write implementation and test artifacts in their worktrees. They return results to the coordinator, which reconciles claims and updates state. Never let parallel children mutate the same feature or ticket state documents.
 
+## Tracker-visible claims and leases
+
+The local feature record prevents accidental duplication only on one shared filesystem. The tracker is the cross-chat and cross-machine coordination surface.
+
+Before implementation begins, assign a unique coordinator ID and inspect the keystone/feature issue for machine-readable claim comments, project status, labels, open PRs, and recent implementation activity. Also reconcile remote branches, worktrees, local coordinator records, and child sessions when available.
+
+The portable claim is one editable tracker comment containing:
+
+```text
+<!-- agent-os:implement-feature-claim:v1 -->
+Coordinator: <unique ID>
+State: IN PROGRESS
+Started: <UTC timestamp>
+Heartbeat: <UTC timestamp>
+Fresh for: 24 hours
+Feature branch/worktree: <ref/path or pending>
+Coordinator state: <path or unavailable>
+```
+
+Store its comment ID/URL in `feature.md`. Prefer editing this comment for heartbeat/state changes over posting repeated comments. Apply an existing project-native `in-progress` status or label when available.
+
+Freshness and collision rules:
+
+- A claim with a heartbeat less than 24 hours old is fresh by default. Another coordinator or work-discovery pass must skip it.
+- Renew at least every 12 hours and at meaningful phase transitions or wave integrations.
+- Age alone never authorizes takeover. For an older claim, inspect sessions, PRs, branches, worktrees, commits, and tracker activity.
+- If active work remains plausible, ask for direction or mark `NEEDS ATTENTION` rather than creating a competing writer.
+- If abandonment is demonstrated, fence the prior coordinator/attempts, explain the takeover in the claim, and issue a new coordinator ID.
+- Record `PR READY`, `DONE`, `CANCELLED`, `FAILED`, `BLOCKED`, or `NEEDS ATTENTION` visibly. Remove active status/labels when ownership ends, but preserve timestamps and links as history.
+
+When a ticket enters an active wave, give it a tracker-visible assignment with coordinator ID, ticket attempt ID, UTC assignment/heartbeat, and branch/worktree. Finalize or clear that assignment when integrated, fenced, cancelled, or failed.
+
 ## Feature states
 
 Recommended states:
@@ -130,7 +162,7 @@ Reconcile:
 - expected commit ancestry
 - child agent/session status
 - local/remote branch state
-- tracker issue state
+- tracker issue state, claim comment, claim freshness, and coordinator identity
 - feature/docs PR state and head SHA
 - validation evidence and the SHA it covers
 - manual E2E artifacts

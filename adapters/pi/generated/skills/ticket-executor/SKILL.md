@@ -9,7 +9,7 @@ argument-hint: "<ticket-number | ticket-URL | ticket-file-path>"
 
 # Ticket Executor
 
-Consume the established domain glossary and ADRs. Invoke `domain-modeling` only when implementation exposes a genuine contradiction; do not silently coin competing language. If repeated local fixes spread across module contracts, invoke `zoom-out` and return the architectural finding to the coordinator.
+Consume the established domain glossary and ADRs. Invoke `domain-modeling` only when implementation exposes a genuine contradiction; do not silently coin competing language. If review remediation repeats or moves across module contracts, stop as the atomic writer and return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet to the coordinator. The coordinator owns `zoom-out`; this writer must not continue a third local repair.
 
 Implement one well-specified ticket and return tested, inspectable evidence.
 

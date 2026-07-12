@@ -75,6 +75,12 @@ export function readPrefillMarkdown(markdownPath: string): string {
   return readFileSync(markdownPath, "utf8");
 }
 
+export function hasConsumedPrefillArtifact(markdownPath: string): boolean {
+  const rootDir = dirname(dirname(dirname(markdownPath)));
+  const consumedMarkdownPath = join(getPrefillDir(rootDir, "consumed"), basename(markdownPath));
+  return existsSync(consumedMarkdownPath);
+}
+
 export function readPrefillMetadata(markdownPath: string): HopPrefillMetadata {
   return JSON.parse(readFileSync(getMetadataPathForMarkdown(markdownPath), "utf8")) as HopPrefillMetadata;
 }
