@@ -1,7 +1,7 @@
 ---
 description: "Generates and modifies the active agent harness TypeScript hooks and their settings.json wiring. Use when the user wants to create a new hook, modify an existing hook, add a new hook event handler, or change hook behavior."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-sol:medium"
 temperature: 0.3
 tools:
   read: true

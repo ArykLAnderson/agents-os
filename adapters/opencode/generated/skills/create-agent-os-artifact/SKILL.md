@@ -71,6 +71,7 @@ Guidelines:
 - Prefer harness-neutral wording in the body
 - If specifying tools for Pi compatibility, use lowercase Pi tool names
 - Keep the file canonical; adapter-specific model/tool rewriting happens during generation
+- Put concrete model routes in `config/models.json`, not individual artifacts. For example, local OpenCode may lower `smart` or `deep` to LiteLLM GPT-5.6 routes while another environment maps the same tiers differently.
 
 ### Skills
 

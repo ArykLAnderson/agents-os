@@ -1,7 +1,7 @@
 ---
 description: "Stress-tests proposals by actively seeking failure modes, hidden costs, and flawed assumptions. Use in deliberation councils or research sprints when rigorous challenge is needed."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true

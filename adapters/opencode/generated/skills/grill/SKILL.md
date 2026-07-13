@@ -35,6 +35,10 @@ Ask questions **one at a time**. For each question:
 2. Provide your **recommended answer** based on what you know about the project, the domain, and the user's prior responses
 3. Wait for the user to confirm, modify, or reject your recommendation
 
+If a question can be answered by reading existing docs or code, investigate first instead of asking the user. Surface the answer briefly, then ask the next unresolved question.
+
+If the user asks a question or challenges the framing, pause the grill flow and resolve that discussion before continuing. Resume only after the user is ready to proceed.
+
 **Question properties:**
 - Start broad (goals, constraints, users) then drill into specifics (implementation, edge cases, trade-offs)
 - Challenge vague answers — ask for concrete examples or constraints

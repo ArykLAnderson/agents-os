@@ -1,7 +1,7 @@
 ---
 description: "Implements code changes from a plan or task description. Use when you need to write, edit, or execute code."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-sol:medium"
 temperature: 0.3
 tools:
   read: true

@@ -1,7 +1,7 @@
 ---
 description: "Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true
