@@ -1,8 +1,8 @@
 ---
 name: implement-feature
-description: Coordinate end-to-end implementation of an accepted feature ticket graph or keystone. Use when the user asks to implement a feature, finish a keystone, execute all tickets/slices, or implement and merge a multi-ticket effort. Runs bounded waves of ticket writers, independent review/fix loops, incremental feature integration, feature-level verification, archival implementation reporting, one final PR, and optional merge. Requires an accepted ticket graph; use `to-spec` and `to-tickets` first when scope is not yet decomposed.
+description: Coordinate end-to-end implementation of an accepted feature ticket graph or keystone. Use when the user asks to implement a feature, finish a keystone, execute all tickets, or implement and merge a multi-ticket effort. Runs bounded waves of ticket writers, independent review/fix loops, incremental feature integration, feature-level verification, archival implementation reporting, single or stacked PR preparation, and optional merge. Requires an accepted ticket graph; use `to-spec` and `to-tickets` first when scope is not yet decomposed.
 user-invocable: true
-argument-hint: "<ticket-graph | keystone | feature-map> [--merge]"
+argument-hint: "<ticket-graph | keystone | feature-map> [--pr-mode single|stacked] [--merge]"
 ---
 
 # Implement Feature
@@ -31,7 +31,8 @@ Use:
 - `zoom-out` when integration reveals incompatible intentions or repeated local fixes
 - `verification` for evidence discipline
 - `implementation-report` for the final archival report bundle
-- `slice-build` only for local markdown milestones where tracker tickets are intentionally inappropriate
+
+Prefer local ticket files for task decomposition unless the repository explicitly owns a tracker integration. Do not create GitHub issues as implementation bookkeeping in shared repositories. A future Linear integration may publish or sync ticket state, but until that exists the local ticket graph and coordinator state are authoritative for decomposition.
 
 ## Execution Authority
 
@@ -40,6 +41,28 @@ Default stop gate: **PR READY**.
 If the user says “implement and merge,” passes `--merge`, or otherwise explicitly requests end-to-end merge, continue through checks, merge, tracker finalization, and cleanup without asking again for routine authorization.
 
 Never bypass failing acceptance evidence or protected-branch/worktree policy.
+
+### Coordinator Write Authority
+
+When running as a feature coordinator, use delegated-only mode by default for production changes: the coordinator owns state, dispatch, review synthesis, integration decisions, verification planning, and reporting, but does not directly edit source, test, config, generated, or committed documentation files. Dispatch scoped ticket writers or explicit integration/fix writers for production edits.
+
+The coordinator may write durable coordination artifacts under `.agent/implement/<feature>/` and may inspect status, diffs, logs, and files. Direct production edits are allowed only when the user explicitly authorizes them or when the repository policy defines a narrow mechanical coordinator task. If the coordinator accidentally edits production files while delegated-only mode is active, stop, report the files, do not commit, and ask whether to keep, revert, or recreate the worktree.
+
+In OpenCode and any harness without verified nested subagent support, assume child writers cannot safely spawn their own subagents. The parent `implement-feature` coordinator owns all child launches. Do not ask ticket writers to run `Task`, spawn reviewers, or create nested task-owner agents; give each child a bounded input/output contract and reconcile its result in the parent.
+
+### PR Output Mode
+
+Default PR mode is repository-dependent:
+
+- Use `single` for prototypes, small features, or repositories where one final feature PR is reviewable.
+- Use `stacked` when review norms require manageable PRs, especially when multiple engineers must review separate chunks.
+
+Respect an explicit `--pr-mode single` or `--pr-mode stacked` argument. Record the selected mode and rationale in `integration.md` before opening PRs.
+
+After selecting the mode, read the matching reference before preparing PRs:
+
+- `single`: [references/single-pr-mode.md](references/single-pr-mode.md)
+- `stacked`: [references/stacked-pr-mode.md](references/stacked-pr-mode.md)
 
 ## Durable Coordinator State
 
@@ -101,10 +124,10 @@ Before creating worktrees or dispatching writers:
 1. Inspect the keystone/feature issue, child issues, open PRs, remote branches, shared coordinator state, and tracker comments/status for an existing implementation claim.
 2. Treat a claim renewed within the last 24 hours as fresh by default. If another fresh claim exists, do not start, resume, or dispatch the feature; report who/what claimed it, the last heartbeat, and continue looking for other work when work selection is the caller's goal.
 3. Never take over merely because a claim is older than 24 hours. Reconcile its coordinator/session status, PRs, branches, worktrees, commits, and latest tracker activity. If active work remains plausible, ask for direction or mark `NEEDS ATTENTION`. If the prior run is demonstrably abandoned, fence it, explain the takeover in the tracker, and issue a new coordinator ID.
-4. Publish a machine-readable claim comment on the keystone or primary feature issue before the first implementation side effect. Include coordinator ID, `IN PROGRESS`, UTC start and heartbeat timestamps, feature branch/worktree when known, durable state path, and the 24-hour freshness rule. Store the comment ID/URL in `feature.md` so the same comment can be edited rather than creating heartbeat noise.
+4. Publish a machine-readable claim in the configured tracker only when the repository explicitly uses one for implementation coordination. When no tracker integration exists, write the claim to local coordinator state instead. Include coordinator ID, `IN PROGRESS`, UTC start and heartbeat timestamps, feature branch/worktree when known, durable state path, and the 24-hour freshness rule. Store the claim path or URL in `feature.md`.
 5. Apply the repository's existing in-progress project status or label when available. If the tracker has no equivalent and repository policy permits label management, create/use a plainly named `in-progress` label so ordinary issue lists expose active ownership without parsing comments. Do not invent a parallel status taxonomy when the tracker already has one; the claim comment remains the portable source of coordinator identity and freshness.
 6. Renew the claim at least once every 12 hours while active and at every meaningful phase boundary or ticket-wave integration. Update the tracker-visible state to `VERIFYING`, `REPORTING`, `PR READY`, `BLOCKED`, or `NEEDS ATTENTION` when applicable.
-7. When dispatching a ticket, publish the coordinator ID, ticket attempt ID, UTC assignment time, and active branch/worktree on that ticket using the same project-native status mechanism. Clear or finalize the ticket claim when it is integrated, cancelled, failed, or fenced.
+7. When dispatching a ticket, record the coordinator ID, ticket attempt ID, UTC assignment time, and active branch/worktree in the ticket state. Publish it to an external tracker only when the repository has an explicit tracker integration. Clear or finalize the ticket claim when it is integrated, cancelled, failed, or fenced.
 
 A work-discovery or keystone-review pass must perform this collision check before recommending a feature. Freshly claimed work is already underway, not available work.
 
@@ -114,9 +137,10 @@ Create or reuse:
 
 - one feature integration branch and worktree based on the intended target
 - one isolated ticket branch/worktree per dispatched ticket
-- no ticket-level PRs
+- no ticket-level PRs in `single` mode
+- one stacked PR branch per ticket or tightly coupled ticket group in `stacked` mode
 
-Record target ref/SHA, feature branch, integration worktree, tracker URLs, and merge mode in `feature.md` and `integration.md`.
+Record target ref/SHA, feature branch, integration worktree, ticket sources, PR mode, tracker URLs when available, and merge mode in `feature.md` and `integration.md`.
 
 Never implement directly in protected release worktrees. Never allow concurrent writers in the feature integration worktree.
 
@@ -250,7 +274,7 @@ Run the plan against the exact feature integration SHA. If fixes change HEAD, in
 
 The feature is not ready while substantive deep-review findings, undocumented platform gaps, or required manual acceptance remain unresolved.
 
-### 12. Create the archival implementation report
+### 12. Create implementation reports
 
 After integrated behavior is verified, invoke `implementation-report` in Showcase/archive mode.
 
@@ -264,37 +288,41 @@ The report belongs in the canonical docs repository, not the code feature branch
 - final amended spec/ticket/graph snapshots
 - outcomes, integration SHA, drift ledger, and provenance manifest
 
-Open one docs PR. Record a provenance tuple of `(code PR head SHA, docs PR head SHA, archive manifest digest)` in both PRs. Any member change invalidates `PR READY` and requires report/PR-body regeneration and revalidation.
+In `single` mode, create one feature-level implementation report. In `stacked` mode, create one scoped implementation report per stack PR plus one feature-level rollup report. Each per-PR report should include the ticket(s), diff summary, acceptance evidence, review risks, validation evidence, dependency on earlier stack PRs, and any unresolved gaps. The rollup report should include the stack map, feature acceptance, integration SHA, drift ledger, final E2E/manual evidence, and unresolved risks/follow-ups.
+
+Open docs PRs according to repository docs policy. Record provenance tuples linking each code PR head SHA to its report head SHA and archive manifest digest. Any member change invalidates `PR READY` for that PR and may invalidate the feature rollup.
 
 If the current harness cannot invoke Pi’s native `imagegen`, hand the report stage to a Pi-capable report worker. Do not silently omit required diagrams or substitute a wrapped model CLI.
 
 Read [references/report-and-finalization.md](references/report-and-finalization.md).
 
-### 13. Open the final feature PR
+### 13. Prepare code PRs
 
-Push the feature integration branch and open one feature-level PR to the target branch. Ticket PRs are unnecessary.
+In `single` mode, push the feature integration branch and open one feature-level PR to the target branch.
 
-The PR body must include:
+In `stacked` mode, prepare a stack of PRs where each PR maps to one ticket or a small group of tightly coupled tickets. Stack branches come from approved ticket branches, build each PR on the previous PR in the stack, keep diffs reviewable, and preserve dependency order. The feature integration branch remains the combined acceptance branch, but it does not collapse or replace the stacked PRs. Do not close, merge, or supersede child PRs merely because the integration branch exists.
+
+Each PR body must include:
 
 - feature/keystone and included tickets
-- exact integration SHA
+- exact PR head SHA and, when applicable, integration SHA containing this PR
 - acceptance and verification summary
 - manual E2E/platform status
-- deep-review outcome
+- focused review outcome
 - specification-drift summary or explicit “no drift”
 - unresolved risks/follow-ups
-- archived implementation-report docs PR
+- archived implementation-report docs PR or report artifact
 
-Wait for PR checks and confirm they apply to the current head SHA. Route feature-caused failures through the diagnosis/fix/reverification loop.
+Wait for PR checks and confirm they apply to the current head SHA. Route feature-caused failures through the diagnosis/fix/reverification loop. In `stacked` mode, propagate required fixes through dependent PRs and refresh affected reports.
 
 ### 14. Reach `PR READY`
 
-When the code PR and docs archive PR are current and required gates pass:
+When the code PR(s) and docs archive PR/report artifacts are current and required gates pass:
 
 - mark feature `PR READY`
 - transition integrated tickets to `DONE` and close all non-keystone tickets
-- comment each ticket with feature PR, integration SHA, evidence summary, and docs-report PR
-- update the tracker-visible claim to `PR READY`, link both PRs, and stop active heartbeats; use the repository's review status if available
+- record each ticket with code PR, integration SHA, evidence summary, and docs-report PR/artifact
+- update the tracker-visible claim to `PR READY` when a tracker integration exists; otherwise update local state and stop active heartbeats
 - update keystone checklist/status
 - keep the keystone open until merge
 

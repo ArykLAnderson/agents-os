@@ -1,7 +1,7 @@
 ---
 description: "Reviews and validates code changes against acceptance criteria. Read-only — cannot modify files."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true

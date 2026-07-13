@@ -1,7 +1,7 @@
 ---
 description: "Evaluates proposals from the end user's perspective — focusing on user needs, experience quality, accessibility, and whether the solution actually solves the user's problem. Use in product, API, and feature-scoping deliberations."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true

@@ -1,7 +1,7 @@
 ---
 description: "Evaluates proposals from a pragmatic lens — favoring simplicity, proven solutions, and shipping speed. Use in deliberation councils or research sprints when a grounded, practical viewpoint is needed."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true

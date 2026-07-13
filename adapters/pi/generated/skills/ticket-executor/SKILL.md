@@ -1,8 +1,8 @@
 ---
 name: ticket-executor
-description: Implement exactly one already-triaged GitHub issue or local ticket as a scoped, tested change. Use only when the user explicitly asks to implement one ticket, or when `implement-feature` delegates one atomic ticket inside an isolated worktree. Do not use for keystones, milestones, PRDs, ticket graphs, markdown tasklists, multi-ticket requests, or “all slices”; use `implement-feature` or `slice-build` instead.
+description: Implement exactly one already-triaged local or tracker-backed ticket as a scoped, tested change. Use only when the user explicitly asks to implement one ticket, or when `implement-feature` delegates one atomic ticket inside an isolated worktree. Do not use for keystones, milestones, PRDs, ticket graphs, markdown tasklists, multi-ticket requests, or whole features; use `implement-feature` instead.
 user-invocable: true
-argument-hint: "<ticket-number | ticket-URL | ticket-file-path>"
+argument-hint: "<ticket-file-path | ticket-number | ticket-URL>"
 ---
 
 <!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->
@@ -31,17 +31,16 @@ Do **not** use this skill when the request includes:
 - broad implementation of a plan
 - ambiguous scope that may contain multiple vertical slices
 
-Route accepted ticket graphs and keystones to `implement-feature`. Route local markdown milestones that intentionally have no tracker tickets to `slice-build`.
+Route accepted ticket graphs, keystones, and whole-feature requests to `implement-feature`.
 
 ## Input
 
 Require one of:
 
-- GitHub issue/ticket number
-- GitHub issue/ticket URL
 - local ticket/brief file
+- tracker ticket number or URL, only when the repository explicitly uses that tracker for implementation work
 
-If no ticket is supplied, ask for one. Do not automatically select a ticket, mutate labels, or claim work from a queue.
+If no ticket is supplied, ask for one. Do not automatically select a ticket, mutate labels, create GitHub issues, or claim work from a shared queue.
 
 ## Process
 
@@ -71,7 +70,7 @@ Follow project instructions and the worktree skill.
 
 ### 3. Read the ticket and project context
 
-For a GitHub ticket, fetch its current title, body, labels, and linked context. For a local ticket, read the file completely.
+For a local ticket, read the file completely. For a tracker-backed ticket, fetch its current title, body, labels/status, and linked context only when the repository explicitly uses that tracker for implementation coordination.
 
 Extract:
 
@@ -93,7 +92,7 @@ If behavior cannot be resolved from the ticket and canonical context:
 1. Stop before guessing.
 2. Return `BLOCKED` with the exact contradiction or decision needed.
 3. Include the relevant source documents and a recommended resolution when possible.
-4. Comment, relabel, or modify the ticket only when explicitly authorized.
+4. Comment, relabel, or modify an external tracker ticket only when explicitly authorized and repository policy allows it.
 
 Do not silently narrow, expand, or reinterpret the ticket.
 

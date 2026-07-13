@@ -1,7 +1,7 @@
 ---
 description: "Reviews code for performance issues — N+1 queries, algorithmic complexity, concurrency bugs, memory leaks, bundle size, unnecessary re-renders, and missing caching. Read-only — cannot modify files."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-terra:medium"
 temperature: 0.3
 tools:
   read: true

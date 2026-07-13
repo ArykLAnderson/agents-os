@@ -1,7 +1,7 @@
 ---
 description: "Generates new the active agent harness agents and commands/skills from natural language descriptions. Also modifies existing ones. Use proactively when the user asks to create, update, or extend an agent, command, or skill."
 mode: subagent
-model: "gpt-5.6-sol"
+model: "litellm/openai/gpt-5.6-sol:medium"
 temperature: 0.3
 tools:
   read: true
