@@ -35,8 +35,23 @@ For nonblocking `medium` or `high` findings, maintain one phase-batched author r
 3. Apply supported nonbinding `medium` updates with their provenance; queue unresolved material author questions for the reconciliation phase.
 4. For `high` findings, retain accepted state and queue the proposed change. Do not use `author-approved` provenance or accepted status without a durable approval event.
 5. For `blocking` findings, stop affected downstream work and issue the immediate author interrupt.
-6. After explicit approval or correction resolves any semantic change, append superseding entries rather than destructively rewriting accepted history and create a later immutable Case snapshot, even when no artifact exists or no artifact is affected. Mark an artifact stale only when its pinned support no longer satisfies reader action; snapshot creation alone does not make an artifact stale.
+6. After explicit approval or correction resolves a change to accepted `INT`, `DEC`, `REQ`, `CON`, or scope, append a successor entry with a stable ID and `supersedes <prior-entry>` relation. Mark the prior entry `superseded` without overwriting its statement, provenance, sources, approval, or snapshot manifest. Historical entries remain inspectable, including rejected and superseded entries. A new source or agent finding does not supersede author-approved meaning without author approval.
+7. Create a later immutable Case snapshot after an accepted material semantic change, including author-approved supersession, a material evidence change, a material artifact-currency change, or a group of medium changes that collectively changes meaning. Record the prior snapshot in `Supersedes`; retain every earlier manifest and digest unchanged. Do not create a snapshot for mechanical cleanup, source-link repair, low-risk queue churn, deferral, or a low-risk observation or gap unless a downstream workflow explicitly needs a stable boundary.
+8. Issue a Staleness Notice when a captured source changes or becomes outdated, revoked, deprecated, or superseded; new evidence contradicts accepted content; an entry's `Review after` (`review-after`) date or event occurs; or pinned trace support changes, is superseded, or becomes unresolved. The notice identifies its trigger, affected entries, affected artifacts, affected trace units when known, and the required review disposition. Mark an artifact stale only when its pinned support no longer satisfies reader action; snapshot creation alone does not make an artifact stale. Do not mutate an artifact's pinned snapshot set while issuing the notice.
 
 ## Result
 
-Return applied working-ledger updates, consolidated findings with original locators, the materiality decision, immediate blockers, phase-batched author questions, snapshot decision, and affected artifact notices. Do not compose, publish, or claim stakeholder approval.
+Return applied working-ledger updates, consolidated findings with original locators, the materiality decision, immediate blockers, phase-batched author questions, snapshot decision, and affected artifact notices. Use this shape for every artifact that needs review:
+
+```markdown
+### STALE-001: review-brief support superseded
+
+- **Trigger:** accepted supersession
+- **Affected entries:** REQ-001, REQ-002
+- **Affected artifacts:** review-brief/artifact.md
+- **Affected units:** AU-001
+- **Pinned snapshot set:** SNAP-001
+- **Disposition:** review before reader action
+```
+
+Do not compose, publish, or claim stakeholder approval.

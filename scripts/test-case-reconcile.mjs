@@ -39,7 +39,7 @@ async function filesUnder(dir) {
   return files;
 }
 
-const [skill, contract, fixture, manifestOne, manifestTwo, mechanical, material, accepted, blocking, duplicates] = await Promise.all([
+const [skill, contract, fixture, manifestOne, manifestTwo, mechanical, material, accepted, supersession, staleness, trace, blocking, duplicates] = await Promise.all([
   readFile(path.join(reconcileRoot, "SKILL.md"), "utf8"),
   readFile(path.join(reconcileRoot, "resources/reconciliation.md"), "utf8"),
   readFile(path.join(fixtureRoot, "CASE.md"), "utf8"),
@@ -48,6 +48,9 @@ const [skill, contract, fixture, manifestOne, manifestTwo, mechanical, material,
   readFile(path.join(fixtureRoot, "mechanical-result.md"), "utf8"),
   readFile(path.join(fixtureRoot, "material-result.md"), "utf8"),
   readFile(path.join(fixtureRoot, "accepted-semantic-result.md"), "utf8"),
+  readFile(path.join(fixtureRoot, "supersession-result.md"), "utf8"),
+  readFile(path.join(fixtureRoot, "staleness-result.md"), "utf8"),
+  readFile(path.join(fixtureRoot, "artifacts/review-brief/artifact.trace.md"), "utf8"),
   readFile(path.join(fixtureRoot, "blocking-result.md"), "utf8"),
   readFile(path.join(fixtureRoot, "duplicate-findings.md"), "utf8"),
 ]);
@@ -56,7 +59,12 @@ assert(skill.includes("resources/reconciliation.md"), "case-reconcile must load 
 for (const phrase of ["semantic update ownership", "blocking", "phase-batched", "low-risk mechanical", "agent consensus", "delegation declaration locator", "later immutable Case snapshot"]) {
   assert(contract.includes(phrase), `reconciliation contract must govern ${phrase}`);
 }
-assert(contract.includes("snapshot creation alone does not make an artifact stale"), "staleness must remain conditional on reader action");
+for (const phrase of ["snapshot creation alone does not make an artifact stale", "without overwriting", "Historical entries remain inspectable", "Staleness Notice", "review-after"]) {
+  assert(contract.includes(phrase), `reconciliation contract must define ${phrase}`);
+}
+for (const trigger of ["captured source changes", "outdated, revoked, deprecated", "new evidence contradicts", "pinned trace support changes"]) {
+  assert(contract.includes(trigger), `reconciliation contract must define the ${trigger} staleness trigger`);
+}
 
 const entries = blocks(fixture, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
 const snapshots = blocks(fixture, /^### (SNAP-\d{3}): (.+)$/gm);
@@ -71,6 +79,7 @@ assert(mechanical.includes("**Materiality:** low"), "mechanical correction must 
 assert(mechanical.includes("**Outcome:** applied"), "safe mechanical correction must apply without author approval");
 assert(mechanical.includes("**Snapshot:** unchanged"), "mechanical correction must not create a snapshot");
 assert(!mechanical.includes("APR-"), "mechanical correction must not manufacture author approval");
+assert(!mechanical.includes("Supersedes"), "mechanical correction must not manufacture supersession");
 
 assert(material.includes("**Materiality:** high"), "semantic requirement change must be high materiality");
 assert(material.includes("**Outcome:** queued for author approval"), "material change must wait for author approval");
@@ -85,10 +94,30 @@ assert(accepted.includes("**Outcome:** applied after author approval"), "accepte
 assert(snapshotTwo?.fields.get("Supersedes") === "SNAP-001", "accepted semantic change must create a later snapshot");
 assert(snapshotTwo?.fields.get("Entries")?.includes(sha256(manifestTwo)), "later snapshot manifest digest must match immutable bytes");
 for (const id of ["OBS-001", "REQ-001", "REQ-002"]) assert(snapshotTwoEntries.some((entry) => entry.id === id), `later snapshot must retain resulting accepted entry ${id}`);
-assert(!snapshotTwoEntries.some((entry) => ["superseded", "rejected"].includes(entry.fields.get("Status"))), "later snapshot must exclude superseded and rejected entries");
-assert(!manifestTwo.includes("OBS-002") && !manifestTwo.includes("ALT-001"), "later snapshot must exclude superseded and rejected entry IDs");
+assert(snapshotTwoEntries.find((entry) => entry.id === "REQ-001")?.fields.get("Status") === "superseded", "later complete-state snapshot must retain superseded historical entries");
+assert(!manifestTwo.includes("OBS-002") && !manifestTwo.includes("ALT-001"), "later snapshot must exclude unrelated superseded and rejected entries");
 assert(accepted.includes("**Artifacts:** none affected") && accepted.includes("**Staleness:** none"), "semantic snapshots must not require affected or stale artifacts");
 for (const field of ["Authority", "Author", "Recorded", "Locator", "Outcome", "Approved entries", "Final wording", "Delegation declaration locator", "Delegation scope"]) assert(accepted.includes(`**${field}:**`), `delegated approval must include ${field}`);
+
+const supersededEntries = blocks(supersession, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
+const supersededRequirement = supersededEntries.find((entry) => entry.id === "REQ-001");
+const successorRequirement = supersededEntries.find((entry) => entry.id === "REQ-002");
+assert(supersededRequirement?.fields.get("Status") === "superseded", "prior accepted requirement must remain inspectable as superseded");
+assert(successorRequirement?.fields.get("Status") === "accepted", "successor requirement must become the accepted current meaning");
+assert(successorRequirement?.fields.get("Relations") === "supersedes REQ-001", "successor requirement must link to the historical requirement");
+assert(supersession.includes("**Outcome:** applied after author approval"), "semantic supersession must require durable approval");
+assert(supersession.includes("**Snapshot:** SNAP-002"), "approved semantic supersession must create a later snapshot");
+assert(supersession.includes("**Overwrite:** none"), "semantic supersession must not overwrite accepted history");
+assert(manifestOne.includes("### REQ-001:") && manifestTwo.includes("### REQ-002:"), "each immutable snapshot manifest must preserve its own accepted state");
+
+const notices = blocks(staleness, /^### (STALE-\d{3}): (.+)$/gm);
+assert(notices.length === 1, "fixture must consolidate the affected trace support into one staleness notice");
+assert(notices[0]?.fields.get("Affected entries") === "REQ-001, REQ-002", "staleness notice must identify changed and successor entries");
+assert(notices[0]?.fields.get("Affected artifacts") === "review-brief/artifact.md", "staleness notice must identify the affected artifact");
+assert(notices[0]?.fields.get("Affected units") === "AU-001", "staleness notice must identify affected trace units");
+assert(notices[0]?.fields.get("Disposition") === "review before reader action", "staleness notice must preserve the required reader-action review");
+assert(trace.includes("**Canonical support:** reconciliation-fixture/SNAP-001/REQ-001"), "trace fixture must pin support to the historical snapshot");
+assert(trace.includes("**Trace state:** model-changed"), "changed pinned support must mark the trace state stale");
 
 const blockingEntries = blocks(blocking, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
 for (const id of ["REQ-003", "GAP-001"]) assert(blockingEntries.some((entry) => entry.id === id), `blocking fixture must preserve ${id}`);

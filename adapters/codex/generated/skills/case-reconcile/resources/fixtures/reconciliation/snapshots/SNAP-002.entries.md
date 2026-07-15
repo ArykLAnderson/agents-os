@@ -8,7 +8,7 @@
 ### REQ-001: accessible artifact registration
 
 - **Statement:** Register accessible supplied artifacts before extracting semantic entries.
-- **Status:** accepted
+- **Status:** superseded
 - **Provenance:** author-approved
 - **Sources:** none: author approval
 - **Approval:** APR-001
@@ -20,3 +20,4 @@
 - **Provenance:** author-approved
 - **Sources:** none: delegated author correction
 - **Approval:** APR-002
+- **Relations:** supersedes REQ-001
