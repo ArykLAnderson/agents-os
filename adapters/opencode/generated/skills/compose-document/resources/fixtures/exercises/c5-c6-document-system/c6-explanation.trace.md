@@ -1,7 +1,7 @@
 # Artifact Trace
 
 - **Artifact:** `c6-explanation.md` and `c6-explanation.html`
-- **Revision:** `exercise-05-attempt-02` re-exercised from `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass for `exercise-05-attempt-02`; exact Markdown/HTML digests and inspected revision are recorded by the following evidence pass
 - **Pinned Case snapshot:** `notification-retry-policy/SNAP-005`
 - **Qualified non-Case inputs:** local `case-intake`, `case-reconcile`, `compose-document`, `shape-document`, `trace-artifact`, `review-document`, `format-document`, and `publish-document` instructions
 - **Trace status:** reviewable; publication intentionally blocked because no destination or explicit authorization exists

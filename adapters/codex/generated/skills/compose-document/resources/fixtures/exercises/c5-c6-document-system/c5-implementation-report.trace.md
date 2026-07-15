@@ -1,7 +1,7 @@
 # Artifact Trace
 
 - **Artifact:** `c5-implementation-report.md`
-- **Implementation revision:** `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass; exact artifact digest and inspected revision are recorded by the following evidence pass
 - **Comparable baseline:** `71d48b6a6c62184d2f4f553348f3aca4d658a26e`
 - **Pinned Case snapshot:** `notification-retry-policy/SNAP-005`
 - **Trace status:** reviewable local evidence only

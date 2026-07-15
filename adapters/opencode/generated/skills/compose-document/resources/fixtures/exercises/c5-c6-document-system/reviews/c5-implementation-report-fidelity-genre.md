@@ -1,6 +1,6 @@
 # C5 Implementation Report Fidelity And Genre Review
 
-- **Artifact revision:** `c5-implementation-report.md` at `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass; exact inspected artifact digest and revision are recorded by the following evidence pass
 - **Trace:** `c5-implementation-report.trace.md`
 - **Comparable baseline:** `71d48b6a6c62184d2f4f553348f3aca4d658a26e`
 - **Review boundary:** local repository handoff only; not a production implementation report.

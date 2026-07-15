@@ -1,6 +1,6 @@
 # C2 PRD Fidelity And Genre Review
 
-- **Artifact revision:** `c2-prd.md` at `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass; exact inspected artifact digest and revision are recorded by the following evidence pass
 - **Trace:** `c2-prd.trace.md`
 - **Pinned snapshot:** `notification-retry-policy/SNAP-005`
 - **Review boundary:** local fidelity and genre inspection; not product approval or implementation authorization.
