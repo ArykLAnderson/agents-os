@@ -1,0 +1,87 @@
+{
+  "bundle_id": "mixed-intake",
+  "title": "Mixed intake source bundle",
+  "captured": "2026-07-15",
+  "artifacts": [
+    {
+      "id": "conversation-notes",
+      "kind": "current-conversation",
+      "title": "Author conversation notes for document system intake",
+      "location": "sources/conversation-notes.md",
+      "captured": "2026-07-15",
+      "source_updated": "2026-07-15",
+      "source_status": "author-supplied",
+      "reliability": "Author supplied current-session notes; exact full conversation is not preserved unless separately supplied."
+    },
+    {
+      "id": "planning-transcript",
+      "kind": "meeting-transcript",
+      "title": "Document system planning transcript",
+      "location": "sources/planning-transcript.vtt#t=00:03:12-00:18:44",
+      "captured": "2026-07-15",
+      "source_updated": "unknown",
+      "source_status": "working-transcript",
+      "reliability": "Transcript wording is available; speaker attribution and source update time are not verified."
+    },
+    {
+      "id": "prior-rfc",
+      "kind": "existing-document",
+      "title": "Prior AI document workflow RFC",
+      "location": "https://example.invalid/docs/ai-document-workflow-rfc",
+      "captured": "2026-07-15",
+      "source_updated": "2026-06-30",
+      "source_status": "historical-draft",
+      "reliability": "Existing document may be stale; current authority is not declared."
+    },
+    {
+      "id": "tracker-item",
+      "kind": "tracker-item",
+      "title": "DOC-42 Case intake requirements",
+      "location": "tracker:DOC-42#description",
+      "captured": "2026-07-15",
+      "source_updated": "unknown",
+      "source_status": "open",
+      "reliability": "Ticket authority and latest update time are unknown; requirements remain proposed until author approval."
+    },
+    {
+      "id": "code-locator",
+      "kind": "code-reference",
+      "title": "Case model parser interface",
+      "location": "repo:document-system path:src/case/model.ts symbol:parseCaseModel commit:abc1234",
+      "captured": "2026-07-15",
+      "source_updated": "abc1234",
+      "source_status": "code-locator",
+      "reliability": "Code locator is fixed to a commit; generated interfaces or runtime behavior are not verified by registration alone."
+    },
+    {
+      "id": "metrics-dashboard",
+      "kind": "metric-set",
+      "title": "Document review burden dashboard excerpt",
+      "location": "dashboard:review-burden#panel=cycle-time&range=2026-06-01..2026-07-01",
+      "captured": "2026-07-15",
+      "source_updated": "2026-07-01",
+      "source_status": "dashboard-export",
+      "reliability": "Metric range is supplied; query definition and dashboard revision are not expanded during registration."
+    },
+    {
+      "id": "research-output",
+      "kind": "research-output",
+      "title": "Agent research summary on document traceability",
+      "location": "sources/research-summary.md",
+      "captured": "2026-07-15",
+      "source_updated": "2026-07-14",
+      "source_status": "agent-generated-summary",
+      "reliability": "Agent research summary is secondary evidence; primary links are not expanded without bounded discovery."
+    },
+    {
+      "id": "inaccessible-source",
+      "kind": "unavailable-source",
+      "title": "Private stakeholder interview notes",
+      "location": "local/unavailable: source path redacted from fixture",
+      "captured": "2026-07-15",
+      "source_updated": "unknown",
+      "source_status": "unavailable",
+      "reliability": "Limited reliability: content is inaccessible; only known metadata is registered and no content is inferred."
+    }
+  ]
+}
