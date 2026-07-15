@@ -6,11 +6,59 @@
 - **Decision:** **NEEDS ATTENTION - NOT READY FOR COMPATIBILITY-WRAPPER MIGRATION**
 - **Decision basis:** DS-010, DS-012, the ticket-06 acceptance criteria, and the integrated C1-C6 local evidence listed below.
 
+## Frozen Canonical Inputs
+
+The following local files are the canonical decision inputs for this record. Their absolute paths and SHA-256 digests make later drift visible; they are not copied into this repository or treated as portable-skill inputs.
+
+| Input | Canonical local path | SHA-256 | Relevant decision surface |
+|---|---|---|---|
+| Specification | `/Users/mont/workspace/mercari/ai/plans/document-system/SPEC.md` | `49f926d48f91bdab128351923d471713552d9b808169ad1d57e763c6591f89be` | Six paired cases and hard gates: `#proof-cases` (lines 429-455); no migration before proof: `#implementation-slices` (lines 343-360); deferred proof inputs: `#deferred-implementation-choices` (lines 484-497). |
+| Evaluation criteria | `/Users/mont/workspace/mercari/ai/plans/document-system/DS-010-evaluation.md` | `2774c1e85bf7b9ca24bf7f91b7500026c2e49edca0b5044a7cc5d96f2f955d1f` | Paired-baseline rule: `#resolution` (lines 3-7); hard candidate failures: `#hard-gates` (lines 30-41); evaluation dimensions and reviewers: `#evaluation-dimensions` through `#review-roles` (lines 43-85); readiness gates: `#system-readiness` (lines 87-102); per-case decision contents: `#evidence-bundle` (lines 104-127). |
+| Proof-artifact plan | `/Users/mont/workspace/mercari/ai/plans/document-system/DS-012-proof-artifacts.md` | `a6f21cf12a31f47339249a026dd8777d890d9b12180635c0bfe92de9f14d17dc` | Case/strategy/format matrix: `#artifact-matrix` (lines 7-16); required Case families and source reuse: `#candidate-cases` and `#source-reuse` (lines 18-35); sequence: `#sequence` (lines 37-50); required bundle: `#per-case-evidence` (lines 52-78); safe-publication proof: `#safe-publishing-proof` (lines 95-103); mutation proof: `#trace-mutation-proof` (lines 105-107). |
+| Ticket 06 | `/Users/mont/workspace/mercari/ai/plans/document-system/issues-v2/06-run-readiness-proof-and-migrate-wrappers.md` | `6d9eb70f4ee7b1efec1a74b128152cf56222e4728e6af736d65845eb8270cdd0` | Required evidence, hard-gate decision, conservative blocker behavior, and post-acceptance-only wrapper migration: lines 19-45. |
+
 ## Decision Rule
 
 DS-010 requires six paired cases: each candidate must be compared with a frozen current-workflow baseline made from the same source bundle for the same reader action. Readiness also requires representative readers, a practical author-burden tolerance, controlled trace mutations across at least three cases, and inspected rendered Notion and HTML outputs. A local simulation is comprehension evidence only; it is not a representative-reader result, stakeholder approval, or operational acceptance.
 
 This record does not treat a stale historical artifact, a later Case-backed artifact with a changed reader action, a repository revision, local Chromium inspection, or an agent simulation as a substitute for a missing required input.
+
+## Canonical Requirement Mapping
+
+This mapping prevents a local evidence artifact from being promoted into a readiness result merely because it resembles a required proof artifact.
+
+| Requirement | Canonical source | Required proof artifact or observation | Current local mapping and outcome |
+|---|---|---|---|
+| Same-source, same-reader-action pair for every C1-C6 case | DS-010 `#resolution`; SPEC `#proof-cases` | Frozen current-workflow baseline, candidate, input/prompt/version record, and per-case decision | C1/C4 are frozen historical controls but change snapshot and/or action; C5 names a revision, not a baseline artifact; C2/C3/C6 lack baselines. **NOT ESTABLISHED.** |
+| No material fidelity/status/authority/unsupported-claim failure | DS-010 `#hard-gates`, `#fidelity`; SPEC `#proof-cases` | Independent source-fidelity review against pinned Case snapshots and trace | C1-C6 have scoped local fidelity evidence, but not six independent paired proof packets. **NOT ESTABLISHED for readiness; no known local critical failure.** |
+| Complete trace support, omission accounting, and material-unit coverage | DS-010 `#trace-coverage-and-maintenance`; DS-012 `#per-case-evidence` | Candidate trace, selection manifest, trace-coverage and trace-maintenance records | Trace sidecars exist for C1-C6; only C1 has an explicit local mutation inspection. Required per-case proof bundle is incomplete. **NOT ESTABLISHED.** |
+| No missed material stale unit across at least three cases | DS-010 `#trace-coverage-and-maintenance`; DS-012 `#trace-mutation-proof` | Controlled mutations covering decision, observation status, gap, requirement, anchor, table row, and visual edge, with every stale unit recorded | C1 covers decision/anchor/table cell; C4 demonstrates later staleness, not the complete controlled matrix. **NOT ESTABLISHED.** |
+| Candidate usefulness, concision/value, comprehension, and burden comparison | DS-010 `#concision-and-information-value`, `#reader-comprehension-and-action`, `#author-burden`, `#system-readiness` | Ordinal baseline/candidate comparison, representative-reader responses, and paired burden record using an accepted tolerance | No fair pairs, representative readers, or burden tolerance. Simulations are qualified local comprehension evidence only. **NOT ESTABLISHED.** |
+| Rendered Notion and HTML preserve meaning | DS-010 `#presentation`; SPEC `#proof-cases`; DS-012 `#artifact-matrix`, `#safe-publishing-proof` | Rendered targets, inspected navigation/tables/visuals/narrow viewports, and safe-publication/post-publish records where authorized | C4/C6 local HTML inspection is present. No rendered/fetched Notion page exists; C1/C2/C3/C5 target proof is incomplete. **NOT ESTABLISHED.** |
+| Bounded, actionable consolidated review findings | DS-010 `#system-readiness`; SPEC `#review` | Source-fidelity, genre/audience, and fresh-reader reports consolidated by semantic issue for each case and across the set | Individual local exercise reviews converge; no complete six-case independent review bundle or cross-case consolidation exists. **NOT ESTABLISHED.** |
+| C1-C6 artifact and format/strategy coverage | DS-012 `#artifact-matrix`, `#candidate-cases`, `#source-reuse`; SPEC `#proof-cases` | Six Case-backed candidates, required strategy combinations, required Markdown/Notion/HTML outputs, and C6 flagship visuals | All adapters have local exercise artifacts, but the evidence reuses one fixture/local instructions rather than DS-012 K1-K5 sources and lacks several required rendered formats. **NOT ESTABLISHED.** |
+| Controlled Notion create/update and HTML attachment/embed proof | DS-012 `#safe-publishing-proof`; ticket 06 AC 32 | Expressly authorized controlled destination, create/update inspection, child-content safety, attachment/embed, post-publish fetch, and target locators | No destination or permission exists. This is deliberately deferred until local paired gates are ready. **BLOCKED, not waived.** |
+| Wrapper delegation only after accepted readiness | SPEC `#migration`; ticket 06 AC 33 | Explicit accepted readiness decision naming the evidence revision, then local wrapper-delegation exercise | Current decision is NEEDS ATTENTION. No wrappers are implemented or migrated. **BLOCKED.** |
+
+## Required Proof Bundle Mapping
+
+DS-010 and DS-012 require each proof case to retain the following evidence. This is a completeness map, not a claim that a missing file should be synthesized from existing prose.
+
+| Proof bundle item | C1 | C2 | C3 | C4 | C5 | C6 |
+|---|---|---|---|---|---|---|
+| Source bundle and approved/pinned Case snapshot | Local fixture evidence | Local fixture evidence | Local fixture evidence | Local fixture evidence | Local fixture evidence | Local fixture/local skill inputs |
+| Frozen same-action current-workflow baseline with prompt/version and digest | Weak, action changed | Missing | Missing | Weak, inputs/action changed | Weak, repository revision only | Missing |
+| Candidate selection manifest, artifact, and trace | Present | Candidate and trace; no separate readiness bundle | Candidate and trace; no separate readiness bundle | Present across local artifacts | Candidate and trace; no separate readiness bundle | Candidate and trace; no separate readiness bundle |
+| Required target representations and rendered inspection | Missing required Notion | Missing required Notion | Missing required HTML | Local HTML only; Notion source unrendered | Missing required HTML | Local HTML only; Notion unrendered |
+| Fidelity/genre review | Present | Present, combined local review | Present, combined local review | Present, staged local review | Present, combined local review | Present, staged local review |
+| Representative reader comparison | Simulation only | Missing | Missing | Simulation only | Missing | Simulation only |
+| Concision/value comparison | Qualitative only | Missing | Missing | Missing | Missing | Missing |
+| Author-burden comparison against accepted threshold | Local candidate record only | Missing | Missing | Local candidate record only | Missing | Missing |
+| Controlled trace-maintenance mutation evidence | Partial | Missing | Missing | Partial staleness evidence only | Missing | Missing |
+| Safe-publish and post-publish verification | Blocked | Missing/blocked | Missing/blocked | Blocked | Missing/blocked | Missing/blocked |
+| Per-case readiness decision | Local exercise decision only | Missing | Missing | Local artifact decision only | Missing | Local artifact decision only |
+
+`Present` in this table means an inspectable local exercise artifact exists. It does not mean the item satisfies the corresponding DS-010 paired-proof requirement.
 
 ## Evidence Inventory
 
@@ -63,18 +111,27 @@ Status meanings: **LOCAL PASS** means the cited local artifact supports the narr
 6. Zero or low recorded questions is not an author-burden pass without a baseline process comparison and an author-selected practical tolerance. No coarse active author time is recorded for all six cases.
 7. The current local fixture demonstrates useful semantic boundaries and re-exercise behavior, but it does not cover the DS-012 K1-K5 Case diversity or the required C3/C5 implementation-slice decision.
 
-## Decision-Ready HITL Request
+## Stage 1 HITL Request: Local Pair Gates
 
-Acceptance of readiness is not requested yet. To run the proof rather than manufacture it, the author or designated coordinator must provide the following bounded inputs:
+Acceptance of readiness is not requested. The minimum decision set needed now is limited to local paired-proof preparation; it does not authorize Notion, publication, wrappers, Git push, or pull requests.
 
-1. Six frozen baseline artifacts, or explicit approval of an honest exception for a named case. For each: source bundle digest/locator, current-workflow skill/prompt version, output digest, capture time, intended reader, and reader action. Each must use the same sources and action as its candidate.
-2. Actual representative readers for the genre-specific actions, distinct from artifact authors. Their review packet must contain only the frozen baseline/candidate materials and questions appropriate to the action.
-3. A practical author-burden tolerance and comparison method: acceptable interruption/question pattern, whether repeated repairs fail, and coarse active-time category for both paths.
-4. A controlled Notion destination and express authorization naming the system and allowed create/update actions, if rendered-Notion and safe-publication proof are required. Without this, retain the explicit Notion gate as blocked.
-5. A real or controlled implementation slice and fair baseline for C3/C5, plus the intended reader actions.
-6. Approval of a controlled mutation plan spanning at least three cases: decision, observation status, gap resolution, requirement, anchor, table row, and visual edge. Every affected material unit must be recorded; overflagging is a maintenance cost, not a pass substitute.
+1. **Fair baselines and same actions:** select or approve an honest named exception for each C1-C6 frozen current-workflow baseline. For every selected pair, record source-bundle digest/locator, current-workflow skill/prompt version, output digest, capture time, intended reader, and one identical reader action for baseline and candidate.
+2. **Representative readers:** name actual genre-appropriate readers, distinct from artifact authors, and approve their isolated review packet and questions. The packet may expose only the required baseline/candidate materials and action; simulations remain supplemental evidence only.
+3. **Burden threshold:** set the practical comparison rule before execution: acceptable interruption and question pattern, treatment of repeated source-fidelity repair, and an acceptable coarse active-author-time category for both paths.
+4. **Mutation plan:** approve at least three named cases and a controlled mutation matrix covering decision, observation status, gap resolution, requirement, anchor, table row, and visual edge. Record expected affected units, expected non-affected units, and whether overflagging is acceptable maintenance cost.
+5. **C3/C5 scope choice:** select a real or controlled implementation slice for C3 and C5, their same-action baseline candidates, and their intended review audience. A repository commit alone is not sufficient.
 
-After those inputs are supplied, execute independent source-fidelity, genre/audience, and fresh-reader reviews; compare each pair ordinally; record C1-C6 decisions; and make a new readiness decision. A failure on a hard gate remains a blocker and must not be averaged into a score.
+After these Stage 1 inputs are supplied, build the paired local proof bundles, run independent source-fidelity and genre/audience review, collect representative-reader and burden evidence, execute approved mutations, and record a fresh C1-C6 decision matrix. A hard-gate failure remains a blocker and must not be averaged into a score.
+
+## Stage 2 HITL Request: Controlled Notion Proof
+
+Request this only after Stage 1 local pair gates are ready to exercise and the artifacts have no unresolved local semantic or trace blocker. It is a separate permission, not a prerequisite for selecting baselines or readers.
+
+1. Name a controlled private/test Notion destination and the exact permitted action for each proof artifact: create, update, or both.
+2. Confirm permission to fetch existing content before any update and to inspect child-content safety, attachment/embed behavior, rendered output, and final target locators after the allowed action.
+3. Confirm whether the HTML attachment/embed proof may use the same controlled destination and which native searchable summary is required.
+
+Without this Stage 2 authorization, rendered-Notion, controlled publication, and post-publish gates remain **BLOCKED**. Local pair evidence may proceed, but it cannot be reported as satisfying those gates.
 
 ## Post-Acceptance Wrapper Migration Plan
 
