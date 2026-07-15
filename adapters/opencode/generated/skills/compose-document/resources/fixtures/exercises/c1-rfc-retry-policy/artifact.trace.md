@@ -1,8 +1,10 @@
 # Artifact Trace
 
-- **Artifact:** notification-retry-policy decision brief, candidate rev-02
+- **Artifact:** notification-retry-policy decision record, candidate rev-03
 - **Snapshot set:** notification-retry-policy/SNAP-003
-- **Reader action:** ratify that the brief faithfully presents the already-accepted four-retry policy as input to separate implementation planning
+- **Case-backed reader action:** none; DEC-002 is already accepted
+- **Supplied exercise action:** review whether this record faithfully presents DEC-002
+- **Publication status:** not publication-ready; the supplied exercise action has no Case authority
 - **Trace status:** current
 
 ## Units
@@ -79,25 +81,16 @@
 - **Status:** supported
 - **Notes:** Status labels remain visible to prevent historical material being read as current.
 
-### AU-009: Ratification boundary
+### AU-009: Decision-record boundary
 
-- **Anchor:** ratification-boundary
-- **Assertion:** The policy is already accepted; reader ratification is limited to faithful presentation for a separate planning discussion and does not authorize implementation, ownership, schedule, or rollout.
+- **Anchor:** record-boundary
+- **Assertion:** The policy is already accepted; this record may inform later planning but does not authorize implementation, ownership, schedule, or rollout.
 - **Support:** notification-retry-policy/SNAP-003/DEC-002; notification-retry-policy/SNAP-003/GAP-001; notification-retry-policy/SNAP-003/INT-001
 - **Derivation:** synthesis
 - **Status:** supported
 - **Notes:** APR-002 is an approval record at the Case root, not a snapshot entry.
 
-### AU-010: Requested action
-
-- **Anchor:** requested-action
-- **Assertion:** The reader is asked only to ratify faithful presentation of the accepted policy as input to separate implementation planning.
-- **Support:** notification-retry-policy/SNAP-003/INT-001; notification-retry-policy/SNAP-003/DEC-002
-- **Derivation:** synthesis
-- **Status:** supported
-- **Notes:** The action makes no implementation commitment.
-
-### AU-011: Omitted duplicate historical observation
+### AU-010: Omitted duplicate historical observation
 
 - **Anchor:** tradeoffs
 - **Assertion:** OBS-001 is omitted because superseded DEC-001 carries the same reader-relevant three-retry history.

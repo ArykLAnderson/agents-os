@@ -3,7 +3,9 @@
 - **Artifact:** notification-retry-policy decision brief, candidate rev-02
 - **Genre:** RFC
 - **Pinned snapshot set:** notification-retry-policy/SNAP-003
-- **Reader action:** ratify that the brief faithfully presents the already-accepted four-retry policy as input to separate implementation planning
+- **Artifact type:** decision record
+- **Case-backed reader action:** none; DEC-002 is already accepted
+- **Supplied exercise action:** review whether the decision record faithfully presents DEC-002
 - **Recommended shaping strategy:** `decision-brief`; fit confirmed because one accepted decision and one approver action are in scope
 
 ## Selected Entries
@@ -27,7 +29,7 @@
 
 ## Blocking Gaps And Conflicts
 
-No composition blocker remains for the narrow ratification action. The policy is already accepted in DEC-002 and APR-002, so the reader is not asked to approve it again. The Case does not specify an implementation owner, schedule, rollout plan, or authorization to begin implementation. The candidate may only serve as input to a separate planning discussion and must not imply any of those facts.
+No composition blocker remains for the decision record. The policy is already accepted in DEC-002 and APR-002, so the artifact has no Case-backed reader action. The supplied exercise action is external review context and cannot become Case authority, trace support, or a publication instruction. The Case does not specify an implementation owner, schedule, rollout plan, or authorization to begin implementation; the record must not imply any of those facts.
 
 ## RFC Composition Basis
 
@@ -35,4 +37,4 @@ No composition blocker remains for the narrow ratification action. The policy is
 2. **Scope:** migration retry behavior before dead-lettering; no claim about unrelated notification policy.
 3. **Evidence:** three retries missed delivery rate; four sustained it; five exceeded the dead-letter latency target.
 4. **Trade-off:** retain three retries only as superseded history and reject the five-retry proposal for this migration.
-5. **Action:** ratify that the brief faithfully presents the accepted direction as input to separate implementation planning; do not authorize implementation or request an owner assignment.
+5. **Record boundary:** document the accepted direction as input to a later planning discussion without requesting approval, implementation, or owner assignment.

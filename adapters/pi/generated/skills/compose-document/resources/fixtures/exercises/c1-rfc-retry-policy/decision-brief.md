@@ -26,10 +26,10 @@ The Case records qualitative test conclusions only. It does not provide sample s
 
 The former three-retry migration direction is retained only as superseded history. A five-retry proposal was rejected because the validation result exceeded the latency target. Neither alternative is current policy.
 
-## Ratification Boundary {#ratification-boundary}
+## Record Boundary {#record-boundary}
 
-The retry-policy decision is already accepted; this brief does not request a second policy approval. A reader may ratify only that this brief faithfully presents the accepted policy for use as input to a separate implementation-planning discussion. The Case does not identify an implementation owner, schedule, rollout plan, or authorization to begin implementation.
+The retry-policy decision is already accepted; this is a decision record, not a request for a reader action. It may inform a separate implementation-planning discussion, but the Case does not identify an implementation owner, schedule, rollout plan, or authorization to begin implementation.
 
-## Requested Action {#requested-action}
+## Exercise Context {#exercise-context}
 
-Ratify that this brief faithfully presents the accepted four-retry policy as input to a separate implementation-planning discussion. Do not treat this ratification as policy approval, implementation authorization, owner assignment, schedule approval, or rollout approval.
+This local exercise asks a reviewer to inspect whether the record faithfully presents the accepted policy. That supplied exercise instruction is not Case authority, an approved reader action, or a publication instruction. Do not treat the record as policy approval, implementation authorization, owner assignment, schedule approval, or rollout approval.

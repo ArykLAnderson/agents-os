@@ -6,7 +6,7 @@ This is a local, human-executed record of invoking `compose-document`, `shape-do
 - **Case:** notification-retry-policy
 - **Snapshot set:** notification-retry-policy/SNAP-003
 - **Genre:** RFC composition, shaped as a decision brief
-- **Reader action:** ratify that this brief faithfully presents the already-accepted four-retry policy as input to a separate implementation-planning discussion
+- **Supplied exercise action:** review whether the decision record faithfully presents the already-accepted four-retry policy
 - **Source bundle:** `../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/`
 - **External actions:** none
 
@@ -19,4 +19,4 @@ This is a local, human-executed record of invoking `compose-document`, `shape-do
 5. The reviews inspect fidelity, genre, editorial quality, and fresh-reader comprehension in order.
 6. `mutation-staleness-inspection.md` changes one decision, one row anchor, and one material table cell in a copied candidate to demonstrate unit-scoped stale detection. The canonical Case and candidate remain unchanged.
 
-The retained notification RFC is a historical stale baseline pinned to SNAP-001. This exercise neither revises nor republishes it.
+The retained notification RFC is a historical stale baseline pinned to SNAP-001. This exercise neither revises nor republishes it. The supplied exercise action is not Case authority, a trace-supported reader action, or a publication instruction.

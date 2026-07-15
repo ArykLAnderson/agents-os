@@ -4,9 +4,9 @@ Select an RFC basis for a technical direction, decision, or review action.
 
 ## Reader Contract
 
-- Name the intended technical reader and the single action requested: approve a direction, reject it, request a bounded follow-up, or review a proposal.
+- Name the intended technical reader and any Case-backed action requested: approve a direction, reject it, request a bounded follow-up, or review a proposal. Keep a supplied exercise action distinct from Case-backed meaning.
 - State the current decision, proposal, or uncertainty in the first composed unit. Do not imply approval when the selected Case entries do not carry it.
-- When the selected direction is already accepted, do not ask the reader to approve it again. Request only a bounded ratification, review, or planning-input action, and state what that action cannot authorize.
+- When the selected direction is already accepted, do not ask the reader to approve it again. Either produce a decision record with no reader action, or record any supplied exercise review action as external context rather than Case authority.
 - Use the pinned snapshot set as the only source of accepted meaning. Preserve the Case ID for every selected entry.
 
 ## Selection Manifest

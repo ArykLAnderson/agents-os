@@ -15,6 +15,6 @@
 
 ## Observed Re-Exercise And Refinement
 
-The first candidate incorrectly asked for approval of an already-accepted policy and used an unsupported "normal migration process" assignment. Its table had only a table-level unit, so mutations could not identify an individual material row. The revised canonical resources require material row anchors and row units. Candidate rev-02 removes the unsupported process claim, narrows the reader action to faithful-presentation ratification, exposes the qualitative evidence boundary, and records isolated reader-review inputs.
+The first candidate incorrectly asked for approval of an already-accepted policy and used an unsupported "normal migration process" assignment. Its table had only a table-level unit, so mutations could not identify an individual material row. Candidate rev-02 removed the process claim but still treated ratification as Case-supported. The revised canonical resources distinguish supplied exercise actions from Case-backed reader actions. Candidate rev-03 is a decision record with no Case-backed reader action; its local review instruction is explicit external context, is not traced as support, and prevents publication readiness.
 
-The re-exercise applied the affected shaping, trace, and fresh-reader seams again. The original Case, snapshot manifests, retained artifact, and retained trace were not edited.
+The re-exercise applied the affected composition, shaping, trace, genre, fidelity, and fresh-reader seams again. The original Case, snapshot manifests, retained artifact, and retained trace were not edited.
