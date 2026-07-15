@@ -29,6 +29,19 @@ function blocks(markdown, expression) {
   });
 }
 
+function approval(markdown, id) {
+  const headings = [...markdown.matchAll(/^## Approval Event (APR-\d+)$/gm)];
+  const index = headings.findIndex((heading) => heading[1] === id);
+  if (index < 0) return undefined;
+  const start = headings[index].index + headings[index][0].length;
+  const nextApproval = index + 1 < headings.length ? headings[index + 1].index : markdown.length;
+  const nextSection = markdown.slice(start).search(/\n#{1,6} /);
+  const end = nextSection >= 0 ? Math.min(nextApproval, start + nextSection) : nextApproval;
+  const fields = new Map();
+  for (const field of markdown.slice(start, end).matchAll(/^- \*\*(.+?):\*\* (.+)$/gm)) fields.set(field[1], field[2]);
+  return fields;
+}
+
 async function filesUnder(dir) {
   const files = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -116,12 +129,19 @@ assert(manifestOne.includes("### REQ-001:") && manifestTwo.includes("### REQ-002
 const reconciledEntries = blocks(reconciledCase, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
 const reconciledSnapshots = blocks(reconciledCase, /^### (SNAP-\d{3}): (.+)$/gm);
 const reconciledSnapshotTwo = reconciledSnapshots.find((snapshot) => snapshot.id === "SNAP-002");
+const approvalTwo = approval(reconciledCase, "APR-002");
 assert(reconciledCase.includes("current_snapshot: SNAP-002"), "working Case pointer must advance after reconciliation");
 for (const id of ["REQ-001", "REQ-002", "OBS-002", "ALT-001"]) assert(reconciledEntries.some((entry) => entry.id === id), `post-reconciliation working ledger must retain ${id}`);
 assert(reconciledEntries.find((entry) => entry.id === "REQ-001")?.fields.get("Status") === "superseded", "post-reconciliation ledger must retain the superseded prior requirement unchanged");
 assert(reconciledEntries.find((entry) => entry.id === "OBS-002")?.fields.get("Status") === "historical", "post-reconciliation ledger must retain historical observations");
 assert(reconciledEntries.find((entry) => entry.id === "ALT-001")?.fields.get("Status") === "rejected", "post-reconciliation ledger must retain rejected alternatives");
 assert(reconciledSnapshotTwo?.fields.get("Entries")?.includes(sha256(manifestTwo)), "Case pointer may advance only after SNAP-002 has an immutable manifest and matching digest");
+for (const snapshotEntry of snapshotTwoEntries) {
+  const ledgerEntry = reconciledEntries.find((entry) => entry.id === snapshotEntry.id);
+  assert(ledgerEntry !== undefined, `post-reconciliation Case must retain SNAP-002 entry ${snapshotEntry.id}`);
+  for (const [field, value] of snapshotEntry.fields) assert(ledgerEntry?.fields.get(field) === value, `post-reconciliation Case must preserve SNAP-002 ${snapshotEntry.id} ${field}`);
+}
+for (const [field, value] of approval(accepted, "APR-002")) assert(approvalTwo?.get(field) === value, `post-reconciliation Case must preserve APR-002 ${field}`);
 
 const notices = blocks(staleness, /^### (STALE-\d{3}): (.+)$/gm);
 assert(notices.length === 1, "fixture must consolidate the affected trace support into one staleness notice");

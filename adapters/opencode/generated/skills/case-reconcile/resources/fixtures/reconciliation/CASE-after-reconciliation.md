@@ -34,7 +34,7 @@ current_snapshot: SNAP-002
 - **Statement:** Register accessible supplied artifacts and record unavailable artifacts as limited sources.
 - **Status:** accepted
 - **Provenance:** author-approved
-- **Sources:** none: author correction
+- **Sources:** none: delegated author correction
 - **Approval:** APR-002
 - **Relations:** supersedes REQ-001
 
@@ -60,13 +60,15 @@ current_snapshot: SNAP-002
 
 ## Approval Event APR-002
 
-- **Authority:** author
-- **Author:** local-author
+- **Authority:** delegated-author
+- **Author:** documentation-owner
 - **Recorded:** 2026-07-16T09:00:00Z
 - **Locator:** queue/author-review.md#APR-002
-- **Outcome:** approve
+- **Outcome:** correct
 - **Approved entries:** REQ-002
 - **Final wording:** Register accessible supplied artifacts and record unavailable artifacts as limited sources.
+- **Delegation declaration locator:** sources/delegation.md#documentation-owner
+- **Delegation scope:** Case semantic corrections for reconciliation-fixture
 
 # Snapshots
 
