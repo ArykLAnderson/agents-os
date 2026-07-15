@@ -11,7 +11,9 @@
     nav ul { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; list-style: none; }
     a { color: #075985; }
     .callout { padding: 1rem; border-left: .35rem solid #0f766e; background: #f0fdfa; }
-    .table-wrap { overflow-x: auto; }
+    .table-intro { margin-bottom: .5rem; }
+    .table-affordance { margin: 0 0 .75rem; font-weight: 600; }
+    .table-wrap { overflow-x: auto; border: 1px solid #cbd5e1; }
     table { width: 100%; border-collapse: collapse; min-width: 48rem; }
     th, td { padding: .75rem; vertical-align: top; text-align: left; border: 1px solid #cbd5e1; }
     th { background: #e2e8f0; }
@@ -38,7 +40,9 @@
     </section>
     <section id="authority">
       <h2>Evidence and authority register</h2>
-      <div class="table-wrap" tabindex="0" aria-label="Scrollable evidence and authority register">
+      <p class="table-intro">The controlled rerun is evidence, not policy authority. <code>ALT-001</code> is a rejected five-retry proposal, and the duplicate unattributed channel claim <code>OBS-002</code> is omitted from prose because it repeats that proposal; its weak authority remains disclosed here. Neither claim is current policy.</p>
+      <p class="table-affordance" id="authority-table-help">On narrow screens, scroll the register horizontally to read all columns.</p>
+      <div class="table-wrap" tabindex="0" aria-describedby="authority-table-help" aria-label="Scrollable evidence and authority register">
         <table>
           <caption>Evidence is distinct from policy authority.</caption>
           <thead><tr><th>Item</th><th>Status</th><th>Establishes</th><th>Does not establish</th></tr></thead>
@@ -47,10 +51,11 @@
             <tr><td>Controlled capacity rerun (<code>OBS-004</code>)</td><td>Current observation</td><td>Four retries missed delivery; five retries exceeded latency. It invalidates baseline report support for four retries.</td><td>Why runs differ, a numeric margin, a replacement configuration, or policy authority.</td></tr>
             <tr><td>Four-retry decision (<code>DEC-002</code>)</td><td>Superseded decision</td><td>The formerly approved policy direction.</td><td>A current policy after <code>APR-004</code>; the rerun did not supersede it.</td></tr>
             <tr><td>Author approval (<code>APR-004</code>) and no-count decision (<code>DEC-003</code>)</td><td>Accepted direction</td><td>Do not state a count pending validation that meets both targets.</td><td>A replacement count or evidence that any configuration meets both targets.</td></tr>
+            <tr><td>Five-retry planning/channel claims (<code>ALT-001</code>, omitted <code>OBS-002</code>)</td><td>Rejected or weak authority</td><td>Competing claims exist.</td><td>Current policy or adequate capacity support.</td></tr>
           </tbody>
         </table>
       </div>
-      <p>Text equivalent: the rerun changes evidentiary support, while <code>APR-004</code> approves <code>DEC-003</code> as the current no-count policy direction.</p>
+      <p>Text equivalent: the rerun changes evidentiary support, while <code>APR-004</code> approves <code>DEC-003</code> as the current no-count policy direction. <code>ALT-001</code> remains rejected, and omitted <code>OBS-002</code> is a duplicate unattributed claim with weak authority.</p>
     </section>
     <section id="evidence">
       <h2>Evidence</h2>
@@ -65,7 +70,7 @@
       <h2>Decision boundary</h2>
       <p>Keep the retry count out of the RFC. Validate a configuration against both required targets, reconcile the resulting evidence, and obtain a new author-approved decision before stating a count.</p>
     </section>
-    <footer><p>Trace support: <a href="../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/successor-r2/artifact.trace.md">successor-r2 artifact trace</a>.</p></footer>
+    <footer><p>Trace support: <a href="trace-locators.md">target locator translation</a> and <a href="../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/successor-r2/artifact.trace.md">successor-r2 artifact trace</a>.</p></footer>
   </main>
 </body>
 </html>
