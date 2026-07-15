@@ -39,3 +39,15 @@ Keep the review to three through seven numbered material questions. Explain why 
 ## Approval Boundary
 
 The review proposes content only. It must not claim that `SNAP-001` exists, convert a source claim into an accepted decision, or treat agent consensus as authority. After an author accepts, modifies, rejects, defers, or requests research, later snapshot creation belongs to the next intake step.
+
+## Author Outcomes
+
+Accept, correct, reject, defer, or request bounded research for each material proposal. Record the author's response before changing semantic status or provenance:
+
+- **Approve:** adopt the approved material as `author-approved` and create the first snapshot only when all required material approval is present.
+- **Correct:** apply the author-corrected meaning with `author-approved` provenance; do not retain the proposed wording as accepted meaning.
+- **Reject:** do not adopt the proposal; retain supported evidence as an `OBS`, `ALT`, `GAP`, `ASM`, or `RISK` with a type-appropriate non-accepted status.
+- **Defer:** retain the current working ledger and open material gap; do not create an accepted snapshot.
+- **Research:** retain or create the evidence gap and an `ACT` that names the bounded question and source scope; do not create an accepted snapshot until a later author response resolves the material item.
+
+An absent, ambiguous, or partial response is not approval. Ask again when required material approval is missing.
