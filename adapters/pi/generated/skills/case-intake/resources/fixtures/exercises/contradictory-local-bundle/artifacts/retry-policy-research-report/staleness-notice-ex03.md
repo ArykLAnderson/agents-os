@@ -7,4 +7,4 @@
 - **Affected artifact:** `artifacts/retry-policy-research-report/artifact.md`
 - **Affected units:** AU-001, AU-002, AU-003, AU-004
 - **Pinned snapshot set:** `notification-retry-policy/SNAP-003`
-- **Disposition:** Do not use `baseline-r1` for reader action. Review the successor report traced to `SNAP-004`.
+- **Disposition:** Do not use `baseline-r1` for reader action. Review the successor report traced to `SNAP-005`; the SNAP-004 integrity issue is preserved separately and does not alter baseline staleness.

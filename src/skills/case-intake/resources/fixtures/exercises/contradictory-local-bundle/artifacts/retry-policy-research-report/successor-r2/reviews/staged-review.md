@@ -1,7 +1,7 @@
 # Staged Document Review
 
 - **Artifact revision:** `successor-r2`
-- **Pinned snapshot set:** `notification-retry-policy/SNAP-004`
+- **Pinned snapshot set:** `notification-retry-policy/SNAP-005`
 - **Review boundary:** Local worked review using canonical review lenses. No reviewer grants authority or changes Case meaning.
 
 ## Stage 1: Case Fidelity
@@ -29,3 +29,4 @@
 - **Artifact status:** Reviewable with open validation gap.
 - **Reader use:** Use `successor-r2` from `INDEX.md`; do not use `baseline-r1` for current reader action.
 - **Reconciliation needed:** Only after new validation or a proposed replacement count; this review does not create either.
+- **Representation correction:** `APR-005` repointed this review to `SNAP-005` after preserving the SNAP-004 digest mismatch as history. The correction preserves the reviewed meaning and reader action.
