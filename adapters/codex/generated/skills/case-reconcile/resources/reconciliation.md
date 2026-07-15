@@ -26,7 +26,7 @@ A low-risk mechanical change is limited to spelling, formatting, stable IDs, loc
 
 When accessible evidence supports opposing claims that affect accepted binding meaning, preserve both entries, link them directly with `contradicts`, create or update a `GAP` linked to both with `derived-from`, classify the finding as `blocking`, halt affected downstream work, and interrupt for the author immediately. Missing authority, unsupported meaning, and stale material support are also blocking when they would mislead a downstream artifact. Never silently choose the majority view, latest review, or agent consensus.
 
-For nonblocking `medium` or `high` findings, maintain one phase-batched author review containing three through seven distinct material questions where possible. State the question, why it matters, affected entries or artifacts, evidence locators, and an evidence-backed recommendation only when support exists. Keep unrelated mechanical updates out of the batch. A batch is a queue convenience, not authority or a provisional snapshot.
+For nonblocking `medium` or `high` findings, maintain one phase-batched author review containing zero through seven distinct material questions. Do not pad a batch to meet a minimum; a fully resolved phase may require no author question. State each question, why it matters, affected entries or artifacts, evidence locators, and an evidence-backed recommendation only when support exists. Keep unrelated mechanical updates out of the batch. A batch is a queue convenience, not authority or a provisional snapshot.
 
 ## Applying Updates
 

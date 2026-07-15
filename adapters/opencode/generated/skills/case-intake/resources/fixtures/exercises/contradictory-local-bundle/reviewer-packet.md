@@ -12,11 +12,11 @@ Review only the listed inputs; do not infer authority from the reviewer, the cha
 - `author-review-prompt.md`
 - `author-response-intake.md`
 - `CASE.md` and `snapshots/SNAP-001.entries.md`
-- Sibling reconciliation result: `../../../../../case-reconcile/resources/fixtures/exercises/contradictory-local-bundle/reconciliation-result.md`
+- `reconciliation-result.md`, `staleness-notice.md`, and `snapshots/SNAP-002.entries.md`
 
 ## Review Questions
 
 1. Were sources registered before semantic extraction?
 2. Did any stale, weakly attributed, or source-only claim become accepted meaning without the author?
 3. Does the author interaction contain only the material decision and a usable recommendation?
-4. Does the later reconciliation preserve the contradiction, history, snapshot boundary, and RFC staleness outcome?
+4. Does the later reconciliation preserve the direct contradiction, history, snapshot boundary, and RFC staleness outcome?
