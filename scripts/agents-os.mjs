@@ -131,6 +131,135 @@ async function sync() {
   }
 }
 
+function parseFixtureArgs(args) {
+  const options = { root: process.env.AGENT_OS_DOCUMENT_SYSTEM_WORK_ROOT || "", artifact: "draft", proofCase: "C1-rfc" };
+  const positional = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--root") options.root = args[++i] || "";
+    else if (arg === "--artifact") options.artifact = args[++i] || "";
+    else if (arg === "--proof-case") options.proofCase = args[++i] || "";
+    else positional.push(arg);
+  }
+  return { positional, options };
+}
+
+function assertPortableSlug(value, label) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(value || "")) throw new Error(`${label} must use only letters, numbers, dots, underscores, or dashes and must not start empty`);
+}
+
+function documentSystemFixturePaths(workRoot, caseSlug, artifactSlug, proofCase) {
+  const base = path.join(workRoot, "document-system");
+  const caseDir = path.join(base, "cases", caseSlug);
+  const artifactDir = path.join(caseDir, "artifacts", artifactSlug);
+  const proofDir = path.join(base, "proof-cases", proofCase);
+  return {
+    workRoot,
+    base,
+    caseDir,
+    artifactDir,
+    proofDir,
+    dirs: [
+      path.join(caseDir, "sources"),
+      path.join(caseDir, "sources", "bundles"),
+      path.join(caseDir, "queue"),
+      path.join(caseDir, "snapshots"),
+      artifactDir,
+      path.join(artifactDir, "assets"),
+      path.join(artifactDir, "reviews"),
+      path.join(artifactDir, "publish"),
+      path.join(proofDir, "sources"),
+      path.join(proofDir, "case"),
+      path.join(proofDir, "baseline"),
+      path.join(proofDir, "candidate"),
+      path.join(proofDir, "candidate", "visual-specs"),
+      path.join(proofDir, "candidate", "assets"),
+      path.join(proofDir, "reviews"),
+      path.join(proofDir, "checks"),
+    ],
+    files: [
+      path.join(caseDir, "CASE.md"),
+      path.join(caseDir, "queue", "author-review.md"),
+      path.join(artifactDir, "artifact.md"),
+      path.join(artifactDir, "artifact.trace.md"),
+      path.join(artifactDir, "artifact.notion.md"),
+      path.join(artifactDir, "artifact.html"),
+      path.join(proofDir, "case", "CASE.md"),
+      path.join(proofDir, "candidate", "selection-manifest.md"),
+      path.join(proofDir, "candidate", "artifact.md"),
+      path.join(proofDir, "candidate", "artifact.trace.md"),
+      path.join(proofDir, "candidate", "artifact.notion.md"),
+      path.join(proofDir, "candidate", "artifact.html"),
+      path.join(proofDir, "checks", "trace-coverage.md"),
+      path.join(proofDir, "checks", "trace-maintenance.md"),
+      path.join(proofDir, "checks", "concision-review.md"),
+      path.join(proofDir, "checks", "reader-test.md"),
+      path.join(proofDir, "checks", "presentation-check.md"),
+      path.join(proofDir, "checks", "author-burden.md"),
+      path.join(proofDir, "checks", "safe-publish.md"),
+      path.join(proofDir, "checks", "post-publish-verification.md"),
+      path.join(proofDir, "decision.md"),
+    ],
+  };
+}
+
+function resolveDocumentSystemWorkRoot(configuredRoot) {
+  return path.resolve(configuredRoot || path.join(root, ".agent-os", "document-system-work"));
+}
+
+function placeholderFor(file, caseSlug, artifactSlug, proofCase) {
+  const name = path.basename(file);
+  if (name === "CASE.md") {
+    return `---\nmodel_contract: case-model/v1\ninitiative_id: ${caseSlug}\nworking_state: fixture\ncurrent_snapshot: none\n---\n\n# Sources\n\n# Type Extensions\n\nNo extensions.\n\n# Entries\n\n# Snapshots\n`;
+  }
+  if (name === "author-review.md") return `# Author Review Queue\n\nFixture queue for ${caseSlug}.\n`;
+  if (name === "selection-manifest.md") return `# Selection Manifest\n\n- **Proof case:** ${proofCase}\n- **Case:** ${caseSlug}\n- **Artifact:** ${artifactSlug}\n`;
+  if (name === "artifact.trace.md") return `# Artifact Trace\n\n- **Case:** ${caseSlug}\n- **Artifact:** ${artifactSlug}\n- **Snapshot set:** fixture only\n`;
+  if (name === "artifact.html") return "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><title>Fixture Artifact</title></head>\n<body><main><h1>Fixture Artifact</h1></main></body>\n</html>\n";
+  return `# ${name.replace(/[-.]/g, " ")}\n\nFixture placeholder for ${caseSlug}.\n`;
+}
+
+async function initDocumentSystemFixture(args) {
+  const { positional, options } = parseFixtureArgs(args);
+  const caseSlug = positional[0];
+  assertPortableSlug(caseSlug, "case slug");
+  assertPortableSlug(options.artifact, "artifact slug");
+  assertPortableSlug(options.proofCase, "proof case");
+  const paths = documentSystemFixturePaths(resolveDocumentSystemWorkRoot(options.root), caseSlug, options.artifact, options.proofCase);
+  for (const dir of paths.dirs) await mkdir(dir, { recursive: true });
+  for (const file of paths.files) {
+    if (!(await exists(file))) await writeFile(file, placeholderFor(file, caseSlug, options.artifact, options.proofCase));
+  }
+  console.log(JSON.stringify({ status: "initialized", workRoot: paths.workRoot, caseDir: paths.caseDir, artifactDir: paths.artifactDir, proofDir: paths.proofDir }, null, 2));
+}
+
+async function inspectDocumentSystemFixture(args) {
+  const { positional, options } = parseFixtureArgs(args);
+  const caseSlug = positional[0];
+  assertPortableSlug(caseSlug, "case slug");
+  assertPortableSlug(options.artifact, "artifact slug");
+  assertPortableSlug(options.proofCase, "proof case");
+  const paths = documentSystemFixturePaths(resolveDocumentSystemWorkRoot(options.root), caseSlug, options.artifact, options.proofCase);
+  const missing = [];
+  for (const dir of paths.dirs) if (!(await exists(dir))) missing.push(path.relative(paths.workRoot, dir) + "/");
+  for (const file of paths.files) if (!(await exists(file))) missing.push(path.relative(paths.workRoot, file));
+  if (missing.length) {
+    console.error(JSON.stringify({ status: "missing", workRoot: paths.workRoot, missing }, null, 2));
+    process.exitCode = 1;
+  } else console.log(JSON.stringify({ status: "ok", workRoot: paths.workRoot, caseDir: paths.caseDir, artifactDir: paths.artifactDir, proofDir: paths.proofDir }, null, 2));
+}
+
+async function documentSystemFixture(args) {
+  const action = args[0];
+  const rest = args.slice(1);
+  if (action === "init") await initDocumentSystemFixture(rest);
+  else if (action === "inspect") await inspectDocumentSystemFixture(rest);
+  else {
+    console.error("Usage: node scripts/agents-os.mjs document-system-fixture <init|inspect> <case-slug> [--root <path>] [--artifact <artifact-slug>] [--proof-case <case-id>]");
+    process.exitCode = 2;
+  }
+}
+
 async function doctor() {
   const problems = [];
   for (const target of config.targets) {
@@ -160,7 +289,8 @@ async function doctor() {
 const command = process.argv[2];
 if (command === "sync") await sync();
 else if (command === "doctor") await doctor();
+else if (command === "document-system-fixture") await documentSystemFixture(process.argv.slice(3));
 else {
-  console.error("Usage: node scripts/agents-os.mjs <sync|doctor>");
+  console.error("Usage: node scripts/agents-os.mjs <sync|doctor|document-system-fixture>");
   process.exitCode = 2;
 }
