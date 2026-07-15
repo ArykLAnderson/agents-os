@@ -42,12 +42,32 @@ The review proposes content only. It must not claim that `SNAP-001` exists, conv
 
 ## Author Outcomes
 
-Accept, correct, reject, defer, or request bounded research for each material proposal. Record the author's response before changing semantic status or provenance:
+Accept, correct, reject, defer, or request bounded research for each material proposal. Record the author's response as a durable approval event before changing semantic status or authority:
 
-- **Approve:** adopt the approved material as `author-approved` and create the first snapshot only when all required material approval is present.
-- **Correct:** apply the author-corrected meaning with `author-approved` provenance; do not retain the proposed wording as accepted meaning.
+- **Approve:** adopt the approved material with an `Approval` reference and create the first snapshot only when all required material approval is present.
+- **Correct:** apply the author-corrected meaning with an `Approval` reference; do not retain the proposed wording as accepted meaning.
 - **Reject:** do not adopt the proposal; retain supported evidence as an `OBS`, `ALT`, `GAP`, `ASM`, or `RISK` with a type-appropriate non-accepted status.
 - **Defer:** retain the current working ledger and open material gap; do not create an accepted snapshot.
 - **Research:** retain or create the evidence gap and an `ACT` that names the bounded question and source scope; do not create an accepted snapshot until a later author response resolves the material item.
 
 An absent, ambiguous, or partial response is not approval. Ask again when required material approval is missing.
+
+## Approval Event
+
+Record each accepted or corrected material response in a durable local approval event before creating the snapshot:
+
+```markdown
+# Approval Event APR-001
+
+- **Authority:** author
+- **Author:** <stable author identity or explicit local-author identity>
+- **Recorded:** <YYYY-MM-DDTHH:MM:SSZ>
+- **Locator:** <local response record and exact response anchor>
+- **Outcome:** approve or correct
+- **Approved entries:** <entry IDs>
+- **Final wording:** <exact accepted or corrected statement for each approved entry>
+```
+
+`Authority` must be `author` or an explicitly declared delegated authority with an identity and scope. A source speaker, meeting consensus, agent, unnamed reviewer, or missing authority is not sufficient. The `Locator` and `Recorded` time bind approval to the exact final wording rather than to a general conversation or proposal.
+
+Keep source provenance on entries that retain source evidence. Record author adoption separately with `Approval: APR-###`; do not overwrite `source-direct`, `source-quoted`, `agent-inferred`, or `agent-synthesized` merely to signal authority. Use `author-approved` provenance only when the final entry itself is new author-approved content without retained source-derived provenance.
