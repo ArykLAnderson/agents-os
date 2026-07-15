@@ -1,7 +1,7 @@
 # Artifact Trace
 
 - **Artifact:** `c2-prd.md`
-- **Revision:** `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass; exact artifact digest and inspected revision are recorded by the following evidence pass
 - **Pinned snapshot set:** `notification-retry-policy/SNAP-005`
 - **Trace status:** reviewable with the open `GAP-002` validation gap
 
