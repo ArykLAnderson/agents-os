@@ -6,7 +6,7 @@
 
 Record each incoming report with its source or review locator, affected entries or artifacts, proposed change, and evidence. Consolidate reports that describe the same semantic issue into one finding before assigning materiality. Preserve every original report locator on the consolidated finding; do not count repeated agent reports as independent authority or multiply their priority.
 
-Agent consensus is evidence for investigation only. It is not author authority and cannot accept a `DEC`, `REQ`, `CON`, `INT`, contradiction resolution, or synthesized current guidance. Only the author or explicitly declared delegated authority with an identity and scope may approve those changes.
+Agent consensus is evidence for investigation only. It is not author authority and cannot accept a `DEC`, `REQ`, `CON`, `INT`, contradiction resolution, or synthesized current guidance. Only the author or explicitly declared delegated authority with an identity and scope may approve those changes. A delegated approval reuses every durable approval-event field: authority, author, recorded time, locator, outcome, approved entries, and exact final wording. It additionally records the delegation declaration locator and the delegation scope; a name, meeting role, or implied delegation is not enough.
 
 ## Materiality
 
@@ -24,7 +24,7 @@ A low-risk mechanical change is limited to spelling, formatting, stable IDs, loc
 
 ## Contradictions And Questions
 
-When accessible evidence supports opposing claims that affect accepted binding meaning, preserve both entries, link them with `contradicts`, create or update a `GAP` linked to both, classify the finding as `blocking`, and interrupt for the author immediately. Never silently choose the majority view, latest review, or agent consensus.
+When accessible evidence supports opposing claims that affect accepted binding meaning, preserve both entries, link them directly with `contradicts`, create or update a `GAP` linked to both with `derived-from`, classify the finding as `blocking`, halt affected downstream work, and interrupt for the author immediately. Missing authority, unsupported meaning, and stale material support are also blocking when they would mislead a downstream artifact. Never silently choose the majority view, latest review, or agent consensus.
 
 For nonblocking `medium` or `high` findings, maintain one phase-batched author review containing three through seven distinct material questions where possible. State the question, why it matters, affected entries or artifacts, evidence locators, and an evidence-backed recommendation only when support exists. Keep unrelated mechanical updates out of the batch. A batch is a queue convenience, not authority or a provisional snapshot.
 
@@ -35,7 +35,7 @@ For nonblocking `medium` or `high` findings, maintain one phase-batched author r
 3. Apply supported nonbinding `medium` updates with their provenance; queue unresolved material author questions for the reconciliation phase.
 4. For `high` findings, retain accepted state and queue the proposed change. Do not use `author-approved` provenance or accepted status without a durable approval event.
 5. For `blocking` findings, stop affected downstream work and issue the immediate author interrupt.
-6. After explicit approval or correction resolves material changes, append superseding entries rather than destructively rewriting accepted history. Create a new Case snapshot when accepted semantic changes materially affect downstream artifacts, and mark those artifacts stale when their pinned support no longer satisfies reader action.
+6. After explicit approval or correction resolves any semantic change, append superseding entries rather than destructively rewriting accepted history and create a later immutable Case snapshot, even when no artifact exists or no artifact is affected. Mark an artifact stale only when its pinned support no longer satisfies reader action; snapshot creation alone does not make an artifact stale.
 
 ## Result
 
