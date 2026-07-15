@@ -34,6 +34,14 @@
 - **Narrow output:** viewport `390x844`; page scroll/client widths `390/390`; `overflow:false`; `figures:6`; `equivalents:6`; flow grid `324px` (one column); no browser errors. Screenshot: `rendered/c6-narrow-390x844.png`.
 - **Rendering limit:** screenshots preserve the local QA state, not external accessibility conformance or real-reader approval. Browser commands are reproducible with the file URL and viewport sequence above.
 
+## Full-Page Closure
+
+- **Capture date:** `2026-07-15T08:44:12Z`.
+- **Desktop command:** `agent-browser --session ds05 open <file-url>`; `agent-browser --session ds05 set viewport 1440 1000`; `agent-browser --session ds05 screenshot --full rendered/c6-full-desktop-1440x1000.png`; `agent-browser --session ds05 eval <figure/equivalent/id coverage check>`; `agent-browser --session ds05 errors`.
+- **Desktop result:** `viewport:[1440,1000]`, `scroll:[1440,1440]`, `height:5467`, `overflow:false`, `figures:6`, `equivalents:6`; the full-page capture includes `diagram-lifecycle`, `diagram-skill-hierarchy`, `diagram-trace`, `diagram-multi-case`, `diagram-safe-publishing`, and `diagram-proof-coverage`, each followed by its adjacent text equivalent. Screenshot: `rendered/c6-full-desktop-1440x1000.png`; SHA-256 `1d6bb84b9349cbe5ce1ecaeb57ae740f1ab4032c0edcb815332a9ecab3dc58d4`.
+- **Narrow command:** `agent-browser --session ds05 set viewport 390 844`; `agent-browser --session ds05 screenshot --full rendered/c6-full-narrow-390x844.png`; `agent-browser --session ds05 eval <figure/equivalent/id/flow-column coverage check>`; `agent-browser --session ds05 errors`.
+- **Narrow result:** `viewport:[390,844]`, `scroll:[390,390]`, `height:8955`, `overflow:false`, `figures:6`, `equivalents:6`, `flowColumns:"324px"`; the same six diagram IDs and adjacent text equivalents are present in the full-page capture. Screenshot: `rendered/c6-full-narrow-390x844.png`; SHA-256 `1f80cd4fda4190be20a262a2c3291fa73005463d4f84dddca1ba39781346deb0`.
+
 ## Accessibility And Reader Preservation
 
 - Informative diagrams have role and alt text. Captions and adjacent text equivalents carry the reader-relevant meaning even if CSS diagrams do not render.

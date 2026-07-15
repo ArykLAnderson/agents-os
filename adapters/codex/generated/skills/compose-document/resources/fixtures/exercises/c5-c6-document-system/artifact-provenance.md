@@ -42,6 +42,10 @@ The C2, C3, and C5 fidelity/genre records and the C6 staged review were created 
 |---|---|
 | `rendered/c6-desktop-1440x1000.png` | `fa281ca61e85c3700f872dc5820a7d2fc3c82a498a0d1fe20024af70aca688f0` |
 | `rendered/c6-narrow-390x844.png` | `9695ebf5004fddf795186576e42b6a9dd0dfa32d4d99056721a48cad9dc40f5a` |
+| `rendered/c6-full-desktop-1440x1000.png` | `1d6bb84b9349cbe5ce1ecaeb57ae740f1ab4032c0edcb815332a9ecab3dc58d4` |
+| `rendered/c6-full-narrow-390x844.png` | `1f80cd4fda4190be20a262a2c3291fa73005463d4f84dddca1ba39781346deb0` |
+
+The full-page captures were taken on `2026-07-15T08:44:12Z` from the same HTML digest and browser/file URL above. They visibly cover all six diagrams and their adjacent text equivalents at desktop and narrow viewports; `presentation-evidence.md#full-page-closure` records the command sequences and measured results.
 
 ## Finding Coverage
 
