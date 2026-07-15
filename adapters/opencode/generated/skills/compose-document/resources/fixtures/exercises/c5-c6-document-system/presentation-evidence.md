@@ -1,7 +1,7 @@
 # Presentation Evidence
 
 - **Attempt:** `exercise-05-attempt-02`
-- **Revision under inspection:** recorded after the re-exercise; input content began at `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass; exact HTML digest, screenshots, browser output, and inspection revision are recorded by the following evidence pass
 - **Artifact:** `c6-explanation.html`
 - **Inspection boundary:** local file only; no JavaScript is required for semantic acceptance and no external destination was contacted.
 

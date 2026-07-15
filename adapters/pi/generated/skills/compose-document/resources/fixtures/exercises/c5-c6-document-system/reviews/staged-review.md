@@ -1,7 +1,7 @@
 # Staged Document Review
 
 - **Artifact:** `c6-explanation.md` and `c6-explanation.html`
-- **Revision:** `exercise-05-attempt-02`, re-exercised from `25cb31347fe5407096db3f140a49f8ca4ae466d8`
+- **Creation:** semantic artifact pass for `exercise-05-attempt-02`; exact inspected Markdown/HTML digests and revision are recorded by the following evidence pass
 - **Inputs:** `notification-retry-policy/SNAP-005`, frozen `baseline-r1`, current `successor-r2`, and the local shared skill instructions named in the trace
 - **Review boundary:** local document review. It does not create Case meaning, stakeholder approval, publishing authority, or operational validation.
 
@@ -22,7 +22,7 @@
 
 ## Fresh-Reader Simulation
 
-- **Frozen entrypoint:** `c6-explanation.md`, revision `exercise-05-attempt-01`.
+- **Frozen entrypoint:** `c6-explanation.md`; its exact digest and inspected revision are recorded by the following evidence pass.
 - **Excluded inputs:** Case, source records, trace, visual specs, review notes, and author instructions.
 - **Outcome:** a reader can identify the action: use the current safe artifact, keep named snapshot/trace support, and stop before an external write without authorization.
 - **Recommendation and qualification:** the document system separates evidence, authority, review, formatting, and publishing; it does not approve policy or prove operational outcomes.
