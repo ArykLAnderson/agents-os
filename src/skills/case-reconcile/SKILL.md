@@ -18,8 +18,8 @@ All substantive discoveries, author decisions, contradictions, stale support, un
 - Apply mechanical and low-risk updates when safe; require author approval for high-materiality changes.
 - Interrupt immediately for blocking contradictions or unsupported meaning that would mislead downstream artifacts.
 - Preserve history through supersession instead of destructive semantic rewriting.
-- Create a new Case snapshot when accepted semantic changes materially affect downstream artifacts.
-- Mark affected artifacts stale when their pinned support no longer satisfies their reader action.
+- Every accepted material semantic change creates a later immutable Case snapshot; mechanical cleanup and low-risk queue churn do not.
+- Mark affected artifacts stale only when their pinned support no longer satisfies their reader action; snapshot creation alone is not staleness.
 
 Load `resources/reconciliation.md` before changing the Case. It defines semantic update ownership, materiality, immediate blocking contradictions, phase-batched nonblocking questions, mechanical-change limits, duplicate finding consolidation, and author authority.
 
