@@ -16,6 +16,7 @@ This fixture is one portable, local-only Case root for a representative `case-in
 4. Create the approved initial Case and immutable `SNAP-001` manifest.
 5. Register `sources/later-capacity-evidence.md` in the reconciliation phase, then stop downstream RFC work for the blocking contradiction.
 6. Record the author correction, supersession, `SNAP-002`, and the stale-artifact notice in this Case root.
+7. Inspect `document-system-exercise-03.md` for the subsequent document-system exercise: a report composed from `SNAP-003`, then a controlled contradiction reconciled into `SNAP-004` without mutating the frozen baseline.
 
 ## Invocation
 

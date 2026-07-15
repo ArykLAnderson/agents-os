@@ -2,8 +2,8 @@
 model_contract: case-model/v1
 initiative_id: notification-retry-policy
 working_state: active
-current_snapshot: SNAP-003
-updated: 2026-07-17
+current_snapshot: SNAP-004
+updated: 2026-07-18
 ---
 
 # Sources
@@ -44,10 +44,18 @@ No extensions.
 ### OBS-003: Capacity validation limit
 
 - **Statement:** Capacity validation found that three retries missed the required delivery rate, four retries sustained it, and five retries exceeded the dead-letter latency target.
-- **Status:** current
+- **Status:** superseded
 - **Provenance:** source-direct
 - **Sources:** SRC-004 / full result
-- **Relations:** contradicts DEC-001; contradicts ALT-001
+- **Relations:** contradicts DEC-001; contradicts ALT-001; contradicted-by OBS-004
+
+### OBS-004: Post-baseline capacity rerun limit
+
+- **Statement:** The controlled post-baseline rerun found that four retries missed the required delivery rate under the same validated migration conditions; five retries met the delivery rate but still exceeded the dead-letter latency target.
+- **Status:** current
+- **Provenance:** source-direct
+- **Sources:** SRC-005 / full result
+- **Relations:** contradicts OBS-003; contradicts DEC-002
 
 ### INT-001: Establish an RFC-ready retry-policy direction
 
@@ -69,11 +77,20 @@ No extensions.
 ### DEC-002: Use four retries for the migration
 
 - **Statement:** The current migration policy retries failed notification delivery four times before dead-lettering.
-- **Status:** accepted
+- **Status:** superseded
 - **Provenance:** source-direct
 - **Sources:** SRC-004 / full result
 - **Approval:** APR-002
-- **Relations:** supersedes DEC-001; selects OBS-003
+- **Relations:** supersedes DEC-001; selects OBS-003; contradicts OBS-004
+
+### DEC-003: Do not state a retry count pending validated configuration
+
+- **Statement:** Do not state a current retry count in the notification RFC until a configuration is validated to meet both the required delivery rate and the dead-letter latency target.
+- **Status:** accepted
+- **Provenance:** author-stated
+- **Sources:** none: author response at artifacts/retry-policy-research-report/reconciliation-proposal.md#author-resolution-for-the-worked-exercise
+- **Approval:** APR-004
+- **Relations:** supersedes DEC-002; selects OBS-004
 
 ### GAP-001: Current retry-policy authority is resolved
 
@@ -84,9 +101,17 @@ No extensions.
 - **Approval:** APR-002
 - **Relations:** derived-from DEC-001, OBS-003; resolves DEC-002
 
+### GAP-002: No validated retry count meets both targets
+
+- **Statement:** The available capacity results do not identify a retry count that meets both the required delivery rate and the dead-letter latency target for the validated migration conditions.
+- **Status:** open
+- **Provenance:** agent-inferred
+- **Sources:** SRC-005 / full result
+- **Relations:** derived-from OBS-004; blocks DEC-002
+
 # Approvals
 
-See `approvals/APR-001.md`, `approvals/APR-002.md`, and `approvals/APR-003.md`. Approval is recorded separately from source-derived provenance.
+See `approvals/APR-001.md`, `approvals/APR-002.md`, `approvals/APR-003.md`, and `approvals/APR-004.md`. Approval is recorded separately from source-derived provenance.
 
 # Snapshots
 
@@ -119,3 +144,13 @@ See `approvals/APR-001.md`, `approvals/APR-002.md`, and `approvals/APR-003.md`. 
 - **Entries:** manifest: snapshots/SNAP-003.entries.md (sha256:2ff51ce9b1e73595163254c5fe5011ca8ee6164a6182aa23f34c655235e59ec7)
 - **Supersedes:** SNAP-002
 - **Artifacts:** notification-rfc/artifact.md remains stale pending trace review
+
+### SNAP-004: Retry-count direction withdrawn pending validation
+
+- **Created:** 2026-07-18
+- **Reason:** reconciliation-approved
+- **Author status:** accepted
+- **Approval:** APR-004
+- **Entries:** manifest: snapshots/SNAP-004.entries.md (sha256:bb2d493d94a001ac27ea070b153f4386c2659088a575d5f6ef63cd8f77f06530)
+- **Supersedes:** SNAP-003
+- **Artifacts:** artifacts/retry-policy-research-report/artifact.md marked stale; successor outcome recorded in `artifacts/retry-policy-research-report/reexercise.md`
