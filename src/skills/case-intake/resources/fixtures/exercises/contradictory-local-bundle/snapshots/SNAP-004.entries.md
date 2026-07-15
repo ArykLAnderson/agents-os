@@ -28,7 +28,7 @@
 - **Status:** current
 - **Provenance:** source-direct
 - **Sources:** SRC-005 / full result
-- **Relations:** contradicts OBS-003; contradicts DEC-002
+- **Relations:** contradicts OBS-003; invalidates-support-for DEC-002
 
 ### INT-001: Establish an RFC-ready retry-policy direction
 
@@ -54,7 +54,7 @@
 - **Provenance:** source-direct
 - **Sources:** SRC-004 / full result
 - **Approval:** APR-002
-- **Relations:** supersedes DEC-001; selects OBS-003; contradicts OBS-004
+- **Relations:** supersedes DEC-001; selects OBS-003; support-invalidated-by OBS-004
 
 ### DEC-003: Do not state a retry count pending validated configuration
 
@@ -63,7 +63,7 @@
 - **Provenance:** author-stated
 - **Sources:** none: author response at artifacts/retry-policy-research-report/reconciliation-proposal.md#author-resolution-for-the-worked-exercise
 - **Approval:** APR-004
-- **Relations:** supersedes DEC-002; selects OBS-004
+- **Relations:** supersedes DEC-002; responds-to OBS-004
 
 ### GAP-002: No validated retry count meets both targets
 
