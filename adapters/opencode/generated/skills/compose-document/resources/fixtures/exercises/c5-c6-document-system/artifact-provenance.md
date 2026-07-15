@@ -45,6 +45,17 @@ The C2, C3, and C5 fidelity/genre records and the C6 staged review were created 
 | `rendered/c6-full-desktop-1440x1000.png` | `1d6bb84b9349cbe5ce1ecaeb57ae740f1ab4032c0edcb815332a9ecab3dc58d4` |
 | `rendered/c6-full-narrow-390x844.png` | `1f80cd4fda4190be20a262a2c3291fa73005463d4f84dddca1ba39781346deb0` |
 
+## Directional Layout Revision
+
+The presentation-only revision replaces independent grid arrow cells with grouped flex paths for lifecycle, skill hierarchy, and safe publishing. This does not change accepted Case meaning. The revised HTML was captured at `2026-07-15T08:48:20Z`; it has SHA-256 `652b74bff1d106b23b038d08d9bd32a760836d526a5e50ff484ac79bb2ce03eb`.
+
+| Screenshot | SHA-256 |
+|---|---|
+| `rendered/c6-full-desktop-1440x1000.png` | `c650eda1221423a24c56c3c8f8519277368c3067d389c470e4e99ab5ec93f5f0` |
+| `rendered/c6-full-narrow-390x844.png` | `23f3d51906eb226e9cfde671093a9c7171c25b3884224b25c2722b97a7a543a1` |
+
+`presentation-evidence.md#directional-path-closure` records the exact desktop and narrow path-step/connector results. The old full-page digests remain historical evidence for the pre-layout-closure representation.
+
 The full-page captures were taken on `2026-07-15T08:44:12Z` from the same HTML digest and browser/file URL above. They visibly cover all six diagrams and their adjacent text equivalents at desktop and narrow viewports; `presentation-evidence.md#full-page-closure` records the command sequences and measured results.
 
 ## Finding Coverage

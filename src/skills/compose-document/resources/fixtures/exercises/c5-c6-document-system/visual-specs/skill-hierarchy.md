@@ -7,4 +7,4 @@
 - **Elements:** eight named skill nodes, handoff arrows, one return arrow to reconcile, caption, and text equivalent.
 - **Trace:** `#diagram-skill-hierarchy`, `AU-503`.
 - **Accessibility:** alt: “A handoff chain assigns one responsibility to each document skill and returns proposed meaning changes to reconciliation.”
-- **Validation:** verify every label against the cited skill contract; ensure the return arrow is labeled “meaning change,” not “approval.”
+- **Validation:** verify every label against the cited skill contract; ensure each grouped connector joins adjacent handoff steps and the final return is labeled “meaning change,” not “approval.”

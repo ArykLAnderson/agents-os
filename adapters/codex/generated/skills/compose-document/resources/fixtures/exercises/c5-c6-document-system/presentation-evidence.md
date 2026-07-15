@@ -42,6 +42,15 @@
 - **Narrow command:** `agent-browser --session ds05 set viewport 390 844`; `agent-browser --session ds05 screenshot --full rendered/c6-full-narrow-390x844.png`; `agent-browser --session ds05 eval <figure/equivalent/id/flow-column coverage check>`; `agent-browser --session ds05 errors`.
 - **Narrow result:** `viewport:[390,844]`, `scroll:[390,390]`, `height:8955`, `overflow:false`, `figures:6`, `equivalents:6`, `flowColumns:"324px"`; the same six diagram IDs and adjacent text equivalents are present in the full-page capture. Screenshot: `rendered/c6-full-narrow-390x844.png`; SHA-256 `1f80cd4fda4190be20a262a2c3291fa73005463d4f84dddca1ba39781346deb0`.
 
+## Directional-Path Closure
+
+- **Capture date:** `2026-07-15T08:48:20Z`.
+- **HTML inspected:** SHA-256 `652b74bff1d106b23b038d08d9bd32a760836d526a5e50ff484ac79bb2ce03eb`.
+- **Desktop command:** open the file URL; set viewport `1440 1000`; evaluate each `.path` for width, scroll width, flex direction, connector count, and step count; capture `--full`; inspect browser errors.
+- **Desktop result:** each directional path is `display:flex` with `direction:"row"`, `width:1086`, and `scroll:1086`: lifecycle and skill hierarchy each have `5` adjacent steps and `4` connectors; safe publishing has `6` adjacent steps and `5` connectors. Page-level overflow is false. Screenshot: `rendered/c6-full-desktop-1440x1000.png`; SHA-256 `c650eda1221423a24c56c3c8f8519277368c3067d389c470e4e99ab5ec93f5f0`.
+- **Narrow command:** set viewport `390 844`; evaluate the same path structure; capture `--full`; inspect browser errors.
+- **Narrow result:** each directional path is `direction:"column"`, `width:324`, and `scroll:324`; lifecycle and skill hierarchy retain `5` steps and `4` connectors, while safe publishing retains `6` steps and `5` connectors. Page-level overflow is false. Screenshot: `rendered/c6-full-narrow-390x844.png`; SHA-256 `23f3d51906eb226e9cfde671093a9c7171c25b3884224b25c2722b97a7a543a1`.
+
 ## Accessibility And Reader Preservation
 
 - Informative diagrams have role and alt text. Captions and adjacent text equivalents carry the reader-relevant meaning even if CSS diagrams do not render.
