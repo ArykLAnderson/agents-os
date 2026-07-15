@@ -27,15 +27,17 @@ No extensions.
 
 - **Statement:** Case intake preserves inspectable provenance for accessible supplied artifacts.
 - **Status:** accepted
-- **Provenance:** author-approved
+- **Provenance:** source-direct
 - **Sources:** SRC-001 / author conversation notes
+- **Approval:** APR-001
 
 ### DEC-001: Accessible registration-first workflow
 
 - **Statement:** Register accessible supplied artifacts before extracting semantic entries.
 - **Status:** accepted
-- **Provenance:** author-approved
+- **Provenance:** agent-synthesized
 - **Sources:** SRC-001 / author conversation notes; SRC-002 / 00:03:12-00:04:05
+- **Approval:** APR-001
 - **Relations:** resolves GAP-001
 
 ### GAP-001: Historical workflow conflict
@@ -54,6 +56,7 @@ No extensions.
 - **Created:** 2026-07-15
 - **Reason:** intake-approved
 - **Author status:** accepted
-- **Entries:** manifest: snapshots/SNAP-001.entries.md
+- **Approval:** APR-001
+- **Entries:** manifest: snapshots/SNAP-001.entries.md (sha256:e5d1f8d5bbab0427a12ce945e9f7a1a9dc57540004634c6a98d781f7f9f5e849)
 - **Supersedes:** none
 - **Artifacts:** none
