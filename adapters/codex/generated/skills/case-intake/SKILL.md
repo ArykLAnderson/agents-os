@@ -54,9 +54,15 @@ For inaccessible sources, register the known metadata with limited reliability a
 - Do not adopt company-specific, tracker-specific, chat-specific, wiki-specific, database-placement, or personal workspace defaults in the portable core.
 - Route later semantic changes through `case-reconcile`.
 
+## Extraction
+
+After registration, load `resources/entry-extraction.md`. Extract only independently reviewable semantic atoms into the working Case ledger. Preserve the source locator, provenance, uncertainty, and non-binding status of source-derived material.
+
+Load `resources/author-approval.md` after extraction and gap detection to prepare the concise author review. It governs proposed binding content and material questions; it does not create a snapshot.
+
 ## Progressive Resources
 
-Use only the source registration resource for this phase. Later extraction, approval, reconciliation, and snapshot resources must not be loaded or applied just because a source bundle is available.
+Load resources in this order: source registration, entry extraction, then author approval. Do not load reconciliation or snapshot resources during intake extraction.
 
 ## Handoff
 
