@@ -1,5 +1,6 @@
 # Genre Review
 
+- **Artifact:** candidate rev-03
 - **Genre:** RFC decision record
 - **Reader:** migration technical approver
 - **Outcome:** pass
