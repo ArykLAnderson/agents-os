@@ -80,9 +80,13 @@ assert(!material.includes("**Provenance:** author-approved"), "agent proposal mu
 
 const acceptedSnapshots = blocks(accepted, /^### (SNAP-\d{3}): (.+)$/gm);
 const snapshotTwo = acceptedSnapshots.find((snapshot) => snapshot.id === "SNAP-002");
+const snapshotTwoEntries = blocks(manifestTwo, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
 assert(accepted.includes("**Outcome:** applied after author approval"), "accepted semantic change must wait for durable approval");
 assert(snapshotTwo?.fields.get("Supersedes") === "SNAP-001", "accepted semantic change must create a later snapshot");
 assert(snapshotTwo?.fields.get("Entries")?.includes(sha256(manifestTwo)), "later snapshot manifest digest must match immutable bytes");
+for (const id of ["OBS-001", "REQ-001", "REQ-002"]) assert(snapshotTwoEntries.some((entry) => entry.id === id), `later snapshot must retain resulting accepted entry ${id}`);
+assert(!snapshotTwoEntries.some((entry) => ["superseded", "rejected"].includes(entry.fields.get("Status"))), "later snapshot must exclude superseded and rejected entries");
+assert(!manifestTwo.includes("OBS-002") && !manifestTwo.includes("ALT-001"), "later snapshot must exclude superseded and rejected entry IDs");
 assert(accepted.includes("**Artifacts:** none affected") && accepted.includes("**Staleness:** none"), "semantic snapshots must not require affected or stale artifacts");
 for (const field of ["Authority", "Author", "Recorded", "Locator", "Outcome", "Approved entries", "Final wording", "Delegation declaration locator", "Delegation scope"]) assert(accepted.includes(`**${field}:**`), `delegated approval must include ${field}`);
 
