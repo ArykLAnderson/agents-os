@@ -7,7 +7,7 @@
 
 ## Changed Composition Result
 
-The report cannot recommend four retries because `OBS-004` directly contradicts the capacity support retained in `OBS-003` and supersedes the accepted four-retry decision. It also cannot recommend five retries because the rerun retains the dead-letter latency failure. The approved direction is now `DEC-003`: do not state a count until a configuration meeting both targets is validated.
+The report cannot recommend four retries because `OBS-004` directly contradicts `OBS-003` and invalidates the capacity support retained in the baseline report. The observation does not supersede the accepted four-retry decision. `APR-004` separately supersedes `DEC-002` with `DEC-003`. The report also cannot recommend five retries because the rerun retains the dead-letter latency failure.
 
 ## Successor Shaped Markdown
 
@@ -19,24 +19,19 @@ Do not state a current retry count in the RFC. The author-approved direction is 
 
 ## Evidence
 
-The original capacity validation supported four retries for the migration, but the controlled rerun under the same conditions found four retries below the required delivery rate. Five retries met delivery but still exceeded the dead-letter latency target. The evidence therefore identifies no usable count from the available results.
+The original capacity validation supported four retries for the migration, but the controlled rerun recorded under the same validated migration conditions found four retries below the required delivery rate. Five retries met delivery but still exceeded the dead-letter latency target. The evidence therefore identifies no usable count from the available results. The rerun invalidates report support; `APR-004` separately supplies policy authority for the no-count direction.
 
 ## Limitations
 
-The earlier four-retry report remains preserved but stale because it is pinned to `SNAP-003`. This successor is limited to the tested migration conditions and does not prescribe a replacement configuration.
+The earlier four-retry report remains preserved but stale because it is pinned to `SNAP-003`. This successor is limited to the stated migration conditions and does not prescribe a replacement configuration. The record does not include workload mix, traffic volume, timing, environment configuration, implementation version, measurement method, or either numeric target threshold; it cannot explain the difference or quantify a margin.
 
 ## Decision Boundary
 
 Obtain and reconcile validation for a configuration that meets both targets before the RFC states a retry count.
 
-## Successor Trace Summary
+## Complete Successor Revision
 
-| Unit | Locator | Support | Status |
-|---|---|---|---|
-| AU-101 | `#recommendation` | `notification-retry-policy/SNAP-004/DEC-003`; `notification-retry-policy/SNAP-004/GAP-002` | supported |
-| AU-102 | `#evidence` | `notification-retry-policy/SNAP-004/OBS-003`; `notification-retry-policy/SNAP-004/OBS-004` | supported |
-| AU-103 | `#limitations` | `notification-retry-policy/SNAP-004/DEC-002`; `notification-retry-policy/SNAP-004/GAP-002` | supported |
-| AU-104 | `#decision-boundary` | `notification-retry-policy/SNAP-004/DEC-003` | supported |
+The complete current revision is `successor-r2/`: `artifact.md`, `artifact.trace.md`, `selection-manifest.md`, `composition.md`, `reviews/staged-review.md`, and `decision.md`. `INDEX.md` is the normal reader entrypoint.
 
 ## Re-Exercise Reader Result
 

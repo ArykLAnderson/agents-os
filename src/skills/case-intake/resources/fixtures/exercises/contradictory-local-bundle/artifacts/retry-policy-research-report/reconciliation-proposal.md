@@ -14,23 +14,23 @@
 - **Status:** current
 - **Provenance:** source-direct
 - **Sources:** SRC-005 / full result
-- **Relations:** contradicts OBS-003; contradicts DEC-002
+- **Relations:** contradicts OBS-003; invalidates-support-for DEC-002
 
 ## Classification
 
 - **Finding:** `REC-EX03-001`
 - **Materiality:** blocking
 - **Affected baseline units:** AU-001, AU-002, AU-003, AU-004
-- **Reason:** The reader-facing recommendation that four retries can be stated for the validated migration no longer satisfies the updated capacity evidence. Neither four nor five retries can be recommended from these results.
+- **Reason:** `OBS-004` invalidates the capacity support used by the reader-facing four-retry recommendation. It does not itself supersede `DEC-002`: a source observation cannot replace author-approved meaning. Neither four nor five retries can be recommended from these results.
 - **Immediate disposition:** Halt the baseline reader action. Do not repin `baseline-r1`; preserve its `SNAP-003` trace and mark it stale.
 
 ## Author Resolution For The Worked Exercise
 
-`APR-004` supplies explicit local author approval to supersede `DEC-002` with `DEC-003`: do not state a current retry count in the RFC until a configuration that meets both delivery and latency targets is validated.
+`APR-004` separately supplies explicit local author approval to supersede `DEC-002` with `DEC-003`: do not state a current retry count in the RFC until a configuration that meets both delivery and latency targets is validated.
 
 ## Reconciliation Result
 
-- Preserve `DEC-002` as superseded.
+- Preserve `DEC-002` as accepted historical meaning until `APR-004` supersedes it; do not describe `OBS-004` as the superseding authority.
 - Create accepted `DEC-003` with the no-count direction.
 - Create successor `SNAP-004` and retain `SNAP-003` unchanged.
 - Mark `baseline-r1` stale because its pinned support no longer satisfies its action.

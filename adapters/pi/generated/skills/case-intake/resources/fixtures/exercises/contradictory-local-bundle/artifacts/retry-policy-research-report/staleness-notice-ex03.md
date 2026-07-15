@@ -2,7 +2,7 @@
 
 ### STALE-EX03-001: Four-retry research report support contradicted
 
-- **Trigger:** New validated local rerun directly contradicts the capacity support for `DEC-002`.
+- **Trigger:** New validated local rerun directly contradicts the capacity evidence used to support the baseline report's `DEC-002` recommendation. The rerun invalidates artifact support; `APR-004` separately supersedes the decision.
 - **Affected entries:** `OBS-003`, `OBS-004`, `DEC-002`, `DEC-003`
 - **Affected artifact:** `artifacts/retry-policy-research-report/artifact.md`
 - **Affected units:** AU-001, AU-002, AU-003, AU-004
