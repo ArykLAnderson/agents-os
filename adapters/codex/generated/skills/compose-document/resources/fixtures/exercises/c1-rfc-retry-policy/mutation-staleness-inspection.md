@@ -18,4 +18,4 @@ Only AU-001 and AU-006 are stale in `mutation-01`. AU-002 through AU-005 and AU-
 
 ## Re-Exercise
 
-Restoring the original decision, `option-five` row anchor, and Five-row wording returns the copied candidate to the same content and unit support as rev-02. The baseline candidate's trace status remains `current`.
+Restoring the original decision, `option-five` row anchor, and Five-row wording returns the copied candidate to the same content and unit support as candidate rev-03. The canonical decision record's trace status remains `current`; its supplied exercise action remains external context and it remains not publication-ready.

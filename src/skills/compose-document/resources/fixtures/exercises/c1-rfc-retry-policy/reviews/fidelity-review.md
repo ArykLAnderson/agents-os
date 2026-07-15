@@ -1,6 +1,6 @@
 # Fidelity Review
 
-- **Scope:** candidate rev-02 against notification-retry-policy/SNAP-003 and `artifact.trace.md`
+- **Scope:** candidate rev-03 against notification-retry-policy/SNAP-003 and its rev-03 `artifact.trace.md`
 - **Outcome:** pass with no blocker
 
 | Unit | Result | Evidence |

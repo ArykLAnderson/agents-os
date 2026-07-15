@@ -16,7 +16,7 @@
 - **Source bundle:** `sources/existing-retry-policy.md`, `sources/planning-transcript.md`, `sources/weak-authority-claim.md`, and `sources/later-capacity-evidence.md`
 - **Baseline reader action:** assess the retry-policy direction for the RFC
 - **Reader:** migration technical approver
-- **Re-exercise artifact:** decision record with no Case-backed reader action; supplied local review context only
+- **Re-exercise artifact:** candidate rev-03 decision record with no Case-backed reader action; supplied local review context only
 
 ## Baseline State
 
@@ -26,11 +26,11 @@
 
 ## Qualitative Comparison
 
-| Dimension | Retained SNAP-001 workflow artifact | SNAP-003 re-exercise candidate | Result |
+| Dimension | Retained SNAP-001 workflow artifact | SNAP-003 candidate rev-03 decision record | Result |
 |---|---|---|---|
 | Usefulness for the current policy question | Cannot safely answer it because its current-policy claim is stale. | States the accepted four-retry direction and keeps prior options visible as history. | Re-exercise is a usable decision record; its local review context is not a Case-backed action. |
 | Value to implementation planning | Contains no tested current direction and cannot be used as planning input. | Supplies a Case-backed policy boundary, but no owner, schedule, rollout, or implementation plan. | Re-exercise informs later planning; it does not replace planning. |
 | Reader comprehension | A reader could take the three-retry claim as current. | Fresh-reader evidence shows the decision, evidence boundary, and non-authorization boundary are identifiable. | Re-exercise improves comprehension for this case; no measured claim is made. |
 | Author burden | Earlier approval history is retained; this comparison does not reconstruct its effort. | No new author question is sent because the Case already accepts the policy; the action is narrowed rather than inventing planning facts. | No additional burden was introduced by this re-exercise. |
 
-The comparison is qualitative and chronological: it compares the frozen retained artifact after its staleness was known with a later SNAP-003 candidate. It does not claim measured usefulness, reader performance, or author-time savings.
+The comparison is qualitative and chronological: it compares the frozen retained artifact after its staleness was known with candidate rev-03 on later SNAP-003. It does not claim measured usefulness, reader performance, or author-time savings.

@@ -1,12 +1,12 @@
 # Selection Manifest
 
-- **Artifact:** notification-retry-policy decision brief, candidate rev-02
+- **Artifact:** notification-retry-policy decision record, candidate rev-03
 - **Genre:** RFC
 - **Pinned snapshot set:** notification-retry-policy/SNAP-003
 - **Artifact type:** decision record
 - **Case-backed reader action:** none; DEC-002 is already accepted
 - **Supplied exercise action:** review whether the decision record faithfully presents DEC-002
-- **Recommended shaping strategy:** `decision-brief`; fit confirmed because one accepted decision and one approver action are in scope
+- **Recommended shaping strategy:** `decision-brief`; fit confirmed because one accepted decision is in scope and no Case-backed reader action is requested
 
 ## Selected Entries
 
