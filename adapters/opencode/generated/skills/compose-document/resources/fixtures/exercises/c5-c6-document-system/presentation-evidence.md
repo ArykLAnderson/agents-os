@@ -51,6 +51,15 @@
 - **Narrow command:** set viewport `390 844`; evaluate the same path structure; capture `--full`; inspect browser errors.
 - **Narrow result:** each directional path is `direction:"column"`, `width:324`, and `scroll:324`; lifecycle and skill hierarchy retain `5` steps and `4` connectors, while safe publishing retains `6` steps and `5` connectors. Page-level overflow is false. Screenshot: `rendered/c6-full-narrow-390x844.png`; SHA-256 `23f3d51906eb226e9cfde671093a9c7171c25b3884224b25c2722b97a7a543a1`.
 
+## Reconciliation-Return Closure
+
+- **Capture date:** `2026-07-15T08:51:30Z`.
+- **HTML inspected:** SHA-256 `fd0e99274d3d7e14c36c21f4259509fab45e6b96bee5b0999cf40eb06224bccc`.
+- **Desktop command:** open the file URL; set viewport `1440 1000`; evaluate `.return-band` text, flex direction, width, scroll width, and existence of `#skill-reconcile`; capture `--full`; inspect browser errors.
+- **Desktop result:** one return band reads “Proposed meaning change returns from downstream work to the initial case-reconcile node, then a new snapshot and successor artifact”; it is a `row` at `1082/1082` scroll/client width, and `#skill-reconcile` exists. Page-level overflow is false. Screenshot: `rendered/c6-full-desktop-1440x1000.png`; SHA-256 `a57fbff69380f4b8b3e62ab5335895ddd8b66b76f29f1bb94ff72c871c077121`.
+- **Narrow command:** set viewport `390 844`; evaluate the same return-band and destination-node checks; capture `--full`; inspect browser errors.
+- **Narrow result:** the same one return band becomes a `column` at `320/320` scroll/client width, retains the explicit downstream-to-initial-reconciliation relationship, and `#skill-reconcile` exists. Page-level overflow is false. Screenshot: `rendered/c6-full-narrow-390x844.png`; SHA-256 `6b7ed9e30b0eb6ad7e1230bfa0d246c71b8ef68636fb1602a6741a5138d35419`.
+
 ## Accessibility And Reader Preservation
 
 - Informative diagrams have role and alt text. Captions and adjacent text equivalents carry the reader-relevant meaning even if CSS diagrams do not render.
