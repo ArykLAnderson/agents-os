@@ -18,7 +18,7 @@ A source bundle may contain active conversation notes, conversation wrap-ups, me
 
 ## Source Entry Shape
 
-Use this Markdown shape in the Case `# Sources` section:
+Use this Markdown shape in the Case `# Sources` section. It is the DS-001 `SRC` record contract: the heading supplies the stable ID and human label; the fields preserve artifact identity, location, capture context, freshness, status, and material quality limits.
 
 ```markdown
 ### SRC-001: <short label>
@@ -31,6 +31,25 @@ Use this Markdown shape in the Case `# Sources` section:
 - **Source status:** <status or unknown>
 - **Reliability:** <material limitations, or omit only when no limitation is material>
 ```
+
+`Kind`, `Title`, `Location`, and `Captured` are required for every `SRC` entry. `Source updated` and `Source status` must be recorded with their supplied values or `unknown`. `Reliability` is required when a material quality limitation is known; it may be omitted only when no material limitation is known.
+
+### Provenance And Quality Mapping
+
+`SRC` entries identify source artifacts. They do not use the DS-001 `Provenance` field because provenance describes how a later semantic entry entered the Case model. During extraction, semantic entries reference their `SRC` entry and use the appropriate canonical provenance value: `source-direct`, `source-quoted`, `agent-inferred`, `agent-synthesized`, `author-stated`, or `author-approved`.
+
+The source record carries source-quality context without creating a competing quality model:
+
+| DS-001 concept | `SRC` representation | Rule |
+|---|---|---|
+| Stable source identity | `SRC-###` heading | Keep the ID stable when the source label changes. |
+| Source location and narrow locator | `Location` | Preserve the narrowest stable supplied locator. |
+| Source capture context | `Captured` | Record when the artifact entered the Case. |
+| Freshness or revision | `Source updated` | Preserve a supplied date, revision, or timestamp; otherwise use `unknown`. |
+| Source lifecycle status | `Source status` | Preserve a supplied status; otherwise use `unknown`. |
+| Access, authorship, transcript, freshness, or authority limitation | `Reliability` | Record only material limitations in declarative terms. |
+
+`Reliability` is source metadata, not semantic confidence and not authority. Later semantic entries use DS-001 `Confidence` only when their support or interpretation is uncertain, and preserve authority through their canonical provenance and type-appropriate status.
 
 Accepted source kinds are descriptive labels, not a closed taxonomy. Prefer specific labels such as `current-conversation`, `conversation-wrap-up`, `meeting-notes`, `meeting-transcript`, `existing-document`, `tracker-item`, `code-reference`, `metric-set`, `dashboard`, `research-output`, or `unavailable-source`.
 

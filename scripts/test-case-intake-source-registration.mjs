@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -8,6 +8,7 @@ const root = process.cwd();
 const fixtureDir = path.join(root, "src/skills/case-intake/resources/fixtures/source-bundles/mixed-intake");
 const manifest = JSON.parse(await readFile(path.join(fixtureDir, "manifest.json"), "utf8"));
 const expected = await readFile(path.join(fixtureDir, "expected-sources.md"), "utf8");
+const generatedTargets = ["pi", "codex", "opencode"];
 
 const errors = [];
 
@@ -22,32 +23,60 @@ function assert(condition, message) {
 assert(Array.isArray(manifest.artifacts), "manifest.artifacts must be an array");
 assert(manifest.artifacts.length === 8, "mixed-intake fixture should cover eight distinct artifacts");
 
-const sourceHeadings = [...expected.matchAll(/^### (SRC-\d{3}): (.+)$/gm)];
-assert(sourceHeadings.length === manifest.artifacts.length, "each manifest artifact must be registered as one SRC entry");
+function parseSourceBlocks(markdown) {
+  const headings = [...markdown.matchAll(/^### (SRC-\d{3}): (.+)$/gm)];
+  return headings.map((heading, index) => {
+    const bodyStart = heading.index + heading[0].length;
+    const bodyEnd = index + 1 < headings.length ? headings[index + 1].index : markdown.length;
+    const fields = new Map();
+    for (const field of markdown.slice(bodyStart, bodyEnd).matchAll(/^- \*\*(.+?):\*\* (.+)$/gm)) {
+      fields.set(field[1], field[2]);
+    }
+    return { id: heading[1], label: heading[2], fields };
+  });
+}
+
+async function filesUnder(dir) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...await filesUnder(file));
+    else files.push(file);
+  }
+  return files;
+}
+
+const sourceBlocks = parseSourceBlocks(expected);
+assert(sourceBlocks.length === manifest.artifacts.length, "each manifest artifact must be registered as one SRC entry");
 assert(!/^### (OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}:/m.test(expected), "source registration must not create semantic entries");
 assert(!/^# Entries$/m.test(expected), "source registration fixture must not include an Entries section");
 
-const requiredFields = ["kind", "title", "location", "captured", "source_updated", "source_status"];
+const fieldNames = {
+  kind: "Kind",
+  title: "Title",
+  location: "Location",
+  captured: "Captured",
+  source_updated: "Source updated",
+  source_status: "Source status",
+  reliability: "Reliability",
+};
+const requiredFields = Object.entries(fieldNames).filter(([field]) => field !== "reliability");
 
 for (const [index, artifact] of manifest.artifacts.entries()) {
   const expectedId = `SRC-${String(index + 1).padStart(3, "0")}`;
-  const heading = sourceHeadings[index];
-  assert(heading?.[1] === expectedId, `artifact ${artifact.id} should use stable ID ${expectedId}`);
-  assert(heading?.[2] === artifact.title, `artifact ${artifact.id} heading should use the artifact title`);
+  const source = sourceBlocks[index];
+  assert(source?.id === expectedId, `artifact ${artifact.id} should use stable ID ${expectedId}`);
+  assert(source?.label === artifact.title, `artifact ${artifact.id} heading should use the artifact title`);
 
-  for (const field of requiredFields) {
+  for (const [field, sourceField] of requiredFields) {
     assert(artifact[field], `artifact ${artifact.id} must include ${field}`);
+    assert(source?.fields.has(sourceField), `${expectedId} must include canonical ${sourceField} field`);
+    assert(source?.fields.get(sourceField) === artifact[field], `${expectedId} ${sourceField} must belong to ${artifact.id}`);
   }
 
-  assert(expected.includes(`- **Kind:** ${artifact.kind}`), `expected sources should preserve kind for ${artifact.id}`);
-  assert(expected.includes(`- **Title:** ${artifact.title}`), `expected sources should preserve title for ${artifact.id}`);
-  assert(expected.includes(`- **Location:** ${artifact.location}`), `expected sources should preserve location for ${artifact.id}`);
-  assert(expected.includes(`- **Captured:** ${artifact.captured}`), `expected sources should preserve capture date for ${artifact.id}`);
-  assert(expected.includes(`- **Source updated:** ${artifact.source_updated}`), `expected sources should preserve source update value for ${artifact.id}`);
-  assert(expected.includes(`- **Source status:** ${artifact.source_status}`), `expected sources should preserve source status for ${artifact.id}`);
-
   if (artifact.reliability) {
-    assert(expected.includes(`- **Reliability:** ${artifact.reliability}`), `expected sources should preserve reliability note for ${artifact.id}`);
+    assert(source?.fields.has(fieldNames.reliability), `${expectedId} must include a material Reliability field`);
+    assert(source?.fields.get(fieldNames.reliability) === artifact.reliability, `${expectedId} Reliability must belong to ${artifact.id}`);
   }
 }
 
@@ -61,8 +90,28 @@ assert(unavailable, "fixture should include an inaccessible source");
 assert(unavailable?.location.startsWith("local/unavailable:"), "inaccessible source should use local/unavailable location");
 assert(/limited reliability|inaccessible|no content is inferred/i.test(unavailable?.reliability || ""), "inaccessible source should declare limited reliability and no inferred content");
 
-const bundleTitleRegistered = sourceHeadings.some((heading) => heading[2] === manifest.title);
+const bundleTitleRegistered = sourceBlocks.some((source) => source.label === manifest.title);
 assert(!bundleTitleRegistered, "bundle-level title must not replace component source registration");
+
+const sourceResourcesRoot = path.join(root, "src/skills/case-intake/resources");
+const sourceResourceFiles = await filesUnder(sourceResourcesRoot);
+for (const target of generatedTargets) {
+  const generatedRoot = path.join(root, "adapters", target, "generated/skills/case-intake");
+  const generatedSkill = await readFile(path.join(generatedRoot, "SKILL.md"), "utf8");
+  assert(generatedSkill.includes("<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->"), `${target} generated skill must include its generated header`);
+  assert(generatedSkill.includes("## Source Registration"), `${target} generated skill must include source registration instructions`);
+
+  for (const sourceFile of sourceResourceFiles) {
+    const relative = path.relative(sourceResourcesRoot, sourceFile);
+    const generatedFile = path.join(generatedRoot, "resources", relative);
+    try {
+      const [sourceContent, generatedContent] = await Promise.all([readFile(sourceFile, "utf8"), readFile(generatedFile, "utf8")]);
+      assert(generatedContent === sourceContent, `${target} generated ${relative} must match canonical source`);
+    } catch (error) {
+      fail(`${target} generated ${relative} must exist and match canonical source: ${error.message}`);
+    }
+  }
+}
 
 if (errors.length !== 0) {
   console.error(errors.map((error) => `ERROR ${error}`).join("\n"));
