@@ -4,6 +4,8 @@
 
 ## Evidence and authority register
 
+The controlled rerun is evidence, not policy authority. `ALT-001` is a rejected five-retry proposal, and the duplicate unattributed channel claim `OBS-002` is omitted from prose because it repeats that proposal; its weak authority remains disclosed here. Neither claim is current policy.
+
 | Item | Status | Establishes | Does not establish |
 |---|---|---|---|
 | Original capacity validation (`OBS-003`) | Superseded observation | Evidence used by the frozen baseline report. | Current capacity support after the conflicting rerun. |
@@ -28,4 +30,4 @@ Validate a configuration against both required targets, reconcile the evidence, 
 
 ## Trace
 
-The formatted content preserves the visible units in the integrated `successor-r2/artifact.trace.md`: `AU-101` recommendation, `AU-102` authority distinction, `AU-103` evidence result, `AU-104` limitations, and `AU-105` validation boundary. `AU-106` remains omission accounting in the trace sidecar.
+The formatted content preserves the visible units in the integrated `successor-r2/artifact.trace.md`: `AU-101` recommendation, `AU-102` authority distinction, `AU-103` evidence result, `AU-104` limitations, and `AU-105` validation boundary. `AU-106` remains visible omission accounting for `OBS-002` and `ALT-001`, not a current-policy claim. See `trace-locators.md` for target locator translations; actual Notion block locators can only be recorded after an authorized publish and fetch-back.
