@@ -49,6 +49,19 @@ function withoutFrontmatter(markdown) {
   return markdown.replace(/^---\n[\s\S]*?\n---\n?/, "");
 }
 
+function parseVttRanges(vtt) {
+  const cues = new Map();
+  for (const cue of vtt.matchAll(/^(\d{2}:\d{2}:\d{2})\.\d{3} --> (\d{2}:\d{2}:\d{2})\.\d{3}\n([\s\S]*?)(?=\n\d{2}:\d{2}:\d{2}\.\d{3} -->|$)/gm)) {
+    cues.set(`${cue[1]}-${cue[2]}`, cue[3].trim());
+  }
+  return cues;
+}
+
+function transcriptCueForLocator(locator, ranges) {
+  const match = locator.match(/^SRC-002 \/ (\d{2}:\d{2}:\d{2})-(\d{2}:\d{2}:\d{2})$/);
+  return match ? ranges.get(`${match[1]}-${match[2]}`) : undefined;
+}
+
 const [skill, extractionContract, approvalContract, ledger, authorReview, conversation, transcript, research] = await Promise.all([
   readFile(path.join(caseIntakeRoot, "SKILL.md"), "utf8"),
   readFile(path.join(caseIntakeRoot, "resources/entry-extraction.md"), "utf8"),
@@ -78,7 +91,7 @@ for (const entry of entries.values()) {
 assertEntry(entries, "OBS-001", { Status: "current", Provenance: "source-direct", Sources: "SRC-001 / author conversation notes" });
 assertEntry(entries, "OBS-002", { Status: "current", Provenance: "source-direct", Sources: "SRC-002 / 00:03:12-00:04:05" });
 assertEntry(entries, "OBS-003", { Status: "current", Provenance: "agent-inferred", Sources: "SRC-002 / 00:18:12-00:18:44" });
-assertEntry(entries, "OBS-004", { Status: "current", Provenance: "agent-synthesized", Sources: "SRC-002 / 00:03:12-00:04:05; SRC-007 / research summary" });
+assertEntry(entries, "OBS-004", { Status: "current", Provenance: "agent-synthesized", Sources: "SRC-002 / 00:18:12-00:18:44; SRC-007 / research summary" });
 assertEntry(entries, "INT-001", { Status: "accepted", Provenance: "author-stated", Sources: "SRC-001 / author conversation notes" });
 assertEntry(entries, "OBS-005", { Status: "historical", Provenance: "source-direct", Sources: "SRC-007 / historical workflow note" });
 assertEntry(entries, "INT-002", { Status: "proposed", Provenance: "source-direct", Sources: "SRC-007 / claimed benefit" });
@@ -108,19 +121,22 @@ const availableSourceText = new Map([
   ["SRC-002", transcript],
   ["SRC-007", research],
 ]);
+const transcriptRanges = parseVttRanges(transcript);
+assert(transcriptRanges.get("00:03:12-00:04:05")?.includes("source registration before extraction"), "VTT parser must retain the first cue's text");
+assert(transcriptRanges.get("00:18:12-00:18:44")?.includes("must not have inferred content"), "VTT parser must retain the second cue's text");
 for (const entry of entries.values()) {
   for (const locator of (entry.fields.get("Sources") || "").split("; ")) {
     const sourceId = sourcePathFromLocator(locator);
     if (!availableSourceText.has(sourceId)) continue;
     const text = availableSourceText.get(sourceId);
     if (entry.id === "OBS-001") assert(text.includes("register supplied artifacts before any semantic extraction"), "OBS-001 must be supported by supplied conversation text");
-    if (entry.id === "OBS-002") assert(text.includes("source registration before extraction"), "OBS-002 must be supported by supplied transcript text");
-    if (entry.id === "OBS-003") assert(text.includes("must not have inferred content"), "OBS-003 must be supported by supplied transcript text");
+    if (entry.id === "OBS-002") assert(transcriptCueForLocator(locator, transcriptRanges)?.includes("source registration before extraction"), "OBS-002 must be supported by its VTT locator range");
+    if (entry.id === "OBS-003") assert(transcriptCueForLocator(locator, transcriptRanges)?.includes("must not have inferred content"), "OBS-003 must be supported by its VTT locator range");
     if (entry.id === "OBS-005") assert(text.includes("extracting entries before source registration"), "OBS-005 must be supported by supplied research text");
     if (entry.id === "INT-002" || entry.id === "ASM-001") assert(text.includes("aims to reduce document review burden") && text.includes("does not include a measurement"), `${entry.id} must be supported by supplied research text`);
   }
 }
-assert(research.includes("Primary links are not expanded") && transcript.includes("must not have inferred content"), "OBS-004 synthesis must be supported by both supplied sources");
+assert(research.includes("Primary links are not expanded") && transcriptCueForLocator(entries.get("OBS-004")?.fields.get("Sources")?.split("; ")[0] || "", transcriptRanges)?.includes("must not have inferred content"), "OBS-004 synthesis must be supported by its VTT locator range and research source");
 for (const entry of entries.values()) assert(!/(?:SRC-003|SRC-004|SRC-005|SRC-006) \/ (?:proposal section|description|parseCaseModel|cycle-time panel|claimed benefit)/.test(entry.fields.get("Sources") || ""), `${entry.id} must not infer content from metadata-only source records`);
 
 assert(authorReview.includes("What I extracted as current intent:"), "author review must present extracted intent");

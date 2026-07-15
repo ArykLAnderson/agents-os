@@ -46,7 +46,7 @@ No extensions.
 - **Statement:** Incomplete source evidence requires bounded handling rather than unsupported expansion.
 - **Status:** current
 - **Provenance:** agent-synthesized
-- **Sources:** SRC-002 / 00:03:12-00:04:05; SRC-007 / research summary
+- **Sources:** SRC-002 / 00:18:12-00:18:44; SRC-007 / research summary
 - **Confidence:** medium
 
 ### INT-001: Inspectable intake provenance
