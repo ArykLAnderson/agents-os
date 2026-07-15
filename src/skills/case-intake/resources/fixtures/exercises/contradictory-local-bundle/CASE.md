@@ -2,8 +2,8 @@
 model_contract: case-model/v1
 initiative_id: notification-retry-policy
 working_state: active
-current_snapshot: SNAP-004
-updated: 2026-07-18
+current_snapshot: SNAP-005
+updated: 2026-07-19
 ---
 
 # Sources
@@ -111,7 +111,7 @@ No extensions.
 
 # Approvals
 
-See `approvals/APR-001.md`, `approvals/APR-002.md`, `approvals/APR-003.md`, and `approvals/APR-004.md`. Approval is recorded separately from source-derived provenance.
+See `approvals/APR-001.md`, `approvals/APR-002.md`, `approvals/APR-003.md`, `approvals/APR-004.md`, and `approvals/APR-005.md`. Approval is recorded separately from source-derived provenance.
 
 # Snapshots
 
@@ -153,4 +153,16 @@ See `approvals/APR-001.md`, `approvals/APR-002.md`, `approvals/APR-003.md`, and 
 - **Approval:** APR-004
 - **Entries:** manifest: snapshots/SNAP-004.entries.md (sha256:bb2d493d94a001ac27ea070b153f4386c2659088a575d5f6ef63cd8f77f06530)
 - **Supersedes:** SNAP-003
-- **Artifacts:** artifacts/retry-policy-research-report/artifact.md marked stale; successor outcome recorded in `artifacts/retry-policy-research-report/reexercise.md`
+- **Integrity:** discovered actual digest sha256:d90b2b995ec82beab89a3cd03473649814fa815e93eebe7aabdbb741cf461b1b differs from the recorded digest. Preserved unchanged; see `integrity-reconciliation.md`.
+- **Artifacts:** baseline-r1 remains stale; successor representation is superseded by SNAP-005 only for snapshot-integrity correction.
+
+### SNAP-005: Snapshot-integrity representation corrected
+
+- **Created:** 2026-07-19
+- **Reason:** author-approved representation correction
+- **Author status:** accepted
+- **Approval:** APR-005
+- **Entries:** manifest: snapshots/SNAP-005.entries.md (sha256:d90b2b995ec82beab89a3cd03473649814fa815e93eebe7aabdbb741cf461b1b)
+- **Supersedes:** SNAP-004
+- **Meaning:** identical accepted entry meaning to the discovered SNAP-004 bytes; no retry-policy, authority, evidence, scope, or reader-action change.
+- **Artifacts:** successor-r2 trace and review evidence repointed to SNAP-005; baseline-r1 remains frozen and stale on SNAP-003.

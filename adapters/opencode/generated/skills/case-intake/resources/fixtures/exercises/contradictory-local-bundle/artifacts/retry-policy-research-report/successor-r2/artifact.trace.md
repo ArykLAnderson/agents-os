@@ -2,7 +2,7 @@
 
 - **Artifact:** `artifacts/retry-policy-research-report/successor-r2/artifact.md`
 - **Revision:** `successor-r2`
-- **Pinned snapshot set:** `notification-retry-policy/SNAP-004`
+- **Pinned snapshot set:** `notification-retry-policy/SNAP-005`
 - **Trace status:** reviewable with open validation gap
 
 ## Units
@@ -12,7 +12,7 @@
 - **Locator:** `#recommendation`
 - **Assertion:** Do not state a retry count until a configuration meets both targets and is validated.
 - **Derivation:** direct
-- **Support:** `notification-retry-policy/SNAP-004/DEC-003`; `notification-retry-policy/SNAP-004/GAP-002`
+- **Support:** `notification-retry-policy/SNAP-005/DEC-003`; `notification-retry-policy/SNAP-005/GAP-002`
 - **Visibility:** visible
 - **Status:** supported
 - **Notes:** `DEC-003` is the accepted direction with `APR-004`; `GAP-002` explains why no count is currently usable.
@@ -22,7 +22,7 @@
 - **Locator:** `#evidence-and-authority-register`
 - **Assertion:** `OBS-004` invalidates baseline report support, while `APR-004` separately supersedes `DEC-002` through `DEC-003`.
 - **Derivation:** synthesis
-- **Support:** `notification-retry-policy/SNAP-004/OBS-003`; `notification-retry-policy/SNAP-004/OBS-004`; `notification-retry-policy/SNAP-004/DEC-002`; `notification-retry-policy/SNAP-004/DEC-003`
+- **Support:** `notification-retry-policy/SNAP-005/OBS-003`; `notification-retry-policy/SNAP-005/OBS-004`; `notification-retry-policy/SNAP-005/DEC-002`; `notification-retry-policy/SNAP-005/DEC-003`
 - **Visibility:** visible
 - **Status:** supported
 - **Notes:** The register prevents a source observation from being represented as policy authority.
@@ -32,7 +32,7 @@
 - **Locator:** `#evidence`
 - **Assertion:** Four retries lack current delivery support and five retries exceeds the latency target; no count is supported by available evidence.
 - **Derivation:** synthesis
-- **Support:** `notification-retry-policy/SNAP-004/OBS-004`; `notification-retry-policy/SNAP-004/GAP-002`
+- **Support:** `notification-retry-policy/SNAP-005/OBS-004`; `notification-retry-policy/SNAP-005/GAP-002`
 - **Visibility:** visible
 - **Status:** supported
 - **Notes:** The unit is limited to the stated rerun result and does not claim a numeric margin.
@@ -42,7 +42,7 @@
 - **Locator:** `#limitations`
 - **Assertion:** Missing run variables and numeric thresholds prevent explanation, quantification, generalization, and a replacement configuration.
 - **Derivation:** direct
-- **Support:** `notification-retry-policy/SNAP-004/OBS-004`; `notification-retry-policy/SNAP-004/GAP-002`
+- **Support:** `notification-retry-policy/SNAP-005/OBS-004`; `notification-retry-policy/SNAP-005/GAP-002`
 - **Visibility:** visible
 - **Status:** limited
 - **Notes:** The unrecorded variables and thresholds are documented in `post-baseline-capacity-rerun.md`; the trace does not infer their values.
@@ -52,7 +52,7 @@
 - **Locator:** `#decision-boundary`
 - **Assertion:** Validate, reconcile, and obtain a new author-approved decision before stating a count.
 - **Derivation:** synthesis
-- **Support:** `notification-retry-policy/SNAP-004/DEC-003`; `notification-retry-policy/SNAP-004/GAP-002`; `notification-retry-policy/SNAP-004/INT-001`
+- **Support:** `notification-retry-policy/SNAP-005/DEC-003`; `notification-retry-policy/SNAP-005/GAP-002`; `notification-retry-policy/SNAP-005/INT-001`
 - **Visibility:** visible
 - **Status:** supported
 - **Notes:** This is the bounded reader action, not a claim that validation has occurred.
@@ -62,7 +62,7 @@
 - **Locator:** `selection-manifest.md#omitted-and-deferred-entries`
 - **Assertion:** The duplicate unattributed channel claim is omitted from the main prose while its weak authority remains visible in the register.
 - **Derivation:** omission
-- **Support:** `notification-retry-policy/SNAP-004/OBS-002`; `notification-retry-policy/SNAP-004/ALT-001`
+- **Support:** `notification-retry-policy/SNAP-005/OBS-002`; `notification-retry-policy/SNAP-005/ALT-001`
 - **Visibility:** omitted
 - **Status:** supported
 - **Notes:** Omission does not change the no-count action.

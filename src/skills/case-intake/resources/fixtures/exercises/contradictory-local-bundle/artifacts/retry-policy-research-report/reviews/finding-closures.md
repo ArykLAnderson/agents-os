@@ -10,3 +10,4 @@ These closures describe the local worked exercise evidence. They do not create a
 | RRG-002 | `post-baseline-capacity-rerun.md`, `successor-r2/selection-manifest.md`, and `successor-r2/artifact.md` disclose unrecorded comparability variables and numeric thresholds without inventing values. |
 | RRG-003 | `successor-r2/artifact.md#evidence-and-authority-register` makes evidence status, decision status, and authority visible to the reader. |
 | RRG-004 | `reviews/blind-fresh-reader-entrypoint.md` uses `INDEX.md` as the normal entrypoint and records recovery of the current revision, status, snapshot, support, authority, action, and stale baseline status. |
+| INTG-001 | `integrity-reconciliation.md` preserves SNAP-004's recorded and discovered digests; `APR-005` author-approves SNAP-005 with identical accepted meaning and a verified digest. |

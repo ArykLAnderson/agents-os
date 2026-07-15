@@ -3,7 +3,7 @@
 - **Attempt:** `exercise-03-attempt-01/reexercise-01`
 - **Source set:** `SRC-001` through `SRC-005`; the baseline four sources remain and the controlled rerun is the only changed evidence.
 - **Reader and action:** Same RFC reviewer deciding whether the RFC may recommend a current retry count.
-- **Pinned successor snapshot:** `notification-retry-policy/SNAP-004`
+- **Pinned successor snapshot:** `notification-retry-policy/SNAP-005` after the author-approved representation correction preserved SNAP-004's discovered integrity mismatch.
 
 ## Changed Composition Result
 
