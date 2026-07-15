@@ -190,6 +190,7 @@ function documentSystemFixturePaths(workRoot, caseSlug, artifactSlug, proofCase)
       path.join(proofDir, "candidate", "artifact.trace.md"),
       path.join(proofDir, "candidate", "artifact.notion.md"),
       path.join(proofDir, "candidate", "artifact.html"),
+      path.join(proofDir, "checks", "fidelity-review.md"),
       path.join(proofDir, "checks", "trace-coverage.md"),
       path.join(proofDir, "checks", "trace-maintenance.md"),
       path.join(proofDir, "checks", "concision-review.md"),

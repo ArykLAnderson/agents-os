@@ -55,6 +55,7 @@ Fixture initialization also creates the proof evidence bundle shape:
     assets/
   reviews/
   checks/
+    fidelity-review.md
     trace-coverage.md
     trace-maintenance.md
     concision-review.md
