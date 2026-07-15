@@ -31,12 +31,32 @@ node scripts/agents-os.mjs document-system-fixture init <case-slug> [--root <pat
 node scripts/agents-os.mjs document-system-fixture inspect <case-slug> [--root <path>] [--artifact <artifact-slug>] [--proof-case <case-id>]
 ```
 
+## Source Registration
+
+Before any semantic extraction, load `resources/source-registration.md` and create one `SRC` entry for every distinct supplied artifact in the source bundle. Bundle names are only organizational labels; they never replace component source entries.
+
+Registration records only source metadata and access limits:
+
+- stable `SRC-###` ID
+- kind
+- title or human label
+- location, locator, or unavailable reason
+- capture date
+- source updated/status, or `unknown`
+- reliability notes when access, freshness, authorship, transcript quality, or source authority is materially limited
+
+For inaccessible sources, register the known metadata with limited reliability and do not infer content from a title, URL, ticket key, or unavailable path.
+
 ## Boundary
 
 - Do not compose, shape, format, publish, or review reader-facing documents.
 - Do not perform open-ended discovery unless the author grants bounded discovery scope.
 - Do not adopt company-specific, tracker-specific, chat-specific, wiki-specific, database-placement, or personal workspace defaults in the portable core.
 - Route later semantic changes through `case-reconcile`.
+
+## Progressive Resources
+
+Use only the source registration resource for this phase. Later extraction, approval, reconciliation, and snapshot resources must not be loaded or applied just because a source bundle is available.
 
 ## Handoff
 
