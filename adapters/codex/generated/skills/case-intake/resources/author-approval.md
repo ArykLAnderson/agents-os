@@ -34,7 +34,7 @@ What still needs your call:
 If this is right, approve the snapshot. Otherwise answer only the numbered items.
 ```
 
-Keep the review to three through seven numbered material questions. Explain why each answer matters and include a recommendation only when the available evidence supports one. A blocking contradiction or missing authority that prevents an honest binding proposal must be asked immediately; other questions may be batched at the intake boundary.
+Keep the review to one through seven numbered material questions; do not pad a review to meet a minimum. Explain why each answer matters and include a recommendation only when the available evidence supports one. A blocking contradiction or missing authority that prevents an honest binding proposal must be asked immediately; other questions may be batched at the intake boundary.
 
 ## Approval Boundary
 
