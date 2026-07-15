@@ -56,6 +56,17 @@ The presentation-only revision replaces independent grid arrow cells with groupe
 
 `presentation-evidence.md#directional-path-closure` records the exact desktop and narrow path-step/connector results. The old full-page digests remain historical evidence for the pre-layout-closure representation.
 
+## Reconciliation-Return Revision
+
+The skill-hierarchy forward path now ends at `format/publish`; a separate visible return band explicitly connects a proposed meaning change from downstream work back to the initial `case-reconcile` node. This corrects presentation topology without changing accepted meaning. The revised HTML was captured at `2026-07-15T08:51:30Z`; it has SHA-256 `fd0e99274d3d7e14c36c21f4259509fab45e6b96bee5b0999cf40eb06224bccc`.
+
+| Screenshot | SHA-256 |
+|---|---|
+| `rendered/c6-full-desktop-1440x1000.png` | `a57fbff69380f4b8b3e62ab5335895ddd8b66b76f29f1bb94ff72c871c077121` |
+| `rendered/c6-full-narrow-390x844.png` | `6b7ed9e30b0eb6ad7e1230bfa0d246c71b8ef68636fb1602a6741a5138d35419` |
+
+`presentation-evidence.md#reconciliation-return-closure` records the desktop and narrow return-band relationship checks. Earlier full-page digests remain historical evidence for the preceding layout representations.
+
 The full-page captures were taken on `2026-07-15T08:44:12Z` from the same HTML digest and browser/file URL above. They visibly cover all six diagrams and their adjacent text equivalents at desktop and narrow viewports; `presentation-evidence.md#full-page-closure` records the command sequences and measured results.
 
 ## Finding Coverage

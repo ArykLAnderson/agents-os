@@ -31,12 +31,12 @@
 ### AU-503: Skill hierarchy and stop points
 
 - **Locator:** `#skill-hierarchy`, `#diagram-skill-hierarchy`
-- **Assertion:** Each named skill has a bounded responsibility; accepted meaning returns through reconciliation rather than being created by document, review, format, or publish steps.
+- **Assertion:** Each named skill has a bounded responsibility; a proposed meaning change from downstream document, review, format, or publish work returns to the initial reconciliation node rather than being created or approved downstream.
 - **Derivation:** synthesis
 - **Support:** qualified local skill inputs named in the header
 - **Visibility:** visible
 - **Status:** supported
-- **Notes:** This is a local workflow contract, not Case policy authority.
+- **Notes:** The HTML exposes this as a separate visible return band, not as an inverse adjacent forward edge. This is a local workflow contract, not Case policy authority.
 
 ### AU-504: Trace separates evidence and authority
 
