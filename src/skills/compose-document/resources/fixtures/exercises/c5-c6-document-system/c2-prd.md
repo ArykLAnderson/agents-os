@@ -3,7 +3,7 @@
 - **Adapter:** `prd.md`
 - **Pinned snapshot:** `notification-retry-policy/SNAP-005`
 - **Reader:** RFC planner
-- **Reader action:** Keep a current retry count out of the RFC; do not create an implementation plan, schedule, owner assignment, or replacement configuration from this exercise.
+- **Reader action:** Use the current safe artifact at `../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/INDEX.md`; keep a current retry count out of the RFC; do not create an implementation plan, schedule, owner assignment, or replacement configuration from this exercise.
 - **Primary shaping fit:** `review-briefing`; the reader is reviewing a known decision boundary, not learning the domain from scratch.
 
 ## Problem And Intended Outcome
@@ -30,6 +30,6 @@ The Case does not provide workload variables, numeric thresholds, a replacement 
 | `DEC-002` and `OBS-003` | Stale baseline context | Selected: distinguish a frozen prior report from current reader action. |
 | `ALT-001` and `OBS-002` | Competing weak claims | Omitted from the core requirement; disclosed in C3/C6 to prevent their treatment as current policy. |
 
-## Trace Basis
+## Trace And Review
 
-The C2 claims are supported by `notification-retry-policy/SNAP-005/OBS-004`, `notification-retry-policy/SNAP-005/DEC-003`, `notification-retry-policy/SNAP-005/GAP-002`, `notification-retry-policy/SNAP-005/DEC-002`, and `notification-retry-policy/SNAP-005/OBS-003`. This exercise creates no accepted product requirement.
+See `c2-prd.trace.md` for stable units and `reviews/c2-prd-fidelity-genre.md` for the preserved local fidelity and genre inspection. This exercise creates no accepted product requirement.
