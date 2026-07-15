@@ -58,9 +58,11 @@ After registration, load `resources/entry-extraction.md`. Extract only independe
 
 Load `resources/author-approval.md` after extraction and gap detection to prepare the concise author review. It governs proposed binding content and material questions; it does not create a snapshot.
 
+After an explicit author response, load `resources/first-snapshot.md`. It governs outcome handling and the first immutable accepted snapshot. Do not create a snapshot from silence, agent consensus, a source claim, or a pending question.
+
 ## Progressive Resources
 
-Load resources in this order: source registration, entry extraction, then author approval. Do not load reconciliation or snapshot resources during intake extraction.
+Load resources in this order: source registration, entry extraction, author approval, then first snapshot only after an explicit author response. Do not load reconciliation resources during intake.
 
 ## Handoff
 
