@@ -59,17 +59,17 @@ Use `Confidence` only for uncertain support, interpretation, or attribution. Sou
 ## Source-Sensitive Normalization
 
 - Current author conversation: direct choices may be `INT`, `DEC`, `REQ`, or `CON` with `author-stated` provenance. Author uncertainty becomes `GAP`, `ASM`, `RISK`, or proposed `ALT`.
-- Attributed transcript: preserve material wording as `OBS` with `source-quoted` provenance and timestamp locator. Participant claims do not become accepted decisions.
+- Attributed transcript: use `source-direct` for a normalized claim and `source-quoted` only when the entry preserves the exact material wording. Preserve the timestamp locator. Participant claims do not become accepted decisions.
 - Weak transcript: use unknown or limited attribution, reduce confidence when material, and create a `GAP` when authority or attribution blocks interpretation.
-- Existing document or ticket: preserve claims as `OBS`, proposed `REQ`, `ALT`, or other non-binding candidates. Historical decisions remain observations. Stale guidance remains historical until reaffirmed.
-- Code: record implemented behavior as `OBS`, not desired behavior. Preserve the supplied symbol, schema, diff, or commit locator.
-- Metrics: record measured results as `OBS` with the dashboard, query, range, or revision locator.
+- Existing document or ticket: extract claims only from supplied, accessible content. A title, URL, key, or metadata-only record supports no semantic claim; retain the `SRC` record and create a material `GAP` when its unavailable content matters. Historical decisions remain observations. Stale guidance remains historical until reaffirmed.
+- Code: record implemented behavior as `OBS`, not desired behavior, only when the supplied code content supports it. A code locator alone is not behavior evidence.
+- Metrics: record measured results as `OBS` only when supplied metric content supports them. A dashboard or query locator alone is not a result.
 - Unsupported benefit: normalize a claimed benefit to an `INT` when it is a desired outcome, or an `ASM` when it is an unverified belief. Never create a measured `OBS` without measurement support.
 - Inaccessible source: do not infer content. Create a `GAP` only when the missing content affects the declared purpose or proposed binding content.
 
 ## Gaps And Contradictions
 
-Create explicit `GAP` entries for material missing purpose, authority, attribution, owner, evidence, dependency, metric definition, stale guidance, unsupported benefit, or contradictory claims. Link a contradiction to every conflicting entry with `contradicts`; do not silently select the newest or most convenient claim.
+Create explicit `GAP` entries for material missing purpose, authority, attribution, owner, evidence, dependency, metric definition, stale guidance, unsupported benefit, or contradictory claims. When supplied accessible content supports opposing claims, link the opposing entries directly to each other with `contradicts` and link the `GAP` to both with `derived-from`. When one side is unavailable or metadata-only, represent the missing comparison as a `GAP`; do not fabricate a contradiction or infer the unavailable content.
 
 Use a narrow source locator for each support reference: heading, timestamp range, block URL, ticket comment, code symbol, metric panel, quoted snippet, or semantic anchor. Use `unknown` instead of inventing a locator or value.
 

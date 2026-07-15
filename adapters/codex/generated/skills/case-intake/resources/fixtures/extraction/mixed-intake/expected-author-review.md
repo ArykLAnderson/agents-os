@@ -9,7 +9,7 @@ What I would treat as accepted decisions:
 - Register every supplied artifact before extracting semantic entries.
 
 What still needs your call:
-1. Should the current Case adopt registration-before-extraction despite the older RFC saying the reverse? This determines which guidance is binding. I recommend adopting registration first because the supplied ticket and current author intent support it.
+1. Should the current Case adopt registration-before-extraction despite the historical workflow note saying the reverse? This determines which guidance is binding. I recommend adopting registration first because the current author notes support it.
 2. Does Speaker B have authority to set current intake policy? This determines whether the transcript statement can become binding. I recommend treating it as evidence only until you confirm authority.
 3. Should inaccessible stakeholder notes block the initial Case? This determines whether the available sources are sufficient. I recommend proceeding with the gap open unless those notes contain required policy or scope.
 
