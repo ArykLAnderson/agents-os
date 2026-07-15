@@ -41,3 +41,13 @@ Recorded before extraction on 2026-07-15.
 - **Source updated:** 2026-07-16
 - **Source status:** validated test result
 - **Reliability:** Registered during reconciliation. The result establishes tested retry limits but does not independently choose product policy.
+
+### SRC-005: Post-baseline capacity rerun
+
+- **Kind:** metric-set
+- **Title:** Notification Capacity Rerun
+- **Location:** artifacts/retry-policy-research-report/post-baseline-capacity-rerun.md
+- **Captured:** 2026-07-18
+- **Source updated:** 2026-07-18
+- **Source status:** validated local exercise result
+- **Reliability:** The rerun is controlled local exercise evidence for the same migration conditions. It establishes the observed result but does not independently choose policy.

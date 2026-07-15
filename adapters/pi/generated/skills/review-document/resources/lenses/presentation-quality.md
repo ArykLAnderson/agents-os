@@ -1,5 +1,5 @@
 # Presentation Quality Lens
 
-Skeleton lens for inspecting target presentation quality.
+Inspect the declared reader-facing representation after semantic review. Check heading hierarchy, table readability, locator stability, plain-language labels, and whether important limitations or decision asks are visible without depending on collapsed, hover-only, or target-specific disclosure.
 
-Define rendered-target checks, mobile/accessibility concerns, progressive-disclosure risks, and target-specific finding shape in a downstream implementation ticket.
+Record target-specific issues separately from semantic findings. Do not claim visual rendering, accessibility conformance, or device validation unless it was actually performed.

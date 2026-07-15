@@ -1,7 +1,5 @@
 # Editorial Quality Lens
 
-Review clarity, concision, hierarchy, and emphasis after fidelity findings are known.
+Check clarity, concision, hierarchy, and emphasis after fidelity and genre findings are known. Safe edits may remove repetition, improve labels, shorten prose, or reorder already-equivalent material. Preserve all material caveats, authority distinctions, confidence limits, and decision boundaries.
 
-Safe automatic edits remove duplication, clarify referents, improve headings, and tighten prose only when they preserve trace coverage, authority, confidence, scope, caveats, and reader action. Do not automatically collapse alternatives, remove uncertainty, strengthen modality, or reword a decision such that the trace assertion changes.
-
-Return concrete anchor-level edits and identify any change that requires trace or Case review.
+Escalate rather than automatically edit when a proposed change would alter trace coverage, scope, evidence, authority, confidence, recommendation strength, or reader action. Do not collapse alternatives, remove uncertainty, strengthen modality, or reword a decision such that the trace assertion changes. Return concrete anchor-level edits, record the before/after effect for every material-looking edit, and identify changes that require trace or Case review.
