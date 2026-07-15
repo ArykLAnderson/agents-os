@@ -30,6 +30,6 @@
 - **Reason:** reconciliation-approved
 - **Author status:** accepted
 - **Approval:** APR-002
-- **Entries:** manifest: snapshots/SNAP-002.entries.md (sha256:88a5d9021d71b03371e1c0afb367cef75011c7bf4e8d233ffabcab1748984268)
+- **Entries:** manifest: snapshots/SNAP-002.entries.md (sha256:d38fb12484c5d220022e4498836cccb99b7f2a7d97983bd4e0cb7a9e06ab6478)
 - **Supersedes:** SNAP-001
 - **Artifacts:** none
