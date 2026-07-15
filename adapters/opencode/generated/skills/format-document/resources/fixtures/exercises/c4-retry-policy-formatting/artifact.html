@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notification Migration Retry Policy: Current Evidence Synthesis</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; line-height: 1.5; }
+    body { margin: 0; color: #17202a; background: #f8fafc; }
+    main { max-width: 72rem; margin: auto; padding: 2rem; background: #fff; }
+    nav ul { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; list-style: none; }
+    a { color: #075985; }
+    .callout { padding: 1rem; border-left: .35rem solid #0f766e; background: #f0fdfa; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 48rem; }
+    th, td { padding: .75rem; vertical-align: top; text-align: left; border: 1px solid #cbd5e1; }
+    th { background: #e2e8f0; }
+    @media (max-width: 40rem) { main { padding: 1rem; } nav ul { display: block; } nav li { margin: .5rem 0; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Notification Migration Retry Policy: Current Evidence Synthesis</h1>
+      <nav aria-label="Document sections">
+        <ul>
+          <li><a href="#recommendation">Recommendation</a></li>
+          <li><a href="#authority">Evidence and authority</a></li>
+          <li><a href="#evidence">Evidence</a></li>
+          <li><a href="#limitations">Limitations</a></li>
+          <li><a href="#boundary">Decision boundary</a></li>
+        </ul>
+      </nav>
+    </header>
+    <section id="recommendation">
+      <h2>Recommendation</h2>
+      <p class="callout"><strong>Do not state a current retry count in the RFC.</strong> The current author-approved direction is to wait for a configuration validated to meet both the required delivery rate and the dead-letter latency target.</p>
+    </section>
+    <section id="authority">
+      <h2>Evidence and authority register</h2>
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable evidence and authority register">
+        <table>
+          <caption>Evidence is distinct from policy authority.</caption>
+          <thead><tr><th>Item</th><th>Status</th><th>Establishes</th><th>Does not establish</th></tr></thead>
+          <tbody>
+            <tr><td>Original capacity validation (<code>OBS-003</code>)</td><td>Superseded observation</td><td>Evidence used by the frozen baseline report.</td><td>Current capacity support after the conflicting rerun.</td></tr>
+            <tr><td>Controlled capacity rerun (<code>OBS-004</code>)</td><td>Current observation</td><td>Four retries missed delivery; five retries exceeded latency. It invalidates baseline report support for four retries.</td><td>Why runs differ, a numeric margin, a replacement configuration, or policy authority.</td></tr>
+            <tr><td>Four-retry decision (<code>DEC-002</code>)</td><td>Superseded decision</td><td>The formerly approved policy direction.</td><td>A current policy after <code>APR-004</code>; the rerun did not supersede it.</td></tr>
+            <tr><td>Author approval (<code>APR-004</code>) and no-count decision (<code>DEC-003</code>)</td><td>Accepted direction</td><td>Do not state a count pending validation that meets both targets.</td><td>A replacement count or evidence that any configuration meets both targets.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Text equivalent: the rerun changes evidentiary support, while <code>APR-004</code> approves <code>DEC-003</code> as the current no-count policy direction.</p>
+    </section>
+    <section id="evidence">
+      <h2>Evidence</h2>
+      <p>The controlled rerun found four retries below the required delivery rate. Five retries met delivery but exceeded the dead-letter latency target. The available evidence therefore supports no current retry count.</p>
+      <p>The rerun invalidates report support for the four-retry recommendation. It did not itself supersede the author-approved four-retry decision. <code>APR-004</code> approved <code>DEC-003</code>, which changed the decision to the current no-count direction.</p>
+    </section>
+    <section id="limitations">
+      <h2>Limitations</h2>
+      <p>The record lacks workload mix, traffic volume, timing, environment configuration, implementation version, measurement method, and numeric thresholds. It cannot explain the result difference, quantify a margin, generalize beyond the stated migration conditions, or identify a replacement configuration.</p>
+    </section>
+    <section id="boundary">
+      <h2>Decision boundary</h2>
+      <p>Keep the retry count out of the RFC. Validate a configuration against both required targets, reconcile the resulting evidence, and obtain a new author-approved decision before stating a count.</p>
+    </section>
+    <footer><p>Trace support: <a href="../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/successor-r2/artifact.trace.md">successor-r2 artifact trace</a>.</p></footer>
+  </main>
+</body>
+</html>
