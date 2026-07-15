@@ -23,10 +23,10 @@ Use concise natural prose, not a raw ledger dump:
 I can create the first semantic snapshot after you confirm these points.
 
 What I extracted as current intent:
-- <three to five material intent or purpose statements>
+- <only the material intent or purpose statements needed for this Case>
 
 What I would treat as accepted decisions:
-- <three to five proposed binding statements>
+- <only the proposed binding statements that need approval>
 
 What still needs your call:
 1. <material question, why it matters, and evidence-backed recommendation>
@@ -34,7 +34,7 @@ What still needs your call:
 If this is right, approve the snapshot. Otherwise answer only the numbered items.
 ```
 
-Keep the review to one through seven numbered material questions; do not pad a review to meet a minimum. Explain why each answer matters and include a recommendation only when the available evidence supports one. A blocking contradiction or missing authority that prevents an honest binding proposal must be asked immediately; other questions may be batched at the intake boundary.
+Keep the review to zero through seven numbered material questions; do not pad a review to meet a minimum. A fully resolved Case may need no numbered question and can request approval of the stated binding content. Explain why each question matters and include a recommendation only when the available evidence supports one. A blocking contradiction or missing authority that prevents an honest binding proposal must be asked immediately; other questions may be batched at the intake boundary.
 
 ## Approval Boundary
 

@@ -31,3 +31,13 @@ Recorded before extraction on 2026-07-15.
 - **Source updated:** 2026-07-14
 - **Source status:** unknown
 - **Reliability:** The author identity, approval locator, and capacity support are unavailable.
+
+### SRC-004: Notification capacity validation
+
+- **Kind:** metric-set
+- **Title:** Notification Capacity Validation
+- **Location:** sources/later-capacity-evidence.md
+- **Captured:** 2026-07-16
+- **Source updated:** 2026-07-16
+- **Source status:** validated test result
+- **Reliability:** Registered during reconciliation. The result establishes tested retry limits but does not independently choose product policy.
