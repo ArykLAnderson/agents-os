@@ -39,10 +39,11 @@ async function filesUnder(dir) {
   return files;
 }
 
-const [skill, contract, fixture, manifestOne, manifestTwo, mechanical, material, accepted, supersession, staleness, trace, blocking, duplicates] = await Promise.all([
+const [skill, contract, fixture, reconciledCase, manifestOne, manifestTwo, mechanical, material, accepted, supersession, staleness, trace, blocking, duplicates] = await Promise.all([
   readFile(path.join(reconcileRoot, "SKILL.md"), "utf8"),
   readFile(path.join(reconcileRoot, "resources/reconciliation.md"), "utf8"),
   readFile(path.join(fixtureRoot, "CASE.md"), "utf8"),
+  readFile(path.join(fixtureRoot, "CASE-after-reconciliation.md"), "utf8"),
   readFile(path.join(fixtureRoot, "snapshots/SNAP-001.entries.md"), "utf8"),
   readFile(path.join(fixtureRoot, "snapshots/SNAP-002.entries.md"), "utf8"),
   readFile(path.join(fixtureRoot, "mechanical-result.md"), "utf8"),
@@ -56,6 +57,8 @@ const [skill, contract, fixture, manifestOne, manifestTwo, mechanical, material,
 ]);
 
 assert(skill.includes("resources/reconciliation.md"), "case-reconcile must load its reconciliation contract");
+assert(skill.includes("Every accepted material semantic change creates a later immutable Case snapshot"), "every accepted material semantic change must create a snapshot");
+assert(skill.includes("pinned support no longer satisfies their reader action"), "artifact staleness must remain conditional on reader action");
 for (const phrase of ["semantic update ownership", "blocking", "phase-batched", "low-risk mechanical", "agent consensus", "delegation declaration locator", "later immutable Case snapshot"]) {
   assert(contract.includes(phrase), `reconciliation contract must govern ${phrase}`);
 }
@@ -95,7 +98,7 @@ assert(snapshotTwo?.fields.get("Supersedes") === "SNAP-001", "accepted semantic 
 assert(snapshotTwo?.fields.get("Entries")?.includes(sha256(manifestTwo)), "later snapshot manifest digest must match immutable bytes");
 for (const id of ["OBS-001", "REQ-001", "REQ-002"]) assert(snapshotTwoEntries.some((entry) => entry.id === id), `later snapshot must retain resulting accepted entry ${id}`);
 assert(snapshotTwoEntries.find((entry) => entry.id === "REQ-001")?.fields.get("Status") === "superseded", "later complete-state snapshot must retain superseded historical entries");
-assert(!manifestTwo.includes("OBS-002") && !manifestTwo.includes("ALT-001"), "later snapshot must exclude unrelated superseded and rejected entries");
+assert(!manifestTwo.includes("OBS-002") && !manifestTwo.includes("ALT-001"), "accepted-state snapshot manifest must exclude prior rejected and unrelated historical entries");
 assert(accepted.includes("**Artifacts:** none affected") && accepted.includes("**Staleness:** none"), "semantic snapshots must not require affected or stale artifacts");
 for (const field of ["Authority", "Author", "Recorded", "Locator", "Outcome", "Approved entries", "Final wording", "Delegation declaration locator", "Delegation scope"]) assert(accepted.includes(`**${field}:**`), `delegated approval must include ${field}`);
 
@@ -109,6 +112,16 @@ assert(supersession.includes("**Outcome:** applied after author approval"), "sem
 assert(supersession.includes("**Snapshot:** SNAP-002"), "approved semantic supersession must create a later snapshot");
 assert(supersession.includes("**Overwrite:** none"), "semantic supersession must not overwrite accepted history");
 assert(manifestOne.includes("### REQ-001:") && manifestTwo.includes("### REQ-002:"), "each immutable snapshot manifest must preserve its own accepted state");
+
+const reconciledEntries = blocks(reconciledCase, /^### ((?:OBS|INT|DEC|REQ|CON|ALT|RISK|ASM|GAP|ACT|VIS)-\d{3}): (.+)$/gm);
+const reconciledSnapshots = blocks(reconciledCase, /^### (SNAP-\d{3}): (.+)$/gm);
+const reconciledSnapshotTwo = reconciledSnapshots.find((snapshot) => snapshot.id === "SNAP-002");
+assert(reconciledCase.includes("current_snapshot: SNAP-002"), "working Case pointer must advance after reconciliation");
+for (const id of ["REQ-001", "REQ-002", "OBS-002", "ALT-001"]) assert(reconciledEntries.some((entry) => entry.id === id), `post-reconciliation working ledger must retain ${id}`);
+assert(reconciledEntries.find((entry) => entry.id === "REQ-001")?.fields.get("Status") === "superseded", "post-reconciliation ledger must retain the superseded prior requirement unchanged");
+assert(reconciledEntries.find((entry) => entry.id === "OBS-002")?.fields.get("Status") === "historical", "post-reconciliation ledger must retain historical observations");
+assert(reconciledEntries.find((entry) => entry.id === "ALT-001")?.fields.get("Status") === "rejected", "post-reconciliation ledger must retain rejected alternatives");
+assert(reconciledSnapshotTwo?.fields.get("Entries")?.includes(sha256(manifestTwo)), "Case pointer may advance only after SNAP-002 has an immutable manifest and matching digest");
 
 const notices = blocks(staleness, /^### (STALE-\d{3}): (.+)$/gm);
 assert(notices.length === 1, "fixture must consolidate the affected trace support into one staleness notice");
