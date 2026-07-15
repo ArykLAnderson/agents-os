@@ -7,4 +7,4 @@
 - **Elements:** six gate labels, blocked-before-write marker, no-write result, caption, and text equivalent.
 - **Trace:** `#diagram-safe-publishing`, `AU-506`.
 - **Accessibility:** alt: “A publication path is blocked before the external write because authorization and destination checks are absent.”
-- **Validation:** the blocked marker precedes write; all unperformed checks are visibly conditional; inspect desktop and narrow rendering.
+- **Validation:** the blocked marker precedes write; grouped connectors join only adjacent gates in the declared order; all unperformed checks are visibly conditional; inspect desktop and narrow rendering.
