@@ -1,7 +1,7 @@
 # Artifact Trace
 
 - **Artifact:** `c6-explanation.md` and `c6-explanation.html`
-- **Revision:** `exercise-05-attempt-01`
+- **Revision:** `exercise-05-attempt-02` re-exercised from `25cb31347fe5407096db3f140a49f8ca4ae466d8`
 - **Pinned Case snapshot:** `notification-retry-policy/SNAP-005`
 - **Qualified non-Case inputs:** local `case-intake`, `case-reconcile`, `compose-document`, `shape-document`, `trace-artifact`, `review-document`, `format-document`, and `publish-document` instructions
 - **Trace status:** reviewable; publication intentionally blocked because no destination or explicit authorization exists
@@ -50,7 +50,7 @@
 
 ### AU-505: Multi-Case composition boundary
 
-- **Locator:** `#multi-case-composition`, `#diagram-multi-case`
+- **Locator:** `#multi-case`, `#diagram-multi-case`
 - **Assertion:** A multi-Case artifact preserves separate case/snapshot lanes and cannot transfer policy authority or rendering evidence across them.
 - **Derivation:** synthesis
 - **Support:** qualified local `compose-document`, `trace-artifact`, and `format-document` instructions
@@ -80,7 +80,7 @@
 
 ### AU-508: Omitted weak claim accounting
 
-- **Locator:** `#trace`, `#boundaries-and-next-action`
+- **Locator:** `#trace`, `#boundaries`
 - **Assertion:** The duplicate unattributed `OBS-002` claim is omitted from current action but disclosed as weak, while `ALT-001` remains rejected.
 - **Derivation:** omission
 - **Support:** `notification-retry-policy/SNAP-005/OBS-002`; `notification-retry-policy/SNAP-005/ALT-001`

@@ -1,13 +1,14 @@
 # Presentation Evidence
 
-- **Attempt:** `exercise-05-attempt-01`
+- **Attempt:** `exercise-05-attempt-02`
+- **Revision under inspection:** recorded after the re-exercise; input content began at `25cb31347fe5407096db3f140a49f8ca4ae466d8`
 - **Artifact:** `c6-explanation.html`
 - **Inspection boundary:** local file only; no JavaScript is required for semantic acceptance and no external destination was contacted.
 
 ## Structural And Link Checks
 
 - The HTML has one visible `h1`, ordered `h2` sections, `header`, `nav`, `main`, `section`, `figure`, `figcaption`, and `footer` landmarks.
-- All six required visual anchors are present: `diagram-lifecycle`, `diagram-skill-hierarchy`, `diagram-trace`, `diagram-multi-case`, `diagram-safe-publishing`, and `diagram-proof-coverage`.
+- All six required visual anchors are present: `diagram-lifecycle`, `diagram-skill-hierarchy`, `diagram-trace`, `diagram-multi-case`, `diagram-safe-publishing`, and `diagram-proof-coverage`; their IDs match the C6 trace locators.
 - Each figure has an adjacent selectable “Text equivalent” paragraph; each visual specification and the trace are linked locally from the footer.
 - There are no external images, stylesheets, scripts, or attachments. This avoids a second provenance system and leaves all important meaning as ordinary text.
 - Narrow-layout CSS switches flow and publish diagrams to one column and makes vocabulary tables horizontally scrollable without setting page-level fixed widths.
@@ -25,10 +26,13 @@
 
 ## Desktop And Narrow Review
 
-- **Desktop observation:** local Chromium through `agent-browser` at `1440x1000`. The page scroll/client widths were `1440/1440`; there was no page-level horizontal overflow. All six figures, all six textual equivalents, and all six required diagram IDs were present. Screenshot: `/var/folders/hx/3xqbd8n145z41h_lsydyxycw0000gn/T/opencode/c6-desktop-1440x1000.png`.
-- **Narrow observation:** local Chromium through `agent-browser` at `390x844`. The page scroll/client widths were `390/390`; `overflow` was `false`; all six figures and all six textual equivalents remained present. The flow diagram resolved to one `324px` column. Screenshot: `/var/folders/hx/3xqbd8n145z41h_lsydyxycw0000gn/T/opencode/c6-narrow.png`.
-- **Browser errors:** `agent-browser errors` returned no page errors after each viewport inspection.
-- **Rendering limit:** the screenshots are local temporary QA evidence and are intentionally not checked into the fixture. This records presentation behavior, not external accessibility conformance or real-reader approval.
+- **File URL:** `file:///Users/mont/agents-os-document-system-k1-exercise-05/src/skills/compose-document/resources/fixtures/exercises/c5-c6-document-system/c6-explanation.html`
+- **Browser:** local Chromium launched by `agent-browser 0.31.1`; inspected on `2026-07-15`.
+- **Desktop command:** `agent-browser --session ds05 open <file-url>`; `agent-browser --session ds05 set viewport 1440 1000`; `agent-browser --session ds05 screenshot rendered/c6-desktop-1440x1000.png`; `agent-browser --session ds05 eval <viewport/scroll/figure/equivalent/id check>`; `agent-browser --session ds05 errors`.
+- **Desktop output:** viewport `1440x1000`; page scroll/client widths `1440/1440`; `overflow:false`; `figures:6`; `equivalents:6`; all six required diagram IDs `true`; no browser errors. Screenshot: `rendered/c6-desktop-1440x1000.png`.
+- **Narrow command:** `agent-browser --session ds05 open <file-url>`; `agent-browser --session ds05 set viewport 390 844`; `agent-browser --session ds05 screenshot rendered/c6-narrow-390x844.png`; `agent-browser --session ds05 eval <viewport/scroll/figure/equivalent/flow-column check>`; `agent-browser --session ds05 errors`.
+- **Narrow output:** viewport `390x844`; page scroll/client widths `390/390`; `overflow:false`; `figures:6`; `equivalents:6`; flow grid `324px` (one column); no browser errors. Screenshot: `rendered/c6-narrow-390x844.png`.
+- **Rendering limit:** screenshots preserve the local QA state, not external accessibility conformance or real-reader approval. Browser commands are reproducible with the file URL and viewport sequence above.
 
 ## Accessibility And Reader Preservation
 

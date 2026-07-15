@@ -1,10 +1,10 @@
 # C5 Implementation Report Exercise: Local Document-System Coverage
 
 - **Adapter:** `implementation-report.md`
-- **Subject revision:** `feature/document-system-k1-exercise-05` at the recorded exercise commit
+- **Subject revision:** `25cb31347fe5407096db3f140a49f8ca4ae466d8` (`feat(document-system): exercise document artifact workflows`)
 - **Reader:** engineering handoff reviewer
 - **Reader action:** Inspect the local C2/C3/C5/C6 artifacts and their evidence; do not infer external publication or production behavior.
-- **Comparable baseline:** the C4 formatting exercise represents the previous format/publish seam. The current C5/C6 fixture extends it with adapter, shaping, explanation, visual-spec, and presentation evidence.
+- **Comparable baseline:** `71d48b6a6c62184d2f4f553348f3aca4d658a26e` (`fix(document-system): refine formatting evidence`), which contains the preceding C4 format/publish seam. This report covers the range `71d48b6..25cb313` only.
 
 ## Implemented
 
@@ -14,9 +14,9 @@
 
 ## Observed Local Evidence
 
-- **Observed:** the existing `INDEX.md` selects `successor-r2` as current and labels `baseline-r1` stale.
-- **Observed:** the C4 HTML fixture already demonstrates a local desktop/narrow presentation inspection for the evidence/authority register.
-- **Observed:** this C5/C6 fixture records a new local review and presentation pass for the flagship explanation.
+- **Observed at `25cb313`:** the existing `INDEX.md` selects `successor-r2` as current and labels `baseline-r1` stale.
+- **Observed at `25cb313`:** the C4 HTML fixture records a local desktop/narrow presentation inspection for the evidence/authority register.
+- **Observed at `25cb313`:** this fixture adds adapter guidance, C2/C3/C5 trace sidecars, C6 visual specifications, local review records, and C6 presentation evidence.
 
 ## Unverified And Future
 
@@ -25,4 +25,4 @@
 
 ## Handoff Boundary
 
-The report proves only local repository artifacts and checks recorded beside them. It does not claim the document system performed writes or that the notification policy is operationally ready.
+The report proves only local repository artifacts and checks recorded beside them at `25cb313`. See `c5-implementation-report.trace.md` and `reviews/c5-implementation-report-fidelity-genre.md`. It does not claim the document system performed writes or that the notification policy is operationally ready.

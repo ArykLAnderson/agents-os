@@ -1,7 +1,7 @@
 # Staged Document Review
 
 - **Artifact:** `c6-explanation.md` and `c6-explanation.html`
-- **Revision:** `exercise-05-attempt-01`
+- **Revision:** `exercise-05-attempt-02`, re-exercised from `25cb31347fe5407096db3f140a49f8ca4ae466d8`
 - **Inputs:** `notification-retry-policy/SNAP-005`, frozen `baseline-r1`, current `successor-r2`, and the local shared skill instructions named in the trace
 - **Review boundary:** local document review. It does not create Case meaning, stakeholder approval, publishing authority, or operational validation.
 
@@ -33,9 +33,10 @@
 
 ## Presentation Review
 
-- **Result:** pending recorded local viewport inspection in `presentation-evidence.md`; HTML structure and every visual's adjacent text equivalent are inspectable without JavaScript.
+- **Result:** pass with recorded local viewport inspection in `presentation-evidence.md`; HTML structure and every visual's adjacent text equivalent are inspectable without JavaScript.
 - Six visuals use labels, borders, and text rather than color alone for their material distinctions.
 - The illustrative multi-Case lane is explicitly labeled illustrative to avoid implying a second real Case.
+- The lifecycle diagram visibly labels frozen `baseline-r1 / SNAP-003` and current-safe `successor-r2 / SNAP-005 / GAP-002 open`; the trace diagram labels evidence, limitation, approval, decision, and reader-claim relationships explicitly.
 
 ## Decision
 

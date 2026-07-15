@@ -3,6 +3,7 @@
 This local, human-executed fixture exercises the C2 PRD, C3 change brief, C5 implementation report, and C6 explanation-document paths using the integrated notification retry-policy source bundle.
 
 - **Attempt:** `exercise-05-attempt-01`
+- **Re-exercise:** `exercise-05-attempt-02`, starting at `25cb31347fe5407096db3f140a49f8ca4ae466d8`; see `invocation-and-reexercise.md`
 - **Inputs:** `notification-retry-policy/SNAP-005`, the frozen stale `baseline-r1`, and current safe `successor-r2`
 - **Source fixture:** `../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/`
 - **External actions:** none
@@ -28,9 +29,9 @@ This local, human-executed fixture exercises the C2 PRD, C3 change brief, C5 imp
 
 ## Contents
 
-1. `c2-prd.md`, `c3-change-brief.md`, and `c5-implementation-report.md` record representative adapter exercises.
+1. `c2-prd.md`, `c3-change-brief.md`, and `c5-implementation-report.md` record representative adapter exercises, each with an adjacent trace sidecar and separate fidelity/genre review.
 2. `c6-explanation.md` is the portable flagship explanation; `c6-explanation.html` is its local visual companion.
 3. `c6-explanation.trace.md` records semantic and visual support, selection, omissions, and blockers.
 4. `visual-specs/` holds one semantic spec for each required concept.
-5. `reviews/` records staged fidelity, genre, fresh-reader, and presentation review.
+5. `reviews/` records staged C6 review plus preserved C2/C3/C5 fidelity and genre review.
 6. `presentation-evidence.md` records HTML inspection; `publish-plan.md` records the no-write outcome.

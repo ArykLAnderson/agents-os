@@ -5,7 +5,7 @@
 - **Primary shaping strategy:** `mental-model`
 - **Bounded secondary strategy:** `review-briefing`, used only in [Safe Publishing](#safe-publishing)
 - **Reader:** a contributor who needs to understand how to create or review a local Case-backed document artifact
-- **Reader action:** use the current safe artifact entrypoint, preserve its named snapshot and trace, and stop before an external write without authorization
+- **Reader action:** open [the current safe artifact index](../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/INDEX.md), follow its `successor-r2` link, preserve its named snapshot and trace, and stop before an external write without authorization
 - **Qualified inputs:** `notification-retry-policy/SNAP-005`; the source fixture's `INDEX.md`, `successor-r2` artifact and trace; local document-system skill instructions
 
 ## The Practical Problem
@@ -31,8 +31,11 @@ The document system keeps those concerns distinct. It does not decide retry poli
 The lifecycle is a sequence of responsibilities, not a claim that every document requires every format or visual. A source bundle becomes a Case only after intake and approval. A snapshot pins the meaning used for composition. Composition selects entries for one genre; shaping makes a reader journey; tracing binds material claims to the snapshot; review evaluates the artifact; formatting creates local representations; publishing is separately gated.
 
 ```text
-supplied sources -> Case working record -> immutable snapshot
-                                      -> composition -> shaped artifact -> trace -> review -> local formats -> authorized publish
+supplied sources -> Case working record -> immutable snapshot -> composition
+-> shaped artifact -> trace -> review -> local formats -> authorized publish gate
+
+frozen baseline-r1 (SNAP-003, stale) is comparison only
+successor-r2 (SNAP-005, current-safe with GAP-002) follows the path above
 ```
 
 The retry-policy fixture demonstrates why the distinction matters. The frozen `baseline-r1` used `SNAP-003` and is stale. The normal entrypoint selects `successor-r2`, pinned to `SNAP-005`, with an open validation gap. A later Case correction does not rewrite the baseline or silently change the successor's pinned support.
@@ -48,6 +51,8 @@ The hierarchy deliberately has stop points. Composition cannot invent a missing 
 A trace is a sidecar for semantic units, not a line-by-line citation overlay. Each material recommendation, evidence synthesis, limitation, reader action, table row, or semantic visual has a stable artifact locator, a bounded assertion, a derivation type, and fully qualified support such as `notification-retry-policy/SNAP-005/DEC-003`.
 
 For this fixture, the important claim is not merely that four retries failed delivery or five exceeded latency. The trace separates those observations from the accepted no-count direction. It also records the stale baseline and the omission of the duplicate unattributed claim so a reader cannot mistake omission for disappearance.
+
+`ALT-001` is a rejected five-retry proposal. `OBS-002` is an omitted duplicate unattributed channel claim with weak authority. Both remain visible in the trace and source artifact context precisely so neither can be mistaken for current policy or a reason to bypass `DEC-003`.
 
 ## Multi-Case Composition
 
@@ -71,4 +76,4 @@ The representative fixture has source/Case evidence for the retry-policy boundar
 
 This explanation is a bounded teaching artifact. It does not establish a product requirement, a retry configuration, stakeholder comprehension, target accessibility conformance, or external publication permission. Its six diagrams are local semantic representations with adjacent textual equivalents and the individual limits stated in their specifications.
 
-Use `artifacts/retry-policy-research-report/INDEX.md` to locate the safe current retry-policy artifact. For a new document, select one genre adapter, retain qualified snapshot inputs, record selection and omission, create a trace before relying on the artifact, and use the appropriate review or format stage. For an external write, stop until the publishing preconditions are explicitly met.
+Open [the source fixture's artifact index](../../../../../case-intake/resources/fixtures/exercises/contradictory-local-bundle/artifacts/retry-policy-research-report/INDEX.md), select `successor-r2`, then read its adjacent trace before relying on its no-count boundary. For a new document, select one genre adapter, retain qualified snapshot inputs, record selection and omission, create a trace before relying on the artifact, and use the appropriate review or format stage. For an external write, stop until the publishing preconditions are explicitly met.

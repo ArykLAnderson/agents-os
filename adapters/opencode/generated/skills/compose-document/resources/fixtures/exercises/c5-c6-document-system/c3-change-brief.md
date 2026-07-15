@@ -3,7 +3,8 @@
 - **Adapter:** `change-brief.md`
 - **Pinned snapshot:** `notification-retry-policy/SNAP-005`
 - **Reader:** RFC reviewer
-- **Review action:** Confirm that current documents use `successor-r2` and do not present the frozen baseline's four-retry direction as current policy.
+- **Review scope:** Only the local retry-policy artifact entrypoint, current/stale revision labels, and evidence/authority distinction described below.
+- **Review action:** Confirm that the normal entrypoint selects `successor-r2`, that the frozen baseline is not presented as current policy, and that `OBS-004` is not presented as authority. Do not review a replacement count, implementation, owner, schedule, rollout, or any external destination.
 - **Shaping strategy exercised:** `review-briefing`
 
 ## Review Ask
@@ -24,4 +25,4 @@ The current safe entrypoint is `successor-r2`; the baseline stays frozen for com
 
 ## Verification Boundary
 
-The fixture's local trace and staged review record the distinction. This is not deployment, stakeholder approval, or production verification. A future count needs validation, reconciliation, and a new author-approved decision.
+The fixture's local trace and review record the distinction. See `c3-change-brief.trace.md` and `reviews/c3-change-brief-fidelity-genre.md`. This is not deployment, stakeholder approval, or production verification. A future count needs validation, reconciliation, and a new author-approved decision.
