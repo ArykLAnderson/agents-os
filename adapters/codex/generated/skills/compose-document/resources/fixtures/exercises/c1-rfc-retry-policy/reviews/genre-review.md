@@ -1,10 +1,10 @@
 # Genre Review
 
-- **Genre:** RFC decision brief
+- **Genre:** RFC decision record
 - **Reader:** migration technical approver
 - **Outcome:** pass
 
-The accepted policy is first, scope is bounded, the capacity evidence and alternatives are sufficient for the stated ratification, and the final action distinguishes faithful-presentation ratification from policy approval, implementation authorization, and rollout approval. The brief does not imitate a full implementation RFC where the Case has no implementation owner, schedule, or rollout detail.
+The accepted policy is first, scope is bounded, and the capacity evidence and alternatives are sufficient for a decision record. The record has no Case-backed reader action. The supplied exercise review instruction is visibly external context and does not imply policy approval, implementation authorization, or rollout approval. The record does not imitate a full implementation RFC where the Case has no implementation owner, schedule, or rollout detail.
 
 ## Recommendation
 

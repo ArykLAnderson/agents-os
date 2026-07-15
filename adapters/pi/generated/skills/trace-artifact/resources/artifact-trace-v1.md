@@ -7,7 +7,7 @@ Use this sidecar shape for each formal artifact revision.
 
 - **Artifact:** <artifact ID and revision>
 - **Snapshot set:** <case-id>/<snapshot-id>[, ...]
-- **Reader action:** <action>
+- **Supplied exercise action:** <optional non-Case instruction>
 - **Trace status:** current | blocked | stale
 
 ## Units
@@ -22,6 +22,6 @@ Use this sidecar shape for each formal artifact revision.
 - **Notes:** <authority, confidence, or scope caveat when material>
 ```
 
-Use a unit for each material decision, evidence synthesis, risk or gap, reader action, table row, and visual assertion. A material table needs one unit per material row, each tied to that row's stable anchor; a table-level unit is not a substitute. `synthesis` may combine supported entries but must identify every support reference and cannot erase disagreement. `omission-accounting` identifies a selected entry deliberately absent from the artifact and the reason it is safe to omit or defer.
+Use a unit for each material decision, evidence synthesis, risk or gap, Case-backed reader action, table row, and visual assertion. A material table needs one unit per material row, each tied to that row's stable anchor; a table-level unit is not a substitute. A supplied exercise action may be recorded for context, but it is not a semantic unit, does not receive Case support, and cannot make the artifact publication-ready. `synthesis` may combine supported entries but must identify every support reference and cannot erase disagreement. `omission-accounting` identifies a selected entry deliberately absent from the artifact and the reason it is safe to omit or defer.
 
 An artifact is blocked when any material unit is unsupported, lacks an anchor, conflicts with its support's authority/status, or has no trace for a material table or visual assertion.

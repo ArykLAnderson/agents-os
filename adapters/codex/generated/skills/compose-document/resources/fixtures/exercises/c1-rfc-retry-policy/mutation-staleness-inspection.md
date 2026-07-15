@@ -14,7 +14,7 @@ The canonical `decision-brief.md`, `artifact.trace.md`, and SNAP-003 manifest we
 
 ## Bounded Result
 
-Only AU-001 and AU-006 are stale in `mutation-01`. AU-002 through AU-005 and AU-007 through AU-011 remain supported because their anchored claims and support references were unchanged. The copied candidate must not be used for reader action until it is corrected and retraced.
+Only AU-001 and AU-006 are stale in `mutation-01`. AU-002 through AU-005 and AU-007 through AU-010 remain supported because their anchored claims and support references were unchanged. The copied candidate is not publication-ready because its supplied exercise action remains external context; it must still be corrected and retraced before its decision-record claims can be relied on.
 
 ## Re-Exercise
 
