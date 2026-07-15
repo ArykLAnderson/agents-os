@@ -22,6 +22,15 @@ A Case is a mechanical semantic ledger, not reader-facing prose. This skill regi
 - Create a first Case snapshot only after author approval.
 - Use a configurable work root; never hard-code a personal or organization-specific path.
 
+## Workspace Fixtures
+
+For local repeatable checks, load `resources/workspace-fixtures.md`. It documents the portable Case workspace and proof evidence bundle layout plus the fixture init and inspect commands:
+
+```sh
+node scripts/agents-os.mjs document-system-fixture init <case-slug> [--root <path>] [--artifact <artifact-slug>] [--proof-case <case-id>]
+node scripts/agents-os.mjs document-system-fixture inspect <case-slug> [--root <path>] [--artifact <artifact-slug>] [--proof-case <case-id>]
+```
+
 ## Boundary
 
 - Do not compose, shape, format, publish, or review reader-facing documents.

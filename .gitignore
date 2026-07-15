@@ -3,6 +3,7 @@ archive/
 LOCAL_OVERRIDES.md
 src/memory/
 adapters/*/generated/memory/
+.agent-os/document-system-work/
 
 # local-only private personal workflows
 src/agents/executive-assistant.md
