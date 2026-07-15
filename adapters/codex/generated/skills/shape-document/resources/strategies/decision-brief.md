@@ -16,7 +16,7 @@ Carry forward the composition's pinned snapshots, selected-entry manifest, omiss
 4. Make operational risk, uncertainty, and follow-up visible before the final action.
 5. End with a concrete `Requested action` and owner or approval boundary when supplied by the Case.
 
-Use a compact comparison table only when it preserves the authority, confidence, and status of all material claims. Label historical, rejected, or deferred material in prose or in the table itself. Do not make visual grouping imply priority, approval, causality, or completeness not present in the Case.
+Use a compact comparison table only when it preserves the authority, confidence, and status of all material claims. Give each material row a stable anchor, either by an explicit anchor in the row or an adjacent anchored row label. Label historical, rejected, or deferred material in prose or in the table itself. Do not make visual grouping imply priority, approval, causality, or completeness not present in the Case.
 
 ## Anchors And Disclosure
 

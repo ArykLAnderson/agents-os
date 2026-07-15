@@ -1,16 +1,16 @@
 # Artifact Trace
 
-- **Artifact:** notification-retry-policy decision brief, candidate rev-01
+- **Artifact:** notification-retry-policy decision brief, candidate rev-02
 - **Snapshot set:** notification-retry-policy/SNAP-003
-- **Reader action:** approve the four-retry migration direction and request implementation follow-up
+- **Reader action:** ratify that the brief faithfully presents the already-accepted four-retry policy as input to separate implementation planning
 - **Trace status:** current
 
 ## Units
 
-### AU-001: Accepted migration direction
+### AU-001: Accepted policy
 
-- **Anchor:** decision
-- **Assertion:** Four retries is the accepted current direction for failed notification delivery during the migration.
+- **Anchor:** accepted-policy
+- **Assertion:** Four retries is the accepted current policy for failed notification delivery during the migration.
 - **Support:** notification-retry-policy/SNAP-003/DEC-002
 - **Derivation:** direct
 - **Status:** supported
@@ -25,16 +25,52 @@
 - **Status:** supported
 - **Notes:** The excluded schedule and owner are absence boundaries, not Case claims.
 
-### AU-003: Capacity result and comparison table
+### AU-003: Capacity evidence boundary
 
 - **Anchor:** evidence-capacity
-- **Assertion:** Three retries missed delivery rate, four sustained it, and five exceeded the latency target; the table labels the corresponding current, superseded, and rejected positions.
-- **Support:** notification-retry-policy/SNAP-003/OBS-003; notification-retry-policy/SNAP-003/DEC-002; notification-retry-policy/SNAP-003/DEC-001; notification-retry-policy/SNAP-003/ALT-001
+- **Assertion:** Capacity validation reported the qualitative three-, four-, and five-retry outcomes shown in the comparison table.
+- **Support:** notification-retry-policy/SNAP-003/OBS-003
 - **Derivation:** synthesis
 - **Status:** supported
-- **Notes:** The table is material and has no unsupported quantitative claims.
+- **Notes:** The Case does not support a magnitude, confidence, or generalization claim.
 
-### AU-004: Historical alternatives
+### AU-004: Three-retry table row
+
+- **Anchor:** option-three
+- **Assertion:** Three retries missed the required delivery rate and are superseded historical direction.
+- **Support:** notification-retry-policy/SNAP-003/OBS-003; notification-retry-policy/SNAP-003/DEC-001
+- **Derivation:** synthesis
+- **Status:** supported
+- **Notes:** The row carries both a reported capacity outcome and a status label.
+
+### AU-005: Four-retry table row
+
+- **Anchor:** option-four
+- **Assertion:** Four retries sustained the required delivery rate and are the accepted direction.
+- **Support:** notification-retry-policy/SNAP-003/OBS-003; notification-retry-policy/SNAP-003/DEC-002
+- **Derivation:** synthesis
+- **Status:** supported
+- **Notes:** Approval is recorded separately in APR-002.
+
+### AU-006: Five-retry table row
+
+- **Anchor:** option-five
+- **Assertion:** Five retries exceeded the dead-letter latency target and remain a rejected proposal.
+- **Support:** notification-retry-policy/SNAP-003/OBS-003; notification-retry-policy/SNAP-003/ALT-001
+- **Derivation:** synthesis
+- **Status:** supported
+- **Notes:** The row does not imply a general rejection outside this migration.
+
+### AU-007: Evidence limits
+
+- **Anchor:** evidence-boundary
+- **Assertion:** The brief does not claim test magnitude, statistical confidence, or behavior beyond the migration because the Case records qualitative test conclusions only.
+- **Support:** notification-retry-policy/SNAP-003/OBS-003
+- **Derivation:** synthesis
+- **Status:** supported
+- **Notes:** This is a disclosure of unavailable detail, not an assertion that testing was insufficient.
+
+### AU-008: Historical alternatives
 
 - **Anchor:** tradeoffs
 - **Assertion:** The three-retry direction is superseded history and the five-retry proposal is rejected; neither is current policy.
@@ -43,25 +79,25 @@
 - **Status:** supported
 - **Notes:** Status labels remain visible to prevent historical material being read as current.
 
-### AU-005: Authority and remaining caveat
+### AU-009: Ratification boundary
 
-- **Anchor:** authority-caveat
-- **Assertion:** Authority for the retry direction was resolved through APR-002, while the Case does not specify owner, schedule, or rollout plan.
-- **Support:** notification-retry-policy/SNAP-003/GAP-001; notification-retry-policy/SNAP-003/DEC-002
+- **Anchor:** ratification-boundary
+- **Assertion:** The policy is already accepted; reader ratification is limited to faithful presentation for a separate planning discussion and does not authorize implementation, ownership, schedule, or rollout.
+- **Support:** notification-retry-policy/SNAP-003/DEC-002; notification-retry-policy/SNAP-003/GAP-001; notification-retry-policy/SNAP-003/INT-001
 - **Derivation:** synthesis
 - **Status:** supported
 - **Notes:** APR-002 is an approval record at the Case root, not a snapshot entry.
 
-### AU-006: Requested action
+### AU-010: Requested action
 
 - **Anchor:** requested-action
-- **Assertion:** The approver is asked to approve the four-retry direction and assign later implementation follow-up, without approving a rollout plan.
+- **Assertion:** The reader is asked only to ratify faithful presentation of the accepted policy as input to separate implementation planning.
 - **Support:** notification-retry-policy/SNAP-003/INT-001; notification-retry-policy/SNAP-003/DEC-002
 - **Derivation:** synthesis
 - **Status:** supported
-- **Notes:** Assignment is a requested next step, not an asserted Case commitment.
+- **Notes:** The action makes no implementation commitment.
 
-### AU-007: Omitted duplicate historical observation
+### AU-011: Omitted duplicate historical observation
 
 - **Anchor:** tradeoffs
 - **Assertion:** OBS-001 is omitted because superseded DEC-001 carries the same reader-relevant three-retry history.

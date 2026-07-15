@@ -1,21 +1,21 @@
 # Selection Manifest
 
-- **Artifact:** notification-retry-policy decision brief, candidate rev-01
+- **Artifact:** notification-retry-policy decision brief, candidate rev-02
 - **Genre:** RFC
 - **Pinned snapshot set:** notification-retry-policy/SNAP-003
-- **Reader action:** approve the four-retry migration direction and request implementation follow-up
+- **Reader action:** ratify that the brief faithfully presents the already-accepted four-retry policy as input to separate implementation planning
 - **Recommended shaping strategy:** `decision-brief`; fit confirmed because one accepted decision and one approver action are in scope
 
 ## Selected Entries
 
 | Reference | RFC role | Treatment |
 |---|---|---|
-| notification-retry-policy/SNAP-003/INT-001 | Reader purpose | State the RFC-ready policy direction goal. |
+| notification-retry-policy/SNAP-003/INT-001 | Reader purpose | State the RFC-ready policy direction goal and retain the policy/planning boundary. |
 | notification-retry-policy/SNAP-003/DEC-002 | Current decision | Lead the brief with the accepted four-retry direction. |
 | notification-retry-policy/SNAP-003/OBS-003 | Evidence and trade-off | Explain why three and five retries are not selected. |
 | notification-retry-policy/SNAP-003/DEC-001 | Historical comparison | Label as superseded context, never as current policy. |
 | notification-retry-policy/SNAP-003/ALT-001 | Rejected alternative | Explain the rejected five-retry proposal through the capacity result. |
-| notification-retry-policy/SNAP-003/GAP-001 | Authority boundary | State that authority was resolved through APR-002. |
+| notification-retry-policy/SNAP-003/GAP-001 | Authority boundary | State that policy authority was resolved through APR-002. |
 
 ## Omitted Or Deferred
 
@@ -27,7 +27,7 @@
 
 ## Blocking Gaps And Conflicts
 
-No composition blocker remains for the stated reader action. The Case does not specify an implementation owner, schedule, or rollout plan; the candidate therefore requests approval for a follow-up rather than asserting those details.
+No composition blocker remains for the narrow ratification action. The policy is already accepted in DEC-002 and APR-002, so the reader is not asked to approve it again. The Case does not specify an implementation owner, schedule, rollout plan, or authorization to begin implementation. The candidate may only serve as input to a separate planning discussion and must not imply any of those facts.
 
 ## RFC Composition Basis
 
@@ -35,4 +35,4 @@ No composition blocker remains for the stated reader action. The Case does not s
 2. **Scope:** migration retry behavior before dead-lettering; no claim about unrelated notification policy.
 3. **Evidence:** three retries missed delivery rate; four sustained it; five exceeded the dead-letter latency target.
 4. **Trade-off:** retain three retries only as superseded history and reject the five-retry proposal for this migration.
-5. **Action:** approve the four-retry direction and assign the implementation follow-up through the normal migration process.
+5. **Action:** ratify that the brief faithfully presents the accepted direction as input to separate implementation planning; do not authorize implementation or request an owner assignment.

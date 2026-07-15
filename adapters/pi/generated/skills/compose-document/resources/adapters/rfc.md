@@ -6,6 +6,7 @@ Select an RFC basis for a technical direction, decision, or review action.
 
 - Name the intended technical reader and the single action requested: approve a direction, reject it, request a bounded follow-up, or review a proposal.
 - State the current decision, proposal, or uncertainty in the first composed unit. Do not imply approval when the selected Case entries do not carry it.
+- When the selected direction is already accepted, do not ask the reader to approve it again. Request only a bounded ratification, review, or planning-input action, and state what that action cannot authorize.
 - Use the pinned snapshot set as the only source of accepted meaning. Preserve the Case ID for every selected entry.
 
 ## Selection Manifest
@@ -34,4 +35,4 @@ The basis is not reader shaping. It must retain the selected entry references or
 
 ## Stop Conditions
 
-Stop and report a blocking gap when the Case cannot support the stated decision, the action is ambiguous, selected entries conflict without a resolved Case decision, or a material assertion would require new accepted meaning. Route those discoveries to `case-reconcile`; do not silently repair them in the RFC.
+Stop and report a blocking gap when the Case cannot support the stated decision, the action is ambiguous, selected entries conflict without a resolved Case decision, or a material assertion would require new accepted meaning. If the intended action would authorize implementation, ownership, schedule, rollout, or another fact absent from the Case, narrow the action or route a bounded question to `case-reconcile`; do not silently repair the gap in the RFC.
