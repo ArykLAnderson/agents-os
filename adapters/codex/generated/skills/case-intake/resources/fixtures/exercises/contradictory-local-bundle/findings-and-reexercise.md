@@ -19,8 +19,8 @@ Follow `INVOCATION.md` against this single root.
 1. `source-records.md` registers `SRC-001` through `SRC-003` before `pre-approval-case.md`; `APR-001` creates immutable `SNAP-001`.
 2. `SRC-004` is registered in the same source inventory before the reconciliation queue is considered.
 3. `OBS-003` directly contradicts `DEC-001` and `ALT-001`; `ARI-001` records a blocking immediate interrupt rather than adopting capacity evidence as policy.
-4. The author correction is separately durable in `APR-002`. The mutable working ledger corrects `DEC-002` to `source-direct` with `Approval: APR-002` for authority; `DEC-001` is preserved as superseded. The pre-remediation `SNAP-002` manifest remains byte-for-byte historical evidence rather than being rewritten.
-5. `SNAP-002` freezes the prior later accepted state, while `SNAP-001` remains untouched. `STALE-001` preserves the RFC's original pinned snapshot set and requires review before reader action.
+4. The author correction is separately durable in `APR-002`. `SNAP-002` retains its historical provenance/authority representation and digest; it is not rewritten. `APR-003` explicitly approves the corrected representation in successor `SNAP-003`.
+5. `SNAP-003` preserves source-derived provenance and source locators for source-backed entries while retaining `APR-001` and `APR-002` as authority records. `STALE-001` preserves the RFC's original pinned snapshot set and requires review before reader action.
 6. The author prompt and reconciliation resource both permit zero through seven material questions and explicitly prohibit padding.
 
 ## Result

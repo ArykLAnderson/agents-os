@@ -2,8 +2,8 @@
 model_contract: case-model/v1
 initiative_id: notification-retry-policy
 working_state: active
-current_snapshot: SNAP-002
-updated: 2026-07-16
+current_snapshot: SNAP-003
+updated: 2026-07-17
 ---
 
 # Sources
@@ -86,7 +86,7 @@ No extensions.
 
 # Approvals
 
-See `approvals/APR-001.md` and `approvals/APR-002.md`. Approval is recorded separately from source-derived provenance.
+See `approvals/APR-001.md`, `approvals/APR-002.md`, and `approvals/APR-003.md`. Approval is recorded separately from source-derived provenance.
 
 # Snapshots
 
@@ -109,3 +109,13 @@ See `approvals/APR-001.md` and `approvals/APR-002.md`. Approval is recorded sepa
 - **Entries:** manifest: snapshots/SNAP-002.entries.md (sha256:9c3540efe11e8d478ed67a3b4ad6e7206fa584750e5f63ea7bc72d5e5ef14f75)
 - **Supersedes:** SNAP-001
 - **Artifacts:** notification-rfc/artifact.md marked stale
+
+### SNAP-003: Provenance and authority representation corrected
+
+- **Created:** 2026-07-17
+- **Reason:** reconciliation-approved
+- **Author status:** accepted
+- **Approval:** APR-003
+- **Entries:** manifest: snapshots/SNAP-003.entries.md (sha256:2ff51ce9b1e73595163254c5fe5011ca8ee6164a6182aa23f34c655235e59ec7)
+- **Supersedes:** SNAP-002
+- **Artifacts:** notification-rfc/artifact.md remains stale pending trace review
