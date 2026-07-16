@@ -1,5 +1,6 @@
 docs/
 archive/
+.cases/
 LOCAL_OVERRIDES.md
 src/memory/
 adapters/*/generated/memory/
