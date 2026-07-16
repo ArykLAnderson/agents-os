@@ -1,14 +1,14 @@
 # Generated Image
 
-Use this workflow only for a semantic visual whose approved semantic spec can be better communicated as a polished or presentation-grade image. It is capability- and provider-neutral: do not assume an image-generation skill, tool, model, or service is installed.
+Use this workflow only when a retained visual anchor and validated diagram specification select an image-based realization. It is capability- and provider-neutral.
 
 ## Select A Rendering Route
 
 1. Inspect the current environment's available skills, tools, and capabilities before selecting a route. Record whether a usable image-generation capability is available; do not infer availability from this resource.
-2. Require a completed `semantic-diagram-spec.md` for every semantic visual before rendering. The spec bounds the image; generation must not invent content, relationships, labels, or visual implications.
-3. Prefer an available image-generation capability for complex flow, lifecycle, architecture, or multi-lane diagrams when the semantic spec contains many nodes, crossing or returning edges, nested boundaries, or status-dependent paths. At that complexity, browser-rendered HTML/SVG often preserves labels while producing awkward arrows, connector routing, or visual artifacts that reduce comprehension.
+2. Require a shaped visual anchor and completed `semantic-diagram-spec.md` before rendering a semantic diagram. The anchor bounds the reader question and cognitive budget; the spec bounds the image. Generation must not invent content, relationships, labels, or visual implications.
+3. Use image generation only when the shaped anchor requires spatial or illustrative treatment that deterministic routes cannot communicate well. Complexity alone is not a reason to generate an image; a dense node or edge count is first a signal to return to shaping and split, distribute, simplify, convert, or remove the visual.
 4. Prefer Mermaid, SVG, or semantic HTML for simple diagrams with few nodes and relationships, or when deterministic labels, exact geometry, editability, inspectability, and revision control outweigh presentation fidelity.
-5. Do not feed an over-dense spec to image generation. Split a complex visual into several bounded diagrams when one image cannot preserve every required relationship legibly.
+5. Do not feed an over-dense spec to image generation. Return it to shaping when one image cannot preserve the takeaway legibly at the intended size.
 6. If image generation is unavailable, unsuitable, fails validation, or cannot be regenerated within the formatting task, do not block the document. First simplify or split the visual; then use the best supported deterministic or textual fallback and disclose the route, limitation, and reason in local presentation evidence.
 
 ## Generate And Record

@@ -26,9 +26,11 @@ Load `../document/resources/operation-result.md` before returning a result.
 - Produce a selected-entry manifest for accounting and a separate semantic basis for writing. Organize the basis into meaning clusters, relationships, tensions, examples, caveats, and possible explanatory moves. Several entries may support one cluster, and one entry may support several clusters.
 - Preserve support and authority at the cluster level, but do not preserve Case order, entry boundaries, ledger phrasing, or one-entry-to-one-paragraph correspondence unless the genre requires it.
 - Treat the semantic basis as loose intermediate material: complete enough to trace, flexible enough for shaping to combine, split, interleave, defer, or reorder supported points into natural prose.
+- Identify **visual opportunities** when a relationship, comparison, quantity, hierarchy, or sequence may be harder to understand or retain in prose. Record each opportunity under a stable ID such as `VO-001`, with its reader question, supported meaning, material caveats, and why prose alone may be insufficient. A session visual opportunity is not a Case entry; reference a Case `VIS` entry only when it supplies a reusable visual requirement. Leave placement, semantic form, and rendering technology to shaping and formatting.
 - Identify blocking gaps, deferrable gaps, multi-Case conflicts, relevant omitted entries, and recommended shaping strategies.
 - Route semantic discoveries or proposed new accepted meaning to `document-reconcile`.
 - Keep compositions and drafts inside the document session under the approved Case workspace. Do not relocate them into a tracked documentation path without explicit author intent.
+- Complete composition only when the selection manifest and semantic basis both exist, every selected entry is handled, every visual opportunity has a stable ID, and blocking gaps are recorded.
 
 ## Boundary
 

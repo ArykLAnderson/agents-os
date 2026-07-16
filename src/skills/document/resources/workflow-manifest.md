@@ -24,11 +24,20 @@ Use `current`, `stale`, `blocked`, `pending`, or `not-applicable` for status. Ke
 
 For `substantial` and `high-risk` work, include a current condition showing that durable Case intake exists or that an already-current Case was selected before semantic composition. Do not use document genre, requested length, or a single conversational source as sufficient reason to classify work as `simple`.
 
+Also record `Applicable review scope is complete and current`. Name completed lenses and give an explicit `not-applicable` rationale for omitted default lenses. Substantial and high-risk Case-backed work normally requires case fidelity, isolated fresh-reader comprehension, and editorial quality; a reader-facing target also requires presentation quality.
+
 ## Artifacts And Revisions
 
 - **Semantic artifact:** <path and simple revision>
 - **Target representation:** <path or remote locator and revision>
 - **Milestones:** <retained approved or recovery-relevant revisions>
+
+Use these revision terms consistently:
+
+- **Semantic revision:** shaped reader-facing content before target conversion.
+- **Target revision:** a formatted local or remote representation of one semantic revision.
+- **Current safe revision:** the latest revision whose applicable checks are current and non-blocking for its reader action.
+- **Milestone revision:** a retained revision needed for approval, comparison, staging, or recovery.
 
 ## Findings And Checkpoints
 

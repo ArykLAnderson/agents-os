@@ -23,14 +23,17 @@ Load `../document/resources/operation-result.md` before returning a result.
 - Load only the selected target adapter from `resources/adapters/`.
 - Start from a shaped artifact and its selected-entry or source metadata. Use its trace sidecar when tracing is applicable; do not require trace work for a low-risk artifact that the coordinator has selected not to trace. Keep the formatted artifact beside any trace and preserve the source revision and snapshot identity.
 - Use visual resources from `resources/visuals/` only when the artifact requires visual companion work.
-- During visual preparation, inspect available skills, tools, and capabilities; never assume image generation is installed. Start every semantic visual from `semantic-diagram-spec.md`. Choose prose or tables when a visual adds no comprehension. Use Mermaid, SVG, or semantic HTML for simple diagrams where deterministic labels, a small number of relationships, editability, or accessibility matter most. For complex flow, lifecycle, architecture, or multi-lane diagrams, prefer a validated image-generation capability when available: browser-rendered HTML/SVG connectors frequently produce awkward routing and visual artifacts at that complexity. Keep the semantic spec as source of truth, validate the generated image against it, and retain an adjacent textual equivalent. If image generation is unavailable or cannot produce a faithful result, simplify or split the visual before falling back to deterministic rendering. Disclose the chosen route and fallback in presentation evidence.
+- Start visual preparation from the shaped visual anchor and traced reader-facing assertions. Formatting chooses only the target realization of the selected semantic form; it does not redefine the reader question, placement, takeaway, decomposition, semantic scope, or form. If target constraints require another form, return the anchor to `document-shape`.
+- Inspect available skills, tools, and capabilities. Use semantic HTML, Mermaid, SVG, or another deterministic route when it faithfully realizes the selected form. Use generated images only when the selected form requires spatial or illustrative treatment unavailable through deterministic routes. If no route preserves the anchor legibly at target size, return it to `document-shape`.
 - Preserve critical decisions, risks, caveats, review asks, and searchable conclusions outside hidden-only structures.
 - Ensure target output preserves reading order and meaning across expected viewport and accessibility constraints.
 - Derive evidence backlinks from trace and source metadata rather than creating a second provenance system.
 - Record local presentation evidence for every target: asset and link resolution, normal and narrow layout inspection, navigation, text alternatives, searchable critical meaning, and semantic comparison with the traced source.
 - Keep formatted outputs, generated assets, prompts, screenshots, and presentation evidence inside the document session under the approved Case workspace unless the author explicitly selects a tracked destination.
 - If a target cannot preserve a traced unit, retain a readable textual equivalent and report the target limitation instead of silently omitting or changing the unit.
-- Route semantic changes or unsupported visual implications to `document-reconcile`.
+- Route unsupported visual meaning to `document-reconcile`; route an over-scoped or narratively misplaced visual to `document-shape`.
+- For every retained meaning-bearing visual, load `resources/visuals/visual-validation.md`. Load `semantic-diagram-spec.md` only for a diagram and `generated-image.md` only for image generation.
+- Complete formatting only when the selected adapter requirements, asset and link checks, local presentation evidence, and applicable visual validation are complete, or when a required remote-preview limitation is recorded.
 
 ## Boundary
 

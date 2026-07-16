@@ -32,7 +32,7 @@ Load `../document/resources/operation-result.md` before returning a result.
 
 ## Publication Invariant
 
-Publication cannot waive unsupported assertions, missing material anchors, stale support affecting reader action, status or authority conflicts, or untraced material visual/table assertions. Any waiver requires author-approved `document-reconcile` output and an updated Case state.
+Load `../document/resources/publication-readiness.md` and enforce its non-waivable invariant before stage or release.
 
 ## Boundary
 
@@ -43,4 +43,4 @@ Publication cannot waive unsupported assertions, missing material anchors, stale
 
 ## Progressive Resources
 
-Load only the publication resources needed for the selected destination and mode from `resources/`.
+Load the destination adapter for the selected target. Load `attachment-handling.md` when the artifact references assets, `rollback-notes.md` before destructive replacement or material update, and `post-publish-verification.md` after every successful external write.

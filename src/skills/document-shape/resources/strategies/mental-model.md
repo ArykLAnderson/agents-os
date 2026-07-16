@@ -16,4 +16,6 @@ Use for explanation documents whose reader must understand concepts and relation
 
 Use stable semantic anchors appropriate to the actual argument; do not require visible sections named `problem`, `vocabulary`, `lifecycle`, `relationships`, `example`, `boundaries`, or `next-action`. Define a concept before depending on its shorthand, but allow its grounding, example, and consequence to be woven through the reader journey. Label examples and diagrams as bounded representations.
 
+When a visual carries part of the mental model, give it one job. Place it only after its concepts are grounded, and shape adjacent prose so the visual reveals a relationship rather than restating a paragraph. Prefer small beats distributed through the explanation over one exhaustive system map.
+
 This strategy does not fit when the reader already understands the system and only needs a narrowly scoped approval or review ask; use `review-briefing` then. It must not replace a Case decision, source trace, or approval record.

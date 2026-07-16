@@ -21,4 +21,6 @@ Use this adapter for a public or internal article that gives a named audience a 
 
 ## Draft Basis
 
-Produce a source-aware narrative basis with a working hook, explicit grounding requirements, core takeaway, supporting sections, limitations or caveats, and reader close. Identify concepts the audience may be assumed to know and concepts the article must ground before use. Use meaningful anchors for material claims and visuals so tracing and formatting can inspect them later.
+Produce a source-aware narrative basis with a working hook, explicit grounding requirements, core takeaway, supporting sections, limitations or caveats, and reader close. Identify concepts the audience may be assumed to know and concepts the article must ground before use.
+
+Record a visual opportunity only when it can answer one reader question better than prose alone. Name that question, the supported relationship or comparison, the likely takeaway, material caveats, and details that may remain in prose. Leave placement and semantic form to shaping; leave target rendering to formatting.

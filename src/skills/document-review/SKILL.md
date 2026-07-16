@@ -20,15 +20,15 @@ The review system checks fidelity, genre fit, editorial quality, presentation qu
 
 Load `../document/resources/operation-result.md` before returning a result.
 
-- Load only the needed review lens resources from `resources/lenses/`.
-- Select lenses according to genre, risk, representation, and unresolved conditions. Case fidelity and fresh-reader comprehension are defaults for substantive Case-backed documents; genre, editorial, and presentation lenses apply when useful.
+- Select lenses according to genre, risk, representation, and unresolved conditions. For substantial or high-risk Case-backed work, run case fidelity, isolated fresh-reader comprehension, and editorial quality before completion. Add genre review when the adapter declares obligations. Add presentation quality after a reader-facing target exists. Record an explicit `not-applicable` rationale for any default lens omitted.
 - For substantial prose, run a low-context readability pass on the selected shaped prose after its main structure is complete. This pass evaluates naturalness, paragraph flow, conceptual grounding, and whole-article understanding without seeing the Case, trace, source accounting, prior review discussion, or author rationale.
 - Do not infer readability from Case coverage, trace completeness, grammatical correctness, or the presence of every required concept. A fully supported artifact can still fail because it reads like reordered source accounting or because correct sentences are unnaturally adjacent.
+- Review each meaning-bearing visual in narrative context: the prose immediately before and after it, its visual anchor, caption, textual equivalent, and intended reading size. Test whether it answers its reader question, reduces cognitive effort, and preserves the shaped takeaway without relying on a corrective caption. Recommend revision, redesign, decomposition, relocation, conversion, or removal as needed.
 - Treat fresh-reader simulation as comprehension evidence, not real stakeholder approval.
 - Consolidate duplicate findings and budget author-facing output.
-- Apply automatic fixes only when meaning, authority, confidence, scope, evidence, reader action, and trace coverage remain unchanged.
 - Send semantic changes, unsupported assertions, and material stakeholder questions to `document-reconcile`.
 - Return the smallest faithful recovery route with each finding: `document-reconcile` for Case meaning or support, `document-compose` for missing or corrected substance, `document-shape` for reader flow, `document-trace` for coverage, and `document-format` for representation. After recovery, recommend rerunning only the lenses and checks made stale.
+- Complete review only when the selected lenses ran, omitted default lenses have a rationale, duplicate findings are consolidated, and every material finding has a disposition and smallest recovery route.
 
 ## Boundary
 
@@ -39,4 +39,4 @@ Load `../document/resources/operation-result.md` before returning a result.
 
 ## Progressive Resources
 
-Initial lens skeletons live under `resources/lenses/`.
+Available lenses live under `resources/lenses/`: case fidelity, fresh-reader comprehension, editorial quality, genre review, and presentation quality.

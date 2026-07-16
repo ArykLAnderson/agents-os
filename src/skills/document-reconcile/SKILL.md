@@ -34,7 +34,7 @@ Load `resources/reconciliation.md` before changing the Case. It defines semantic
 
 - Agent consensus never becomes author authority.
 - Semantic changes always route through `document-reconcile` before they become accepted Case state.
-- Publication blockers from unsupported assertions, stale material support, authority conflicts, or missing trace coverage cannot be waived by formatting or publishing; waivers require author-approved reconciliation into a new snapshot.
+- Load `../document/resources/publication-readiness.md` when a finding may affect external publication. Reconcile semantic or authority changes required by its non-waivable invariant.
 
 ## Boundary
 

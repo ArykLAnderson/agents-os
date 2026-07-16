@@ -16,7 +16,7 @@ Do not lead with raw chronology when it obscures the conclusion. Do preserve eno
 
 ## Evidence Visibility
 
-Use short stable semantic anchors such as `## Recommendation`, `## Evidence`, `## Limitations`, and `## Decision Boundary`. A material table must identify what it establishes and what it does not establish. Keep source IDs or fully qualified Case references in visible prose, table notes, or a compact evidence register so tracing can locate the semantic unit without relying on sentence order.
+Use short stable semantic locators such as `## Recommendation`, `## Evidence`, `## Limitations`, and `## Decision Boundary`. A material table must identify what it establishes and what it does not establish. Keep internal Case IDs and fully qualified Case references in the trace sidecar or an internal evidence register. Use only audience-accessible citations or an explicit source limitation in reader-facing prose.
 
 For each claim, expose its support class:
 

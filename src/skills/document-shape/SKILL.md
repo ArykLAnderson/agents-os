@@ -29,10 +29,14 @@ Load `../document/resources/operation-result.md` before returning a result.
 - Shape from meaning clusters and their relationships, not from the order of Case entries or selection rows. Mix support from several clusters when one paragraph needs it; split one cluster across the article when grounding, example, and consequence belong at different moments.
 - Optimize paragraph adjacency explicitly. Each sentence should arise naturally from the previous sentence's subject, implication, contrast, question, or example. Flag an abrupt adjacency when two supported statements are individually correct but their connection exists only in the author's private model.
 - Do not expose trace structure as prose structure. Readers should encounter a coherent explanation, not a visible march through source accounting. Trace the resulting semantic units after shaping.
+- Give every visual opportunity one recorded disposition: `retained`, `converted-to-prose`, `deferred`, or `declined`, with a brief reader-effort rationale.
+- For each retained opportunity, shape one **explanatory beat** with its surrounding prose. Decide its placement, one-sentence takeaway, reader prerequisites, prose before and after it, cognitive budget, details to omit, and semantic form such as comparison table, cards, boundary model, lineage, chart, or diagram.
+- Create one visual anchor from `resources/visual-anchor.md` for each retained meaning-bearing visual. The anchor owns semantic scope, narrative role, and semantic form; formatting owns target realization. Do not expand a reader-facing visual to satisfy trace or implementation accounting.
 - Preserve accepted Case meaning and explicit uncertainty.
 - Create stable visible or hidden semantic anchors for downstream tracing.
 - Account for selected entries that are omitted or deferred from the reader-facing artifact.
 - Send unsupported discoveries, material caveat changes, or proposed accepted meaning to `document-reconcile`.
+- Complete shaping only when material semantic units have stable locators, selected omissions are accounted for, every visual opportunity has a disposition, and every retained meaning-bearing visual has a stable visual anchor.
 
 ## Boundary
 
@@ -44,6 +48,8 @@ Load `../document/resources/operation-result.md` before returning a result.
 ## Progressive Resources
 
 Load only selected strategy files under `resources/strategies/`.
+
+Load `resources/visual-anchor.md` when the shaped artifact retains a meaning-bearing visual.
 
 Initial strategy skeletons:
 
