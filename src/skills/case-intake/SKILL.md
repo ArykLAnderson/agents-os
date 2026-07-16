@@ -18,11 +18,12 @@ A Case is a mechanical semantic ledger, not reader-facing prose. This skill regi
 - Preserve provenance and authority; source claims do not become current decisions unless the author states, approves, or explicitly delegates that authority.
 - Ask concise material questions only when needed for the first snapshot.
 - Create a first Case snapshot only after author approval.
-- Use a configurable work root; never hard-code a personal or organization-specific path.
+- Use a configurable work root. Default to the project-local `.documents/` directory when the project does not declare another private artifact root; never hard-code a personal or organization-specific path.
+- Before writing, check whether the selected root is inside a Git worktree and whether the planned files are ignored. Do not create document-system artifacts in a Git-visible path without warning the author and receiving an explicit location choice.
 
 ## Workspace Layout
 
-Load `resources/workspace-fixtures.md` when initializing or locating Case files. It defines the portable Case workspace layout without requiring a repository-specific script or fixed filesystem root.
+Load `resources/workspace-fixtures.md` when initializing or locating Case files. It defines the private-by-default portable Case workspace layout without requiring a repository-specific script or fixed filesystem root.
 
 ## Source Registration
 

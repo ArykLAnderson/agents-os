@@ -29,6 +29,7 @@ Publication cannot waive unsupported assertions, missing material anchors, stale
 
 - Do not format or rewrite meaning.
 - Do not automatically publish to real team destinations without explicit authorization.
+- Do not interpret a local artifact's presence in a Git-visible path as authorization to stage, commit, push, or publish it.
 - Do not encode company-specific, database-placement, tracker-specific, chat-specific, wiki-specific, or personal path defaults in the portable core.
 
 ## Progressive Resources
