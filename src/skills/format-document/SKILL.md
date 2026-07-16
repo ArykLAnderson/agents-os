@@ -21,6 +21,7 @@ Formatting translates structure, disclosure, visuals, navigation, links, and acc
 - Ensure target output preserves reading order and meaning across expected viewport and accessibility constraints.
 - Derive evidence backlinks from trace and source metadata rather than creating a second provenance system.
 - Record local presentation evidence for every target: asset and link resolution, normal and narrow layout inspection, navigation, text alternatives, searchable critical meaning, and semantic comparison with the traced source.
+- Keep formatted outputs, generated assets, prompts, screenshots, and presentation evidence inside the Case's approved private work root unless the author explicitly selects a tracked destination.
 - If a target cannot preserve a traced unit, retain a readable textual equivalent and report the target limitation instead of silently omitting or changing the unit.
 - Route semantic changes or unsupported visual implications to `case-reconcile`.
 

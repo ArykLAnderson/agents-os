@@ -19,6 +19,7 @@ Composition is adapter-driven. Load exactly the relevant genre adapter from `res
 - Produce a selected-entry manifest and draftable composition, not a universal document AST.
 - Identify blocking gaps, deferrable gaps, multi-Case conflicts, relevant omitted entries, and recommended shaping strategies.
 - Route semantic discoveries or proposed new accepted meaning to `case-reconcile`.
+- Keep compositions and drafts inside the Case's approved private work root. Do not relocate them into a tracked documentation path without explicit author intent.
 
 ## Boundary
 
