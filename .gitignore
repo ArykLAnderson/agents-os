@@ -4,6 +4,9 @@ LOCAL_OVERRIDES.md
 src/memory/
 adapters/*/generated/memory/
 
+# Disposable harness output; regenerate from canonical src/ with agents-os sync.
+adapters/*/generated/
+
 # local-only private personal workflows
 src/agents/executive-assistant.md
 src/agents/personal-coach.md
