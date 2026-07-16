@@ -7,9 +7,9 @@ argument-hint: "<ticket-file-path | ticket-number | ticket-URL>"
 
 # Ticket Executor
 
-Consume the established domain glossary and ADRs. Invoke `domain-modeling` only when implementation exposes a genuine contradiction; do not silently coin competing language. If review remediation repeats or moves across module contracts, stop as the atomic writer and return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet to the coordinator. The coordinator owns `zoom-out`; this writer must not continue a third local repair.
+Consume the established domain glossary and ADRs. Invoke `domain-modeling` only when implementation exposes a genuine contradiction; do not silently coin competing language. If review remediation moves across module/caller/ownership/authority/trust/mutation/persistence/deployment/HITL boundaries or changes intent, stop as the atomic writer and return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet to the coordinator. If the proposed correction changes a frozen architectural assumption or a contract inherited by another ticket, mark `BASELINE_REALIGNMENT_REQUIRED`; do not implement it or infer downstream changes. The coordinator must fence the chain and obtain explicit human approval through the feature workflow. After two failed ordinary closure cycles, do not continue a third local repair. The coordinator owns `zoom-out`; this writer may execute recovery attempt 1 or 2 only when the assignment explicitly identifies the attempt, accepted seam, approved baseline revision/fingerprint, active token, and expected HEAD. During recovery, return `ARCHITECTURAL_RECOVERY_REQUIRED` for renewed boundary movement or intent uncertainty rather than broadening the assignment.
 
-Implement one well-specified ticket and return tested, inspectable evidence.
+Implement one well-specified ticket and return tested, inspectable evidence. Review findings are proposals: do not adjudicate architecture or widen scope. On a substantive blocking finding, return a checkpoint packet with stable ID/evidence, protected criterion/spec/ADR, owning module/ticket/seam, observable-intent impact, boundary signals, proposed disposition/rationale, and bounded verification plan; wait for the coordinator's disposition before fixing.
 
 This is an **atomic writer**, not a feature orchestrator. When called by `implement-feature`, it does not own independent review, integration, PR creation, tracker closure, or feature state.
 
@@ -52,7 +52,7 @@ Resolve and state:
 - implementation repository and base revision
 - assigned worktree/branch
 - allowed side effects and commit authority
-- coordinator constraints, unique attempt ID/writer token, expected starting HEAD, and result format
+- coordinator constraints, approved baseline revision and graph fingerprint, unique attempt ID/writer token, expected starting HEAD, and result format
 
 If the ticket is part of a larger feature, preserve the ticket boundary and do not imply that the feature is complete.
 
@@ -62,7 +62,7 @@ Follow project instructions and the worktree skill.
 
 - Never modify a protected release or integration worktree.
 - Preserve unrelated changes.
-- When invoked by an orchestrator, use the provided worktree, branch, environment, attempt token, and starting SHA. Verify the token/HEAD before editing and again before committing; abort if the attempt was fenced or the branch moved unexpectedly.
+- When invoked by an orchestrator, use the provided worktree, branch, environment, baseline revision/fingerprint, attempt token, and starting SHA. Verify the baseline, token, and HEAD before editing and again before committing; abort if the assignment became stale, the attempt was fenced, or the branch moved unexpectedly.
 - When invoked directly, create or request an allowed ticket worktree before production edits.
 - Do not write shared `.agent/implement/...` coordinator state.
 
@@ -81,6 +81,8 @@ Extract:
 
 Then read relevant `AGENTS.md`, `CONTEXT.md`, canonical specifications, ADRs, plans, and existing implementation patterns.
 
+When the ticket creates or changes a database migration, or any migration mutability/rollback conflict appears, read [references/migration-mutability.md](references/migration-mutability.md) before editing or disposing the finding.
+
 A ticket is not the sole source of architectural truth when the project defines canonical decisions elsewhere.
 
 ### 4. Handle ambiguity without inventing requirements
@@ -90,7 +92,8 @@ If behavior cannot be resolved from the ticket and canonical context:
 1. Stop before guessing.
 2. Return `BLOCKED` with the exact contradiction or decision needed.
 3. Include the relevant source documents and a recommended resolution when possible.
-4. Comment, relabel, or modify an external tracker ticket only when explicitly authorized and repository policy allows it.
+4. If resolving it would change frozen architecture or downstream inherited contracts, return `BASELINE_REALIGNMENT_REQUIRED` with the old assumption, proposed invariant, affected tickets/dependencies, and candidate/evidence impact.
+5. Comment, relabel, or modify an external tracker ticket only when explicitly authorized and repository policy allows it.
 
 Do not silently narrow, expand, or reinterpret the ticket.
 

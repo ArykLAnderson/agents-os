@@ -35,8 +35,8 @@
     }
   },
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol-focused",
-  "defaultThinkingLevel": "high",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "low",
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384,

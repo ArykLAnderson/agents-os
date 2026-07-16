@@ -92,9 +92,17 @@ Recommended states:
 - `CANCELLED`
 - `DONE`
 
+## Baseline revisions
+
+The initial accepted inputs remain immutable. Record an active baseline revision ID and graph fingerprint in `feature.md`, `graph.md`, and every ticket assignment.
+
+When an explicitly human-approved architecture correction changes frozen assumptions, preserve the prior revision and add an append-only revision containing the proposal, cascade analysis, approval evidence, canonical source revisions/digests, revised ticket snapshots, and new graph fingerprint. Follow [architecture-baseline-realignment.md](architecture-baseline-realignment.md) for the canonical `agent-os-baseline-manifest-v1` fingerprint and approval-binding contract; use the bundled baseline revision and approval templates. Keep the affected chain blocked until canonical docs, tracker contracts, dependency edges, snapshots, and coordinator state agree. A partially published revision is not active.
+
+Approval evidence must bind approver identity/authority and decision source/time to the exact proposal digest, cascade digest, manifest digest, and candidate graph fingerprint. Assignments, reviews, integrations, and verification tied to an older revision are stale unless the cascade analysis explicitly marks them still applicable. Never infer approval of downstream contract changes from approval of only the immediate correction.
+
 ## Attempt fencing
 
-Each ticket assignment has one active attempt ID and writer token. Record the expected starting SHA and current branch HEAD.
+Each ticket assignment has one active attempt ID and writer token. Record the approved baseline revision, graph fingerprint, expected starting SHA, and current branch HEAD.
 
 Before replacing a writer:
 
@@ -141,7 +149,7 @@ Current state documents remain concise; the event log preserves transition histo
 
 When records disagree, use this order:
 
-1. accepted immutable input snapshots define frozen intent;
+1. the latest fully published, explicitly human-approved baseline revision defines current intent; immutable predecessor snapshots preserve historical intent and provenance;
 2. git objects/ancestry and worktree facts define code state;
 3. tracker and PR APIs define remote workflow state;
 4. command/manual evidence keyed to a SHA defines verification state;
@@ -163,6 +171,7 @@ Reconcile:
 - child agent/session status
 - local/remote branch state
 - tracker issue state, claim comment, claim freshness, and coordinator identity
+- active baseline revision, graph fingerprint, approval evidence, canonical source digests, and agreement with tracker dependencies
 - feature/docs PR state and head SHA
 - validation evidence and the SHA it covers
 - manual E2E artifacts
@@ -195,8 +204,9 @@ Never recover by:
 - assuming a branch is merged from a ticket checkbox
 - treating an open PR as proof its current head passed checks
 - marking manual E2E complete from compilation
-- accepting a stale/fenced writer result without reconciliation
+- accepting a stale/fenced writer result or old-baseline assignment without reconciliation
 - recreating missing state by inventing prior decisions
+- treating reviewer consensus, green tests, or approval of an immediate correction as human approval of inferred downstream architecture changes
 - leaving tickets closed after the feature PR is abandoned or no longer contains their integration commit
 
 Git, GitHub/local tracker state, and evidence are facts. State documents explain the coordinator’s intent and reconciled interpretation of those facts.

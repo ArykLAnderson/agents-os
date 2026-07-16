@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "agent-os-baseline-manifest-v1",
+  "featureId": "<feature-id>",
+  "revisionId": "<revision-id>",
+  "predecessorFingerprint": null,
+  "canonicalSources": [],
+  "ticketSnapshots": [],
+  "dependencyEdges": [],
+  "hitlGates": [],
+  "featureConstraints": [],
+  "proposalSha256": "sha256:<hex>",
+  "cascadeSha256": "sha256:<hex>"
+}

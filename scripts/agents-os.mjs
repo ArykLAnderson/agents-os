@@ -94,8 +94,17 @@ async function filesUnder(dir) {
   return out;
 }
 
+function excludedSkills(target) {
+  return new Set(config.skillExcludes?.[target] || []);
+}
+
+function skillName(rel) {
+  return rel.split(path.sep)[0];
+}
+
 async function renderTarget(target, destination, clean = true) {
   const layout = layouts[target];
+  const excluded = excludedSkills(target);
   if (!layout) throw new Error(`Unsupported target: ${target}`);
   await mkdir(destination, { recursive: true });
   for (const kind of ["agents", "commands", "skills"]) {
@@ -117,6 +126,7 @@ async function renderTarget(target, destination, clean = true) {
   }
   for (const file of await filesUnder(path.join(src, "skills"))) {
     const rel = path.relative(path.join(src, "skills"), file);
+    if (excluded.has(skillName(rel))) continue;
     const out = path.join(destination, layout.skills, rel);
     await mkdir(path.dirname(out), { recursive: true });
     if (path.basename(file) === "SKILL.md") await writeFile(out, addHeader(await readFile(file, "utf8")));
@@ -136,17 +146,23 @@ async function doctor() {
   for (const target of config.targets) {
     const layout = layouts[target];
     const base = path.join(root, "adapters", target, "generated");
+    const excluded = excludedSkills(target);
     for (const kind of ["agents", "commands", "skills"]) {
       const dir = path.join(base, layout[kind]);
       if (!(await exists(dir))) problems.push(`${target}: missing ${layout[kind]}/`);
     }
     for (const file of await filesUnder(path.join(src, "skills"))) {
       const rel = path.relative(path.join(src, "skills"), file);
+      if (excluded.has(skillName(rel))) continue;
       const generated = path.join(base, layout.skills, rel);
       if (!(await exists(generated))) problems.push(`${target}: missing skill file ${rel}`);
       else if (path.basename(file) === "SKILL.md" && !(await readFile(generated, "utf8")).includes(header)) problems.push(`${target}: missing generated header in ${rel}`);
     }
-    const sourceNames = new Set((await readdir(path.join(src, "skills"), { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name));
+    const allSourceNames = new Set((await readdir(path.join(src, "skills"), { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name));
+    for (const name of excluded) {
+      if (!allSourceNames.has(name)) problems.push(`${target}: unknown excluded skill ${name}`);
+    }
+    const sourceNames = new Set([...allSourceNames].filter((name) => !excluded.has(name)));
     for (const entry of await readdir(path.join(base, layout.skills), { withFileTypes: true })) {
       if (entry.isDirectory() && !sourceNames.has(entry.name)) problems.push(`${target}: stale generated skill ${entry.name}`);
     }
