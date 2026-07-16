@@ -51,7 +51,7 @@ Labels are optional presentation aids except for `atlas-current`. Keep exactly o
 4. Update both segment states and the Atlas root's current-segment locator.
 5. Confirm Maps still point to the Atlas root as owner and are not native children of either segment.
 
-Choose rotation based on readability and context pressure, not a fixed count. Do not create the live Atlas hierarchy or rotate a real segment unless the current Work Item authorizes that publication.
+Choose rotation based on readability and context pressure, not a fixed count. Create the live Atlas hierarchy or rotate a real segment only when an authorized shaping invocation requires that publication in this configured tracker.
 
 ## Body and comment discipline
 
