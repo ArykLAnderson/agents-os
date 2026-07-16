@@ -6,9 +6,9 @@ $ARGUMENTS
 
 ## Scope
 
-This entry point creates or resumes the canonical Feature Atlas hierarchy and aligns one Feature's intent. It ends after intent alignment and the accepted current-state refresh.
+This entry point creates or resumes the canonical Feature Atlas hierarchy, aligns one Feature's intent, and—after intent acceptance—carries that same Feature through durable specification, active review of a Feature-native tracer-bullet Work Item graph, a distinct named-human decomposition Decision, and mechanical publication of the accepted current state.
 
-Do not accept or publish a decomposition, create Work Item Issues, dispatch implementation, run reconciliation or cross-map workflows, migrate legacy records, or change a global/default route. Leave existing legacy routes available.
+Do not dispatch implementation, amend an already accepted graph through reconciliation, create repositories or a live tracer hierarchy for rollout validation, run delivery, reconciliation, cross-map, visual-authoring, or legacy-migration workflows, or change a global/default route. Leave existing legacy routes available.
 
 ## Instructions
 
@@ -113,14 +113,82 @@ If Decision comment creation fails, do not update body state. If a later body re
 
 The original shaping invocation authorizes creation and maintenance of proposed/shaping Issues in the already configured tracker. Each named-human shaping Decision authorizes its described mechanical proposal/current-state refresh; the named-human intent acceptance Decision authorizes the accepted-body refresh. Do not ask again for these routine operations. Ask separately before publishing anywhere else, transferring canonical authority, or changing an understood-private destination to public.
 
-### 7. Hand off and stop
+### 7. Enter specification and decomposition only from accepted intent
+
+Continue in this workflow when the Feature has an authoritative named-human intent-acceptance Decision, `Intent status` is `Accepted`, and no lifecycle block prevents planning. Re-read the accepted intent and its Decision before deriving anything.
+
+If the Issue already has an accepted Work Item graph, do not silently replace or extend it. When the recovered decomposition Decision and graph agree, repair only incomplete mechanical publication as described below or hand off the already accepted state. When they differ, or when the requested work would amend accepted intent or graph, stop and route to the owning reconciliation workflow; amendment is outside this shaping path.
+
+### 8. Prepare the durable Feature specification
+
+Read and apply the reasoning in the `to-spec` skill without invoking a second publication workflow or creating a separate source of authority. Explore the relevant repositories and governing links; use the domain glossary, applicable architecture decisions, established interfaces, and existing behavioral test seams. Synthesize what is already known rather than restarting discovery.
+
+Prepare a proportionate specification inside the Feature Issue's `Proposal — not accepted` section. Keep the already accepted outcome, boundaries, and outcome-level acceptance unchanged. Include:
+
+- problem and user-facing solution;
+- sufficient numbered user stories to cover the accepted behavior and boundaries;
+- durable implementation decisions expressed through stable modules, interfaces, contracts, or routes rather than brittle file checklists;
+- testing decisions focused on external behavior, the deepest practical existing seams, and relevant prior art;
+- explicit out-of-scope items and material notes or dependencies.
+
+This specification and every proposed Work Item remain non-authoritative. A specification edit cannot mutate `Accepted intent` or `Accepted Work Item graph`. If specification work exposes a material intent change, conflicting domain language, an unresolved architecture choice, or a missing fact that prevents safe decomposition, stop on that ambiguity. Return to the applicable one-question shaping/investigation path and record its named-human Decision before continuing; do not bury the choice inside the specification.
+
+### 9. Propose a Feature-native tracer-bullet Work Item graph
+
+Read and reuse the decomposition reasoning in the `to-tickets` skill, adapted to the already accepted Feature Atlas Feature. Do not emit legacy coordination artifacts or terminology. The accepted Feature itself is the one independently releasable outcome; tracks are optional parallel workstreams, not additional Features or ownership levels.
+
+Decompose into bounded Feature-owned implementation Work Items that:
+
+- prove thin, observable behavior across relevant layers and can land green independently;
+- have clear acceptance and fresh-verification expectations derived from the specification;
+- are approximately one agent-day where practical and do not depend on unfinished sibling branches;
+- use a narrow enabling seam only when a vertical slice cannot safely land first, and name the later tracer-bullet result it blocks;
+- use expand–migrate–contract slices only when a wide mechanical change cannot otherwise remain green;
+- state optional track, AFK/HITL role, `ready`/`needs-info` attention, estimated S/M/L complexity, desired result, current behavior, stable key interfaces, scope boundaries, test strategy, and dependencies;
+- form an acyclic blocking graph and converge on the accepted Feature outcome.
+
+Do not split the accepted intent into additional Features. If it cannot be decomposed as one independently meaningful outcome, stop because intent/ownership is ambiguous. Do not generate acceptance-test files or dispatch briefs during decomposition.
+
+Use temporary review references such as `Proposed WI A` for missing Work Items; a proposed reference is not a stable ID. Preserve the stable ID and canonical locator of an existing matching Work Item. Allocate any missing stable IDs only during post-Decision publication, after the required tracker searches.
+
+Mechanically refresh the Feature's non-authoritative proposal and current state with the specification, proposed graph, unresolved `needs-info` facts, and the next review action. Post any applicable non-decision fact comment before a refresh caused by discovered evidence. Do not treat this proposal refresh as acceptance or ask permission for the mechanical edit.
+
+### 10. Present the graph for active human review
+
+Present the named human with a concise specification summary and the complete proposed decomposition, visibly labeled **not accepted**. Include:
+
+- each proposed Work Item's review reference, title, role, attention, optional track, complexity, desired result, boundaries, acceptance/verification, and direct blocking relationships;
+- a text or ASCII dependency DAG, total Work Item count, ready/needs-info totals, and every missing fact with its downstream effect;
+- why the graph is a workable tracer-bullet path for this one Feature, the recommended disposition, and the material trade-off.
+
+Invite the human to confirm, modify, investigate, defer, or decline the exact specification and graph. This is active semantic review, not a publication-permission prompt. Handle a requested modification through the disposition rule below before incorporating it into the non-authoritative proposal and presenting the complete revised graph again; do not infer acceptance from partial feedback, silence, intent acceptance, or prior implementation authority.
+
+Only an unqualified confirmation of the exact presented specification and graph is decomposition acceptance. It requires a separate, self-contained comment headed `## Decision — Feature decomposition`, distinct from the Feature-intent Decision. Name the human and date; state the exact question and choice, rationale, affected Atlas/Map/Feature IDs and locators, a concise accepted-specification summary, every accepted Work Item title and blocking edge, consequences, and the next mechanical publication step. If that comment fails, leave the body and Work Item Issues unchanged and do not imply acceptance.
+
+For modification, investigation, deferral, or decline, first post `## Decision — Feature decomposition disposition` in the canonical Decision form. A modification keeps the revised specification/graph proposed and returns to active review. Investigation or deferral records the missing evidence or resume trigger, updates lifecycle/attention and next action, and stops. Decline leaves accepted intent and any prior accepted graph untouched, withdraws this proposal from operative state, records the next action, and stops. None of these disposition Decisions authorizes Work Item publication.
+
+### 11. Publish the accepted graph mechanically
+
+The `## Decision — Feature decomposition` comment authorizes, without another permission prompt, the Feature body refresh and creation or update of the accepted canonical Work Item Issues in the configured tracker. It does not authorize another destination or implementation dispatch.
+
+Recover before creating. Recheck open and closed Issues and comments for every accepted existing or candidate Work Item identity. Reuse one canonical Work Item only when identity, Feature owner, and semantic result agree. Stop on a collision, conflicting claim, ambiguous match, owner mismatch, or uncertainty about whether an existing Issue represents the accepted Work Item. For each missing Work Item, allocate the next Atlas-scoped ID using the representation guidance and repeat the search immediately before creation.
+
+Publish in a recoverable two-pass sequence:
+
+1. Create or reuse every accepted Work Item Issue with its exact stable Atlas ID, Feature owner ID and canonical Feature locator, accepted desired result/boundaries/verification, accepted lifecycle/attention, decomposition Decision locator, and dependency IDs. Record every returned canonical Work Item locator. A newly created body may identify a dependency locator as pending only while that dependency Issue is still being created in this same publication pass.
+2. Once all Work Item locators are known, re-read and update every accepted Work Item body so `Scope owner`, `Blocked by`, and `Blocks` contain the exact stable IDs and canonical locators, its current state names the next action, and no pending locator remains.
+3. Only after the Work Item bodies are complete, refresh the Feature body. Preserve the accepted outcome, boundaries, and acceptance; move the accepted specification details under subordinate headings in `Accepted intent`, replace `Accepted Work Item graph` with every exact Work Item ID/locator/state/dependency, clear or accurately narrow `Proposal — not accepted`, link both intent and decomposition Decisions, and set lifecycle/attention and the exact next action.
+4. Refresh affected Map/Index navigation only where current operable text requires it. Re-read the rendered Feature and Work Item bodies and latest comments to verify identity, exact ownership, accepted/proposed separation, graph direction, Decision ordering, lifecycle/attention, and next actions.
+
+GitHub Issue mutations are not transactional. If any create or update fails, stop immediately and report the decomposition Decision locator, completed Issue locators, failed operation, and every stale or pending body. Do not delete successfully created Issues, repost the Decision, fabricate completion, roll IDs back, or create replacements. On resumption, recover and reuse those exact Issues, finish the incomplete pass, and only then refresh the Feature's accepted graph. A Decision with partially published Issues remains authoritative even while the Feature body is stale; report that incomplete mechanical projection honestly and repair it by recovery.
+
+### 12. Hand off and stop
 
 Return a concise handoff containing:
 
-- Atlas, current Index Segment, Map, and Feature IDs with canonical locators;
-- the Feature intent status, lifecycle/attention, latest shaping or disposition Decision locator, and intent-acceptance Decision locator if accepted;
-- the recovered current state;
-- unresolved material intent questions or blocking investigation/deferral trigger, if any;
-- the exact next action.
+- Atlas, current Index Segment, Map, and accepted Feature IDs with canonical locators;
+- intent status, lifecycle/attention, intent-acceptance Decision locator, and decomposition Decision locator;
+- every accepted Work Item ID and canonical locator with role, attention, and direct dependencies;
+- the recovered current state, any unresolved `needs-info` fact or partial-publication repair, and the exact next action.
 
-After intent acceptance, the next action is specification and decomposition acceptance through the owning follow-on workflow. Stop here. Do not silently produce or publish a decomposition, create/update Work Item Issues, or treat intent acceptance as decomposition authority.
+When publication is complete, identify the first unblocked accepted Work Item or the specific prerequisite that must be resolved next, and name the separate owning implementation workflow the human may invoke. Stop without invoking it, assigning a writer, creating a repository/live tracer, or dispatching any implementation.
