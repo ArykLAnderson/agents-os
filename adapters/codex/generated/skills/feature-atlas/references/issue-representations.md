@@ -74,6 +74,7 @@ An Index Segment is a tracker navigation record for one Atlas. It may have a sta
 | Field | Current value |
 |---|---|
 | **ID** | `AIS-<NNN>` |
+| **Canonical Issue** | <this Issue's canonical locator> |
 | **Atlas** | `FA-<NNN>` — <canonical Atlas locator> |
 | **Segment state** | Current / Superseded |
 | **Previous segment** | <ID and locator, or None> |
