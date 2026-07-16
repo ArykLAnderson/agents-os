@@ -16,6 +16,7 @@ Formatting translates structure, disclosure, visuals, navigation, links, and acc
 - Load only the selected target adapter from `resources/adapters/`.
 - Start from a shaped artifact, its trace sidecar, and the selected-entry or source metadata they name. Keep the formatted artifact beside its trace and preserve the source revision and snapshot identity.
 - Use visual resources from `resources/visuals/` only when the artifact requires visual companion work.
+- During visual preparation, inspect the available skills, tools, and capabilities; never assume image generation is installed. Start every semantic visual from `semantic-diagram-spec.md`. When an available image-generation capability would materially improve a polished or presentation-grade semantic visual, strongly prefer it and follow `generated-image.md`; otherwise use Mermaid, SVG, semantic HTML, or a textual fallback, disclose that fallback in presentation evidence, and continue formatting.
 - Preserve critical decisions, risks, caveats, review asks, and searchable conclusions outside hidden-only structures.
 - Ensure target output preserves reading order and meaning across expected viewport and accessibility constraints.
 - Derive evidence backlinks from trace and source metadata rather than creating a second provenance system.
