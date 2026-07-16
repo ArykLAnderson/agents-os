@@ -6,7 +6,7 @@ $ARGUMENTS
 
 This entry point creates or resumes the canonical Feature Atlas hierarchy, aligns one Feature's intent, and—after intent acceptance—carries that same Feature through durable specification, active review of a Feature-native tracer-bullet Work Item graph, a distinct named-human decomposition Decision, and mechanical publication of the accepted current state.
 
-Do not dispatch implementation, amend an already accepted graph through reconciliation, create repositories or a live tracer hierarchy for rollout validation, run delivery, reconciliation, cross-map, visual-authoring, or legacy-migration workflows, or change a global/default route. Leave existing legacy routes available.
+The endpoint is an accepted current state published in the configured canonical tracker and handed off to the named implementation workflow. Keep canonical authority and the configured destination fixed; route changes to accepted intent or graph through reconciliation, and leave implementation dispatch to its owning workflow.
 
 ## Instructions
 
@@ -109,6 +109,8 @@ For any other answer to the final question, first post a separate named-human `#
 
 If Decision comment creation fails, do not update body state. If a later body refresh or close fails, report the Decision locator and the stale body or Issue state explicitly; do not repost, fabricate acceptance, or continue as though the lifecycle changed.
 
+On recovery, if an authoritative Feature-intent acceptance Decision exists but its body projection failed or is stale, recover the exact Decision and latest relevant history, then finish the authorized mechanical refresh and verification in steps 2–4 without asking for acceptance again. Stop when a later Decision, identity or ownership mismatch, or accepted-content conflict contradicts that projection.
+
 The original shaping invocation authorizes creation and maintenance of proposed/shaping Issues in the already configured tracker. Each named-human shaping Decision authorizes its described mechanical proposal/current-state refresh; the named-human intent acceptance Decision authorizes the accepted-body refresh. Do not ask again for these routine operations. Ask separately before publishing anywhere else, transferring canonical authority, or changing an understood-private destination to public.
 
 ### 7. Enter specification and decomposition only from accepted intent
@@ -119,7 +121,7 @@ If the Issue already has an accepted Work Item graph, do not silently replace or
 
 ### 8. Prepare the durable Feature specification
 
-Read and apply the reasoning in the `to-spec` skill without invoking a second publication workflow or creating a separate source of authority. Explore the relevant repositories and governing links; use the domain glossary, applicable architecture decisions, established interfaces, and existing behavioral test seams. Synthesize what is already known rather than restarting discovery.
+Read only the `to-spec` reasoning about repository exploration, established domain and architecture language, durable interface-level decisions, deep behavioral test seams, and specification content. Synthesize what is already known rather than restarting discovery. `/shape-feature` owns the interaction cadence, Feature Atlas terminology, semantic authority, canonical Issue representation, and publication; subordinate seam-approval, artifact-creation, publication-approval, or other workflow mechanics do not apply.
 
 Prepare a proportionate specification inside the Feature Issue's `Proposal — not accepted` section. Keep the already accepted outcome, boundaries, and outcome-level acceptance unchanged. Include:
 
@@ -133,7 +135,7 @@ This specification and every proposed Work Item remain non-authoritative. A spec
 
 ### 9. Propose a Feature-native tracer-bullet Work Item graph
 
-Read and reuse the decomposition reasoning in the `to-tickets` skill, adapted to the already accepted Feature Atlas Feature. Do not emit legacy coordination artifacts or terminology. The accepted Feature itself is the one independently releasable outcome; tracks are optional parallel workstreams, not additional Features or ownership levels.
+Read only the `to-tickets` reasoning about tracer-bullet slicing, narrow enabling seams, expand–migrate–contract work, dependency DAGs, role/readiness, and complexity. Adapt that reasoning to the already accepted Feature Atlas Feature: the accepted Feature is the one independently releasable outcome, and tracks are optional parallel workstreams rather than additional Features or ownership levels. `/shape-feature` owns the interaction cadence, Feature Atlas terminology, semantic authority, canonical Issue representation, and publication; subordinate approval, Keystone, legacy-coordination, and publication mechanics do not apply.
 
 Decompose into bounded Feature-owned implementation Work Items that:
 
@@ -189,4 +191,4 @@ Return a concise handoff containing:
 - every accepted Work Item ID and canonical locator with its complete accepted brief: role/type, attention, optional track (or `None`), complexity, current behavior, desired result, key interfaces, boundaries, dependencies, observable acceptance/verification, and implementation verification strategy;
 - the recovered current state, any unresolved `needs-info` fact or partial-publication repair, and the exact next action.
 
-When publication is complete, identify the first unblocked accepted Work Item or the specific prerequisite that must be resolved next, and name the separate owning implementation workflow the human may invoke. Stop without invoking it, assigning a writer, creating a repository/live tracer, or dispatching any implementation.
+When publication is complete, identify the first unblocked accepted Work Item or the specific prerequisite that must be resolved next, return the handoff, name the separate owning implementation workflow the human may invoke, and end the command.

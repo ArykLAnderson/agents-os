@@ -1,11 +1,9 @@
 ---
 name: feature-atlas
-description: Apply the canonical Markdown representation rules for Feature Atlas records in a configured tracker.
+description: Feature Atlas representation rules. Use when another workflow reads or mutates canonical Atlas, Index Segment, Map, Feature, or Work Item records in a configured tracker.
 ---
 
 # Feature Atlas Representations
-
-Use this skill when reading, preparing, creating, or updating canonical Feature Atlas tracker records.
 
 1. Read [the canonical Issue representations](references/issue-representations.md) for identity, ownership, current-state bodies, and historical comments.
 2. When the configured canonical tracker is private GitHub Issues, also follow [the configured private GitHub instructions](references/configured-private-github.md).

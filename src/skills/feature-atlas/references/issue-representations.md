@@ -165,7 +165,7 @@ The Feature list is current navigation, not a substitute for each canonical Feat
 - <Specification, Decisions, source repositories, pull request, report, or other current locator as applicable.>
 ```
 
-After a named-human Decision, preserve it in comments and mechanically refresh the accepted sections. Never silently retarget accepted intent or an existing delivery candidate.
+After an applicable named-human acceptance Decision, preserve it in comments and mechanically refresh the accepted sections. Modification, investigation, deferral, and decline Decisions update only the proposal, lifecycle/attention, governing links, and current state; accepted sections remain unchanged. Never silently retarget accepted intent or an existing delivery candidate.
 
 ## Work Item
 
