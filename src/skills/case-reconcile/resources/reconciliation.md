@@ -1,0 +1,57 @@
+# Case Reconciliation
+
+`case-reconcile` owns semantic update ownership after the first accepted Case snapshot. A source, reviewer, drafting skill, or agent may report a finding, but only this flow classifies and applies it to the Case working ledger. Do not update accepted Case meaning through a document edit, review report, or queue note.
+
+## Intake And Consolidation
+
+Record each incoming report with its source or review locator, affected entries or artifacts, proposed change, and evidence. Consolidate reports that describe the same semantic issue into one finding before assigning materiality. Preserve every original report locator on the consolidated finding; do not count repeated agent reports as independent authority or multiply their priority.
+
+Agent consensus is evidence for investigation only. It is not author authority and cannot accept a `DEC`, `REQ`, `CON`, `INT`, contradiction resolution, or synthesized current guidance. Only the author or explicitly declared delegated authority with an identity and scope may approve those changes. A delegated approval reuses every durable approval-event field: authority, author, recorded time, locator, outcome, approved entries, and exact final wording. It additionally records the delegation declaration locator and the delegation scope; a name, meeting role, or implied delegation is not enough.
+
+## Materiality
+
+Classify the effect on accepted meaning and downstream reader action, not the number of files changed:
+
+| Materiality | Meaning | Handling |
+|---|---|---|
+| `none` | No Case meaning, authority, support, scope, confidence, or reader action changes. | Apply a mechanical correction and retain the current snapshot. |
+| `low` | A bounded correction preserves accepted meaning and does not affect artifact support or reader action. | Apply when evidence is clear; record the finding and retain the current snapshot. |
+| `medium` | A nonbinding observation, risk, gap, or action changes, or an artifact may need attention without changing accepted binding meaning. | Apply the ledger update when supported; batch any author question for the current reconciliation phase. |
+| `high` | A proposed binding meaning, material caveat, source authority, interpretation, or downstream reader action changes. | Keep accepted meaning unchanged, queue a concise author question, and create a later snapshot only after approval. |
+| `blocking` | Opposing binding claims, missing authority, unsupported meaning, or stale material support would mislead a downstream artifact. | Interrupt immediately. Do not batch, publish, or treat the affected meaning as accepted until resolved. |
+
+A low-risk mechanical change is limited to spelling, formatting, stable IDs, locators, duplicate references, and equivalent wording. It must preserve statement meaning, type, status, provenance, approval, confidence, relations, evidence, scope, and reader action. If equivalence is uncertain, classify the change as material rather than applying it.
+
+## Contradictions And Questions
+
+When accessible evidence supports opposing claims that affect accepted binding meaning, preserve both entries, link them directly with `contradicts`, create or update a `GAP` linked to both with `derived-from`, classify the finding as `blocking`, halt affected downstream work, and interrupt for the author immediately. Missing authority, unsupported meaning, and stale material support are also blocking when they would mislead a downstream artifact. Never silently choose the majority view, latest review, or agent consensus.
+
+For nonblocking `medium` or `high` findings, maintain one phase-batched author review containing zero through seven distinct material questions. Do not pad a batch to meet a minimum; a fully resolved phase may require no author question. State each question, why it matters, affected entries or artifacts, evidence locators, and an evidence-backed recommendation only when support exists. Keep unrelated mechanical updates out of the batch. A batch is a queue convenience, not authority or a provisional snapshot.
+
+## Applying Updates
+
+1. Consolidate duplicate reports and classify the single semantic finding.
+2. Apply `none` and safe `low` mechanical updates to the working ledger, recording the finding and preserving the current snapshot.
+3. Apply supported nonbinding `medium` updates with their provenance; queue unresolved material author questions for the reconciliation phase.
+4. For `high` findings, retain accepted state and queue the proposed change. Do not use `author-approved` provenance or accepted status without a durable approval event.
+5. For `blocking` findings, stop affected downstream work and issue the immediate author interrupt.
+6. After explicit approval or correction resolves a change to accepted `INT`, `DEC`, `REQ`, `CON`, or scope, append a successor entry with a stable ID and `supersedes <prior-entry>` relation. Mark the prior entry `superseded` without overwriting its statement, provenance, sources, approval, or snapshot manifest. Historical entries remain inspectable, including rejected and superseded entries. A new source or agent finding does not supersede author-approved meaning without author approval.
+7. Create a later immutable Case snapshot after every accepted material semantic change, including author-approved supersession, a material evidence change, a material artifact-currency change, or a group of medium changes that collectively changes meaning. Write and verify the immutable manifest and digest first; only then advance the working Case `current_snapshot` pointer. Record the prior snapshot in `Supersedes`; retain every earlier manifest and digest unchanged. The snapshot manifest represents the complete accepted state at that boundary: it may retain an accepted entry now marked `superseded` so the successor relation is inspectable, but it does not become a full historical-ledger export. Historical observations and rejected alternatives remain inspectable in the mutable Case ledger and their own prior snapshots. Do not create a snapshot for mechanical cleanup, source-link repair, low-risk queue churn, deferral, or a low-risk observation or gap unless a downstream workflow explicitly needs a stable boundary.
+8. Issue a Staleness Notice when a captured source changes or becomes outdated, revoked, deprecated, or superseded; new evidence contradicts accepted content; an entry's `Review after` (`review-after`) date or event occurs; or pinned trace support changes, is superseded, or becomes unresolved. The notice identifies its trigger, affected entries, affected artifacts, affected trace units when known, and the required review disposition. Mark an artifact stale only when its pinned support no longer satisfies reader action; snapshot creation alone does not make an artifact stale. Do not mutate an artifact's pinned snapshot set while issuing the notice.
+
+## Result
+
+Return applied working-ledger updates, consolidated findings with original locators, the materiality decision, immediate blockers, phase-batched author questions, snapshot decision, and affected artifact notices. Use this shape for every artifact that needs review:
+
+```markdown
+### STALE-001: review-brief support superseded
+
+- **Trigger:** accepted supersession
+- **Affected entries:** REQ-001, REQ-002
+- **Affected artifacts:** review-brief/artifact.md
+- **Affected units:** AU-001
+- **Pinned snapshot set:** SNAP-001
+- **Disposition:** review before reader action
+```
+
+Do not compose, publish, or claim stakeholder approval.
