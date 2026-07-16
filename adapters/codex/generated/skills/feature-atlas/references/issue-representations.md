@@ -179,10 +179,21 @@ After a named-human Decision, preserve it in comments and mechanically refresh t
 | **Canonical Issue** | <this Issue's canonical locator> |
 | **Acceptance status** | Proposed / Accepted |
 | **Lifecycle / attention** | <current state> |
+| **Role / type** | AFK / HITL |
+| **Track (optional)** | <parallel workstream, or None> |
+| **Complexity** | S / M / L |
+
+## Current behavior
+
+<What happens now, or “N/A — greenfield.”>
 
 ## Desired result
 
 <One bounded result.>
+
+## Key interfaces
+
+- <Stable type, contract, route, or behavioral seam; use “None” when no interface is relevant.>
 
 ## Scope boundaries
 
@@ -194,9 +205,13 @@ After a named-human Decision, preserve it in comments and mechanically refresh t
 - **Blocked by:** <IDs and canonical locators, or None>
 - **Blocks:** <IDs and canonical locators, or None>
 
-## Verification
+## Acceptance / verification
 
 - [ ] <observable or reviewable evidence required>
+
+## Implementation verification strategy
+
+<Tests at the deepest practical seam and any required manual checks; mark either part not applicable when it honestly is not.>
 
 ## Current state
 
