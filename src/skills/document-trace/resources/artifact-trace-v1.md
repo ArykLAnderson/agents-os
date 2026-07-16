@@ -1,6 +1,6 @@
 # Artifact Trace V1
 
-Create `artifact.trace.md` beside every formal shaped artifact. The trace is a reviewable sidecar, not reader-facing prose and not a replacement for the Case.
+Create `artifact.trace.md` beside each artifact revision selected for review, target formatting, staging, release, or reuse when trace applies. The trace is a reviewable sidecar, not reader-facing prose and not a replacement for the Case.
 
 ## Header
 
@@ -11,6 +11,8 @@ Record the artifact path, revision label, retained Case-state references, applic
 Trace semantic units, not each sentence and not Case-entry order. A unit may synthesize several Case entries, and one Case entry may support several units. Use stable unit IDs such as `AU-001` and include:
 
 - artifact anchor, table ID, or other stable target locator;
+- visual anchor ID such as `VA-001` when the unit represents a meaning-bearing visual or table;
+- visual assertions that the retained form must preserve, when applicable;
 - assertion or bounded semantic summary;
 - derivation label: `direct`, `synthesis`, `context`, `omission` (or `omission-accounting`), or `deferred`;
 - fully qualified Case support references in the form `<case-id>/<snapshot-id>/<entry-id>`, or a named direct source reference from the session manifest;

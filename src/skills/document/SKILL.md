@@ -39,6 +39,7 @@ Reason over conditions, not operation order. The universal conditions are:
 - a fit-for-purpose semantic artifact exists;
 - consequential claims, decisions, evidence synthesis, citations, and meaning-bearing visuals are traceable when genre or risk requires it;
 - no unresolved blocking review finding remains;
+- the applicable review scope is complete and current, with omitted default lenses explicitly marked not applicable;
 - the local or staged target representation has been inspected enough for its destination;
 - adaptive human checkpoints needed for length, risk, uncertainty, or prior decisions are current;
 - staging and release have separate explicit authorization when the destination distinguishes them;
@@ -71,7 +72,7 @@ Use isolated subagents when available for independent investigation, fresh-reade
 
 ## Completion And Publication
 
-A session is complete when a fit-for-purpose final local or staged representation exists, applicable conditions are satisfied, blocking findings are resolved or explicitly overridden by the human with a reason, no relevant checks are stale, required checkpoints are current, and remaining limitations are recorded. Publication is optional.
+A session is complete when a fit-for-purpose final local or staged representation exists, applicable conditions are satisfied, completion blockers are resolved or explicitly overridden by the human with a reason, no publication-invariant blocker is represented as publishable, no relevant checks are stale, required checkpoints are current, and remaining limitations are recorded. Publication is optional.
 
 At completion, provide a soft handoff: identify the ready artifact, limitations, compatible destinations, and whether the human wants to stage or release. Staging never authorizes release. For destinations without a safe adapter, provide the ready local artifact and manual handoff.
 

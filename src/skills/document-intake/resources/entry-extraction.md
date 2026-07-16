@@ -36,7 +36,7 @@ Use only these core types. Prefer a namespaced `Subtype` to a new top-level type
 | `ASM` | Belief used despite incomplete support | active, validated, invalidated, superseded |
 | `GAP` | Missing information, ambiguity, contradiction, or unresolved question | open, blocked, resolved, wont-resolve |
 | `ACT` | Work with an owner or explicit unknown owner | open, blocked, done, canceled |
-| `VIS` | Communicative visual candidate | candidate, accepted, produced, rejected, superseded |
+| `VIS` | Reusable author-approved visual requirement or constraint, not a document-session visual opportunity | proposed, accepted, superseded |
 
 Use only these relations when a relation is needed: `supports`, `contradicts`, `derived-from`, `answers`, `resolves`, `supersedes`, `depends-on`, `mitigates`, `implements`, `selects`, `motivates`, and `visualizes`.
 

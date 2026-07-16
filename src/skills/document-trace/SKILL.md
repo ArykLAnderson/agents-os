@@ -20,19 +20,21 @@ Tracing records support for semantic units separately from reader-facing prose. 
 
 Load `../document/resources/operation-result.md` before returning a result.
 
-- Produce an `artifact.trace.md` sidecar for each formal artifact revision.
+- Always load `resources/artifact-trace-v1.md`. Produce an `artifact.trace.md` sidecar for each artifact revision selected for review, target formatting, staging, release, or reuse when trace is applicable under the coordinator's genre and risk conditions.
 - Bind support to identifiable Case entries or direct sources; record stable snapshot references when the Case provides them.
 - Use fully qualified support references: `<case-id>/<snapshot-id>/<entry-id>`.
 - Keep internal support locators separate from reader-facing references. A Case ID, local path, private workspace locator, or trace-sidecar anchor proves internal support but is not a usable citation for an audience that cannot resolve it.
 - Trace semantic units rather than every sentence.
+- For a retained visual anchor, trace the takeaway and each material relationship, comparison, or quantity it must show. Record prose-preserved meaning separately. Do not turn every supporting Case entry, operation, node, or validation label into a reader-facing visual requirement.
 - Account for selected, intentionally omitted, and deferred Case entries.
 - Identify unsupported material assertions, missing material anchors, stale support, status or authority conflicts, and untraced material visual or table assertions as blockers.
 - Route semantic discoveries or unsupported new accepted meaning to `document-reconcile`.
 - For each reader-facing citation or evidence link, select an audience-accessible original or approved substitute. If none exists, record the limitation and use uncited qualified prose or omit the claim as appropriate; never emit a local filesystem reference as a citation for an external or otherwise non-local audience.
+- Load `resources/coverage-check.md` before declaring trace complete. Load `resources/staleness-check.md` when later support may affect the pinned artifact. Load `resources/visual-tracing.md` for every material table or visual.
 
 ## Publication Invariant
 
-Publication cannot waive trace blockers. Any waiver or semantic change requires author-approved reconciliation into a new Case snapshot before publication can proceed.
+Load `../document/resources/publication-readiness.md`. Classify applicable trace blockers as non-waivable publication invariants and return semantic changes to author-approved reconciliation.
 
 ## Boundary
 
