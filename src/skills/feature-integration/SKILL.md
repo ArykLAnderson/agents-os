@@ -19,22 +19,23 @@ Require:
 - completed ticket branches, recorded base SHAs, approved commit IDs/ranges, and resulting SHAs
 - ticket acceptance/review evidence
 - dependency order
+- approved baseline revision and graph fingerprint shared by every branch assignment
 - current integration starting SHA
 
 Every branch must be `READY TO INTEGRATE` under the owning `implement-feature` run.
 
 ## Process
 
-1. Read the parent spec, ticket graph, ticket descriptions, reviews, domain glossary, ADRs, and feature-level acceptance criteria.
-2. Verify ticket base ancestry, approved commit range, resulting commits, and clean worktrees. Reject stale state, unexplained extra commits, or branch-tip-only evidence.
+1. Read the parent spec, active baseline revision/fingerprint, ticket graph, ticket descriptions, reviews, domain glossary, ADRs, and feature-level acceptance criteria.
+2. Verify each assignment used that baseline, plus ticket base ancestry, approved commit range, resulting commits, and clean worktrees. Reject stale-baseline work, stale state, unexplained extra commits, or branch-tip-only evidence.
 3. Integrate the completed wave in dependency order.
 4. Delegate ordinary conflicts to `resolving-merge-conflicts`.
-5. Detect integration failures: broken contracts, crossed seams, duplicated domain logic, branch-shaped special cases, incompatible assumptions, or shallow patches needed only to make integration green.
-6. Freeze integration and return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet when two consecutive review-driven remediation cycles fail closure, a blocker moves to a new module/caller/trust/deployment seam, reviewer demand crosses accepted ownership, or special cases spread/reopen an invariant. The owning coordinator invokes `zoom-out`; integration must not improvise or permit a third local repair.
+5. Detect integration failures: broken contracts, crossed seams, duplicated domain logic, branch-shaped special cases, incompatible assumptions, or shallow patches needed only to make integration green. Treat findings as proposals. For any substantive accepted blocker, freeze before improvising and return a packet with stable ID/evidence, protected criterion/spec/ADR, owning ticket/module/seam, observable-intent impact, boundary signals, proposed disposition/rationale, and bounded verification plan. The owning coordinator completes the review reconciliation checkpoint and dispositions every finding before any fixer dispatch.
+6. Return an `ARCHITECTURAL_RECOVERY_REQUIRED` packet when two consecutive review-driven remediation cycles fail closure, a blocker moves to a new module/caller/ownership/authority/trust/mutation/persistence/deployment/HITL seam, reviewer demand crosses accepted ownership, intent becomes uncertain, or special cases spread/reopen an invariant. If the proposed correction changes frozen architecture or any downstream inherited contract/dependency/HITL boundary, mark `BASELINE_REALIGNMENT_REQUIRED` and identify the transitive impact; the owning coordinator must involve the human feature owner and publish a revised baseline before integration resumes. Integration must not improvise, mutate ticket scope, implement a recovery attempt, or permit a third ordinary local repair. A dedicated writer executes any coordinator-authorized attempt against the approved seam, baseline revision/fingerprint, token, and expected HEAD; integration resumes only after that result is independently closed.
 7. Classify redesign:
-   - **Internal:** preserves user-visible behavior, accepted spec, ticket criteria, and domain meaning. The coordinator may authorize it.
+   - **Internal:** preserves user-visible behavior, accepted spec, every inherited downstream contract/edge, ticket criteria, and domain meaning. The coordinator may authorize it.
    - **Potential intent drift:** appears unsupported, changes observable contracts, or has credible conflicting interpretations. Remove unsupported behavior by default; return a decision-ready finding only when credible evidence remains unresolved.
-8. For an internal redesign, create a focused refactor ticket/brief. Preserve reproducible integration state, state which contracts remain stable, and dispatch a fresh writer plus normal TDD, verification, and review through the owning coordinator. The integration agent must not improvise the refactor.
+8. For an internal redesign, return a focused corrective brief under the owning approved ticket. Preserve reproducible integration state, state which contracts remain stable, and let the coordinator dispatch a fresh writer plus normal TDD, verification, and review. If a new graph node or edge is required, return `BASELINE_REALIGNMENT_REQUIRED` instead. The integration agent must not improvise the refactor.
 9. Resume integration after the refactor lands.
 10. Run focused smoke/integration checks for the newly combined wave.
 11. Return the resulting integration SHA, included ticket SHAs, checks/evidence, drift observations, and unresolved risks to `implement-feature`.
@@ -56,6 +57,7 @@ Tie integration evidence to the resulting integration SHA. If HEAD changes, affe
 Return:
 
 - starting and resulting integration SHA
+- approved baseline revision and graph fingerprint
 - ticket branches/SHAs included
 - conflicts and how they were resolved
 - focused checks run

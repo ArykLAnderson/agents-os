@@ -5,6 +5,15 @@
 **Coordinator session:**
 **Merge mode:** false
 
+## Active baseline
+
+- Revision ID:
+- Predecessor fingerprint:
+- Graph fingerprint:
+- Manifest path/digest:
+- Human approval evidence:
+- Publication reconciliation: PENDING
+
 ## Intent
 
 - Goal:
@@ -28,6 +37,7 @@
 - Black-box acceptance: PENDING
 - Manual E2E: PENDING
 - Deep review: PENDING
+- Baseline/cascade consistency: PENDING
 - Drift sanity check: PENDING
 - Archive report: PENDING
 - PR checks/provenance tuple: PENDING

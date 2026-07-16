@@ -1,10 +1,15 @@
 # Specification Drift Ledger
 
-State explicitly `No material drift detected` when applicable.
+- Active baseline revision:
+- Graph fingerprint:
+- Predecessor revision/fingerprint:
+- Human approval evidence:
 
-| Requirement | Final behavior | Classification | Why/evidence | Authorization basis | Affected tickets/contracts | Verification | Canonical docs status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-|  |  | grounded clarification / grounded evolution / removed invention / needs attention |  |  |  |  |  |
+State explicitly `No material drift detected` only after checking every transitive downstream contract.
+
+| Requirement | Baseline transition | Final behavior | Classification | Why/evidence | Authorization basis | Affected tickets/contracts/edges | Evidence applicability | Verification | Canonical docs status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  | revision/fingerprint → revision/fingerprint |  | grounded clarification / grounded evolution / removed invention / needs attention |  |  |  | current / stale / reference-only |  |  |
 
 ## Removed unsupported behavior
 

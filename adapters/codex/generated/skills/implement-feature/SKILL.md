@@ -78,6 +78,12 @@ Before dispatching work, create the feature record under the repository’s shar
   drift.md
   events.md
 
+  baseline-revisions/
+    <revision>/
+      proposal.md
+      cascade.md
+      approval.md
+
   <ticket>/
     state.md
     assignment.md
@@ -100,7 +106,7 @@ Every feature run receives a unique coordinator ID. Every ticket attempt receive
 
 Local state alone is not a sufficient ownership signal. Publish and maintain a tracker-visible feature claim so other chats, machines, and work-selection passes can see that the keystone is active. On resume, reconcile every nonterminal state and tracker claim before launching new work.
 
-Read [references/state-and-recovery.md](references/state-and-recovery.md) and use the bundled state templates.
+Read [references/state-and-recovery.md](references/state-and-recovery.md) and use the bundled state templates. Read [references/architecture-baseline-realignment.md](references/architecture-baseline-realignment.md) before adjudicating any review-driven architectural correction. When a ticket, integration, or review introduces a migration mutability/rollback conflict, consult [the ticket executor's migration rules](../ticket-executor/references/migration-mutability.md) before disposition; do not improvise a new committed-vs-applied boundary.
 
 ## Process
 
@@ -115,7 +121,7 @@ Read completely:
 - domain glossary/context
 - repository/worktree/testing instructions
 
-Capture immutable initial snapshots for the later report archive. Record canonical URL/path, source revision, content digest, capture time, and graph fingerprint; a mutable source reference alone is insufficient. Record the accepted graph in `graph.md`. Any later source mutation is classified as an authorized correction, post-freeze drift, or untrusted mutation before it can affect execution.
+Capture immutable initial snapshots for the later report archive. Record canonical URL/path, source revision, content digest, capture time, baseline revision ID, and graph fingerprint; a mutable source reference alone is insufficient. Record the accepted graph and active baseline revision in `graph.md`. Any later source mutation is classified as an authorized correction, post-freeze drift, or untrusted mutation before it can affect execution. Never overwrite the initial baseline; approved revisions are append-only descendants with their own snapshots and fingerprints.
 
 Do not reinterpret unchecked publication-template boxes as live tracker state when GitHub/local tracker evidence says the work already landed. Reconcile sources explicitly.
 
@@ -148,7 +154,7 @@ Never implement directly in protected release worktrees. Never allow concurrent 
 
 ### 4. Select a bounded ticket wave
 
-Find tickets whose dependencies are satisfied and whose contracts are stable enough to implement.
+Find tickets whose dependencies are satisfied and whose contracts are stable enough to implement. Require every ticket and dependency to resolve against the current approved baseline revision and graph fingerprint; a stale assignment or downstream contract blocks dispatch.
 
 Choose a model-selected bounded wave:
 
@@ -164,7 +170,7 @@ Record the chosen wave and rationale before dispatch.
 For each ticket:
 
 1. Create/verify its isolated worktree from the current feature integration SHA.
-2. Write `assignment.md` with ticket, allowed scope, unique attempt ID, active-writer token, starting SHA, acceptance criteria, canonical references, validation expectations, and stop rules.
+2. Write `assignment.md` with ticket, allowed scope, unique attempt ID, active-writer token, starting SHA, approved baseline revision and graph fingerprint, acceptance criteria, canonical references, validation expectations, and stop rules.
 3. Mark ticket `IN PROGRESS`.
 4. Launch one primary writer with the `ticket-executor` skill. Require it to echo the attempt ID/start SHA and return a structured result containing result SHA, exact commit range, command/observation evidence, exit status, timestamps, environment, and artifact paths/digests.
 5. Async/background execution is allowed when the work is independent; retain child run/session IDs.
@@ -192,13 +198,17 @@ A writer result is not ticket completion.
 `implement-feature` owns independent ticket review.
 
 1. Mark ticket `REVIEWING`.
-2. Launch focused read-only reviewers selected by risk. Give every substantive finding a stable ID.
-3. Synthesize findings and record a disposition for each ID: accepted, rejected with rationale, fixed, follow-up, or needs attention.
-4. Send accepted fixes back to the same ticket writer.
+2. Launch focused read-only reviewers selected by risk. Give every substantive finding a stable ID. Review findings are proposals, not instructions.
+3. If an initial, closure, integration, or security review returns a substantive accepted finding that prevents advancement, pause before any fixer and complete the coordinator-owned `review reconciliation checkpoint` defined in the verification reference. No writer/fixer dispatch is allowed until every finding has a disposition.
+4. If every accepted finding is a bounded defect inside the documented seam, send the local fixes to the same ticket writer under the ordinary remediation/recovery budget; the checkpoint itself changes no counters.
 5. Re-run affected verification.
-6. Account explicitly for rejected or conflicting findings.
-7. Before another fixer, invoke `zoom-out` when the counter reaches two failed closure cycles, a blocker moves to a new module/caller/trust/deployment seam, reviewer demand crosses ticket or dependency ownership, or special cases spread/reopen an invariant. Do not automatically accept a technically valid finding into the wrong ticket.
-8. Fence the active writer and affected dependency chain, snapshot candidate/review lineage, write durable `zoom-out.md`, and record tracker-visible recovery state. Authorize at most one coherent redesign cycle from the recommendation, then run one consolidated risk/closure review. Recurrence becomes `NEEDS ATTENTION`.
+6. Account explicitly for rejected, deferred, or conflicting findings; reviewer unanimity is not required.
+7. Invoke `zoom-out` immediately when the checkpoint finds an ADR/spec contradiction, ticket ownership crossing, new module/caller/ownership/authority/trust/mutation/persistence/deployment/HITL boundary, reopened invariant after repair, spreading special cases, or genuine intent uncertainty. The existing two-failed-closure tripwire remains a backstop. Do not automatically accept a technically valid finding into the wrong ticket.
+8. Fence the active writer and affected dependency chain, snapshot candidate/review lineage, write durable `zoom-out.md`, and record tracker-visible recovery state. Preserve `reviewRemediationCycles`. The packet must state the proposed reconciliation seam, findings, boundary movement, and stop conditions.
+9. If the recommendation changes any frozen architectural assumption, shared inherited contract, dependency, ticket ownership/decomposition, or HITL boundary, enter `NEEDS ATTENTION — BASELINE REALIGNMENT` and execute the mandatory human gate in the architecture-baseline reference. The coordinator cannot self-authorize this change. Present the human with the recommended highlights and downstream ticket/DAG consequences before changing canonical docs or tracker scope. After explicit approval, publish and reconcile one append-only baseline revision atomically; only then start separate durable `recoverySolveAttempts: 0` and assign work against its revision/fingerprint.
+10. If the recommendation preserves all frozen and downstream contracts, the coordinator may accept the internal seam without baseline realignment and start `recoverySolveAttempts: 0`.
+11. Attempt 1 is a coherent redesign within the accepted seam and current baseline, followed by affected verification and consolidated closure. Attempt 2 is automatic only for accepted local, non-obvious omissions found by attempt-1 closure within that same seam, with no architecture movement, new module/caller/ownership/authority/trust/mutation/persistence/deployment/HITL boundary, intent change, or special-case spread. Scope attempt 2 only to those findings; it cannot broaden or reframe recovery, and requires focused verification plus consolidated closure.
+12. Stop immediately as `NEEDS ATTENTION` on renewed boundary movement or intent uncertainty, including during attempt 1. Architecture movement returns to baseline realignment rather than being absorbed into attempt 2. Stop when attempt 2 fails closure for any substantive accepted finding; no attempt 3. Reset both counters only after successful closure/integration as appropriate, never for superficial green tests or renamed findings.
 
 Do not require unanimous reviewer approval. A ticket may advance when:
 
@@ -243,9 +253,9 @@ Before escalating, proactively inspect relevant specs, ADRs, plans, glossary ter
 
 Only feature-caused failures grant automatic fixer authority. Baseline or investigate the others. Before every fixer, record starting SHA and allowed scope; afterward compare commits/files and reverify.
 
-Classify discovered work as `mandatory-to-preserve-contract`, `optional-debt`, or `intent-change`. Only mandatory work may join the active graph automatically, with a bounded ticket contract and recorded graph revision. Optional debt is deferred; intent changes require the drift/attention policy. Create follow-up tickets with evidence, dependencies, scope, and verification plan.
+Classify discovered work as `mandatory-to-preserve-contract`, `optional-debt`, or `intent-change`. Same-seam mandatory work may join the active ticket automatically only when it preserves the active baseline and requires no new ticket or graph edge. Any new active-graph ticket, split, predecessor, dependency change, inherited-contract change, or HITL movement requires the human-owned baseline realignment gate and a new approved fingerprint. Optional debt is deferred; intent changes require the drift/attention policy. Create follow-up proposals with evidence, dependencies, scope, and verification plan, but do not publish graph-changing tracker work before its required approval.
 
-### 10. Remove invented requirements and track legitimate drift
+### 10. Remove invented requirements and realign legitimate architecture drift
 
 Compare integrated behavior against initial accepted specs/tickets throughout execution and at finalization.
 
@@ -258,7 +268,9 @@ If behavior appears invented or unsupported:
 
 Do not burden the human with obvious hallucinated scope.
 
-Maintain `drift.md` containing original requirement, final behavior, classification, rationale, evidence, authorization basis, affected tickets/contracts, verification, and canonical-doc update status. State explicitly when no drift exists.
+Maintain `drift.md` containing original requirement, final behavior, classification, rationale, evidence, authorization basis, affected tickets/contracts, verification, baseline revision/fingerprint, and canonical-doc update status. State explicitly when no drift exists only after checking all transitive downstream contracts.
+
+When legitimate drift changes a frozen architecture assumption or inherited contract, do not merely record it in the ledger. Invoke the human-owned baseline realignment gate, amend affected downstream tickets and graph edges, invalidate stale assignments/evidence, and publish a new fingerprint before implementation resumes.
 
 ### 11. Build the feature verification plan
 
