@@ -11,7 +11,7 @@ Describe every semantic diagram before rendering it. The spec is the visual's tr
 - **Elements:** required nodes, labels, edges, status labels, caption, and visible boundary or caveat.
 - **Trace:** artifact anchor plus visual trace unit(s), including each material edge or comparison.
 - **Accessibility:** concise alt text and adjacent textual equivalent that preserves the reader-relevant relationship.
-- **Validation:** source/trace check, label and edge inspection, link or asset resolution, desktop and narrow rendering review, and the recorded limitation.
+- **Validation:** source/trace check, label and edge inspection, link or asset resolution, desktop and narrow rendering review, and the recorded limitation. For a generated image, also name the selected capability or fallback route and its provenance record.
 
 ## Design Rules
 
