@@ -1,31 +1,84 @@
 ---
 name: prototype
-description: Build a throwaway prototype to flush out a design before committing to it. Routes between two branches — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route. Use when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says "prototype this", "let me play with it", "try a few designs".
-user-invocable: true
+description: Builds the smallest disposable artifact that answers one explicit question with observable evidence. Use when testing a design assumption, state model, interaction, or UI direction before production implementation.
 ---
 
 # Prototype
 
-A prototype is **throwaway code that answers a question**. The question decides the shape.
+A prototype is disposable evidence for one explicit question. The question and evaluator determine its form.
 
-## Pick a branch
+## 1. Bound The Question
 
-Identify which question is being answered — from the user's prompt, the surrounding code, or by asking if the user is around:
+State one answerable question before building. If the request contains several independent uncertainties, ask the user to choose one or split the work into separate prototypes.
 
-- **"Does this logic / state model feel right?"** → [LOGIC.md](LOGIC.md). Build a tiny interactive terminal app that pushes the state machine through cases that are hard to reason about on paper.
-- **"What should this look like?"** → [UI.md](UI.md). Generate several radically different UI variations on a single route, switchable via a URL search param and a floating bottom bar.
+Identify:
 
-The two branches produce very different artifacts — getting this wrong wastes the whole prototype. If the question is genuinely ambiguous and the user isn't reachable, default to whichever branch better matches the surrounding code (a backend module → logic; a page or component → UI) and state the assumption at the top of the prototype.
+- the question;
+- the evaluator: model, human, or joint;
+- the observation that would support or reject the proposition;
+- constraints needed to keep the artifact small.
 
-## Rules that apply to both
+Do not begin until the question can produce an observable result.
 
-1. **Throwaway from day one, and clearly marked as such.** Locate the prototype code close to where it will actually be used (next to the module or page it's prototyping for) so context is obvious — but name it so a casual reader can see it's a prototype, not production. For throwaway UI routes, obey whatever routing convention the project already uses; don't invent a new top-level structure.
-2. **One command to run.** Whatever the project's existing task runner supports — `pnpm <name>`, `python <path>`, `bun <path>`, etc. The user must be able to start it without thinking.
-3. **No persistence by default.** State lives in memory. Persistence is the thing the prototype is *checking*, not something it should depend on. If the question explicitly involves a database, hit a scratch DB or a local file with a clear "PROTOTYPE — wipe me" name.
-4. **Skip the polish.** No tests, no error handling beyond what makes the prototype *runnable*, no abstractions. The point is to learn something fast and then delete it.
-5. **Surface the state.** After every action (logic) or on every variant switch (UI), print or render the full relevant state so the user can see what changed.
-6. **Delete or absorb when done.** When the prototype has answered its question, either delete it or fold the validated decision into the real code — don't leave it rotting in the repo.
+Proceed when the question, evaluator, proposition, observable discriminator, and scope constraint are explicit.
 
-## When done
+## 2. Select The Evidence Form
 
-The *answer* is the only thing worth keeping from a prototype. Capture it somewhere durable (commit message, ADR, issue, or a `NOTES.md` next to the prototype) along with the question it was answering. If the user is around, that capture is a quick conversation; if not, leave the placeholder so they (or you, on the next pass) can fill in the verdict before deleting the prototype.
+Choose the smallest form the evaluator can assess:
+
+- **Model-evaluated:** prefer a minimal executable harness with inspectable output.
+- **Human-evaluated:** use an interactive artifact by default; use a static form only when interaction cannot add relevant evidence.
+- **Jointly evaluated:** combine human interaction with model-verifiable state or instrumentation.
+
+For logic, state-machine, or business-rule questions, read [LOGIC_STATE.md](LOGIC_STATE.md).
+
+For open-ended interface exploration, read [UI_VARIANTS.md](UI_VARIANTS.md).
+
+Improvise another form when it answers the question more directly. Do not force a terminal or web interface onto evidence that needs neither.
+
+Proceed when the chosen form lets the identified evaluator observe the discriminator directly.
+
+## 3. Build For Disposal
+
+Colocate the prototype with the code or system it informs and mark it clearly as a prototype. Keep it uncommitted by default.
+
+Implement only enough fidelity, instrumentation, and error handling to make the observation trustworthy. There is no test-suite, production architecture, persistence, or polish obligation unless one is itself necessary to answer the question.
+
+Make the relevant state and outcomes visible. Prefer one obvious command or action to run the prototype.
+
+Proceed when the artifact has a runnable or presentable entry point and exposes the state or outcome needed for evaluation.
+
+## 4. Evaluate
+
+Run or present the artifact to its evaluator. Record observations rather than inferring success from the artifact merely running.
+
+Use exactly one verdict:
+
+- `supported`: observed evidence supports the proposition within stated limits;
+- `rejected`: observed evidence contradicts the proposition;
+- `inconclusive`: the prototype did not discriminate reliably.
+
+Report:
+
+```markdown
+## Prototype Result
+
+**Question:** <one question>
+**Evaluator:** <model | human | joint>
+**Verdict:** <supported | rejected | inconclusive>
+
+### Observed Evidence
+<what was actually observed>
+
+### Limitations
+<what the prototype did not establish>
+
+### Disposition
+- <artifact or output>: <delete pending approval | deleted with approval | retain as evidence | explicitly approved for promotion>
+```
+
+## 5. Dispose Or Promote
+
+After capturing the result, recommend deletion by default and ask before deleting unless cleanup was already authorized. Inventory every created artifact, including scratch state and instrumentation output, and record its disposition and authorization status. If the user deliberately chooses promotion, carry the learned design into the normal engineering workflow and add appropriate architecture, tests, failure handling, security, and maintainability. Prototype code is not production-ready merely because its verdict was `supported`.
+
+An `inconclusive` result may justify a new, separately bounded prototype. It does not justify leaving the current artifact indefinitely.

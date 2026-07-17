@@ -1,148 +1,88 @@
 ---
 name: deliberate
-description: Structured team debate using perspective agents. Spawns a council of forced-perspective agents who debate a topic in rounds, producing a synthesized recommendation. Use when facing architecture decisions, technology choices, or any proposal that benefits from adversarial analysis.
-user-invocable: true
-argument-hint: <topic or question to deliberate>
+description: Compares credible alternatives through decision-specific forced perspectives and preserves consequential disagreement. Use when choosing among architecture, technology, product, policy, or operational options with real trade-offs.
 ---
 
-# Deliberate: Structured Perspective Debate
+# Deliberate
 
-Run a multi-round debate using Pi subagents. Each perspective argues from its viewpoint, critiques the others, then defends or concedes. This skill is for the parent orchestrator. Do not ask child subagents to run subagents or use AgentOS team/task/message APIs.
+Deliberate one bounded decision.
 
-Supporting file: `councils.md` — council templates with trigger keywords and default compositions.
+## 1. Bound The Decision
 
-## Process
+Establish these prerequisites:
 
-### 1. Understand the Topic
+- one decision;
+- two or three credible alternatives;
+- shared criteria;
+- available evidence;
+- constraints and relevant tensions;
+- who retains consequential judgment.
 
-Read the topic/question. Gather context:
-- Read relevant source files, plans, or RFCs referenced
-- Understand current state and constraints
-- Identify what kind of decision this is
+If fewer than two credible alternatives are present, surface plausible alternatives, reframe the decision, or ask one focused question before proceeding. Narrow or split a request with more than three. Improve or replace straw alternatives before analysis. Ask only for missing input that materially changes the comparison; otherwise state assumptions.
 
-### 2. Auto-Select Council
+Proceed when one decision, two or three credible alternatives, shared criteria, material constraints, available evidence, and the human authority boundary are explicit.
 
-Read `councils.md` for available templates. Then:
+## 2. Generate Forced Perspectives
 
-1. **Match the topic** against council template keywords
-2. **Discover available perspectives** — glob `perspective-*.md` from both `~/.agents-os/src/agents/` and `.agents-os/src/agents/` (project-scoped)
-3. **Map template to agents:**
-   - Direct match (e.g., template says "Pragmatist", agent `perspective-pragmatist` exists) → use the agent
-   - Project-scoped stateful perspective exists and fits better than a generic one → substitute it
-   - No matching agent → use ad-hoc role defined in spawn prompt
-4. **Default** to Architecture Council when no template clearly matches
-5. **Announce briefly:** "Using Product Council: User Advocate, Pragmatist, Adversary" — proceed unless user overrides
+Create two to four decision-specific perspectives. Each is a materially distinct mandate derived from this decision, not a persistent persona or keyword-selected council.
 
-**User override:** If the user specifies perspectives in the arguments, use those instead of auto-selection. Check for matching `perspective-*` agents first; fall back to ad-hoc roles.
+Choose mandates that expose real tensions in the shared criteria. Examples of mandate shapes include optimizing the binding constraint, protecting the most exposed party, testing reversibility under uncertainty, or challenging the dominant causal assumption. Name them for their mandate, not as characters.
 
-**Technology choices** are special: spawn N advocate teammates (max 3) with ad-hoc roles, each arguing FOR their option and AGAINST the others. Don't use standard perspective agents.
+Every perspective must evaluate every alternative. A perspective is not an advocate assigned to one option.
 
-### 3. Round 1 — State Positions
+## 3. Evaluate In Parallel
 
-Launch one parallel `subagent` task per selected perspective. Use `context: "fresh"` unless the current conversation is itself necessary evidence.
+Use fresh-context reviewers in parallel when subagents are available; otherwise perform the perspectives sequentially while keeping their mandates distinct. Give each the same decision context, alternatives, criteria, evidence, and constraints.
 
-```typescript
-subagent({
-  tasks: [
-    {
-      agent: "<perspective-agent-name>",
-      task: `Round 1 deliberation.
-
-Topic: <topic>
-Context: <relevant context>
-
-Argue from your perspective. Provide:
-- position
-- key arguments
-- evidence or concrete examples
-- recommendation
-- confidence level`
-    }
-  ],
-  context: "fresh"
-})
-```
-
-Collect all Round 1 positions before proceeding.
-
-### 4. Round 2 — Cross-Critique
-
-Run a second parallel `subagent` pass. Include all Round 1 positions in every task and ask each perspective to critique the other positions.
-
-```typescript
-subagent({
-  tasks: [
-    {
-      agent: "<same-perspective-agent>",
-      task: `Round 2 deliberation.
-
-Topic: <topic>
-
-Round 1 positions:
-<all positions>
-
-Critique the other positions, not your own. Identify:
-- incorrect assumptions
-- missing evidence
-- ignored risks
-- strongest argument you disagree with`
-    }
-  ],
-  context: "fresh"
-})
-```
-
-Collect all Round 2 critiques before proceeding.
-
-### 5. Round 3 — Defend or Concede
-
-Run a final parallel `subagent` pass with the critiques included.
-
-```typescript
-subagent({
-  tasks: [
-    {
-      agent: "<same-perspective-agent>",
-      task: `Round 3 deliberation.
-
-Topic: <topic>
-
-Critiques of your position:
-<relevant critiques>
-
-Defend where critiques are wrong. Concede specific points where critiques are right. State your final recommendation and confidence level.`
-    }
-  ],
-  context: "fresh"
-})
-```
-
-Collect all final positions.
-
-### 6. Synthesize
-
-Collect all final positions and produce:
+Require each perspective to return:
 
 ```markdown
-## Deliberation Report: <topic>
+### <Mandate>
 
-### Council Used
-<council name> — <why this council was selected>
+- **Alternative evaluations:** <every alternative under shared criteria>
+- **Evidence:** <supported observations and sources>
+- **Assumptions:** <claims not established by evidence>
+- **Counterevidence:** <facts or arguments pulling the other way>
+- **Trade-offs:** <what this mandate accepts or rejects>
+- **Current conclusion:** <comparative conclusion and why>
+- **Would change if:** <disconfirming evidence or condition>
+```
 
-### Perspectives
-- **<name>**: <final position summary>
-- **<name>**: <final position summary>
-- **<name>**: <final position summary>
+Before synthesis, verify that every perspective evaluated every alternative and supplied each field. Repair incomplete evaluations before continuing.
 
-### Points of Agreement
-<what all perspectives converged on>
+Do not use votes, confidence averaging, or a raw debate transcript as synthesis.
 
-### Points of Contention
-<where they still disagree, and why — include the strongest argument from each side>
+## 4. Challenge Consequential Disagreement
+
+After the first evaluation, identify disagreement that could materially change the recommendation or expose an unacceptable consequence. If none exists, skip challenge.
+
+When it exists, run one targeted challenge pass only on the disputed claim, criterion, or evidence. Ask the affected perspectives to address the strongest counterposition and say whether the new examination changes their conclusion. Do not run fixed debate rounds or require defend-or-concede theater.
+
+## 5. Synthesize Without False Consensus
+
+Produce:
+
+```markdown
+## Deliberation: <decision>
+
+### Alternatives And Criteria
+<bounded alternatives, shared criteria, and constraints>
+
+### Perspective Findings
+<material conclusions, evidence, assumptions, and disconfirming conditions>
+
+### Agreement
+<supported convergence, if any>
+
+### Contestation
+<remaining disagreement and why it matters>
 
 ### Recommendation
-<synthesized recommendation based on the arguments that survived challenge>
+<best-supported alternative, criteria that drive it, and material limitations;
+or why current evidence does not justify a recommendation>
 
-### Risk Register
-<risks identified that should be tracked regardless of decision>
+### Remaining Human Judgment
+<trade-offs, authority choices, or evidence gaps the deliberation cannot resolve>
 ```
+
+Preserve tensions when different criteria support different alternatives. A recommendation is advice under stated evidence and assumptions, not an automatic decision or implementation plan.
