@@ -29,3 +29,5 @@ Maintain one authoritative semantic draft. A target issue that changes meaning r
 Continue independent work when knowledge gaps do not block it. Record consolidated missing, ambiguous, unsupported, or conflicting Case knowledge and its effect as declarative state, then use Frame at the next natural boundary when new judgment or discovery is required.
 
 Recommend completion when the requested artifact boundary is met, every applicable trace, review, representation, and publication obligation is complete or recorded as not applicable, and the current semantic draft remains suitable for the requested use. The human accepts the current revision conversationally. Publication is optional unless it was part of the request.
+
+Creating a target file is not completion. Before reporting completion, verify that material changes have not made review or trace stale, inspect every requested representation in its rendered medium, record the current state, and obtain human acceptance.

@@ -26,6 +26,8 @@ Use an explicit user-provided Casebook workspace root when present; otherwise us
 6. If the original request includes a durable reader-facing artifact, continue through Document revision and acceptance.
 7. Propose completion only when the natural-language outcome, requested artifact, and any requested publication state appear satisfied and verified; ask the user to confirm, revise, or continue.
 
+Before reporting completion, compare that claim with the persisted Frame and linked Document state. An outcome is not complete while either state describes material work as active, stale, blocked, pending review, unverified, or unaccepted.
+
 The user may redirect scope, order, depth, operation, or stopping at any time. Complete bounded directed work, then resume guided navigation unless the user pauses or establishes a continuing constraint.
 
 Confirm before materially expanding scope, changing the primary outcome, adding an unrequested artifact or destination, or accepting a consequential trade-off.
