@@ -1,6 +1,6 @@
 ---
 name: frame
-description: Frames a consequential, under-specified outcome into fit-for-purpose knowledge, decisions, and requested artifacts. Use when material uncertainty, competing interpretations, or authority-dependent judgment requires coordinated discovery and challenge.
+description: Frames a consequential, under-specified outcome into fit-for-purpose knowledge, decisions, and requested artifacts. Use when the user explicitly asks to frame an outcome, or when material uncertainty, competing interpretations, or authority-dependent judgment requires coordinated discovery and challenge.
 ---
 
 # Frame
@@ -10,6 +10,8 @@ Guide one natural-language outcome from uncertainty to human acceptance. Own nav
 ## Start Or Resume
 
 Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Treat it as private and Git-ignored. Create or resume `frames/<frame-id>/frame.md` and `discovery-map.md` beneath that root using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
+
+Scale persisted state to the outcome. An explicit framing request always opens or resumes a Frame, even when the outcome needs only bounded discovery and a short artifact. Keep such Frames compact rather than routing around them.
 
 ## Relentless Loop
 
@@ -21,9 +23,16 @@ Use an explicit user-provided Casebook workspace root when present; otherwise us
    - [Modeling](references/modeling.md) for concepts, rules, states, and interpretations.
    - [Structure](references/structure.md) for responsibilities, capabilities, and information flow.
    - [Review](references/review.md) to challenge a coherent direction.
-4. Persist reusable consequential meaning through Case intake or reconciliation.
+4. At each natural boundary, sweep the completed work for **every independently reusable semantic unit or cohesive cluster**. Give each one exactly one Case disposition:
+   - **Intake** newly established meaning that will reduce future discovery, interpretation, or repeated explanation.
+   - **Reconcile** accepted, provisional, or contested meaning that changes, qualifies, supersedes, or materially extends an existing Case.
+   - **No Case** transient process detail, raw evidence retained elsewhere, duplicate meaning, or a result that is not independently reusable; record the reason in the Frame.
+
+   One boundary may produce multiple dispositions. Do not postpone stable subordinate meaning merely because the broader Frame remains active or contested; use `provisional` or `contested` Case entries when appropriate. Defer only when the candidate meaning itself is too unclear to state independently.
+
+   The boundary is not complete until every material operation result has been checked for reusable meaning, every selected Intake or Reconcile action is reflected in a valid Case, and every omitted material result has an explicit No Case reason. Cases condense reusable meaning and cite retained evidence; they do not absorb research reports, transcripts, or logs wholesale.
 5. Continue model-resolvable work across operation boundaries. Ask focused questions only when the user must supply knowledge, authority, preference, or judgment.
-6. If the original request includes a durable reader-facing artifact, continue through Document revision and acceptance.
+6. If the requested reader-facing artifact needs persistent revision, traceable claims, or release verification, continue through Document. A short artifact may be completed directly within the Frame when its accepted meaning and final location remain clear.
 7. Propose completion only when the natural-language outcome, requested artifact, and any requested publication state appear satisfied and verified; ask the user to confirm, revise, or continue.
 
 Before reporting completion, compare that claim with the persisted Frame and linked Document state. An outcome is not complete while either state describes material work as active, stale, blocked, pending review, unverified, or unaccepted.
