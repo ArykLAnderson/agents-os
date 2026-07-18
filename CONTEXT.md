@@ -1,34 +1,45 @@
 # Domain Context
 
-## Document Workflow
+## Casebook
 
 | Term | Definition | Avoid |
 |---|---|---|
-| Case | Reusable subject context containing sources, classified statements, decisions, and unresolved tensions. A Case may support multiple documents. | Using Case for a single document run or draft. |
-| Case workspace | The configured private working area for Cases and document sessions, conventionally `.cases/`. | Assuming private means inaccessible to other local users; it means not tracked by the repository. |
-| Document intent | A human request to create or continue a document of a particular genre from the conversation and available evidence. | Treating document intent as authorization to publish. |
-| Document session | One resumable effort to produce a document. It owns its workflow manifest, drafts, reviews, formatted outputs, and publication records, and may reference multiple Cases. | Storing document-specific workflow state in a reusable Case. |
-| Document operation | A composable action selected to address a current document need, such as intake, reconciliation, composition, review, or publication. Operations may repeat, run out of order, or be omitted. | Calling document operations phases or requiring a linear pipeline. |
-| Document state space | The meaningful conditions through which a document progresses toward fitness for its intended purpose and audience. The coordinator selects operations based on unmet conditions rather than sequence position. | Implementing a rigid state machine or fixed transition table. |
-| Work classification | A lightweight assessment of document work as simple, substantial, or high-risk based on subject complexity, reuse, consequence, uncertainty, audience, and obligations. It determines whether durable Case intake and stronger checks are needed. | Inferring effort from genre, requested length, or source count alone. |
-| Reader-facing reference | A citation or evidence locator that the intended audience can resolve. Internal Case IDs, private trace anchors, and local filesystem paths remain provenance and do not become reader-facing references by default. | Publishing local paths or private workflow locators as citations. |
-| Visual complexity | A routing assessment for semantic visuals. Simple visuals have few nodes and relationships that deterministic HTML, SVG, or Mermaid can render reliably. Complex visuals contain loops, lanes, nested boundaries, many connectors, or status-dependent paths and should prefer validated image generation when available. | Selecting a visual route solely from file format preference or assuming SVG is reliable at every complexity. |
-| Grounded concept | An idea the intended audience either brings as an explicit prerequisite or that the artifact has already introduced with enough meaning to support later use. | Treating a familiar term to the author as automatically available to the reader. |
-| Closed reader model | The reader's sufficient map of the subject: what exists, who acts, what enters and persists, how parts relate or transform, what leaves, where the lifecycle ends, and which decisions remain outside the system. | Clear local prose that leaves the overall subject loosely bound or dependent on privileged context. |
-| Hook | The genre-appropriate entry device that orients attention toward the actual subject and establishes a problem, observation, tension, promise, decision, or question the artifact will fulfill. | Atmospheric or in-medias-res openings that create expectations without grounding the world needed to understand them. |
-| Semantic basis | A loose, supported intermediate organized into meaning clusters, relationships, tensions, examples, and caveats. It separates Case accounting from prose and may be freely recombined during shaping while remaining traceable. | Rendering Case entries in order or treating one entry as one sentence or paragraph. |
-| Natural flow | Reader-visible progression in which sentences and paragraphs connect through subject, implication, contrast, question, or example rather than merely sharing source support. | Assuming complete trace coverage or grammatical correctness proves readability. |
-| Visual anchor | A semantic-layer record that gives one meaning-bearing visual its reader question, narrative placement, takeaway, cognitive budget, required meaning, omissions, and forbidden implications before rendering. | A node-and-edge inventory, generation prompt, or late formatting request for a comprehensive diagram. |
-| Explanatory beat | A unit of prose and optional visual shaped together so each contributes distinct work to one moment in the reader journey. | Dropping a complete system diagram beside prose after the narrative is already fixed. |
-| Stage | Write a non-final representation to a destination for faithful preview or revision. | Treating staging authorization as authorization to release. |
-| Release | Authorize a staged destination representation as final for its intended audience. | Using release for the first external write when that write remains a draft. |
-| Publish workflow | The destination-facing lifecycle that may include staging, remote revision, verification, and release. | Using publish as an ambiguous synonym for every external mutation. |
+| Casebook workspace | The configured private working area for Cases, Frames, Documents, and retained artifacts, conventionally `.casebook/`. | Treating the workspace as workflow-runtime state or assuming privacy without checking repository visibility. |
+| Case | Reusable knowledge about one bounded subject. A Case contains independently classifiable knowledge, sources, authority context, relationships, and retained rich artifacts when reduction would lose important meaning. | Using a Case as the mandatory format for every operation, a document draft, or an execution log. |
+| Knowledge entry | One independently classifiable semantic unit in a Case whose support, authority, scope, and relationships can be assessed together. | Combining claims whose classification, support, authority, or scope differs. |
+| Retained artifact | A readable research, prototype, deliberation, review, or modeling artifact kept when reducing it to Case entries would lose important argument, method, context, or reproducibility. | Requiring Prototype or Deliberate to implement a Case-specific return interface. |
+| Frame | One resumable effort to guide a consequential, under-specified outcome from uncertainty toward human acceptance. It owns the outcome boundary, discovery map, active authorization facts, limitations, and stable downstream-work references. | Treating Frame as a task scheduler, event log, fixed phase sequence, or substitute for human judgment. |
+| Discovery map | A compact projection of unresolved fog, frontier questions, blockers, contestation, deferrals, and exclusions for one Frame. | Persisting assignments, routing instructions, operation history, confidence scores, or recommended next actions. |
+| Document | One resumable effort to create an accepted durable reader-facing artifact from Case-backed or directly supplied evidence. It owns editorial intent, one authoritative semantic draft, artifact-local findings, representations, acceptance, and factual publication state. | Storing reusable subject meaning in the Document or treating a target file as proof of completion. |
+| Prototype | A disposable artifact built to answer one explicit question through observable evidence and exactly one verdict: supported, rejected, or inconclusive. | Treating runnable prototype code as production-ready or requiring prototypes to persist through Casebook. |
+| Deliberation | A bounded comparison of two or three credible alternatives through decision-specific forced perspectives, preserving consequential disagreement and remaining human judgment. | Voting, confidence averaging, fixed debate theater, or treating a recommendation as a decision. |
+
+## Casebook Boundaries
+
+- Cases own reusable subject meaning.
+- Frames own active uncertainty and the route toward a bounded accepted outcome.
+- Documents own reader-facing semantic artifacts and their factual representation, acceptance, and publication state.
+- Prototype and Deliberate are standalone capabilities that Frame may invoke when useful; neither requires a Casebook-specific integration contract.
+- Feature Atlas owns accepted delivery intent, Feature and Work Item identity, named Decisions, and canonical tracker representation.
+- Workflow Runtime owns live execution, participants, operations, cancellation, recovery, and journal truth.
+- Git, trackers, publication destinations, and other external systems remain authoritative for facts they own. Casebook records stable locators rather than replacing them.
+
+## Document Language
+
+| Term | Definition | Avoid |
+|---|---|---|
+| Semantic draft | The authoritative meaning-bearing Document revision from which target representations are produced. | Editing a target representation as an independent semantic authority. |
+| Genre | The semantic obligations and reader outcome expected of a document, such as an RFC, PRD, research report, change brief, implementation report, explanation, or blog post. | Treating genre as a fixed visual template. |
+| Reader-facing reference | A citation or evidence locator the intended audience can resolve. Internal Case IDs and private paths remain provenance by default. | Publishing private workflow locators as citations. |
+| Stage | Write a non-final representation to a destination for faithful preview or revision. | Treating staging authorization as release authorization. |
+| Release | Authorize a staged destination representation as final for its intended audience. | Assuming document acceptance authorizes publication. |
+| Publication | The separately authorized destination-facing work of staging or releasing a representation and verifying the resulting remote state. | Treating a successful API response as verified publication. |
 
 ## Context Classification
 
 | Term | Definition | Avoid |
 |---|---|---|
-| Accepted | Context the workflow may rely on as settled for the current purpose. | Assuming every user or assistant statement is accepted. |
-| Provisional | Plausible context that still requires confirmation or verification before consequential use. | Presenting provisional context as fact. |
-| Contested | Context for which material sources or participants disagree. | Silently choosing one side. |
-| Superseded | Context replaced by a later accepted statement or decision while retained for history. | Deleting prior context needed to understand a change. |
+| Accepted | Support establishes the current meaning; applicable authority is also present when meaning depends on a decision, policy, approval, ownership, or delegated judgment. | Treating every participant statement as accepted knowledge. |
+| Provisional | Useful current meaning remains qualified by uncertainty. | Presenting provisional context as settled fact. |
+| Contested | Material positions disagree and each position retains its own support, scope, and authority where applicable. | Silently selecting one position or collapsing disagreement into confidence. |
+| Superseded | Earlier meaning has been replaced by later accepted meaning while remaining available to explain the change. | Deleting history needed to understand why meaning changed. |
