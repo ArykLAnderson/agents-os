@@ -15,4 +15,12 @@ Reuse stable contextual Case knowledge by default. Refresh knowledge that is dec
 
 After orientation, after material changes, and before proposing completion, sweep for omitted parties, lifecycle effects, inherited constraints, weak evidence, assumptions, failure modes, and prematurely dismissed alternatives. Persist only material unresolved gaps.
 
-A wave completes when it observably reduces or precisely reclassifies the selected uncertainty. Update current map state and reconcile reusable meaning before selecting further work.
+A wave completes only when it:
+
+1. observably reduces or precisely reclassifies the selected uncertainty;
+2. updates the Discovery Map;
+3. inventories its material findings, decisions, corrections, and reusable operating lessons;
+4. completes Intake, Reconcile, or explicit No Case disposition for each independently reusable unit or cohesive cluster; and
+5. preserves detailed evidence outside Cases when condensation would lose argument, method, or provenance.
+
+Only then select the next wave. An active or contested Frame does not defer stable subordinate meaning; classify it provisionally or as contested when that accurately represents its current state.
