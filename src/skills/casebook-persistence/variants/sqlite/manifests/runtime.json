@@ -1,0 +1,18 @@
+{
+  "runtime_manifest_version": 1,
+  "protocol": {
+    "id": "casebook-persistence-json",
+    "version": 1
+  },
+  "schema": {
+    "id": "casebook-persistence-sqlite",
+    "version": 1,
+    "store_initialization": "not_yet_implemented"
+  },
+  "entrypoint": {
+    "interpreter": "node",
+    "path": "variants/sqlite/bin/casebook-persistence.mjs",
+    "stdout": "versioned-json-only",
+    "stderr": "diagnostics-only"
+  }
+}
