@@ -401,7 +401,6 @@ test("typed request selectors outside the implemented query surface reject witho
 
     const readCases = [
       ["home_namespace_id", initialized.namespace.id],
-      ["revision_id", "case-revision:97617dba-ff62-4911-99c6-8a02196dbd4b"],
       ["include", ["history"]],
       ["history", true],
       ["filter", { state: "active" }],

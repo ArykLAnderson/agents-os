@@ -26,7 +26,7 @@ Retain the returned store ID, view ID, exact view-policy revision ID, and operat
 
 Minimal typed Case/Frame create/read, common resolve/list/bounded lexical search, deterministic synthetic SQLite export, and explicit non-mutating Markdown parse are available only within the L-01 boundaries described by the package manifest. A Markdown fixture affects SQLite only when an operator/test explicitly parses it and submits ordinary typed owner creates to a separately configured disposable store. There is no watcher, mirror, fallback, or mode toggle.
 
-History, events, checkpoints, snapshots, global search, full atomic Markdown replacement/generation selection, migration, backup/restore, recovery, and production cutover remain unavailable. The private L01-W03 owner-neutral commit/read envelope is only an implementation seam for typed façades and synthetic validation. Do not point this delivery slice at a live `.casebook` store.
+Exact Case historical revision reads by revision number or revision ID are now supported. Broader history listing, events, checkpoints, snapshots, global search, full atomic Markdown replacement/generation selection, migration, backup/restore, recovery, and production cutover remain unavailable. The private L01-W03 owner-neutral commit/read envelope is only an implementation seam for typed façades and synthetic validation. Do not point this delivery slice at a live `.casebook` store.
 
 ## Safe diagnostic check
 

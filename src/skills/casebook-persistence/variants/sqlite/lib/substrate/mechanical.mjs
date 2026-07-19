@@ -901,6 +901,84 @@ async function readOwnerCurrent(request) {
   });
 }
 
+async function readOwnerRevision(request) {
+  const context = contextShape(request.context);
+  const owner = requireObject(request.owner, "owner");
+  const kind = requireString(owner.kind, "owner.kind", 64);
+  const target = { id: requireUuidId(owner.id, "owner.id", kind), kind };
+  const hasNumber = request.revision_number != null;
+  const hasId = request.revision_id != null;
+  if (hasNumber === hasId) throw new RequestError("identity_invalid", "Exactly one historical revision selector is required.");
+  if (hasNumber && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) throw new RequestError("identity_invalid", "revision_number must be positive.");
+  const revisionId = hasId ? requireUuidId(request.revision_id, "revision_id", "owner-revision") : null;
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (request.store_id !== state.metadata.store_id) return failure("not_visible", "The requested owner is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  const selector = hasNumber ? `r.revision_number = ${request.revision_number}` : `r.revision_id = ${sqlText(revisionId)}`;
+  const rows = await queryJson(binary, storePath, `
+    SELECT o.owner_id,o.owner_kind,o.home_namespace_id,r.revision_id,r.revision_number,
+      r.normalized_json,r.representation_id,r.representation_version,r.committed_at
+    FROM owners o JOIN owner_revisions r ON r.owner_id=o.owner_id
+    JOIN view_policy_namespace_grants g ON g.namespace_id=o.home_namespace_id AND g.view_policy_revision_id=${sqlText(context.view_policy_revision_id)}
+    JOIN view_policy_revisions p ON p.view_policy_revision_id=g.view_policy_revision_id AND p.view_id=${sqlText(context.view_id)} AND p.lifecycle='active'
+    JOIN json_each(p.object_kinds_json) k ON k.value=o.owner_kind
+    WHERE o.owner_id=${sqlText(target.id)} AND o.owner_kind=${sqlText(target.kind)} AND ${selector} LIMIT 1;`);
+  if (!rows.length) return failure("not_visible", "The requested owner is unknown or not visible.", { failureClass: "not_visible", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {} });
+  const row=rows[0];
+  const selected=await queryJson(binary,storePath,`SELECT s.family_id,v.version_id,v.content_json,v.content_digest FROM owner_revision_selections s JOIN owner_versions v ON v.version_id=s.version_id WHERE s.revision_id=${sqlText(row.revision_id)} ORDER BY s.family_id LIMIT ${MAX_SELECTIONS+1};`);
+  if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","The owner revision exceeds the bounded read shape.",{failureClass:"representation_invalid",evidence:{}});
+  return success("read_owner_revision",{status:"found",owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest})),committed_at:row.committed_at},applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id},operation_fence:state.operation_fence});
+}
+
+async function readOwnerCurrentCorpus(request) {
+  const context = contextShape(request.context);
+  const kind = requireString(request.owner_kind, "owner_kind", 64);
+  if (!OWNER_KIND.test(kind)) throw new RequestError("identity_invalid", "owner_kind has invalid syntax.");
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested owners are unknown or not visible.", { failureClass: "not_visible", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {} });
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  // This single SELECT is the read snapshot: fence, visibility, current pointer,
+  // revision, selections, and immutable versions cannot come from different commits.
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "advance_fence_after_corpus_prepare") await sqlite(binary,storePath,"UPDATE store_fence SET operation_fence=operation_fence+1 WHERE singleton=1;",{args:["-batch","-bail"]});
+  const rows = await queryJson(binary, storePath, `
+    SELECT corpus.*,f.operation_fence
+    FROM store_fence f LEFT JOIN (
+      SELECT o.owner_id,o.owner_kind,o.home_namespace_id,c.projection_json,
+        r.revision_id,r.revision_number,r.normalized_json,r.representation_id,
+        r.representation_version,r.committed_at,
+        COALESCE((SELECT json_group_array(json_object(
+          'family_id',selected.family_id,'version_id',selected.version_id,
+          'content_json',selected.content_json,'content_digest',selected.content_digest))
+          FROM (SELECT s.family_id,v.version_id,v.content_json,v.content_digest
+            FROM owner_revision_selections s JOIN owner_versions v ON v.version_id=s.version_id
+            WHERE s.revision_id=r.revision_id ORDER BY s.family_id LIMIT ${MAX_SELECTIONS + 1}) selected),'[]') selected_json
+      FROM owners o JOIN owner_current c ON c.owner_id=o.owner_id
+      JOIN owner_revisions r ON r.revision_id=c.revision_id
+      JOIN view_policy_namespace_grants g ON g.namespace_id=o.home_namespace_id AND g.view_policy_revision_id=${sqlText(context.view_policy_revision_id)}
+      JOIN view_policy_revisions p ON p.view_policy_revision_id=g.view_policy_revision_id AND p.view_id=${sqlText(context.view_id)} AND p.lifecycle='active'
+      JOIN json_each(p.object_kinds_json) k ON k.value=o.owner_kind
+      WHERE o.owner_kind=${sqlText(kind)}
+      ORDER BY o.owner_id LIMIT ${MAX_LIST_SCAN + 1}
+    ) corpus ON 1=1
+    ORDER BY corpus.owner_id;`);
+  const ownerRows=rows.filter(row=>row.owner_id!=null);
+  if (ownerRows.length > MAX_LIST_SCAN) return failure("capability_unavailable", "The bounded cohesive owner corpus scan limit was exceeded.", { failureClass: "capability_unavailable", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: { maximum_owner_scan: MAX_LIST_SCAN } });
+  const items=[];
+  for(const row of ownerRows){
+    const selected=JSON.parse(row.selected_json);
+    if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","A current owner revision exceeds the bounded corpus read shape.",{failureClass:"representation_invalid",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});
+    items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
+  }
+  return success("read_owner_current_corpus",{status:"found",items,operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
+}
+
 async function listOwnerCurrent(request) {
   const context = contextShape(request.context);
   const kind = requireString(request.owner_kind, "owner_kind", 64);
@@ -958,6 +1036,8 @@ export async function invokeMechanicalOperation(request) {
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
+    if (request.operation === "read_owner_revision") return await readOwnerRevision(request);
+    if (request.operation === "read_owner_current_corpus") return await readOwnerCurrentCorpus(request);
     if (request.operation === "list_owner_current") return await listOwnerCurrent(request);
     return null;
   } catch (error) {

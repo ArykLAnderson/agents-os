@@ -429,7 +429,7 @@ test("receipt lookup and unsupported ordinary access do not implicitly initializ
 
     const unsupported = await invoke(sourceEntrypoint, root, {
       protocol,
-      operation: "case.search",
+      operation: "case.stage_tombstone",
       configuration: configuration(storePath, sqliteBinary),
     });
     assert.equal(unsupported.exitCode, 2);
