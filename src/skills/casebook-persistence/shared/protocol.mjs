@@ -27,6 +27,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "frame.resolve",
   "frame.read",
   "frame.discovery.read",
+  "frame.disposition.read",
   "frame.history",
   "frame.list",
   "frame.legacy.prepare_reconciliation",

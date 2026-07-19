@@ -37,6 +37,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "frame.resolve",
     "frame.read",
     "frame.discovery.read",
+    "frame.disposition.read",
     "frame.history",
     "frame.list",
     "frame.legacy.prepare_reconciliation",
@@ -53,16 +54,16 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
     case_lifecycle_portability: "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
-    frame_revision_assembly: "complete canonical Frame/Discovery create and commit_revision",
+    frame_revision_assembly: "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     frame_statuses: ["active", "completed", "abandoned", "superseded"],
     discovery_lifecycles: ["active", "settled", "tombstoned"],
     discovery_dependencies: "typed stable references",
-    frame_query: "exact receipt/resolve/current/history/discovery reads, active-only/all-selected Discovery projection, and selector-bound fenced paging",
+    frame_query: "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
     markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
-    exact_identity: "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",
+    exact_identity: "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     frame_authority_scope: "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
-    legacy_reconciliation: "immutable non-mutating preparation only; no writeback, rename, watcher, or view lifecycle creation",
+    legacy_reconciliation: "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
   assert.deepEqual(runtime.implemented_slice_constraints, check.manifest.implemented_slice_constraints);
