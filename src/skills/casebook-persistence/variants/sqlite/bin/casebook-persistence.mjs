@@ -1,5 +1,7 @@
-import { diagnose } from "../lib/substrate/diagnostics.mjs";
+import { invokeCaseOperation } from "../lib/case/index.mjs";
+import { invokeFrameOperation } from "../lib/frame/index.mjs";
 import { invokeExceptionalOperation } from "../lib/operations/index.mjs";
+import { diagnose } from "../lib/substrate/diagnostics.mjs";
 import { failure, PROTOCOL_ID, PROTOCOL_VERSION } from "../../../shared/protocol.mjs";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
@@ -25,6 +27,10 @@ try {
     });
   } else if (request.operation === "diagnose") {
     result = await diagnose(request);
+  } else if (request.operation === "case.create" || request.operation === "case.read") {
+    result = await invokeCaseOperation(request);
+  } else if (request.operation === "frame.create" || request.operation === "frame.read" || request.operation === "frame.list") {
+    result = await invokeFrameOperation(request);
   } else {
     result = await invokeExceptionalOperation(request);
   }

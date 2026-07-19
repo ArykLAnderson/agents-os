@@ -19,8 +19,23 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "diagnose",
     "initialize_store",
     "get_store_operation_receipt",
+    "case.create",
+    "case.read",
+    "frame.create",
+    "frame.read",
+    "frame.list",
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
+  assert.deepEqual(check.manifest.l01_operation_constraints, {
+    store_receipt_visible_operation_kinds: ["initialize_store"],
+    typed_read_target: "stable_owner_id_under_exact_active_view",
+    frame_statuses: ["active"],
+    discovery_lifecycles: ["active"],
+    discovery_dependencies: "empty_only",
+    frame_list: "active_only_without_filters_history_or_paging",
+  });
+  const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
+  assert.deepEqual(runtime.l01_operation_constraints, check.manifest.l01_operation_constraints);
   assert.equal(check.manifest.assets.some((asset) => asset.path.includes("internal-mechanical-driver")), false);
 });
 

@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.1.0-l01-w03"
+    "version": "0.1.0-l01-w04"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "31cc3e4c67dff5c8a5c3e71e5f4c34adc61586a8cbfda1a3bd15b4be16838247"
+    "sha256": "d5622fd8fd890ced7a536c60471f78684fde0176649beb46ee869b496dfa321f"
   },
   "entrypoints": [
     {
@@ -33,11 +33,31 @@
   "supported_operations": [
     "diagnose",
     "initialize_store",
-    "get_store_operation_receipt"
+    "get_store_operation_receipt",
+    "case.create",
+    "case.read",
+    "frame.create",
+    "frame.read",
+    "frame.list"
   ],
+  "l01_operation_constraints": {
+    "store_receipt_visible_operation_kinds": [
+      "initialize_store"
+    ],
+    "typed_read_target": "stable_owner_id_under_exact_active_view",
+    "frame_statuses": [
+      "active"
+    ],
+    "discovery_lifecycles": [
+      "active"
+    ],
+    "discovery_dependencies": "empty_only",
+    "frame_list": "active_only_without_filters_history_or_paging"
+  },
   "unsupported_until_later_work_items": [
-    "case.*",
-    "frame.*",
+    "case.commit_revision/search/export/history/include/filter/paging/lifecycle",
+    "frame.commit_revision/closed/settled/tombstoned/references/history/include/filter/paging/lifecycle/legacy-reconciliation",
+    "generic-search-and-export",
     "migration",
     "export",
     "snapshot",
@@ -48,7 +68,7 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "242915acb95fb0b432c03e800cdc05473d12bf7f530a147c7d8a99b2c4ad53d9"
+      "sha256": "35a30d9d07ed167f7e5e096201cff851391760f5e266f80a23e681a78d3ee935"
     },
     {
       "id": "human-install-guidance",
@@ -60,7 +80,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "763c1b044915573b90cd3fd0c8f465ca8fc4a17d36ae14df8ec8a320348feb9e"
+      "sha256": "0c6820c0c0efe98c1143e7b0009768fab69b3b10749dfe8406c9ee0a43698a2e"
     },
     {
       "id": "shared-configuration",
@@ -84,7 +104,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "738629a010cb2cb5c46b6f31a6ed4ff28d19493908058289f1476f1b1be3a1c2"
+      "sha256": "163ad393274a1e99a7b0d7b3250e50e88faf6529366f9e2d0ab0fd5ec24305a2"
     },
     {
       "id": "sqlite-diagnostics",
@@ -96,31 +116,31 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "32420474191f413835a9db29de73db8881dc095fb424f4c49e6b4b511fcabe7d"
+      "sha256": "778cce6b72be8e7ad3c84a5fb01d50e9fdc5a8203593a224d05be5837487647c"
     },
     {
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "7f85c7937ad07f85a69cc2fff83f6bce10757f330ea905c127eb007dbd074efd"
+      "sha256": "3f7536ce611bea924c9713b8b18a1b93408ee4f4514865bd5fbdfd249ca6540c"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "719f479b651352438844af891016ee3c188d0de9270877ff79de7c748975c67c"
+      "sha256": "0668e02be619d798e4f0da43d379118f83980848daf25d8aa889aad084666f20"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "1301bbcc4151c5d4fc781aa56fdcf89884d776c0e7e288bb8bd957cd069b3e45"
+      "sha256": "c3468480f563404d265be35a3ba8439afeade2be5c0edc85986b61a9c693087a"
     },
     {
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "31313a33fc5dcd9c918e90f796c94be433cbd2974be689b81b51346d3c47edf0"
+      "sha256": "201cc6caa867d8ead49272e4339f73cb860902921bff8348018c148b3c1034fa"
     },
     {
       "id": "sqlite-schema",
@@ -138,7 +158,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "9872119ecf735b9ed8e65ae51f5b861dca93129a6e8cee369a9f74a4e7c37690"
+      "sha256": "86d3dd1cd6830cc702d00bb5002c10ae9a06ff872a77fe3d6fa8231ee4429b8b"
     }
   ]
 }

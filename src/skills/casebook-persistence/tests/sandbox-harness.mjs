@@ -132,7 +132,7 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
     if (await stat(configuredStore).then(() => true).catch(() => false)) throw new Error(`${target} created configured store`);
     if ((await readdir(probeDirectory)).length !== 0) throw new Error(`${target} left probe debris`);
 
-    const unsupportedRequest = { ...request, operation: "case.create" };
+    const unsupportedRequest = { ...request, operation: "case.search" };
     const unsupported = await invoke(nodeBinary, entrypoint, cwd, home, unsupportedRequest);
     if (unsupported.exitCode !== 2 || unsupported.json.failure?.code !== "not_yet_implemented") {
       throw new Error(`${target} did not fail closed for later operation`);

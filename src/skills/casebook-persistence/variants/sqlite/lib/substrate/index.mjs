@@ -284,6 +284,13 @@ export async function readStoreOperationReceipt(binary, storePath, operationId) 
   };
 }
 
+// Private façade-to-substrate dispatch. Dynamic loading avoids making the
+// owner-neutral store module depend on either typed owner façade.
+export async function invokeSubstrateOperation(request) {
+  const { invokeMechanicalOperation } = await import("./mechanical.mjs");
+  return invokeMechanicalOperation(request);
+}
+
 export async function createInitializedStore(binary, storePath, initialization) {
   const parent = await realpath(path.dirname(storePath));
   const temporaryDirectory = await mkdtemp(path.join(parent, ".casebook-persistence-init-"));
