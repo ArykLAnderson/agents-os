@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "d8c3f1099d413ccb1a9036f3c57e64b4d384ba3987fd8c31efc03e4dbc0184dd"
+    "sha256": "1e21f18f5300a5721c7bf70544c36cdede8aa744e7e456e66ae8c756148cabf5"
   },
   "entrypoints": [
     {
@@ -52,6 +52,7 @@
     "frame.discovery.read",
     "frame.history",
     "frame.list",
+    "frame.legacy.prepare_reconciliation",
     "common.resolve",
     "common.list",
     "common.search",
@@ -81,12 +82,13 @@
     "frame_query": "exact resolve/current/history/discovery reads and query-bound fenced paging; list defaults active-only",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
-    "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only"
+    "exact_identity": "typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",
+    "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
+    "legacy_reconciliation": "immutable non-mutating preparation only; no writeback, rename, watcher, or view lifecycle creation"
   },
   "unsupported_until_later_work_items": [
     "case.include/filter/lifecycle/export",
-    "frame.include/filter/lifecycle-query/reconciliation",
-    "frame authority-scope mutation and legacy preparation",
+    "frame.include/filter/lifecycle-query/reconciliation-commit-writeback",
     "events/checkpoints/snapshots/global-search",
     "full-atomic-markdown-write-and-generation-selection",
     "migration",
@@ -99,13 +101,13 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "1c14a788a9bf84941d3a6026c7b7b8cf2039c4ed1e16edfa3215cd853a2b44f1"
+      "sha256": "730382cc621e63e06f40207771e6ef7d3150709623db76ae8b9aad882eda5f45"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "89e9ed3cb7f8428a90693c660a198baaf28b1f9c2b24fd51fce5f42f8617f8ac"
+      "sha256": "aef7a1ba2f17c12779089888fe87d5ae52fb172b2d8e6855019dde720dade583"
     },
     {
       "id": "shared-protocol",
@@ -159,7 +161,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "9f0a34f77f609114448d9ab85b98171d8c29a4d3ce31abf8f624edb9cba33905"
+      "sha256": "169ab90d1de773c11993a3f79f0176fb6b6f655843b8205e12d9ed537308c07b"
     },
     {
       "id": "sqlite-diagnostics",
@@ -171,13 +173,13 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "778cce6b72be8e7ad3c84a5fb01d50e9fdc5a8203593a224d05be5837487647c"
+      "sha256": "f942324ae7a943d73835fba6bac58410aeab51426bcc77a78b92da6a1986918d"
     },
     {
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "1714c11d044ce9f3e76a92a6617596b3ad96f0471225bd2da89b9838953dde87"
+      "sha256": "e360e215fbe9452d6363258be6e503ba1fb89d4073f5742a162dd9d6cba33f9d"
     },
     {
       "id": "case-facade",
@@ -189,7 +191,7 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "0618c42ae945ec387320ab5088f1765a79305fdb10b26e5df3c92b3c36ade8ca"
+      "sha256": "3c11aa6b058607a95372acd33606539b3e13e99a3b5d1957cc300bfa4743f00e"
     },
     {
       "id": "sqlite-common-subset",
@@ -219,7 +221,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "d4b3b254a8e7aa82be4f1aecb5084281485e425c2bd971f6fd642dcdf4e21fad"
+      "sha256": "f3fb4a66785dd2bc0fa8eb116bc23d6ba4846b40a406e1c52ed6a948c30a75cb"
     }
   ]
 }

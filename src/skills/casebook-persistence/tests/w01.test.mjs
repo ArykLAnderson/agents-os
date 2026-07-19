@@ -32,6 +32,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "frame.discovery.read",
     "frame.history",
     "frame.list",
+    "frame.legacy.prepare_reconciliation",
     "common.resolve",
     "common.list",
     "common.search",
@@ -51,7 +52,9 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     frame_query: "exact resolve/current/history/discovery reads and query-bound fenced paging; list defaults active-only",
     common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
     markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
-    exact_identity: "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only",
+    exact_identity: "typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",
+    frame_authority_scope: "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
+    legacy_reconciliation: "immutable non-mutating preparation only; no writeback, rename, watcher, or view lifecycle creation",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
   assert.deepEqual(runtime.implemented_slice_constraints, check.manifest.implemented_slice_constraints);

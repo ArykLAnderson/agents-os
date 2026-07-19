@@ -1088,8 +1088,29 @@ async function listOwnerCurrent(request) {
   return success("list_owner_current", { status: "found", items, operation_fence: fence, applied_view: appliedView });
 }
 
+async function readActiveViewScope(request) {
+  const available = await prepare(request);
+  if (available.failure) return available.failure;
+  const { binary, storePath, state } = available;
+  const active = await validateActiveView(binary, storePath, state, request.context);
+  if (active.failure) return active.failure;
+  const rows = await queryJson(binary, storePath, `
+    SELECT grant.namespace_id
+    FROM view_policy_namespace_grants grant
+    JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'
+    WHERE grant.view_policy_revision_id = ${sqlText(request.context.view_policy_revision_id)}
+    ORDER BY grant.namespace_id;
+  `);
+  return success("read_active_view_scope", {
+    status: "found",
+    namespace_ids: rows.map((row) => row.namespace_id),
+    applied_view: { id: request.context.view_id, policy_revision_id: request.context.view_policy_revision_id },
+  });
+}
+
 export async function invokeMechanicalOperation(request) {
   try {
+    if (request.operation === "read_active_view_scope") return await readActiveViewScope(request);
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
