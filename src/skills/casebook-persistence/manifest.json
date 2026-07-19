@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b988c2d065892fd79b00798facd66867571a2aa00dbc5f9e330c1cc4648a9dde"
+    "sha256": "568c116934d8cf9466cd51afbda504253591396569759af0502e4ab850437192"
   },
   "entrypoints": [
     {
@@ -157,7 +157,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "d53534e5c36f7bdc734b711beac034f24b6bebb367a9b4bccf76bc6d3dcd1853"
+      "sha256": "10d98cfd961aa9813eb0857907c9c75e45e2a072b79ddc7c72ac970008c61e0f"
     },
     {
       "id": "markdown-interchange",
@@ -193,7 +193,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "fb8c91af574d675aa6dc25997c6fd962a17f9604a03fe54361179ab759d7deb0"
+      "sha256": "6d658c69235ce82192cf50fe847ea556a85fb1b30e67dfc2c62eddf42ce41849"
     },
     {
       "id": "frame-facade",
