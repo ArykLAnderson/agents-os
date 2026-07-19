@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "568c116934d8cf9466cd51afbda504253591396569759af0502e4ab850437192"
+    "sha256": "7269ae00d99a305bbc36c81eac88f0621dd245be85597bde70b91f4f280e7ecd"
   },
   "entrypoints": [
     {
@@ -193,7 +193,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "6d658c69235ce82192cf50fe847ea556a85fb1b30e67dfc2c62eddf42ce41849"
+      "sha256": "1aade7e7db3bd79eecb858f1909eb5d33721cc37faad5efacadf73d8af87ca64"
     },
     {
       "id": "frame-facade",
