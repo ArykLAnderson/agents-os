@@ -18,7 +18,7 @@ import { inspectStore, readStoreOperationReceipt } from "./index.mjs";
 const MAX_VERSIONS = 256;
 const MAX_SELECTIONS = 256;
 const MAX_OUTBOX = 64;
-const MAX_LIST_SCAN = 256;
+const MAX_CURRENT_PAGE = 100;
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const UUID_ID = new RegExp(`^[a-z][a-z0-9_-]*:${UUID}$`);
 const OWNER_KIND = /^[a-z][a-z0-9_-]{0,63}$/;
@@ -48,6 +48,19 @@ export function canonicalJson(value) {
 
 export function mechanicalDigest(value) {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
+}
+
+// This key is intentionally available only to in-process persistence façades. It is
+// derived from immutable, verified store identity metadata and is never returned by
+// a mechanical or semantic operation.
+export async function deriveInternalCursorSigningKey(configuration, storeId) {
+  const prepared = await prepare({ configuration });
+  if (prepared.failure || prepared.state.metadata.store_id !== storeId) return null;
+  return createHash("sha256").update(canonicalJson({
+    domain: "casebook-internal-cursor-signing-key@1",
+    store_id: prepared.state.metadata.store_id,
+    initialization_operation_id: prepared.state.metadata.initialization_operation_id,
+  })).digest();
 }
 
 export function canonicalCommitRequestDigest(storeId, context, envelope) {
@@ -901,56 +914,127 @@ async function readOwnerCurrent(request) {
   });
 }
 
-async function listOwnerCurrent(request) {
+async function readOwnerRevision(request) {
+  const context = contextShape(request.context);
+  const owner = requireObject(request.owner, "owner");
+  const kind = requireString(owner.kind, "owner.kind", 64);
+  const targetId = requireUuidId(owner.id, "owner.id", kind);
+  const revisionId = request.revision_id == null ? null : requireUuidId(request.revision_id, "revision_id", "owner-revision");
+  if (revisionId == null && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) throw new RequestError("identity_invalid", "A positive revision_number or revision_id is required.");
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (request.store_id !== state.metadata.store_id) return failure("not_visible", "The requested revision is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  const selector = revisionId == null ? `r.revision_number = ${request.revision_number}` : `r.revision_id = ${sqlText(revisionId)}`;
+  const rows = await queryJson(binary, storePath, `
+    SELECT o.owner_id, o.owner_kind, o.home_namespace_id, r.revision_id, r.revision_number,
+      r.normalized_json, r.representation_id, r.representation_version, r.committed_at
+    FROM owners o JOIN owner_revisions r ON r.owner_id=o.owner_id
+    JOIN view_policy_namespace_grants grant ON grant.namespace_id=o.home_namespace_id AND grant.view_policy_revision_id=${sqlText(context.view_policy_revision_id)}
+    JOIN view_policy_revisions vpr ON vpr.view_policy_revision_id=grant.view_policy_revision_id AND vpr.view_id=${sqlText(context.view_id)} AND vpr.lifecycle='active'
+    JOIN json_each(vpr.object_kinds_json) object_kind ON object_kind.value=o.owner_kind
+    WHERE o.owner_id=${sqlText(targetId)} AND o.owner_kind=${sqlText(kind)} AND ${selector} LIMIT 1;`);
+  if (!rows.length) return failure("not_visible", "The requested revision is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const row=rows[0];
+  const selected=await queryJson(binary,storePath,`SELECT s.family_id,v.version_id,v.content_json,v.content_digest FROM owner_revision_selections s JOIN owner_versions v ON v.version_id=s.version_id WHERE s.revision_id=${sqlText(row.revision_id)} ORDER BY s.family_id LIMIT ${MAX_SELECTIONS + 1};`);
+  if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","The owner revision exceeds the bounded read shape.",{failureClass:"representation_invalid",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});
+  return success("read_owner_revision",{status:"found",owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},selected_versions:selected.map(item=>({family_id:item.family_id,version_id:item.version_id,content:JSON.parse(item.content_json),content_digest:item.content_digest})),committed_at:row.committed_at},applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
+}
+
+async function pageOwnerCurrent(request) {
   const context = contextShape(request.context);
   const kind = requireString(request.owner_kind, "owner_kind", 64);
   if (!OWNER_KIND.test(kind)) throw new RequestError("identity_invalid", "owner_kind has invalid syntax.");
   const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const limit = request.limit;
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_CURRENT_PAGE) {
+    throw new RequestError("representation_invalid", `limit must be 1 to ${MAX_CURRENT_PAGE}.`);
+  }
+  let afterKey = null;
+  if (request.after_key != null) {
+    if (!Array.isArray(request.after_key) || request.after_key.length !== 2
+      || request.after_key.some((part) => !nonEmpty(part, 512))) {
+      throw new RequestError("representation_invalid", "after_key must be a stable [updated_at, owner_id] key.");
+    }
+    afterKey = request.after_key;
+  }
+  if (request.expected_fence != null && (!Number.isInteger(request.expected_fence) || request.expected_fence < 1)) {
+    throw new RequestError("representation_invalid", "expected_fence must be a positive integer.");
+  }
   const prepared = await prepare(request);
   if (prepared.failure) return prepared.failure;
   const { binary, storePath, state } = prepared;
-  if (storeId !== state.metadata.store_id) {
-    return failure("not_visible", "The requested owners are unknown or not visible.", {
-      failureClass: "not_visible", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {},
-    });
-  }
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested owners are unknown or not visible.", { failureClass: "not_visible", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {} });
   const view = await validateActiveView(binary, storePath, state, context);
   if (view.failure) return view.failure;
-  const rows = await queryJson(binary, storePath, `
-    SELECT o.owner_id, o.owner_kind, o.home_namespace_id,
-      r.revision_id, r.revision_number, r.committed_at, c.projection_json
-    FROM owners o
-    JOIN owner_current c ON c.owner_id = o.owner_id
-    JOIN owner_revisions r ON r.revision_id = c.revision_id
-    JOIN view_policy_namespace_grants grant
-      ON grant.namespace_id = o.home_namespace_id
-      AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-    JOIN view_policy_revisions vpr
-      ON vpr.view_policy_revision_id = grant.view_policy_revision_id
-      AND vpr.view_id = ${sqlText(context.view_id)} AND vpr.lifecycle = 'active'
-    JOIN json_each(vpr.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
-    WHERE o.owner_kind = ${sqlText(kind)}
-    ORDER BY c.updated_at DESC, o.owner_id ASC
-    LIMIT ${MAX_LIST_SCAN + 1};
+  const after = afterKey == null ? "" : `AND (c.updated_at < ${sqlText(afterKey[0])} OR (c.updated_at = ${sqlText(afterKey[0])} AND o.owner_id > ${sqlText(afterKey[1])}))`;
+  // Fence and page are read by one SQLite statement, hence from one read snapshot.
+  const result = await queryJson(binary, storePath, `
+    WITH visible AS (
+      SELECT o.owner_id, o.owner_kind, o.home_namespace_id, r.revision_id,
+        r.revision_number, r.committed_at, c.updated_at, c.projection_json
+      FROM owners o
+      JOIN owner_current c ON c.owner_id = o.owner_id
+      JOIN owner_revisions r ON r.revision_id = c.revision_id
+      JOIN view_policy_namespace_grants grant ON grant.namespace_id = o.home_namespace_id
+        AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
+      JOIN view_policy_revisions vpr ON vpr.view_policy_revision_id = grant.view_policy_revision_id
+        AND vpr.view_id = ${sqlText(context.view_id)} AND vpr.lifecycle = 'active'
+      JOIN json_each(vpr.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
+      WHERE o.owner_kind = ${sqlText(kind)} ${after}
+      ORDER BY c.updated_at DESC, o.owner_id ASC LIMIT ${limit + 1}
+    )
+    SELECT (SELECT operation_fence FROM store_fence WHERE singleton = 1) AS operation_fence,
+      COALESCE(json_group_array(json_object(
+        'owner_id', owner_id, 'owner_kind', owner_kind, 'home_namespace_id', home_namespace_id,
+        'revision_id', revision_id, 'revision_number', revision_number, 'committed_at', committed_at,
+        'updated_at', updated_at, 'projection_json', json(projection_json)
+      )) FILTER (WHERE owner_id IS NOT NULL), json('[]')) AS items_json
+    FROM visible;
   `);
-  if (rows.length > MAX_LIST_SCAN) {
-    return failure("capability_unavailable", "The minimal bounded owner list scan limit was exceeded.", {
-      failureClass: "capability_unavailable",
-      retryDisposition: RETRY_DISPOSITIONS.NEVER,
-      correctiveGuidance: "Use the later accepted paged owner-list capability; do not treat this response as a complete list.",
-      evidence: { maximum_owner_scan: MAX_LIST_SCAN },
+  const fence = result[0].operation_fence;
+  if (request.expected_fence != null && request.expected_fence !== fence) {
+    return failure("snapshot_fence_changed", "The current projection fence changed; restart pagination.", {
+      failureClass: "snapshot_fence_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      evidence: { restart_required: true, current_fence: fence },
     });
   }
-  return success("list_owner_current", {
+  const rows = JSON.parse(result[0].items_json);
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  return success("page_owner_current", {
     status: "found",
-    items: rows.map((row) => ({
+    items: page.map((row) => ({
       owner: { id: row.owner_id, kind: row.owner_kind, home_namespace_id: row.home_namespace_id },
       revision: { id: row.revision_id, number: row.revision_number, committed_at: row.committed_at },
-      current_projection: JSON.parse(row.projection_json),
+      current_projection: row.projection_json,
     })),
-    operation_fence: state.operation_fence,
+    operation_fence: fence,
+    has_more: hasMore,
+    next_after_key: hasMore ? [page.at(-1).updated_at, page.at(-1).owner_id] : null,
     applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
   });
+}
+
+// Compatibility primitive for the existing bounded common-subset façade. Frame
+// pagination intentionally uses page_owner_current directly and has no scan cap.
+async function listOwnerCurrent(request) {
+  const items = [];
+  let afterKey = null;
+  let fence = null;
+  let appliedView = null;
+  do {
+    const page = await pageOwnerCurrent({ ...request, limit: MAX_CURRENT_PAGE, ...(afterKey == null ? {} : { after_key: afterKey }), ...(fence == null ? {} : { expected_fence: fence }) });
+    if (!page.ok) return page;
+    fence ??= page.result.operation_fence;
+    appliedView = page.result.applied_view;
+    items.push(...page.result.items);
+    if (items.length > 256) return failure("capability_unavailable", "The bounded common owner list scan limit was exceeded.", { failureClass: "capability_unavailable", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: { maximum_owner_scan: 256 } });
+    afterKey = page.result.next_after_key;
+  } while (afterKey != null);
+  return success("list_owner_current", { status: "found", items, operation_fence: fence, applied_view: appliedView });
 }
 
 export async function invokeMechanicalOperation(request) {
@@ -958,6 +1042,8 @@ export async function invokeMechanicalOperation(request) {
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
+    if (request.operation === "read_owner_revision") return await readOwnerRevision(request);
+    if (request.operation === "page_owner_current") return await pageOwnerCurrent(request);
     if (request.operation === "list_owner_current") return await listOwnerCurrent(request);
     return null;
   } catch (error) {
