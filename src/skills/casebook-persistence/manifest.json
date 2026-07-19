@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "3a548d8c792878379255acb16da5069f2da40b3c36207e74de1bd706bd008477"
+    "sha256": "b988c2d065892fd79b00798facd66867571a2aa00dbc5f9e330c1cc4648a9dde"
   },
   "entrypoints": [
     {
@@ -121,7 +121,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "7f7c2e368ce412e2d50d7794a39b2d49f990fe9918ccdd4cc4231ceb4a85d9c5"
+      "sha256": "9be68e1194cbb8dacfc82a0018e57b15100018bf4399ae5be36dca85c1e234c5"
     },
     {
       "id": "shared-configuration",
