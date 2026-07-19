@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "a9bae3bf8ce66a5566f78a027cacf3322176325e5365ec51696796a6bd9ae653"
+    "sha256": "d8c3f1099d413ccb1a9036f3c57e64b4d384ba3987fd8c31efc03e4dbc0184dd"
   },
   "entrypoints": [
     {
@@ -105,7 +105,7 @@
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "945cf23c7a51ede380c1773c5734e559fe6d440e01d4253ea94d62126cb8764e"
+      "sha256": "89e9ed3cb7f8428a90693c660a198baaf28b1f9c2b24fd51fce5f42f8617f8ac"
     },
     {
       "id": "shared-protocol",
