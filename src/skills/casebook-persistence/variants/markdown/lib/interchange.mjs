@@ -51,6 +51,19 @@ function renderFrameMarkdown(record) {
   markdown += interchangeJsonSection("Limitations", record.limitations);
   markdown += interchangeJsonSection("Completion Condition", record.completion_condition);
   markdown += "## Discovery\nSee the manifest-selected Discovery file.\n";
+  if (record.disposition_boundaries != null && record.case_dispositions != null) {
+    const content = {
+      disposition_boundaries: record.disposition_boundaries.map((item, index) => ({
+        source_label: `DB-${String(index + 1).padStart(3, "0")}`,
+        record: item,
+      })),
+      case_dispositions: record.case_dispositions.map((item, index) => ({
+        source_label: `CD-${String(index + 1).padStart(3, "0")}`,
+        record: item,
+      })),
+    };
+    markdown += `\n## Case Dispositions\n\`\`\`json\n${JSON.stringify(content)}\n\`\`\`\n`;
+  }
   return markdown;
 }
 

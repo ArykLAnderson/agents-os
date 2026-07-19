@@ -2,7 +2,7 @@
   "variant_manifest_version": 1,
   "id": "casebook-persistence-markdown",
   "authority_mode": "markdown",
-  "implementation_status": "l05_w02_atomic_case_replacement_with_l01_operations",
+  "implementation_status": "l05_w03_coherent_frame_generation_with_l01_operations",
   "guarantees": "reduced-file-authoritative-common-subset",
   "entrypoint": {
     "interpreter": "node",
@@ -10,9 +10,12 @@
   },
   "supported_operations": [
     "case.create",
+    "case.commit_revision",
     "case.read",
     "frame.create",
+    "frame.commit_revision",
     "frame.read",
+    "frame.legacy.prepare_reconciliation",
     "frame.list",
     "common.resolve",
     "common.list",
@@ -39,7 +42,6 @@
     "checkpoints",
     "snapshots",
     "global-search",
-    "atomic-markdown-replacement",
     "migration"
   ]
 }

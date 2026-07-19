@@ -709,7 +709,7 @@ test("dual mode, hot-switch, ambiguous identity, dual Discovery files, and unsup
 
     const before = sha256(await readFile(manifestPath));
     const unsupportedBreadth = ["case.history", "events.read", "checkpoint.read", "snapshot.create", "global.search"];
-    for (const operation of [...unsupportedBreadth, "frame.commit_revision", "interchange.export"]) {
+    for (const operation of [...unsupportedBreadth, "interchange.export"]) {
       const rejected = await invoke(markdownEntrypoint, root, markdownRequest(operation, workspaceRoot, written.workspaceMarker));
       assert.equal(rejected.exitCode, 2, operation);
       assert.equal(rejected.json.failure.code, "not_yet_implemented", operation);

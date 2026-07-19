@@ -6,6 +6,7 @@ import {
   mkdir,
   open,
   readFile,
+  readdir,
   realpath,
   rename,
   rm,
@@ -37,12 +38,24 @@ const MAX_RECORDS = 256;
 const MAX_SEARCH_LIMIT = 50;
 const FILE_AUTHORITY_PROFILE = "file-authoritative-markdown-v1";
 const CASE_STAGE_PREFIX = ".casebook-owned-case-stage-";
+const FRAME_SELECTOR = ".casebook-frame-selected-generation.json";
+const FRAME_STAGE_PREFIX = ".casebook-owned-frame-stage-";
+const FRAME_GENERATION_PREFIX = ".casebook-owned-frame-generation-";
+const FRAME_SELECTOR_STAGE_PREFIX = ".casebook-owned-frame-selector-";
+const FRAME_GENERATION_MANIFEST = "generation-manifest.json";
+const FRAME_GENERATION_SCHEMA = "casebook-file-frame-generation@1";
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const idPattern = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
 const OWNER_ID = new RegExp(`^(case|frame):${UUID}$`);
 const KINDS = new Set(["case", "frame"]);
 const ACTIVE_CATEGORIES = new Set(["fog", "frontier", "blocked", "contested", "deferred", "out_of_scope"]);
 const HUMAN_AUTHORITY = new Set(["required", "not_required", "unclear"]);
+const FRAME_STATUSES = new Set(["active", "completed", "abandoned", "superseded"]);
+const BOUNDARY_CLOSURES = new Set(["open", "closed"]);
+const CLASSIFICATION_STATES = new Set(["pending_classification", "classified"]);
+const CASE_DISPOSITIONS = new Set(["intake", "reconcile", "no_case"]);
+const CASE_REALIZATION_STATES = new Set(["awaiting_case", "settled"]);
+const LOCATOR_AUDIENCES = new Set(["private", "project", "public"]);
 const CATEGORY = Object.freeze({
   "Fog": "fog",
   "Frontier": "frontier",
@@ -354,6 +367,29 @@ function parseDiscovery(bytes, manifestRecord) {
   return items;
 }
 
+function parseDispositionSection(map, label) {
+  const raw = optionalSection(map, "Case Dispositions");
+  if (raw == null) return { disposition_state: "absent_in_legacy", disposition_boundaries: undefined, case_dispositions: undefined };
+  if (!object(raw)) throw new MarkdownError("frame.invalid_representation", `${label}.Case Dispositions`, "disposition_section_schema_invalid", "Case Dispositions must contain one closed canonical JSON object.");
+  exactKeys(raw, new Set(["disposition_boundaries", "case_dispositions"]), "section.Case Dispositions");
+  if (!Array.isArray(raw.disposition_boundaries) || !Array.isArray(raw.case_dispositions)
+    || raw.disposition_boundaries.length > 64 || raw.case_dispositions.length > 128) {
+    throw new MarkdownError("frame.invalid_representation", `${label}.Case Dispositions`, "disposition_section_schema_invalid", "Case Dispositions requires bounded complete boundary and disposition arrays.");
+  }
+  const unwrap = (wrapper, index, prefix, normalizer) => {
+    const itemPath = `${label}.Case Dispositions.${prefix === "DB" ? "disposition_boundaries" : "case_dispositions"}[${index}]`;
+    if (!object(wrapper)) throw new MarkdownError("frame.invalid_representation", itemPath, "disposition_candidate_schema_invalid", "A strict labeled disposition record is required.");
+    exactKeys(wrapper, new Set(["source_label", "record"]), itemPath);
+    const expected = `${prefix}-${String(index + 1).padStart(3, "0")}`;
+    if (wrapper.source_label !== expected) throw new MarkdownError("frame.invalid_representation", `${itemPath}.source_label`, "source_label_invalid", "Disposition source labels must use canonical order.");
+    return normalizer(wrapper.record, index);
+  };
+  const dispositionBoundaries = raw.disposition_boundaries.map((item, index) => unwrap(item, index, "DB", normalizeDispositionBoundary));
+  const caseDispositions = raw.case_dispositions.map((item, index) => unwrap(item, index, "CD", normalizeCaseDisposition));
+  validateDispositionSelection(dispositionBoundaries, caseDispositions, undefined);
+  return { disposition_state: "present", disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions };
+}
+
 function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const { fields, body } = parseFrontmatter(frameBytes, manifestRecord.frame_path);
   exactKeys(fields, new Set([
@@ -368,8 +404,8 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   if (!Array.isArray(fields.authority_scope_namespace_ids) || fields.authority_scope_namespace_ids.length !== 1 || fields.authority_scope_namespace_ids[0] !== home) {
     throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "cross_namespace_scope_unsupported", "L-01 supports exactly the home namespace.");
   }
-  if (fields.status !== "active") throw new MarkdownError("markdown.parse_invalid", "frontmatter.status", "active_frame_only_l01", "Only active minimal Frames are supported.");
-  const frameHeadings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Discovery"];
+  if (!FRAME_STATUSES.has(fields.status)) throw new MarkdownError("markdown.parse_invalid", "frontmatter.status", "frame_status_invalid", "The Frame status is unsupported.");
+  const frameHeadings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Discovery", "Case Dispositions"];
   const map = sections(body, manifestRecord.frame_path, frameHeadings, { required: ["Discovery"] });
   if (map.get("Discovery") !== "See the manifest-selected Discovery file.") {
     throw new MarkdownError("markdown.parse_invalid", "section.Discovery", "discovery_reference_invalid", "The synthetic Frame must contain only its exact manifest-selected Discovery reference.");
@@ -392,6 +428,12 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
       if (!Array.isArray(value) || value.length > 64) throw new MarkdownError("markdown.parse_invalid", `section.${heading}`, "bounded_string_array_required", "A bounded string array is required.");
       record[key] = value.map((entry, index) => requiredString(entry, `section.${heading}[${index}]`, 4_096));
     }
+  }
+  const dispositions = parseDispositionSection(map, manifestRecord.frame_path);
+  if (dispositions.disposition_state === "present") {
+    validateDispositionSelection(dispositions.disposition_boundaries, dispositions.case_dispositions, record.status);
+    record.disposition_boundaries = dispositions.disposition_boundaries;
+    record.case_dispositions = dispositions.case_dispositions;
   }
   return record;
 }
@@ -608,18 +650,140 @@ async function syncDirectoryAsAvailable(directory) {
   }
 }
 
-function normalizeFrame(value) {
+function normalizeEvidenceLocators(value, pathName) {
+  if (value == null) return undefined;
+  if (!Array.isArray(value) || value.length > 32) throw new MarkdownError("frame.invalid_representation", pathName, "bounded_array_required", "Evidence locators must be a bounded array.");
+  return value.map((item, index) => {
+    const itemPath = `${pathName}[${index}]`;
+    if (!object(item)) throw new MarkdownError("frame.invalid_representation", itemPath, "object_required", "An evidence locator must be an object.");
+    exactKeys(item, new Set(["uri", "media_type", "audience", "digest"]), itemPath);
+    if (!LOCATOR_AUDIENCES.has(item.audience)) throw new MarkdownError("frame.invalid_representation", `${itemPath}.audience`, "audience_invalid", "Evidence audience is invalid.");
+    const result = { uri: requiredString(item.uri, `${itemPath}.uri`, 4_096), audience: item.audience };
+    for (const key of ["media_type", "digest"]) if (item[key] != null) result[key] = requiredString(item[key], `${itemPath}.${key}`, 512);
+    return result;
+  });
+}
+
+function normalizeDispositionBoundary(value, index) {
+  const pathName = `frame.disposition_boundaries[${index}]`;
+  if (!object(value)) throw new MarkdownError("frame.invalid_representation", pathName, "object_required", "A complete disposition boundary is required.");
+  exactKeys(value, new Set(["id", "version_id", "display_label", "display_order", "title", "basis", "evidence_locators", "disposition_ids", "closure"]), pathName);
+  if (!Number.isInteger(value.display_order) || value.display_order < 0 || value.display_order > 1_000_000) throw new MarkdownError("frame.invalid_representation", `${pathName}.display_order`, "display_order_invalid", "A bounded display order is required.");
+  if (!BOUNDARY_CLOSURES.has(value.closure)) throw new MarkdownError("frame.invalid_representation", `${pathName}.closure`, "boundary_closure_invalid", "Boundary closure must be open or closed.");
+  if (!Array.isArray(value.disposition_ids) || value.disposition_ids.length < 1 || value.disposition_ids.length > 128) throw new MarkdownError("frame.invalid_representation", `${pathName}.disposition_ids`, "bounded_array_required", "A declared boundary requires a bounded material-result inventory.");
+  const dispositionIds = value.disposition_ids.map((id, itemIndex) => requiredId(id, `${pathName}.disposition_ids[${itemIndex}]`, "case-disposition"));
+  if (new Set(dispositionIds).size !== dispositionIds.length) throw new MarkdownError("frame.invalid_representation", `${pathName}.disposition_ids`, "duplicate_disposition_membership", "A boundary inventory cannot repeat a disposition.");
+  const title = value.title == null ? undefined : requiredString(value.title, `${pathName}.title`, 512);
+  const basis = value.basis == null ? undefined : requiredString(value.basis, `${pathName}.basis`, 4_096);
+  if (title == null && basis == null) throw new MarkdownError("frame.invalid_representation", pathName, "boundary_title_or_basis_required", "A boundary requires title or basis.");
+  const result = {
+    id: requiredId(value.id, `${pathName}.id`, "disposition-boundary"),
+    version_id: requiredId(value.version_id, `${pathName}.version_id`, "disposition-boundary-version"),
+    display_order: value.display_order,
+    closure: value.closure,
+    disposition_ids: dispositionIds,
+  };
+  if (value.display_label != null) result.display_label = requiredString(value.display_label, `${pathName}.display_label`, 64);
+  if (title != null) result.title = title;
+  if (basis != null) result.basis = basis;
+  const locators = normalizeEvidenceLocators(value.evidence_locators, `${pathName}.evidence_locators`);
+  if (locators != null) result.evidence_locators = locators;
+  return result;
+}
+
+function normalizeCaseDisposition(value, index) {
+  const pathName = `frame.case_dispositions[${index}]`;
+  if (!object(value)) throw new MarkdownError("frame.invalid_representation", pathName, "object_required", "A complete Case disposition is required.");
+  exactKeys(value, new Set([
+    "id", "version_id", "boundary_id", "result_summary", "classification_state", "disposition", "rationale", "evidence_locators",
+    "pending_reason", "resume_condition", "realization_state", "case_id", "case_operation_id", "observed_case_revision_id",
+    "pinned_case_revision_id", "affected_case_entry_display_ids", "no_case_reason",
+  ]), pathName);
+  if (!CLASSIFICATION_STATES.has(value.classification_state)) throw new MarkdownError("frame.invalid_representation", `${pathName}.classification_state`, "classification_state_invalid", "Classification state is invalid.");
+  const result = {
+    id: requiredId(value.id, `${pathName}.id`, "case-disposition"),
+    version_id: requiredId(value.version_id, `${pathName}.version_id`, "case-disposition-version"),
+    boundary_id: requiredId(value.boundary_id, `${pathName}.boundary_id`, "disposition-boundary"),
+    result_summary: requiredString(value.result_summary, `${pathName}.result_summary`, 4_096),
+    classification_state: value.classification_state,
+  };
+  const locators = normalizeEvidenceLocators(value.evidence_locators, `${pathName}.evidence_locators`);
+  if (locators != null) result.evidence_locators = locators;
+  const present = (key) => value[key] != null;
+  if (value.classification_state === "pending_classification") {
+    if (["disposition", "realization_state", "case_id", "case_operation_id", "observed_case_revision_id", "pinned_case_revision_id", "affected_case_entry_display_ids", "no_case_reason"].some(present)) {
+      throw new MarkdownError("frame.invalid_representation", pathName, "pending_classification_shape_invalid", "Pending classification cannot assert a disposition or Case realization.");
+    }
+    result.pending_reason = requiredString(value.pending_reason, `${pathName}.pending_reason`, 4_096);
+    result.resume_condition = requiredString(value.resume_condition, `${pathName}.resume_condition`, 4_096);
+    if (value.rationale != null) result.rationale = requiredString(value.rationale, `${pathName}.rationale`, 4_096);
+    return result;
+  }
+  if (present("pending_reason") || present("resume_condition")) throw new MarkdownError("frame.invalid_representation", pathName, "classified_pending_fields_forbidden", "Classified dispositions cannot retain pending-only fields.");
+  if (!CASE_DISPOSITIONS.has(value.disposition)) throw new MarkdownError("frame.invalid_representation", `${pathName}.disposition`, "classified_disposition_required", "Classified disposition must be intake, reconcile, or no_case.");
+  result.disposition = value.disposition;
+  if (value.disposition === "no_case") {
+    if (["realization_state", "case_id", "case_operation_id", "observed_case_revision_id", "pinned_case_revision_id", "affected_case_entry_display_ids"].some(present)) {
+      throw new MarkdownError("frame.invalid_representation", pathName, "no_case_shape_invalid", "No Case cannot carry Case realization fields.");
+    }
+    result.no_case_reason = requiredString(value.no_case_reason, `${pathName}.no_case_reason`, 4_096);
+    if (value.rationale != null) result.rationale = requiredString(value.rationale, `${pathName}.rationale`, 4_096);
+    return result;
+  }
+  if (present("no_case_reason")) throw new MarkdownError("frame.invalid_representation", `${pathName}.no_case_reason`, "no_case_reason_forbidden", "No Case reason is valid only for no_case.");
+  result.rationale = requiredString(value.rationale, `${pathName}.rationale`, 4_096);
+  if (!CASE_REALIZATION_STATES.has(value.realization_state)) throw new MarkdownError("frame.invalid_representation", `${pathName}.realization_state`, "case_realization_state_required", "Intake/Reconcile requires awaiting_case or settled.");
+  result.realization_state = value.realization_state;
+  result.case_id = requiredId(value.case_id, `${pathName}.case_id`, "case");
+  result.case_operation_id = requiredString(value.case_operation_id, `${pathName}.case_operation_id`, 256);
+  for (const key of ["observed_case_revision_id", "pinned_case_revision_id"]) if (value[key] != null) result[key] = requiredId(value[key], `${pathName}.${key}`, "case-revision");
+  if (value.realization_state === "awaiting_case" && (result.observed_case_revision_id != null || result.pinned_case_revision_id != null)) throw new MarkdownError("frame.invalid_representation", pathName, "awaiting_case_revision_forbidden", "Awaiting Case cannot claim a committed revision.");
+  if (value.realization_state === "settled" && result.observed_case_revision_id == null && result.pinned_case_revision_id == null) throw new MarkdownError("frame.invalid_representation", pathName, "settled_case_revision_required", "Settled Case realization requires revision evidence.");
+  if (value.affected_case_entry_display_ids != null) {
+    if (!Array.isArray(value.affected_case_entry_display_ids) || value.affected_case_entry_display_ids.length > 128) throw new MarkdownError("frame.invalid_representation", `${pathName}.affected_case_entry_display_ids`, "bounded_array_required", "Affected display IDs must be bounded.");
+    result.affected_case_entry_display_ids = value.affected_case_entry_display_ids.map((item, itemIndex) => requiredString(item, `${pathName}.affected_case_entry_display_ids[${itemIndex}]`, 4_096));
+  }
+  return result;
+}
+
+function validateDispositionSelection(boundaries, dispositions, frameStatus) {
+  const boundaryIds = new Set(); const boundaryOrders = new Set(); const memberships = new Map();
+  for (const boundary of boundaries) {
+    if (boundaryIds.has(boundary.id)) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "duplicate_boundary_id", "Boundary IDs must be unique.");
+    if (boundaryOrders.has(boundary.display_order)) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "duplicate_display_order", "Boundary display orders must be unique.");
+    boundaryIds.add(boundary.id); boundaryOrders.add(boundary.display_order);
+    for (const dispositionId of boundary.disposition_ids) {
+      if (memberships.has(dispositionId)) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "duplicate_disposition_membership", "Each disposition belongs to exactly one boundary.");
+      memberships.set(dispositionId, boundary.id);
+    }
+  }
+  const dispositionIds = new Set();
+  for (const disposition of dispositions) {
+    if (dispositionIds.has(disposition.id)) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "duplicate_case_disposition_id", "Disposition IDs must be unique.");
+    dispositionIds.add(disposition.id);
+    if (!boundaryIds.has(disposition.boundary_id) || memberships.get(disposition.id) !== disposition.boundary_id) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "disposition_membership_incomplete", "Boundary inventories and Case dispositions must be complete and identical.");
+  }
+  if (memberships.size !== dispositions.length || [...memberships.keys()].some((id) => !dispositionIds.has(id))) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "disposition_membership_incomplete", "Boundary inventories and Case dispositions must be complete and identical.");
+  for (const boundary of boundaries) {
+    const members = dispositions.filter((item) => item.boundary_id === boundary.id);
+    if (boundary.closure === "closed" && members.some((item) => item.classification_state === "pending_classification" || item.realization_state === "awaiting_case")) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "closed_boundary_unsettled", "Closed boundaries cannot retain unsettled dispositions.");
+  }
+  if (frameStatus === "completed" && dispositions.some((item) => item.classification_state === "pending_classification" || item.realization_state === "awaiting_case")) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "completed_frame_unsettled_disposition", "Completed Frames cannot retain unsettled dispositions.");
+}
+
+function normalizeFrame(value, { requireDispositions = false } = {}) {
   if (!object(value)) throw new MarkdownError("frame.invalid_representation", "frame", "object_required", "frame must be an object.");
   exactKeys(value, new Set([
     "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title", "outcome",
     "included_scope", "excluded_scope", "limitations", "completion_condition", "discovery",
+    "disposition_boundaries", "case_dispositions",
   ]), "frame");
   const home = requiredId(value.home_namespace_id, "frame.home_namespace_id", "namespace");
   if (!Array.isArray(value.authority_scope_namespace_ids) || value.authority_scope_namespace_ids.length !== 1 || value.authority_scope_namespace_ids[0] !== home) {
     throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "cross_namespace_scope_unsupported", "Only the home namespace is supported.");
   }
-  if (value.status !== "active" || !Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > 128) {
-    throw new MarkdownError("frame.invalid_representation", "frame", "active_complete_frame_required", "An active Frame with complete Discovery is required.");
+  if (!FRAME_STATUSES.has(value.status) || !Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > 128) {
+    throw new MarkdownError("frame.invalid_representation", "frame", "complete_frame_required", "A supported Frame with complete Discovery is required.");
   }
   const discovery = value.discovery.map((item, index) => {
     if (!object(item)) throw new MarkdownError("frame.invalid_representation", `frame.discovery[${index}]`, "object_required", "A Discovery object is required.");
@@ -627,24 +791,22 @@ function normalizeFrame(value) {
     if (item.lifecycle !== "active" || !ACTIVE_CATEGORIES.has(item.category) || !HUMAN_AUTHORITY.has(item.human_authority)
       || !Array.isArray(item.dependencies) || item.dependencies.length !== 0 || !Number.isInteger(item.display_order)
       || item.display_order < 0 || item.display_order > 1_000_000) {
-      throw new MarkdownError("frame.invalid_representation", `frame.discovery[${index}]`, "active_discovery_shape_required", "Only active dependency-free L-01 Discovery is supported.");
+      throw new MarkdownError("frame.invalid_representation", `frame.discovery[${index}]`, "active_discovery_shape_required", "Only active dependency-free L-05 Discovery is supported.");
     }
     const normalized = {
-      id: requiredId(item.id, `frame.discovery[${index}].id`, "discovery"),
-      display_order: item.display_order,
-      lifecycle: item.lifecycle,
-      category: item.category,
-      title: requiredString(item.title, `frame.discovery[${index}].title`, 512),
-      body: requiredString(item.body, `frame.discovery[${index}].body`),
-      human_authority: item.human_authority,
-      dependencies: [],
+      id: requiredId(item.id, `frame.discovery[${index}].id`, "discovery"), display_order: item.display_order,
+      lifecycle: item.lifecycle, category: item.category, title: requiredString(item.title, `frame.discovery[${index}].title`, 512),
+      body: requiredString(item.body, `frame.discovery[${index}].body`), human_authority: item.human_authority, dependencies: [],
     };
     if (item.display_label != null) normalized.display_label = requiredString(item.display_label, `frame.discovery[${index}].display_label`, 64);
     return normalized;
   });
-  if (new Set(discovery.map((item) => item.id)).size !== discovery.length || new Set(discovery.map((item) => item.display_order)).size !== discovery.length) {
-    throw new MarkdownError("frame.invalid_representation", "frame.discovery", "duplicate_discovery_identity", "Discovery IDs and orders must be unique.");
-  }
+  if (new Set(discovery.map((item) => item.id)).size !== discovery.length || new Set(discovery.map((item) => item.display_order)).size !== discovery.length) throw new MarkdownError("frame.invalid_representation", "frame.discovery", "duplicate_discovery_identity", "Discovery IDs and orders must be unique.");
+  if ((value.disposition_boundaries == null) !== (value.case_dispositions == null) || (requireDispositions && value.disposition_boundaries == null)) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "complete_disposition_sets_required", "Complete boundary and Case disposition sets are required.");
+  const boundaries = value.disposition_boundaries?.map(normalizeDispositionBoundary);
+  const dispositions = value.case_dispositions?.map(normalizeCaseDisposition);
+  if ((boundaries?.length ?? 0) > 64 || (dispositions?.length ?? 0) > 128) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "bounded_array_required", "Disposition selections exceed their bounds.");
+  if (boundaries != null) validateDispositionSelection(boundaries, dispositions, value.status);
   const record = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: home, authority_scope_namespace_ids: [home], status: value.status, discovery };
   for (const key of ["title", "outcome", "limitations", "completion_condition"]) if (value[key] != null) record[key] = requiredString(value[key], `frame.${key}`, key === "title" ? 512 : 4_096);
   for (const key of ["included_scope", "excluded_scope"]) {
@@ -653,6 +815,7 @@ function normalizeFrame(value) {
       record[key] = value[key].map((entry, index) => requiredString(entry, `frame.${key}[${index}]`, 4_096));
     }
   }
+  if (boundaries != null) { record.disposition_boundaries = boundaries; record.case_dispositions = dispositions; }
   return record;
 }
 
@@ -875,6 +1038,345 @@ async function commitFileAuthorityCase(request) {
   }
 }
 
+function frameOwnerRelativePath(frameId) {
+  return `frames/${frameId.slice(frameId.indexOf(":") + 1)}`;
+}
+
+async function readOwnedRegular(directory, filename, label) {
+  const candidate = path.join(directory, filename);
+  const entry = await lstat(candidate).catch(() => null);
+  if (!entry) return null;
+  if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_FILE_BYTES) throw new MarkdownError("markdown.path_invalid", label, "bounded_regular_generation_file_required", "A selected Frame generation file must be a bounded real file.");
+  let handle;
+  try {
+    handle = await open(candidate, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.dev !== entry.dev || opened.ino !== entry.ino || opened.size > MAX_FILE_BYTES) throw new MarkdownError("markdown.path_invalid", label, "stable_regular_generation_file_required", "The selected Frame generation file changed identity while opening.");
+    return await handle.readFile("utf8");
+  } finally {
+    await handle?.close();
+  }
+}
+
+async function loadFrameOwner(authority, frameId, { createParents = false } = {}) {
+  const relative = frameOwnerRelativePath(frameId);
+  if (createParents) await secureWriteParent(authority.root, `${relative}/frame.md`, relative);
+  const owner = path.join(authority.root, relative);
+  const entry = await lstat(owner).catch(() => null);
+  if (!entry) throw new MarkdownError("frame.not_found_or_not_visible", relative, "frame_directory_missing", "The Frame is unknown or not visible in the selected workspace.");
+  if (entry.isSymbolicLink() || !entry.isDirectory() || await realpath(owner) !== owner) throw new MarkdownError("markdown.path_invalid", relative, "real_frame_directory_required", "The Frame owner directory must be an unchanged real directory.");
+  assertWithinRoot(authority.root, owner, relative);
+  return { ...authority, relative, owner };
+}
+
+function frameAggregateDigest({ frameId, selectedDiscoveryFilename, documents, discoveryItems = [], dispositionBoundaries = [], caseDispositions = [] }) {
+  return sha256(canonicalJson({
+    schema: "casebook-file-frame-aggregate@1",
+    frame_id: frameId,
+    selected_discovery_filename: selectedDiscoveryFilename,
+    documents,
+    discovery_items: discoveryItems,
+    disposition_boundaries: dispositionBoundaries,
+    case_dispositions: caseDispositions,
+  }));
+}
+
+function legacyDiscoveryCandidates(bytes, label) {
+  const categorySections = sections(bytes, label, Object.keys(CATEGORY), { ordered: Object.keys(CATEGORY) });
+  const items = [];
+  for (const [categoryName, block] of categorySections) {
+    const matches = [...block.matchAll(/^### (AT-\d{3}): ([^\n]+)\n/gm)];
+    if (block.slice(0, matches[0]?.index ?? block.length).trim()) throw new MarkdownError("markdown.parse_invalid", label, "discovery_body_outside_item", "Legacy Discovery prose must remain inside exact items.");
+    for (let index = 0; index < matches.length; index += 1) {
+      const match = matches[index];
+      const itemBody = block.slice(match.index + match[0].length, matches[index + 1]?.index ?? block.length).trim();
+      const shape = itemBody.match(/^- Human authority: (required|not_required|unclear)\n\n```json\n([^\n]+)\n```$/);
+      if (!shape) throw new MarkdownError("markdown.parse_invalid", label, "discovery_shape_invalid", "Legacy Discovery requires the exact rendered item shape.");
+      let title; let body;
+      try { title = JSON.parse(match[2]); body = JSON.parse(shape[2]); } catch { throw new MarkdownError("markdown.parse_invalid", label, "discovery_json_invalid", "Legacy Discovery title/body JSON is invalid."); }
+      items.push({ source_index: items.length, display_label: match[1], category: CATEGORY[categoryName], title: requiredString(title, `${label}.${match[1]}.title`, 512), body: requiredString(body, `${label}.${match[1]}.body`), human_authority: shape[1] });
+    }
+  }
+  if (!items.length) throw new MarkdownError("markdown.parse_invalid", label, "discovery_items_required", "At least one legacy Discovery candidate is required.");
+  return items;
+}
+
+function legacyFrameCandidate(bytes, label) {
+  const { fields, body } = parseFrontmatter(bytes, label);
+  exactKeys(fields, new Set(["type", "schema_version", "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title"]), "frontmatter");
+  if (fields.type !== "frame" || fields.schema_version !== 1) throw new MarkdownError("markdown.parse_invalid", label, "frame_schema_incompatible", "The legacy Frame schema is incompatible.");
+  const headings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Discovery", "Case Dispositions"];
+  const map = sections(body, label, headings, { required: ["Discovery"] });
+  if (map.get("Discovery") !== "See the manifest-selected Discovery file.") throw new MarkdownError("markdown.parse_invalid", `${label}.Discovery`, "discovery_reference_invalid", "The Frame must retain the exact selected Discovery reference.");
+  const record = {
+    id: requiredId(fields.id, `${label}.id`, "frame"),
+    home_namespace_id: requiredId(fields.home_namespace_id, `${label}.home_namespace_id`, "namespace"),
+    authority_scope_namespace_ids: fields.authority_scope_namespace_ids,
+    status: fields.status,
+  };
+  if (!FRAME_STATUSES.has(record.status)) throw new MarkdownError("markdown.parse_invalid", `${label}.status`, "frame_status_invalid", "The legacy Frame status is invalid.");
+  if (!Array.isArray(record.authority_scope_namespace_ids) || record.authority_scope_namespace_ids.length !== 1 || record.authority_scope_namespace_ids[0] !== record.home_namespace_id) throw new MarkdownError("markdown.parse_invalid", `${label}.authority_scope_namespace_ids`, "cross_namespace_scope_unsupported", "Only the home namespace is supported.");
+  if (fields.title != null) record.title = requiredString(fields.title, `${label}.title`, 512);
+  for (const [key, heading] of [["outcome", "Outcome"], ["limitations", "Limitations"], ["completion_condition", "Completion Condition"]]) {
+    const value = optionalSection(map, heading); if (value != null) record[key] = requiredString(value, `${label}.${key}`, 4_096);
+  }
+  for (const [key, heading] of [["included_scope", "Included Scope"], ["excluded_scope", "Excluded Scope"]]) {
+    const value = optionalSection(map, heading);
+    if (value != null) {
+      if (!Array.isArray(value) || value.length > 64) throw new MarkdownError("markdown.parse_invalid", `${label}.${key}`, "bounded_string_array_required", "A bounded string array is required.");
+      record[key] = value.map((item, index) => requiredString(item, `${label}.${key}[${index}]`, 4_096));
+    }
+  }
+  return { record, ...parseDispositionSection(map, label) };
+}
+
+async function loadLegacyFrame(ownerState, frameId) {
+  const frameBytes = await readOwnedRegular(ownerState.owner, "frame.md", `${ownerState.relative}/frame.md`);
+  if (frameBytes == null) throw new MarkdownError("frame.not_found_or_not_visible", `${ownerState.relative}/frame.md`, "frame_document_missing", "The legacy Frame document is missing.");
+  const discoveryNames = [];
+  for (const filename of ["discovery.md", "discovery-map.md"]) if (await readOwnedRegular(ownerState.owner, filename, `${ownerState.relative}/${filename}`) != null) discoveryNames.push(filename);
+  if (discoveryNames.length !== 1) throw new MarkdownError("markdown.identity_ambiguous", ownerState.relative, "single_legacy_discovery_authority_required", "Legacy Frame authority requires exactly one Discovery filename.");
+  const selectedDiscoveryFilename = discoveryNames[0];
+  const discoveryBytes = await readOwnedRegular(ownerState.owner, selectedDiscoveryFilename, `${ownerState.relative}/${selectedDiscoveryFilename}`);
+  const parsedFrame = legacyFrameCandidate(frameBytes, `${ownerState.relative}/frame.md`);
+  if (parsedFrame.record.id !== frameId) throw new MarkdownError("frame.identity_conflict", `${ownerState.relative}/frame.md`, "frame_identity_mismatch", "The legacy Frame identity differs from the requested stable identity.");
+  const discovery = legacyDiscoveryCandidates(discoveryBytes, `${ownerState.relative}/${selectedDiscoveryFilename}`);
+  const documents = { "frame.md": sha256(frameBytes), [selectedDiscoveryFilename]: sha256(discoveryBytes) };
+  const dispositionBoundaries = (parsedFrame.disposition_boundaries ?? []).map(({ id, version_id }) => ({ id, version_id }));
+  const caseDispositions = (parsedFrame.case_dispositions ?? []).map(({ id, version_id }) => ({ id, version_id }));
+  const aggregateDigest = frameAggregateDigest({ frameId, selectedDiscoveryFilename, documents, dispositionBoundaries, caseDispositions });
+  return { kind: "legacy", ...ownerState, frameBytes, discoveryBytes, selectedDiscoveryFilename, parsedFrame, discovery, documents, dispositionBoundaries, caseDispositions, aggregateDigest };
+}
+
+function validateGenerationManifest(manifest, frameId) {
+  if (!object(manifest)) throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "generation_manifest_object_required", "The selected Frame generation manifest must be an object.");
+  exactKeys(manifest, new Set([
+    "schema", "frame_id", "previous_aggregate_digest", "aggregate_digest", "generation_directory", "selected_discovery_filename",
+    "documents", "discovery_items", "disposition_boundaries", "case_dispositions",
+  ]), "frame_generation_manifest");
+  if (manifest.schema !== FRAME_GENERATION_SCHEMA || manifest.frame_id !== frameId || !DIGEST.test(manifest.aggregate_digest)
+    || !DIGEST.test(manifest.previous_aggregate_digest) || !["discovery.md", "discovery-map.md"].includes(manifest.selected_discovery_filename)
+    || manifest.generation_directory !== `${FRAME_GENERATION_PREFIX}${manifest.aggregate_digest}`) {
+    throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "generation_manifest_identity_invalid", "The selected Frame generation identity is invalid.");
+  }
+  if (!object(manifest.documents) || Object.keys(manifest.documents).length !== 2
+    || !DIGEST.test(manifest.documents["frame.md"])
+    || !DIGEST.test(manifest.documents[manifest.selected_discovery_filename])) throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "generation_documents_invalid", "The generation manifest must bind frame.md and exactly one selected Discovery file.");
+  for (const key of ["discovery_items", "disposition_boundaries", "case_dispositions"]) if (!Array.isArray(manifest[key])) throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "generation_identity_bindings_invalid", "Generation identity bindings must be arrays.");
+  const calculated = frameAggregateDigest({
+    frameId,
+    selectedDiscoveryFilename: manifest.selected_discovery_filename,
+    documents: manifest.documents,
+    discoveryItems: manifest.discovery_items,
+    dispositionBoundaries: manifest.disposition_boundaries,
+    caseDispositions: manifest.case_dispositions,
+  });
+  if (calculated !== manifest.aggregate_digest) throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "aggregate_digest_mismatch", "The selected Frame aggregate digest does not match its complete manifest bindings.");
+  return manifest;
+}
+
+async function validateGenerationDirectory(ownerState, manifest, directory = path.join(ownerState.owner, manifest.generation_directory)) {
+  const entry = await lstat(directory).catch(() => null);
+  if (!entry || entry.isSymbolicLink() || !entry.isDirectory() || await realpath(directory) !== directory) throw new MarkdownError("markdown.path_invalid", manifest.generation_directory, "real_generation_directory_required", "The selected generation directory must be real and unchanged.");
+  assertWithinRoot(ownerState.root, directory, manifest.generation_directory);
+  const expectedNames = ["frame.md", manifest.selected_discovery_filename, FRAME_GENERATION_MANIFEST].sort();
+  if (!isDeepStrictEqual((await readdir(directory)).sort(), expectedNames)) throw new MarkdownError("markdown.manifest_incompatible", manifest.generation_directory, "exact_generation_files_required", "A generation must contain frame.md, exactly one selected Discovery filename, and its owner manifest.");
+  const frameBytes = await readOwnedRegular(directory, "frame.md", `${manifest.generation_directory}/frame.md`);
+  const discoveryBytes = await readOwnedRegular(directory, manifest.selected_discovery_filename, `${manifest.generation_directory}/${manifest.selected_discovery_filename}`);
+  const internalManifestBytes = await readOwnedRegular(directory, FRAME_GENERATION_MANIFEST, `${manifest.generation_directory}/${FRAME_GENERATION_MANIFEST}`);
+  if (sha256(frameBytes) !== manifest.documents["frame.md"] || sha256(discoveryBytes) !== manifest.documents[manifest.selected_discovery_filename]
+    || internalManifestBytes !== canonicalJson(manifest)) throw new MarkdownError("markdown.manifest_incompatible", manifest.generation_directory, "generation_content_binding_mismatch", "The generation bytes do not match the selected aggregate manifest.");
+  const record = parseFrame(frameBytes, discoveryBytes, {
+    id: manifest.frame_id,
+    frame_path: `${manifest.generation_directory}/frame.md`,
+    discovery_path: `${manifest.generation_directory}/${manifest.selected_discovery_filename}`,
+    discovery_items: manifest.discovery_items,
+  });
+  const boundaryBindings = record.disposition_boundaries.map(({ id, version_id }) => ({ id, version_id }));
+  const dispositionBindings = record.case_dispositions.map(({ id, version_id }) => ({ id, version_id }));
+  if (!isDeepStrictEqual(boundaryBindings, manifest.disposition_boundaries) || !isDeepStrictEqual(dispositionBindings, manifest.case_dispositions)) throw new MarkdownError("markdown.manifest_incompatible", manifest.generation_directory, "disposition_identity_binding_mismatch", "Manifest disposition bindings must exactly match strict Frame content.");
+  return { record, frameBytes, discoveryBytes, directory };
+}
+
+async function loadSelectedFrame(ownerState) {
+  const selectorBytes = await readOwnedRegular(ownerState.owner, FRAME_SELECTOR, `${ownerState.relative}/${FRAME_SELECTOR}`);
+  if (selectorBytes == null) return loadLegacyFrame(ownerState, ownerState.frameId);
+  let manifest;
+  try { manifest = JSON.parse(selectorBytes); } catch { throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "generation_manifest_json_invalid", "The selected Frame generation manifest is invalid JSON."); }
+  if (selectorBytes !== canonicalJson(manifest)) throw new MarkdownError("markdown.manifest_incompatible", FRAME_SELECTOR, "canonical_generation_manifest_required", "The selected generation manifest must use canonical JSON bytes.");
+  validateGenerationManifest(manifest, ownerState.frameId);
+  const selected = await validateGenerationDirectory(ownerState, manifest);
+  return { kind: "generation", ...ownerState, selectorBytes, manifest, aggregateDigest: manifest.aggregate_digest, selectedDiscoveryFilename: manifest.selected_discovery_filename, ...selected };
+}
+
+async function loadFileAuthorityFrame(request, frameId) {
+  const authority = await loadAuthorityWorkspace(request);
+  if (authority.marker.profile !== FILE_AUTHORITY_PROFILE || authority.marker.interchange_manifest_sha256 != null) throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "file_authority_profile_required", "Coherent Frame generation requires the selected file-authoritative Markdown profile.");
+  const ownerState = await loadFrameOwner(authority, frameId);
+  ownerState.frameId = frameId;
+  return loadSelectedFrame(ownerState);
+}
+
+async function attributableGeneration(ownerState, name) {
+  if (!new RegExp(`^${FRAME_GENERATION_PREFIX}[0-9a-f]{64}$`).test(name)) return false;
+  const bytes = await readOwnedRegular(path.join(ownerState.owner, name), FRAME_GENERATION_MANIFEST, `${name}/${FRAME_GENERATION_MANIFEST}`).catch(() => null);
+  if (bytes == null) return false;
+  try {
+    const manifest = JSON.parse(bytes);
+    validateGenerationManifest(manifest, ownerState.frameId);
+    return manifest.generation_directory === name && bytes === canonicalJson(manifest);
+  } catch { return false; }
+}
+
+async function cleanupFrameDebris(ownerState, selectedGeneration) {
+  const removed = [];
+  const key = ownerState.frameId.slice(ownerState.frameId.indexOf(":") + 1);
+  for (const name of await readdir(ownerState.owner)) {
+    const stageOwned = name.startsWith(`${FRAME_STAGE_PREFIX}${key}-`) || name.startsWith(`${FRAME_SELECTOR_STAGE_PREFIX}${key}-`);
+    const generationOwned = name !== selectedGeneration && await attributableGeneration(ownerState, name);
+    if (!stageOwned && !generationOwned) continue;
+    await rm(path.join(ownerState.owner, name), { recursive: true, force: true });
+    removed.push(name);
+  }
+  if (removed.length) await syncDirectoryAsAvailable(ownerState.owner);
+  return removed.sort();
+}
+
+async function writeFlushedFile(filename, content) {
+  const handle = await open(filename, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | (fsConstants.O_NOFOLLOW ?? 0), 0o600);
+  try { await handle.writeFile(content, "utf8"); await handle.sync(); } finally { await handle.close(); }
+}
+
+async function currentFrameDigest(ownerState) {
+  return (await loadSelectedFrame(ownerState)).aggregateDigest;
+}
+
+async function commitFileAuthorityFrame(request) {
+  validateBase(request, ["operation_id", "expected_digest", "commit_basis", "provenance", "frame_id", "frame"]);
+  requiredString(request.operation_id, "operation_id", 256);
+  const frameId = requiredId(request.frame_id, "frame_id", "frame");
+  if (!DIGEST.test(request.expected_digest)) throw new MarkdownError("frame.invalid_representation", "expected_digest", "sha256_required", "A lowercase SHA-256 expected aggregate digest is required.");
+  requiredString(request.commit_basis, "commit_basis", 2_048); validateProvenance(request.provenance);
+  let record;
+  try { record = normalizeFrame(request.frame, { requireDispositions: true }); }
+  catch (error) {
+    if (!(error instanceof MarkdownError) || error.code === "frame.invalid_representation") throw error;
+    throw new MarkdownError("frame.invalid_representation", error.pathName, error.rule, "The complete Frame aggregate representation is structurally invalid.");
+  }
+  if (record.id !== frameId) throw new MarkdownError("frame.identity_conflict", "frame.id", "frame_identity_mismatch", "The complete Frame identity differs from frame_id.");
+  const authority = await loadAuthorityWorkspace(request);
+  if (authority.marker.profile !== FILE_AUTHORITY_PROFILE || authority.marker.interchange_manifest_sha256 != null) throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "file_authority_profile_required", "Coherent Frame generation requires the selected file-authoritative Markdown profile.");
+  const ownerState = await loadFrameOwner(authority, frameId); ownerState.frameId = frameId;
+  let current = await loadSelectedFrame(ownerState);
+  await cleanupFrameDebris(ownerState, current.kind === "generation" ? current.manifest.generation_directory : null);
+  current = await loadSelectedFrame(ownerState);
+  if (current.aggregateDigest !== request.expected_digest) return failure("frame.digest_conflict", "The selected Frame aggregate changed; replacement did not merge or overwrite it.", {
+    failureClass: "frame.mutation_conflict", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+    correctiveGuidance: "Read or prepare the current aggregate, reconcile explicitly, and retry with its exact digest.",
+    evidence: { expected_digest: request.expected_digest, current_digest: current.aggregateDigest },
+  });
+  const rendered = renderInterchange([{ kind: "frame", id: frameId, record }], { discoveryFilenameByFrame: { [frameId]: current.selectedDiscoveryFilename } });
+  const renderedRecord = rendered.manifest.records[0];
+  const documents = Object.fromEntries(rendered.files.map((file) => [path.basename(file.path), file.sha256]));
+  const dispositionBoundaries = record.disposition_boundaries.map(({ id, version_id }) => ({ id, version_id }));
+  const caseDispositions = record.case_dispositions.map(({ id, version_id }) => ({ id, version_id }));
+  const aggregateDigest = frameAggregateDigest({
+    frameId, selectedDiscoveryFilename: current.selectedDiscoveryFilename, documents,
+    discoveryItems: renderedRecord.discovery_items, dispositionBoundaries, caseDispositions,
+  });
+  const generationDirectory = `${FRAME_GENERATION_PREFIX}${aggregateDigest}`;
+  if (current.kind === "generation" && aggregateDigest === current.aggregateDigest) {
+    const removed = await cleanupFrameDebris(ownerState, current.manifest.generation_directory);
+    return success("frame.commit_revision", {
+      status: "settled", frame: record, previous_aggregate_digest: request.expected_digest, current_aggregate_digest: aggregateDigest,
+      persistence: {
+        authority_mode: "markdown", aggregate_digest: aggregateDigest, owner_manifest: `${ownerState.relative}/${FRAME_SELECTOR}`,
+        selected_generation: generationDirectory, selected_discovery_filename: current.selectedDiscoveryFilename,
+        selection: "already_selected_complete_generation", stage_flush: "not_required", directory_flush: "not_required",
+        interruption_debris: { owner: "casebook-persistence", stage_prefix: `${FRAME_STAGE_PREFIX}${frameId.slice(frameId.indexOf(":") + 1)}-`, generation_prefix: FRAME_GENERATION_PREFIX, cleaned: removed },
+      },
+      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_revision_visibility_not_verified_in_file_mode"],
+      applied_view: authority.appliedView,
+    });
+  }
+  const manifest = {
+    schema: FRAME_GENERATION_SCHEMA, frame_id: frameId, previous_aggregate_digest: current.aggregateDigest,
+    aggregate_digest: aggregateDigest, generation_directory: generationDirectory,
+    selected_discovery_filename: current.selectedDiscoveryFilename, documents,
+    discovery_items: renderedRecord.discovery_items, disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions,
+  };
+  validateGenerationManifest(manifest, frameId);
+  const key = frameId.slice(frameId.indexOf(":") + 1); const nonce = `${process.pid}-${randomBytes(8).toString("hex")}`;
+  const stageName = `${FRAME_STAGE_PREFIX}${key}-${nonce}.tmp`; const stagePath = path.join(ownerState.owner, stageName);
+  const finalPath = path.join(ownerState.owner, generationDirectory);
+  const selectorStageName = `${FRAME_SELECTOR_STAGE_PREFIX}${key}-${nonce}.tmp`; const selectorStagePath = path.join(ownerState.owner, selectorStageName);
+  let published = false; let selected = false;
+  try {
+    await mkdir(stagePath, { mode: 0o700 });
+    for (const file of rendered.files) await writeFlushedFile(path.join(stagePath, path.basename(file.path)), file.content);
+    await writeFlushedFile(path.join(stagePath, FRAME_GENERATION_MANIFEST), canonicalJson(manifest));
+    await syncDirectoryAsAvailable(stagePath);
+    if (authority.configuration.source.kind === "synthetic-test" && process.env.CASEBOOK_MARKDOWN_TEST_FAULT === "corrupt_staged_frame") await writeFile(path.join(stagePath, "frame.md"), "invalid staged Frame\n");
+    const staged = await validateGenerationDirectory(ownerState, manifest, stagePath);
+    if (!isDeepStrictEqual(staged.record, record)) throw new MarkdownError("frame.invalid_representation", "frame", "staged_round_trip_mismatch", "The flushed Frame generation did not round-trip as the complete requested owner state.");
+    if (authority.configuration.source.kind === "synthetic-test" && process.env.CASEBOOK_MARKDOWN_TEST_FAULT === "stop_after_frame_stage_flush") process.kill(process.pid, "SIGSTOP");
+    await rename(stagePath, finalPath); published = true; await syncDirectoryAsAvailable(ownerState.owner);
+    if (authority.configuration.source.kind === "synthetic-test" && process.env.CASEBOOK_MARKDOWN_TEST_FAULT === "stop_after_frame_generation_publish") process.kill(process.pid, "SIGSTOP");
+    await writeFlushedFile(selectorStagePath, canonicalJson(manifest));
+    const selectorCandidate = JSON.parse(await readOwnedRegular(ownerState.owner, selectorStageName, selectorStageName));
+    validateGenerationManifest(selectorCandidate, frameId);
+    if ((await currentFrameDigest(ownerState)) !== request.expected_digest) return failure("frame.digest_conflict", "The selected Frame aggregate changed while replacement was staged; no merge or overwrite occurred.", {
+      failureClass: "frame.mutation_conflict", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      evidence: { expected_digest: request.expected_digest, current_digest: await currentFrameDigest(ownerState) },
+    });
+    await rename(selectorStagePath, path.join(ownerState.owner, FRAME_SELECTOR)); selected = true; await syncDirectoryAsAvailable(ownerState.owner);
+    const removed = await cleanupFrameDebris(ownerState, generationDirectory);
+    return success("frame.commit_revision", {
+      status: "settled", frame: record, previous_aggregate_digest: request.expected_digest, current_aggregate_digest: aggregateDigest,
+      persistence: {
+        authority_mode: "markdown", aggregate_digest: aggregateDigest, owner_manifest: `${ownerState.relative}/${FRAME_SELECTOR}`,
+        selected_generation: generationDirectory, selected_discovery_filename: current.selectedDiscoveryFilename,
+        selection: "same_directory_atomic_manifest_rename", stage_flush: "fsync", directory_flush: "fsync_as_available",
+        interruption_debris: { owner: "casebook-persistence", stage_prefix: `${FRAME_STAGE_PREFIX}${key}-`, generation_prefix: FRAME_GENERATION_PREFIX, cleaned: removed },
+      },
+      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_revision_visibility_not_verified_in_file_mode"],
+      applied_view: authority.appliedView,
+    });
+  } finally {
+    await rm(stagePath, { recursive: true, force: true });
+    await rm(selectorStagePath, { force: true });
+    if (published && !selected) await rm(finalPath, { recursive: true, force: true });
+  }
+}
+
+async function prepareFileAuthorityFrameReconciliation(request) {
+  validateBase(request, ["frame_id"]); const frameId = requiredId(request.frame_id, "frame_id", "frame");
+  const selected = await loadFileAuthorityFrame(request, frameId);
+  const generation = selected.kind === "generation";
+  const parsedFrame = generation ? selected.record : selected.parsedFrame.record;
+  const discovery = generation ? selected.record.discovery : selected.discovery;
+  const boundaries = generation ? selected.record.disposition_boundaries : (selected.parsedFrame.disposition_boundaries ?? []);
+  const dispositions = generation ? selected.record.case_dispositions : (selected.parsedFrame.case_dispositions ?? []);
+  const absent = !generation && selected.parsedFrame.disposition_state === "absent_in_legacy";
+  const boundaryCandidates = boundaries.map((item, index) => generation
+    ? { source_index: index, source_label: `DB-${String(index + 1).padStart(3, "0")}`, match: "exact", disposition_boundary_id: item.id, disposition_boundary_version_id: item.version_id }
+    : { source_index: index, source_label: `DB-${String(index + 1).padStart(3, "0")}`, match: "unmatched", candidate_disposition_boundary_ids: [] });
+  const dispositionCandidates = dispositions.map((item, index) => generation
+    ? { source_index: index, source_label: `CD-${String(index + 1).padStart(3, "0")}`, match: "exact", case_disposition_id: item.id, case_disposition_version_id: item.version_id }
+    : { source_index: index, source_label: `CD-${String(index + 1).padStart(3, "0")}`, match: "unmatched", candidate_case_disposition_ids: [] });
+  return success("frame.legacy.prepare_reconciliation", {
+    status: "prepared", frame_id: frameId, selected_discovery_filename: selected.selectedDiscoveryFilename,
+    aggregate_digest: selected.aggregateDigest, absent_in_legacy: absent,
+    legacy_disposition_state: absent ? "absent_in_legacy" : "present", requires_semantic_reconcile: true,
+    completion_inferred: false, no_case_inferred: false, violations: [],
+    parsed: { frame: parsedFrame, discovery, disposition_boundaries: boundaries, case_dispositions: dispositions },
+    structural_diff: { additions: generation ? [] : [...boundaryCandidates, ...dispositionCandidates], changes: [], removals: [] },
+    disposition_boundary_candidates: boundaryCandidates, case_disposition_candidates: dispositionCandidates,
+    mutation_performed: false, watch_started: false, rename_performed: false, writeback_performed: false,
+    applied_view: selected.appliedView,
+  });
+}
+
 async function createFrame(request) {
   validateBase(request, ["operation_id", "expected_revision", "commit_basis", "provenance", "frame"]);
   requiredString(request.operation_id, "operation_id", 256);
@@ -902,6 +1404,22 @@ async function readOwner(request, kind) {
         persistence: { authority_mode: "markdown", selected_file: workspace.relativePath, content_digest: workspace.digest },
         limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"],
         applied_view: workspace.appliedView,
+      });
+    }
+  }
+  if (kind === "frame") {
+    const authority = await loadAuthorityWorkspace(request);
+    if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
+      const workspace = await loadFileAuthorityFrame(request, id);
+      if (workspace.kind !== "generation") return failure("frame.requires_semantic_reconcile", "The legacy Frame has no manifest-selected complete generation.", {
+        failureClass: "frame.read_failure", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+        correctiveGuidance: "Prepare non-mutating legacy reconciliation and commit one explicit complete Frame generation.",
+        evidence: { aggregate_digest: workspace.aggregateDigest, selected_discovery_filename: workspace.selectedDiscoveryFilename, absent_in_legacy: workspace.parsedFrame.disposition_state === "absent_in_legacy", requires_semantic_reconcile: true },
+      });
+      return success("frame.read", {
+        status: "found", frame: workspace.record,
+        persistence: { authority_mode: "markdown", aggregate_digest: workspace.aggregateDigest, selected_generation: workspace.manifest.generation_directory, selected_discovery_filename: workspace.selectedDiscoveryFilename },
+        limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"], applied_view: workspace.appliedView,
       });
     }
   }
@@ -1009,7 +1527,9 @@ export async function invokeMarkdownOperation(request) {
     if (request.operation === "case.commit_revision") return await commitFileAuthorityCase(request);
     if (request.operation === "case.read") return await readOwner(request, "case");
     if (request.operation === "frame.create") return await createFrame(request);
+    if (request.operation === "frame.commit_revision") return await commitFileAuthorityFrame(request);
     if (request.operation === "frame.read") return await readOwner(request, "frame");
+    if (request.operation === "frame.legacy.prepare_reconciliation") return await prepareFileAuthorityFrameReconciliation(request);
     if (request.operation === "frame.list") return await frameList(request);
     if (request.operation === "common.resolve") return await commonResolve(request);
     if (request.operation === "common.list") return await commonList(request);
