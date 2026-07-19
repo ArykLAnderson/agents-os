@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.1.0-l01-w01"
+    "version": "0.1.0-l01-w02"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -17,11 +17,11 @@
     "compatible_versions": [
       1
     ],
-    "store_initialization": "not_yet_implemented"
+    "store_initialization": "explicit_human_authorized"
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "342cede0f828b77867de9be2f8779621cb75ac5940ece045af422c437d181ada"
+    "sha256": "b62c62b25752c80e2cce72a6d98d6d3572eed0cea42346763ce775316338f76c"
   },
   "entrypoints": [
     {
@@ -31,32 +31,37 @@
     }
   ],
   "supported_operations": [
-    "diagnose"
+    "diagnose",
+    "initialize_store",
+    "get_store_operation_receipt"
   ],
   "unsupported_until_later_work_items": [
-    "initialize_store",
     "case.*",
     "frame.*",
-    "operations.*"
+    "commit_owner_revision",
+    "migration",
+    "export",
+    "snapshot",
+    "restore"
   ],
   "assets": [
     {
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "6eebf8f9625e64885a3aef79540e1f64659c671688cd79d8e20522833e01192f"
+      "sha256": "2c1318d2e23cc6c874a18506ed8259b7b2782d30dbe1c84b84c985acfc459ac4"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "35d46c0465741065728baf7f1d099a81b9e45434fef2d25b6edce71de7537770"
+      "sha256": "ac99559d072ffc4f294905b804b05ba9c530292a08188987173d543f4878e7a9"
     },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "46276ad23753c841957ca8fb466ebf8851452e1fbe5f537fd74878192a94d3eb"
+      "sha256": "fef837a2ed42a88a3384f79160fc1c2a7fc677421e9de901c2d560012140a7e9"
     },
     {
       "id": "shared-configuration",
@@ -80,19 +85,19 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "fda9e28d7a9d7673190b1e76b9132cd835f9fb98e69125c5c77c3e26ca899978"
+      "sha256": "738629a010cb2cb5c46b6f31a6ed4ff28d19493908058289f1476f1b1be3a1c2"
     },
     {
       "id": "sqlite-diagnostics",
       "path": "variants/sqlite/lib/substrate/diagnostics.mjs",
       "kind": "module",
-      "sha256": "e902edeaa9de346fc98edd71e1816c916bb33ce1d4e2a5ed9c8bdcae35741022"
+      "sha256": "3a2541bdbaa3a777d2f5624c4b423f97268730aae1298513ee3070df09b5e093"
     },
     {
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "4ba14de225fcf38ce22cd6214d79d0783c6c25a781513a8b393e311aebafc92b"
+      "sha256": "31ffab6eb739b5632766dd3aac69f23c2275b6bcfbf86a3b6acfb60ce6e167c0"
     },
     {
       "id": "case-facade",
@@ -110,25 +115,25 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "e2bbc4db3f734e2c5bd08a0143d5129a058dee93074fe8afe3b68dbfd27a2790"
+      "sha256": "31313a33fc5dcd9c918e90f796c94be433cbd2974be689b81b51346d3c47edf0"
     },
     {
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "ba0e1b9dd26c7647cfe9938a3739a7f5d07abca2e6452d37a36f3a468ddd7ca7"
+      "sha256": "b2a384bdc9d9a6da111610dcc28e937a6751291b1a0d4b0980ef385ee403baf8"
     },
     {
       "id": "sqlite-migrations",
       "path": "variants/sqlite/migrations/manifest.json",
       "kind": "migration_manifest",
-      "sha256": "84d6f4e136c23a1c3b2c857fb66558c0eea290d3202eee027f62de4ba0c74f4a"
+      "sha256": "c9bd8e52c709b833f239b610df4d2359a0e4a8eee422c24261dc0e665dfa6711"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "7880761f95589aec027f80758611ddb835808ad3318cb7bebc259a8565cbb63c"
+      "sha256": "9872119ecf735b9ed8e65ae51f5b861dca93129a6e8cee369a9f74a4e7c37690"
     }
   ]
 }

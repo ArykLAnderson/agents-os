@@ -7,12 +7,17 @@
   "schema": {
     "id": "casebook-persistence-sqlite",
     "version": 1,
-    "store_initialization": "not_yet_implemented"
+    "store_initialization": "explicit_human_authorized"
   },
   "entrypoint": {
     "interpreter": "node",
     "path": "variants/sqlite/bin/casebook-persistence.mjs",
     "stdout": "versioned-json-only",
     "stderr": "diagnostics-only"
-  }
+  },
+  "supported_operations": [
+    "diagnose",
+    "initialize_store",
+    "get_store_operation_receipt"
+  ]
 }
