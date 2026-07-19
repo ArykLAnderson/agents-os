@@ -100,22 +100,31 @@ export function renderL01FrameMarkdown(record) {
   return markdown;
 }
 
+export function l01DiscoveryEntries(record) {
+  const categoryOrder = Object.keys(L01_CATEGORY_HEADING);
+  return record.discovery
+    .map((item, sourceIndex) => ({ item, sourceIndex }))
+    .sort((left, right) => {
+      const leftCategory = categoryOrder.indexOf(left.item.category);
+      const rightCategory = categoryOrder.indexOf(right.item.category);
+      return (leftCategory < 0 ? categoryOrder.length : leftCategory)
+        - (rightCategory < 0 ? categoryOrder.length : rightCategory)
+        || left.sourceIndex - right.sourceIndex;
+    })
+    .map((entry, displayIndex) => ({ ...entry, display_label: l01DiscoveryLabel(displayIndex) }));
+}
+
 export function renderL01DiscoveryMarkdown(record) {
-  const groups = new Map();
-  record.discovery.forEach((item, index) => {
-    const values = groups.get(item.category) ?? [];
-    values.push({ item, index });
-    groups.set(item.category, values);
-  });
-  let markdown = "";
-  for (const category of Object.keys(L01_CATEGORY_HEADING)) {
-    const values = groups.get(category);
-    if (!values?.length) continue;
-    markdown += `## ${L01_CATEGORY_HEADING[category]}\n\n`;
-    for (const { item, index } of values) {
-      markdown += `### ${l01DiscoveryLabel(index)}: ${JSON.stringify(item.title)}\n`;
-      markdown += `- Human authority: ${item.human_authority}\n\n\`\`\`json\n${JSON.stringify(item.body)}\n\`\`\`\n\n`;
+  const entries = l01DiscoveryEntries(record);
+  let markdown = "", priorCategory = null;
+  for (const { item, display_label: displayLabel } of entries) {
+    if (!Object.hasOwn(L01_CATEGORY_HEADING, item.category)) continue;
+    if (item.category !== priorCategory) {
+      markdown += `## ${L01_CATEGORY_HEADING[item.category]}\n\n`;
+      priorCategory = item.category;
     }
+    markdown += `### ${displayLabel}: ${JSON.stringify(item.title)}\n`;
+    markdown += `- Human authority: ${item.human_authority}\n\n\`\`\`json\n${JSON.stringify(item.body)}\n\`\`\`\n\n`;
   }
   return markdown;
 }
@@ -904,7 +913,7 @@ async function readDiscovery(request) {
   const item = frameRead.result.frame.discovery.find((candidate) => candidate.id === request.discovery_item_id
     && (request.version_id == null || candidate.version_id === request.version_id));
   if (!item) return failure("frame.discovery_not_found_or_not_visible", "The Discovery item or selected version is unknown or not visible.", { failureClass: "frame.read_failure", evidence: {} });
-  return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, ...(frameRead.result.frame.hidden_authority_scope_count == null ? {} : { hidden_authority_scope_count: frameRead.result.frame.hidden_authority_scope_count }), applied_view: frameRead.result.applied_view });
+  return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, ...(frameRead.result.frame.hidden_authority_scope_count == null ? {} : { hidden_authority_scope_count: frameRead.result.frame.hidden_authority_scope_count }), ...(frameRead.result.frame.hidden_reference_count == null ? {} : { hidden_reference_count: frameRead.result.frame.hidden_reference_count }), applied_view: frameRead.result.applied_view });
 }
 
 async function frameHistory(request) {
@@ -941,8 +950,9 @@ async function immutableSnapshot(descriptor, path, allowedFields) {
   let bytes;
   try {
     const encoded = requiredString(descriptor.bytes_base64, `${path}.bytes_base64`, 2 * 1024 * 1024);
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) throw new Error("invalid base64");
     bytes = Buffer.from(encoded, "base64");
-    if (bytes.toString("base64").replace(/=+$/, "") !== encoded.replace(/=+$/, "")) throw new Error("non-canonical base64");
+    if (bytes.toString("base64") !== encoded) throw new Error("non-canonical base64");
   } catch { throw new FrameRequestError(`${path}.bytes_base64`, "base64_invalid", "Snapshot bytes must use canonical base64."); }
   if (`sha256:${createHash("sha256").update(bytes).digest("hex")}` !== digest) throw new FrameRequestError(`${path}.digest`, "digest_mismatch", "Snapshot bytes do not match the claimed digest.");
   return { ...(descriptor.filename == null ? {} : { filename: descriptor.filename }), ...(descriptor.locator == null ? {} : { locator: requiredString(descriptor.locator, `${path}.locator`, 4096) }), digest, bytes };
@@ -1027,7 +1037,7 @@ function structuralDiff(baseFrame, parsedFrame, parsedDiscovery, matches) {
     matched.add(match.discovery_item_id);
     const before = baseFrame.discovery.find((item) => item.id === match.discovery_item_id);
     const after = parsedDiscovery[match.source_index];
-    for (const key of ["display_label", "title", "body", "human_authority", "category"])
+    for (const key of ["title", "body", "human_authority", "category"])
       if (JSON.stringify(before?.[key] ?? null) !== JSON.stringify(after?.[key] ?? null)) changed.push({ path: `discovery.${match.discovery_item_id}.${key}`, before: before?.[key] ?? null, after: after?.[key] ?? null });
   }
   return { additions: matches.filter((item) => item.match === "unmatched"), changes: changed, removals: baseFrame.discovery.filter((item) => !matched.has(item.id)).map((item) => ({ discovery_item_id: item.id })) };
@@ -1073,7 +1083,7 @@ async function prepareLegacyReconciliation(request) {
     else { identities.set(item.display_label, item); boundIds.add(item.id); }
   }
   const known = new Map(base.result.frame.discovery.map((item) => [item.id, item]));
-  const expectedByLabel = new Map(base.result.frame.discovery.map((item, index) => [l01DiscoveryLabel(index), item]));
+  const expectedByLabel = new Map(l01DiscoveryEntries(base.result.frame).map(({ item, display_label: label }) => [label, item]));
   for (const [label, identity] of identities) {
     const selected = known.get(identity.id);
     const expected = expectedByLabel.get(label);
