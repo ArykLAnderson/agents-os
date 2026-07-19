@@ -323,6 +323,13 @@ async function getStoreOperationReceipt(request) {
       operation_fence: state.operation_fence,
     });
   }
+  // This public exceptional recovery surface is deliberately restricted to
+  // accepted exceptional operation kinds. Owner commit receipts are private
+  // mechanical material and must be recovered only through a future typed
+  // owner façade operation, not leaked through store-operation lookup.
+  if (receipt.operation_kind !== "initialize_store") {
+    return success("get_store_operation_receipt", { status: "not_visible" });
+  }
   return success("get_store_operation_receipt", {
     status: "settled",
     receipt,
