@@ -20,6 +20,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "initialize_store",
     "get_store_operation_receipt",
     "case.create",
+    "case.commit_revision",
     "case.read",
     "frame.create",
     "frame.read",
