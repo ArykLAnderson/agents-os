@@ -379,7 +379,7 @@ test("façade allocations replay stably while changed reuse, create conflicts, a
   }
 });
 
-test("exact L-01 typed request shapes, active-only lifecycle, and empty dependencies reject later selectors without mutation", async () => {
+test("typed request selectors outside the implemented query surface reject without mutation", async () => {
   const sqliteBinary = await selectCompatibleSqliteBinary();
   const root = await makeRoot("w04-exact-shapes");
   try {
@@ -397,59 +397,6 @@ test("exact L-01 typed request shapes, active-only lifecycle, and empty dependen
       assertInvalid(await invoke(sourceEntrypoint, root, request), "frame", `request.${selector}`);
     }
 
-    for (const [status, operationId] of [
-      ["completed", "operation:invalid-completed"],
-      ["abandoned", "operation:invalid-abandoned"],
-      ["superseded", "operation:invalid-superseded"],
-    ]) {
-      const request = frameCreate(storePath, sqliteBinary, initialized, {
-        frameId: ids.closedFrame,
-        discoveryId: ids.closedDiscovery,
-        operationId,
-        frameOverrides: { status },
-      });
-      assertInvalid(await invoke(sourceEntrypoint, root, request), "frame", "frame.status", "active_frame_only_l01");
-    }
-    for (const lifecycle of ["settled", "tombstoned"]) {
-      const request = frameCreate(storePath, sqliteBinary, initialized, {
-        operationId: `operation:invalid-${lifecycle}`,
-        discoveryOverrides: { lifecycle, category: lifecycle === "settled" ? "settled" : "frontier" },
-      });
-      assertInvalid(
-        await invoke(sourceEntrypoint, root, request),
-        "frame",
-        "frame.discovery[0].lifecycle",
-        "active_discovery_only_l01",
-      );
-    }
-
-    const referenced = frameCreate(storePath, sqliteBinary, initialized, {
-      operationId: "operation:invalid-reference",
-      discoveryOverrides: {
-        dependencies: [{
-          target_kind: "case",
-          target_id: ids.case,
-          observed_revision_id: "case-revision:97617dba-ff62-4911-99c6-8a02196dbd4b",
-          predicate: "uses-evidence-from",
-        }],
-      },
-    });
-    assertInvalid(
-      await invoke(sourceEntrypoint, root, referenced),
-      "frame",
-      "frame.discovery[0].dependencies",
-      "dependencies_unsupported_until_l03",
-    );
-
-    const laterDiscoveryField = frameCreate(storePath, sqliteBinary, initialized, {
-      operationId: "operation:invalid-disposition",
-      discoveryOverrides: { disposition: "not in L-01" },
-    });
-    assertInvalid(
-      await invoke(sourceEntrypoint, root, laterDiscoveryField),
-      "frame",
-      "frame.discovery[0].disposition",
-    );
     assert.deepEqual(await ownerFacts(sqliteBinary, storePath), []);
 
     const readCases = [
@@ -553,9 +500,164 @@ test("invalid owner shapes fail before mutation and typed façades retain the de
     assert.match(caseSource, /case-profile@1/);
     assert.match(caseSource, /case\.revision\.committed/);
     assert.match(frameSource, /frame-discovery-item@1/);
-    assert.match(frameSource, /active_frame_only_l01/);
-    assert.match(frameSource, /dependencies_unsupported_until_l03/);
-    assert.doesNotMatch(substrateSource, /case-profile@1|frame-discovery-item@1|active_frame_only_l01|dependencies_unsupported_until_l03/);
+    assert.match(frameSource, /frame-canonical-selection@2/);
+    assert.match(frameSource, /reopen_reference_required/);
+    assert.doesNotMatch(substrateSource, /case-profile@1|frame-discovery-item@1|reopen_reference_required/);
+  } finally {
+    await removeAndVerify(root);
+  }
+});
+
+test("complete Frame revisions settle, replay, reopen, and reject omissions before mutation", async () => {
+  const sqliteBinary = await selectCompatibleSqliteBinary();
+  const root = await makeRoot("l03-w01-frame-revisions");
+  try {
+    const storePath = path.join(root, "store.sqlite3");
+    const initialized = await initialize(sourceEntrypoint, root, storePath, sqliteBinary, "operation:l03-w01-init");
+    const invalidCreateReopen = frameCreate(storePath, sqliteBinary, initialized, {
+      operationId: "operation:l03-w01-create-reopen",
+      discoveryOverrides: { reopened_from_version: "discovery-item-version:97617dba-ff62-4911-99c6-8a02196dbd4b", reopening_basis: "impossible on create" },
+    });
+    assertInvalid(await invoke(sourceEntrypoint, root, invalidCreateReopen), "frame", "frame.discovery", "reopen_requires_prior_settlement");
+    assert.deepEqual(await ownerFacts(sqliteBinary, storePath), []);
+    const createdRequest = frameCreate(storePath, sqliteBinary, initialized, {
+      operationId: "operation:l03-w01-create",
+      frameOverrides: {
+        title: "Complete Frame", outcome: "Persist cohesive revisions", included_scope: ["Frame owner"], excluded_scope: ["queries"],
+        case_links: [{ target_kind: "case", target_id: ids.case, predicate: "informed-by", observed_revision_id: "case-revision:97617dba-ff62-4911-99c6-8a02196dbd4b" }],
+        authorization_provenance: { acting_role: "hand", authority_basis: "accepted Deliver authorization" },
+      },
+      discoveryOverrides: { dependencies: [{ target_kind: "case", target_id: ids.case, predicate: "depends-on" }] },
+    });
+    const created = await invoke(sourceEntrypoint, root, createdRequest);
+    assert.equal(created.exitCode, 0, created.stderr);
+    assert.equal(created.json.result.receipt.observed_revision, null);
+    assert.doesNotMatch(JSON.stringify(created.json.result.receipt), /owner-revision:/);
+
+    const settledRequest = frameCreate(storePath, sqliteBinary, initialized, { operationId: "operation:l03-w01-settle" });
+    settledRequest.frame = structuredClone(created.json.result.frame);
+    Object.assign(settledRequest.frame.discovery[0], { lifecycle: "settled", category: "settled", disposition: "accepted", resolution: "represented durably" });
+    settledRequest.operation = "frame.commit_revision";
+    settledRequest.frame_id = ids.activeFrame;
+    settledRequest.expected_revision = 1;
+    delete settledRequest.frame.discovery[0].version_id;
+    const settled = await invoke(sourceEntrypoint, root, settledRequest);
+    assert.equal(settled.exitCode, 0, settled.stderr);
+    assert.equal(settled.json.result.frame.discovery[0].lifecycle, "settled");
+    assert.deepEqual(settled.json.result.receipt.observed_revision, created.json.result.revision && { id: created.json.result.revision.id, number: 1 });
+    assert.equal(settled.json.result.revision.version_ids.frame, created.json.result.revision.version_ids.frame);
+    assert.notEqual(settled.json.result.frame.discovery[0].version_id, created.json.result.frame.discovery[0].version_id);
+    assert.doesNotMatch(JSON.stringify(settled.json.result.receipt), /owner-revision:/);
+    const revisionOneReplay = await invoke(sourceEntrypoint, root, createdRequest);
+    assert.equal(revisionOneReplay.exitCode, 0, revisionOneReplay.stderr);
+    assert.equal(revisionOneReplay.json.result.idempotent_replay, true);
+    assert.deepEqual(revisionOneReplay.json.result.receipt, created.json.result.receipt);
+    const replay = await invoke(sourceEntrypoint, root, settledRequest);
+    assert.equal(replay.exitCode, 0, replay.stderr);
+    assert.equal(replay.json.result.idempotent_replay, true);
+    assert.deepEqual(replay.json.result.revision, settled.json.result.revision);
+
+    const unchangedRequest = structuredClone(settledRequest);
+    unchangedRequest.operation_id = "operation:l03-w01-unchanged";
+    unchangedRequest.expected_revision = 2;
+    const unchanged = await invoke(sourceEntrypoint, root, unchangedRequest);
+    assert.equal(unchanged.exitCode, 0, unchanged.stderr);
+    assert.deepEqual(unchanged.json.result.revision.version_ids, settled.json.result.revision.version_ids);
+    const replayAfterLaterRevision = await invoke(sourceEntrypoint, root, settledRequest);
+    assert.equal(replayAfterLaterRevision.exitCode, 0, replayAfterLaterRevision.stderr);
+    assert.equal(replayAfterLaterRevision.json.result.idempotent_replay, true);
+    assert.deepEqual(replayAfterLaterRevision.json.result.receipt, settled.json.result.receipt);
+
+    const reopenRequest = structuredClone(settledRequest);
+    reopenRequest.operation_id = "operation:l03-w01-reopen";
+    reopenRequest.expected_revision = 3;
+    reopenRequest.frame.discovery[0] = {
+      ...reopenRequest.frame.discovery[0], lifecycle: "active", category: "frontier",
+      reopened_from_version: settled.json.result.frame.discovery[0].version_id, reopening_basis: "new evidence",
+    };
+    delete reopenRequest.frame.discovery[0].disposition;
+    delete reopenRequest.frame.discovery[0].resolution;
+    const reopened = await invoke(sourceEntrypoint, root, reopenRequest);
+    assert.equal(reopened.exitCode, 0, reopened.stderr);
+    assert.equal(reopened.json.result.revision.number, 4);
+
+    const before = await ownerFacts(sqliteBinary, storePath);
+    const omitted = structuredClone(reopenRequest);
+    omitted.operation_id = "operation:l03-w01-omit";
+    omitted.expected_revision = 4;
+    omitted.frame.discovery = [];
+    assertInvalid(await invoke(sourceEntrypoint, root, omitted), "frame", "frame.discovery", "complete_discovery_required");
+    const impossibleSettlement = structuredClone(reopenRequest);
+    impossibleSettlement.operation_id = "operation:l03-w01-invalid-settlement";
+    impossibleSettlement.expected_revision = 4;
+    Object.assign(impossibleSettlement.frame.discovery[0], { lifecycle: "settled", category: "settled" });
+    delete impossibleSettlement.frame.discovery[0].reopened_from_version;
+    delete impossibleSettlement.frame.discovery[0].reopening_basis;
+    delete impossibleSettlement.frame.discovery[0].disposition;
+    delete impossibleSettlement.frame.discovery[0].resolution;
+    assertInvalid(await invoke(sourceEntrypoint, root, impossibleSettlement), "frame", "frame.discovery[0].disposition", "disposition_or_resolution_required");
+    const invalidReference = structuredClone(reopenRequest);
+    invalidReference.operation_id = "operation:l03-w01-invalid-reference";
+    invalidReference.expected_revision = 4;
+    invalidReference.frame.case_links = [{ target_kind: "case", target_id: "case:not-a-uuid", predicate: "informed-by" }];
+    assertInvalid(await invoke(sourceEntrypoint, root, invalidReference), "frame", "frame.case_links[0].target_id", "uuid_identity_required");
+    const invalidArtifactRevision = structuredClone(reopenRequest);
+    invalidArtifactRevision.operation_id = "operation:l03-w01-invalid-artifact-revision";
+    invalidArtifactRevision.expected_revision = 4;
+    invalidArtifactRevision.frame.artifact_links = [{ artifact_id: "artifact:97617dba-ff62-4911-99c6-8a02196dbd4b", kind: "report", title: "Proof", locator: { uri: "file:///proof", audience: "private" }, observed_revision_id: "owner-revision:97617dba-ff62-4911-99c6-8a02196dbd4b" }];
+    assertInvalid(await invoke(sourceEntrypoint, root, invalidArtifactRevision), "frame", "frame.artifact_links[0].observed_revision_id", "revision_reference_invalid");
+    for (const [index, field] of ["observed_revision_id", "pinned_revision_id"].entries()) {
+      const mismatchedReferenceRevision = structuredClone(reopenRequest);
+      mismatchedReferenceRevision.operation_id = `operation:l03-w01-mismatched-reference-${index}`;
+      mismatchedReferenceRevision.expected_revision = 4;
+      mismatchedReferenceRevision.frame.discovery[0].dependencies = [{
+        target_kind: "case", target_id: ids.case, predicate: "depends-on",
+        [field]: "frame-revision:97617dba-ff62-4911-99c6-8a02196dbd4b",
+      }];
+      assertInvalid(await invoke(sourceEntrypoint, root, mismatchedReferenceRevision), "frame", `frame.discovery[0].dependencies[0].${field}`, "revision_reference_invalid");
+    }
+    const crossScope = structuredClone(reopenRequest);
+    crossScope.operation_id = "operation:l03-w01-cross-scope";
+    crossScope.expected_revision = 4;
+    crossScope.frame.authority_scope_namespace_ids.push("namespace:97617dba-ff62-4911-99c6-8a02196dbd4b");
+    assertInvalid(await invoke(sourceEntrypoint, root, crossScope), "frame", "frame.authority_scope_namespace_ids", "cross_namespace_scope_unsupported");
+    const activeReopen = structuredClone(reopenRequest);
+    activeReopen.operation_id = "operation:l03-w01-active-reopen";
+    activeReopen.expected_revision = 4;
+    activeReopen.frame.discovery[0].reopening_basis = "changed active basis";
+    assertInvalid(await invoke(sourceEntrypoint, root, activeReopen), "frame", "frame.discovery", "active_to_active_reopen_invalid");
+    assert.deepEqual(await ownerFacts(sqliteBinary, storePath), before);
+
+    const returnToSettled = structuredClone(settledRequest);
+    returnToSettled.operation_id = "operation:l03-w01-return-to-settled";
+    returnToSettled.expected_revision = 4;
+    const returned = await invoke(sourceEntrypoint, root, returnToSettled);
+    assert.equal(returned.exitCode, 0, returned.stderr);
+    const exactHistoricalReplay = await invoke(sourceEntrypoint, root, settledRequest);
+    assert.equal(exactHistoricalReplay.exitCode, 0, exactHistoricalReplay.stderr);
+    assert.equal(exactHistoricalReplay.json.result.idempotent_replay, true);
+    assert.deepEqual(exactHistoricalReplay.json.result, { ...settled.json.result, idempotent_replay: true });
+    const changedHistoricalReuse = structuredClone(settledRequest);
+    changedHistoricalReuse.frame.discovery[0].resolution = "changed after the A→B→A cycle";
+    const changedHistoricalMismatch = await invoke(sourceEntrypoint, root, changedHistoricalReuse);
+    assert.equal(changedHistoricalMismatch.json.failure.code, "frame.idempotency_mismatch");
+
+    const staleRequest = structuredClone(settledRequest);
+    staleRequest.operation_id = "operation:l03-w01-stale-rejected";
+    staleRequest.expected_revision = 4;
+    const staleFirst = await invoke(sourceEntrypoint, root, staleRequest);
+    assert.equal(staleFirst.json.failure.code, "frame.revision_conflict");
+    const advanceAfterStale = structuredClone(reopenRequest);
+    advanceAfterStale.operation_id = "operation:l03-w01-advance-after-stale";
+    advanceAfterStale.expected_revision = 5;
+    advanceAfterStale.frame.discovery[0].reopened_from_version = returned.json.result.frame.discovery[0].version_id;
+    const advancedAfterStale = await invoke(sourceEntrypoint, root, advanceAfterStale);
+    assert.equal(advancedAfterStale.exitCode, 0, JSON.stringify(advancedAfterStale.json));
+    const staleRetry = await invoke(sourceEntrypoint, root, staleRequest);
+    assert.deepEqual(staleRetry.json, staleFirst.json);
+    const changedStaleReuse = structuredClone(staleRequest);
+    changedStaleReuse.frame.discovery[0].resolution = "changed rejected reuse";
+    assert.equal((await invoke(sourceEntrypoint, root, changedStaleReuse)).json.failure.code, "frame.idempotency_mismatch");
   } finally {
     await removeAndVerify(root);
   }
@@ -578,6 +680,56 @@ async function runGeneratedTypedProof(generated, report, root) {
   });
   const createdFrame = await invoke(connector, cwd, frameRequest);
   assert.equal(createdFrame.exitCode, 0, createdFrame.stderr);
+  const commitFrameRequest = frameCreate(storePath, report.sqlite_binary, initialized, {
+    operationId: `operation:w04-${generated.target}-frame-commit`,
+  });
+  commitFrameRequest.operation = "frame.commit_revision";
+  commitFrameRequest.frame_id = ids.activeFrame;
+  commitFrameRequest.expected_revision = 1;
+  commitFrameRequest.frame = structuredClone(createdFrame.json.result.frame);
+  commitFrameRequest.frame.title = `Committed through ${generated.target}`;
+  Object.assign(commitFrameRequest.frame.discovery[0], { lifecycle: "settled", category: "settled", disposition: "accepted", resolution: "generated A" });
+  for (const item of commitFrameRequest.frame.discovery) delete item.version_id;
+  const committedFrame = await invoke(connector, cwd, commitFrameRequest);
+  assert.equal(committedFrame.exitCode, 0, committedFrame.stderr);
+  assert.equal(committedFrame.json.operation, "frame.commit_revision");
+  assert.equal(committedFrame.json.result.revision.number, 2);
+  assert.equal(committedFrame.json.result.receipt.observed_revision.id, createdFrame.json.result.revision.id);
+
+  const generatedB = structuredClone(commitFrameRequest);
+  generatedB.operation_id += "-b";
+  generatedB.expected_revision = 2;
+  generatedB.frame.discovery[0] = { ...generatedB.frame.discovery[0], lifecycle: "active", category: "frontier", reopened_from_version: committedFrame.json.result.frame.discovery[0].version_id, reopening_basis: "generated B" };
+  delete generatedB.frame.discovery[0].disposition;
+  delete generatedB.frame.discovery[0].resolution;
+  assert.equal((await invoke(connector, cwd, generatedB)).exitCode, 0);
+  const generatedReturnA = structuredClone(commitFrameRequest);
+  generatedReturnA.operation_id += "-return-a";
+  generatedReturnA.expected_revision = 3;
+  const generatedReturnedA = await invoke(connector, cwd, generatedReturnA);
+  assert.equal(generatedReturnedA.exitCode, 0);
+  const generatedReplay = await invoke(connector, cwd, commitFrameRequest);
+  assert.equal(generatedReplay.exitCode, 0, generatedReplay.stderr);
+  assert.deepEqual(generatedReplay.json.result, { ...committedFrame.json.result, idempotent_replay: true });
+  const generatedChangedReuse = structuredClone(commitFrameRequest);
+  generatedChangedReuse.frame.discovery[0].resolution = "changed generated reuse";
+  assert.equal((await invoke(connector, cwd, generatedChangedReuse)).json.failure.code, "frame.idempotency_mismatch");
+
+  const generatedStale = structuredClone(commitFrameRequest);
+  generatedStale.operation_id += "-stale-rejected";
+  generatedStale.expected_revision = 3;
+  const generatedStaleFirst = await invoke(connector, cwd, generatedStale);
+  assert.equal(generatedStaleFirst.json.failure.code, "frame.revision_conflict");
+  const generatedAdvance = structuredClone(generatedB);
+  generatedAdvance.operation_id += "-advance";
+  generatedAdvance.expected_revision = 4;
+  generatedAdvance.frame.discovery[0].reopened_from_version = generatedReturnedA.json.result.frame.discovery[0].version_id;
+  const generatedAdvanced = await invoke(connector, cwd, generatedAdvance);
+  assert.equal(generatedAdvanced.exitCode, 0, JSON.stringify(generatedAdvanced.json));
+  assert.deepEqual((await invoke(connector, cwd, generatedStale)).json, generatedStaleFirst.json);
+  const generatedChangedStale = structuredClone(generatedStale);
+  generatedChangedStale.frame.discovery[0].resolution = "changed generated rejected reuse";
+  assert.equal((await invoke(connector, cwd, generatedChangedStale)).json.failure.code, "frame.idempotency_mismatch");
   const readCaseResult = await invoke(connector, cwd, caseRead(storePath, report.sqlite_binary, initialized));
   const readFrameResult = await invoke(connector, cwd, frameRead(storePath, report.sqlite_binary, initialized));
   const listFrameResult = await invoke(connector, cwd, frameList(storePath, report.sqlite_binary, initialized));
@@ -585,7 +737,7 @@ async function runGeneratedTypedProof(generated, report, root) {
   assert.equal(readFrameResult.json.result.frame.id, ids.activeFrame);
   assert.deepEqual(listFrameResult.json.result.items.map((item) => item.id), [ids.activeFrame]);
 
-  for (const operationId of [caseRequest.operation_id, frameRequest.operation_id]) {
+  for (const operationId of [caseRequest.operation_id, frameRequest.operation_id, commitFrameRequest.operation_id]) {
     const receipt = await invoke(connector, cwd, storeReceipt(
       storePath, report.sqlite_binary, initialized, operationId,
     ));
@@ -610,21 +762,9 @@ async function runGeneratedTypedProof(generated, report, root) {
   laterCreate.include = ["history"];
   assertInvalid(await invoke(connector, cwd, laterCreate), "case", "request.include");
 
-  const dependencyCreate = frameCreate(storePath, report.sqlite_binary, initialized, {
-    frameId: ids.secondActiveFrame,
-    discoveryId: ids.secondActiveDiscovery,
-    operationId: `operation:w04-${generated.target}-invalid-dependency`,
-    discoveryOverrides: { dependencies: [{ target_kind: "case", target_id: ids.case, predicate: "depends-on" }] },
-  });
-  assertInvalid(
-    await invoke(connector, cwd, dependencyCreate),
-    "frame",
-    "frame.discovery[0].dependencies",
-    "dependencies_unsupported_until_l03",
-  );
   assert.deepEqual(await ownerFacts(report.sqlite_binary, storePath), [
     { owner_kind: "case", owner_id: ids.case, revision_number: 1 },
-    { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 1 },
+    { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 5 },
   ]);
 }
 

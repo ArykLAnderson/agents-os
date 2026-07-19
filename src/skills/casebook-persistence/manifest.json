@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l02-w01"
+    "version": "0.2.0-l02-l03-w01"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "f9d8f4bf89dbe7320a914543ee9d0c116ac0a41801b3b15621bd14868dae8115"
+    "sha256": "463a888f037f0f259dc2c1e3acc0e25aa01023ab69361488673ff56832883b31"
   },
   "entrypoints": [
     {
@@ -43,6 +43,7 @@
     "case.commit_revision",
     "case.read",
     "frame.create",
+    "frame.commit_revision",
     "frame.read",
     "frame.list",
     "common.resolve",
@@ -51,18 +52,25 @@
     "interchange.export",
     "interchange.parse"
   ],
-  "l01_operation_constraints": {
+  "implemented_slice_constraints": {
     "store_receipt_visible_operation_kinds": [
       "initialize_store"
     ],
     "typed_read_target": "stable_owner_id_under_exact_active_view",
+    "case_revision_assembly": "complete canonical Case create and commit_revision",
+    "frame_revision_assembly": "complete canonical Frame/Discovery create and commit_revision",
     "frame_statuses": [
-      "active"
+      "active",
+      "completed",
+      "abandoned",
+      "superseded"
     ],
     "discovery_lifecycles": [
-      "active"
+      "active",
+      "settled",
+      "tombstoned"
     ],
-    "discovery_dependencies": "empty_only",
+    "discovery_dependencies": "typed stable references",
     "frame_list": "active_only_without_filters_history_or_paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
@@ -70,7 +78,7 @@
   },
   "unsupported_until_later_work_items": [
     "case.history/include/filter/paging/lifecycle",
-    "frame.commit_revision/closed/settled/tombstoned/references/history/include/filter/paging/lifecycle/reconciliation",
+    "frame.closed-history/include/filter/paging/lifecycle-query/reconciliation",
     "history/events/checkpoints/snapshots/global-search",
     "full-atomic-markdown-write-and-generation-selection",
     "migration",
@@ -83,7 +91,7 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "bdada295c5b6d934c1d1f37d9ef0a9b44649ebb1230eebbca13ea648d4f8ea51"
+      "sha256": "0004089923e07b534d21c5fb71e1c7f5aac8814eb1ed54531161463197e97d15"
     },
     {
       "id": "human-install-guidance",
@@ -143,7 +151,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "6e75830b655fdc595c9c86d28768d1bc4d2a4c92fd956dec63f6ddcddf1121c6"
+      "sha256": "3dab2d034e3addf74ecb89ba8d605208c999e513e57173a65f01c87d698d747d"
     },
     {
       "id": "sqlite-diagnostics",
@@ -161,7 +169,7 @@
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "300c5e24770594f59efc1616bd143ac9c32daa4223f18f738b21120c23d8adb4"
+      "sha256": "489aa7ddb271338e8be6a1a4c734067406091c669657b346c0cf114f4fab9a28"
     },
     {
       "id": "case-facade",
@@ -173,7 +181,7 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "8352f27610134bf2f4c47885ac1bc3e79a8a2de2c8f2fdf04f9b9328f34d2d3f"
+      "sha256": "970a71e44376ff1cd2ff57d8c1dd2481ac9544f24446106bab725f42a9983e25"
     },
     {
       "id": "sqlite-common-subset",
@@ -203,7 +211,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "2e614457225af56b2e0fe2dedc6bf90ed0e2a50e5db498d6ec8cf70e33826a60"
+      "sha256": "708ef31293bb2db3e130efa676cc1a65da95a34dcdb0a0531c03a75b594fb25f"
     }
   ]
 }
