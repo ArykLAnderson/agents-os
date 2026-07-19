@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   failure,
   RETRY_DISPOSITIONS,
@@ -8,6 +8,7 @@ import {
 import { invokeSubstrateOperation } from "../substrate/index.mjs";
 import {
   canonicalCommitRequestDigest,
+  deriveInternalCursorSigningKey,
   mechanicalDigest,
 } from "../substrate/mechanical.mjs";
 import {
@@ -50,11 +51,22 @@ const CREATE_REQUEST_FIELDS = new Set([
 ]);
 const COMMIT_REQUEST_FIELDS = new Set([...CREATE_REQUEST_FIELDS, "frame_id"]);
 const READ_REQUEST_FIELDS = new Set([
+  "protocol", "operation", "request_version", "store_id", "context", "frame_id", "revision_id", "revision_number", "configuration",
+]);
+const RESOLVE_REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "frame_id", "configuration",
 ]);
-const LIST_REQUEST_FIELDS = new Set([
-  "protocol", "operation", "request_version", "store_id", "context", "configuration",
+const DISCOVERY_READ_FIELDS = new Set([
+  "protocol", "operation", "request_version", "store_id", "context", "frame_id", "discovery_item_id", "version_id", "revision_id", "revision_number", "configuration",
 ]);
+const HISTORY_REQUEST_FIELDS = new Set([
+  "protocol", "operation", "request_version", "store_id", "context", "frame_id", "limit", "cursor", "configuration",
+]);
+const LIST_REQUEST_FIELDS = new Set([
+  "protocol", "operation", "request_version", "store_id", "context", "statuses", "limit", "cursor", "configuration",
+]);
+const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded"]);
+const MAX_PAGE = 100;
 const L01_CATEGORY_HEADING = Object.freeze({
   fog: "Fog",
   frontier: "Frontier",
@@ -528,12 +540,12 @@ function hydrateFrame(mechanical) {
   };
 }
 
-function hydrateListItem(item) {
+function hydrateListItem(item, statuses = new Set(["active"])) {
   const projection = item.current_projection;
   if (projection?.schema !== "frame-current@1" || projection.id !== item.owner.id) {
     throw new FrameRequestError("stored.current_projection", "projection_incompatible", "Stored Frame projection is incompatible.");
   }
-  if (projection.status !== "active") return null;
+  if (!statuses.has(projection.status)) return null;
   return {
     id: projection.id,
     home_namespace_id: projection.home_namespace_id,
@@ -546,6 +558,15 @@ function hydrateListItem(item) {
       number: item.revision.number,
       committed_at: item.revision.committed_at,
     },
+  };
+}
+
+function completionEvidence(frame) {
+  const activeDiscovery = frame.discovery.filter((item) => item.lifecycle === "active").length;
+  return {
+    frame: { descriptive_status: frame.status, closed: CLOSED_STATUSES.has(frame.status), active_discovery_items: activeDiscovery },
+    case_reconciliation: { status: "not_evaluated", linked_cases: frame.case_links?.filter((link) => link.target_kind === "case").length ?? 0 },
+    overall_completion_asserted: false,
   };
 }
 
@@ -612,6 +633,7 @@ async function mutateFrame(request, create) {
       committed_at: mechanical.result.receipt.settled_at,
       version_ids: { frame: frameTypedId("frame-version", allocations.frame_version_id), discovery_items: allocations.discovery_item_version_ids.map((item) => ({ discovery_item_id: item.discovery_item_id, version_id: frameTypedId("discovery-item-version", item.version_id) })) } },
     event_id: allocations.event_id, receipt: frameMutationReceipt(mechanical.result.receipt, mechanical.result, request, frame),
+    completion_evidence: completionEvidence(frame),
     idempotent_replay: mechanical.result.idempotent_replay, applied_view: mechanical.result.applied_view,
   });
 }
@@ -622,16 +644,23 @@ async function readFrame(request) {
   const frameId = requiredId(request.frame_id, "frame_id", "frame");
   requiredId(request.store_id, "store_id", "store");
   validateContext(request.context);
+  if (request.revision_id != null && request.revision_number != null) throw new FrameRequestError("revision_id", "revision_selector_ambiguous", "Select a revision by ID or number, not both.");
+  if (request.revision_id != null) requiredId(request.revision_id, "revision_id", "frame-revision");
+  if (request.revision_number != null && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) throw new FrameRequestError("revision_number", "positive_revision_required", "revision_number must be positive.");
+  const historical = request.revision_id != null || request.revision_number != null;
   const mechanical = await invokeSubstrateOperation({
-    operation: "read_owner_current",
+    operation: historical ? "read_owner_revision" : "read_owner_current",
     configuration: request.configuration,
     store_id: request.store_id,
     context: request.context,
     owner: { id: frameId, kind: "frame" },
+    ...(request.revision_id == null ? {} : { revision_id: `owner-revision:${request.revision_id.slice(15)}` }),
+    ...(request.revision_number == null ? {} : { revision_number: request.revision_number }),
   });
   if (!mechanical?.ok) return typedFailure("read", mechanical);
   try {
-    return success("frame.read", hydrateFrame(mechanical.result));
+    const hydrated = hydrateFrame(mechanical.result);
+    return success("frame.read", { ...hydrated, completion_evidence: completionEvidence(hydrated.frame) });
   } catch (error) {
     return failure("frame.stored_representation_incompatible", "The stored Frame cannot be hydrated through Frame representation version 1.", {
       failureClass: "frame.stored_representation_incompatible",
@@ -641,32 +670,100 @@ async function readFrame(request) {
   }
 }
 
+function pageLimit(value) {
+  if (value == null) return 50;
+  if (!Number.isInteger(value) || value < 1 || value > MAX_PAGE) throw new FrameRequestError("limit", "page_limit_invalid", `limit must be 1 to ${MAX_PAGE}.`);
+  return value;
+}
+const MAX_CURSOR_BYTES = 1024;
+// Cursors are opaque trusted-local continuation state. The checksum and derived
+// signature detect accidental edits in normal use; they are integrity checks, not
+// authentication or an access-control boundary against a source-aware caller.
+function cursorDigest(value) { return createHash("sha256").update(`casebook-frame-cursor@1\0${value}`).digest("hex"); }
+function cursorSignature(key, payload, digest) { return createHmac("sha256", key).update(`casebook-frame-cursor-signature@1\0${payload}\0${digest}`).digest("hex"); }
+function encodeCursor(key, binding, fence, lastKey) {
+  const payload = JSON.stringify({ v: 1, q: binding, f: fence, k: lastKey });
+  const digest = cursorDigest(payload);
+  return Buffer.from(JSON.stringify({ p: payload, d: digest, s: cursorSignature(key, payload, digest) })).toString("base64url");
+}
+function decodeCursor(value, binding, key) {
+  try {
+    const encoded = requiredString(value, "cursor", MAX_CURSOR_BYTES);
+    if (Buffer.byteLength(encoded) > MAX_CURSOR_BYTES) throw new Error();
+    const envelope = JSON.parse(Buffer.from(encoded, "base64url").toString());
+    if (Object.keys(envelope).length !== 3 || typeof envelope.p !== "string" || typeof envelope.d !== "string" || typeof envelope.s !== "string") throw new Error();
+    const expectedDigest = cursorDigest(envelope.p);
+    const expectedSignature = cursorSignature(key, envelope.p, envelope.d);
+    if (envelope.d !== expectedDigest || envelope.s.length !== expectedSignature.length || !timingSafeEqual(Buffer.from(envelope.s), Buffer.from(expectedSignature))) throw new Error();
+    const parsed = JSON.parse(envelope.p);
+    if (Object.keys(parsed).length !== 4 || parsed.v !== 1 || parsed.q !== binding || !Number.isInteger(parsed.f) || parsed.f < 1 || !Array.isArray(parsed.k) || parsed.k.length !== 2 || parsed.k.some((part) => typeof part !== "string")) throw new Error();
+    return parsed;
+  } catch { throw new FrameRequestError("cursor", "cursor_invalid_or_query_mismatch", "The opaque cursor is invalid or belongs to another query."); }
+}
+function listSortKey(item) { return [item.current_revision.committed_at, item.id]; }
+
 async function listFrames(request) {
   exactKeys(request, LIST_REQUEST_FIELDS, "request");
   if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
   requiredId(request.store_id, "store_id", "store");
   validateContext(request.context);
-  const mechanical = await invokeSubstrateOperation({
-    operation: "list_owner_current",
-    configuration: request.configuration,
-    store_id: request.store_id,
-    context: request.context,
-    owner_kind: "frame",
-  });
-  if (!mechanical?.ok) return typedFailure("list", mechanical);
+  const statuses = request.statuses == null ? ["active"] : stringArray(request.statuses, "statuses", { min: 1, max: 4 });
+  if (statuses.some((status) => !FRAME_STATUSES.has(status)) || new Set(statuses).size !== statuses.length) throw new FrameRequestError("statuses", "frame_status_filter_invalid", "statuses must contain unique descriptive Frame statuses.");
+  const limit = pageLimit(request.limit);
+  const binding = mechanicalDigest({ operation: "frame.list", store_id: request.store_id, view: request.context, statuses: [...statuses].sort(), limit });
   try {
-    const eligible = mechanical.result.items.map(hydrateListItem).filter((item) => item != null);
+    const cursorKey = await deriveInternalCursorSigningKey(request.configuration, request.store_id);
+    if (!cursorKey) throw new Error("verified store cursor key unavailable");
+    const decoded = request.cursor == null ? null : decodeCursor(request.cursor, binding, cursorKey);
+    const statusSet = new Set(statuses);
+    const items = [];
+    let afterKey = decoded?.k ?? null;
+    let fence = decoded?.f ?? null;
+    let appliedView = null;
+    let hasMore = true;
+    while (hasMore && items.length <= limit) {
+      const mechanical = await invokeSubstrateOperation({
+        operation: "page_owner_current",
+        configuration: request.configuration,
+        store_id: request.store_id,
+        context: request.context,
+        owner_kind: "frame",
+        limit: MAX_PAGE,
+        ...(afterKey == null ? {} : { after_key: afterKey }),
+        ...(fence == null ? {} : { expected_fence: fence }),
+      });
+      if (!mechanical?.ok) {
+        if (mechanical?.failure?.code === "snapshot_fence_changed") {
+          throw new FrameRequestError("cursor", "cursor_fence_expired", "The store changed; restart Frame pagination.");
+        }
+        return typedFailure("list", mechanical);
+      }
+      fence ??= mechanical.result.operation_fence;
+      appliedView = mechanical.result.applied_view;
+      for (const raw of mechanical.result.items) {
+        const item = hydrateListItem(raw, statusSet);
+        if (item != null) items.push(item);
+        afterKey = [raw.revision.committed_at, raw.owner.id];
+        if (items.length > limit) break;
+      }
+      hasMore = items.length > limit || mechanical.result.has_more;
+      if (items.length <= limit && mechanical.result.has_more) afterKey = mechanical.result.next_after_key;
+    }
+    const pageItems = items.slice(0, limit);
     return success("frame.list", {
       status: "found",
-      items: eligible,
-      applied_lifecycle_scope: "active_only",
+      items: pageItems,
+      applied_lifecycle_scope: statuses.length === 1 && statuses[0] === "active" ? "active_only" : "explicit_statuses",
+      applied_statuses: statuses,
+      next_cursor: hasMore ? encodeCursor(cursorKey, binding, fence, listSortKey(pageItems.at(-1))) : null,
       index_state: "current",
       result_completeness: "complete_within_bounds",
       stable_sort: "updated_desc_id_asc",
-      snapshot_query_fence: mechanical.result.operation_fence,
-      applied_view: mechanical.result.applied_view,
+      snapshot_query_fence: fence,
+      applied_view: appliedView,
     });
   } catch (error) {
+    if (error instanceof FrameRequestError) throw error;
     return failure("frame.stored_representation_incompatible", "A stored Frame list projection is incompatible with Frame representation version 1.", {
       failureClass: "frame.stored_representation_incompatible",
       retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
@@ -675,11 +772,58 @@ async function listFrames(request) {
   }
 }
 
+async function resolveFrame(request) {
+  exactKeys(request, RESOLVE_REQUEST_FIELDS, "request");
+  const read = await readFrame({ ...request, operation: "frame.read" });
+  if (!read.ok) return read;
+  return success("frame.resolve", { status: "resolved", frame_id: read.result.frame.id, current_revision: read.result.revision, status_value: read.result.frame.status, applied_view: read.result.applied_view });
+}
+
+async function readDiscovery(request) {
+  exactKeys(request, DISCOVERY_READ_FIELDS, "request");
+  requiredId(request.discovery_item_id, "discovery_item_id", "discovery");
+  if (request.version_id != null) requiredId(request.version_id, "version_id", "discovery-item-version");
+  const frameRead = await readFrame({ protocol: request.protocol, operation: "frame.read", request_version: request.request_version,
+    store_id: request.store_id, context: request.context, frame_id: request.frame_id, configuration: request.configuration,
+    ...(request.revision_id == null ? {} : { revision_id: request.revision_id }),
+    ...(request.revision_number == null ? {} : { revision_number: request.revision_number }),
+  });
+  if (!frameRead.ok) return frameRead;
+  const item = frameRead.result.frame.discovery.find((candidate) => candidate.id === request.discovery_item_id
+    && (request.version_id == null || candidate.version_id === request.version_id));
+  if (!item) return failure("frame.discovery_not_found_or_not_visible", "The Discovery item or selected version is unknown or not visible.", { failureClass: "frame.read_failure", evidence: {} });
+  return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, applied_view: frameRead.result.applied_view });
+}
+
+async function frameHistory(request) {
+  exactKeys(request, HISTORY_REQUEST_FIELDS, "request");
+  if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
+  requiredId(request.frame_id, "frame_id", "frame"); requiredId(request.store_id, "store_id", "store"); validateContext(request.context);
+  const limit=pageLimit(request.limit);
+  const binding=mechanicalDigest({operation:"frame.history",store_id:request.store_id,view:request.context,frame_id:request.frame_id,limit});
+  const current=await readFrame({protocol:request.protocol,operation:"frame.read",request_version:1,store_id:request.store_id,context:request.context,frame_id:request.frame_id,configuration:request.configuration});
+  if(!current.ok)return current;
+  const cursorKey=await deriveInternalCursorSigningKey(request.configuration,request.store_id);
+  if(!cursorKey)throw new Error("verified store cursor key unavailable");
+  const decoded=request.cursor==null?null:decodeCursor(request.cursor,binding,cursorKey);
+  const fence=current.result.revision.number;
+  if(decoded&&decoded.f!==fence)throw new FrameRequestError("cursor","cursor_fence_expired","The Frame changed; restart history pagination.");
+  const start=decoded==null?fence:Number(decoded.k[0])-1;
+  if(!Number.isInteger(start)||start<1)throw new FrameRequestError("cursor","cursor_invalid_or_query_mismatch","The history cursor sort key is invalid.");
+  const items=[];
+  for(let number=start;number>=1&&items.length<limit;number--){const result=await readFrame({protocol:request.protocol,operation:"frame.read",request_version:1,store_id:request.store_id,context:request.context,frame_id:request.frame_id,revision_number:number,configuration:request.configuration});if(!result.ok)return result;items.push(result.result);}
+  const lastNumber=items.at(-1)?.revision.number??0;
+  return success("frame.history",{status:"found",items,index_state:"current",stable_sort:"revision_desc",snapshot_revision_fence:fence,next_cursor:lastNumber>1?encodeCursor(cursorKey,binding,fence,[String(lastNumber),request.frame_id]):null,result_completeness:"complete_within_bounds",applied_view:current.result.applied_view});
+}
+
 export async function invokeFrameOperation(request) {
   try {
     if (request.operation === "frame.create") return await mutateFrame(request, true);
     if (request.operation === "frame.commit_revision") return await mutateFrame(request, false);
+    if (request.operation === "frame.resolve") return await resolveFrame(request);
     if (request.operation === "frame.read") return await readFrame(request);
+    if (request.operation === "frame.discovery.read") return await readDiscovery(request);
+    if (request.operation === "frame.history") return await frameHistory(request);
     if (request.operation === "frame.list") return await listFrames(request);
     return unsupported(request.operation);
   } catch (error) {
