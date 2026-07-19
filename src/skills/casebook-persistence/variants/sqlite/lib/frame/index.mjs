@@ -33,9 +33,9 @@ const FRAME_FIELDS = new Set([
 ]);
 const DISCOVERY_FIELDS = new Set([
   "id", "display_label", "display_order", "lifecycle", "category", "title", "body",
-  "human_authority", "dependencies", "disposition", "resolution", "reopened_from_version", "reopening_basis",
+  "human_authority", "dependencies", "scope_namespace_ids", "disposition", "resolution", "reopened_from_version", "reopening_basis",
 ]);
-const REFERENCE_FIELDS = new Set(["target_kind", "target_id", "observed_revision_id", "pinned_revision_id", "predicate", "provenance"]);
+const REFERENCE_FIELDS = new Set(["target_kind", "target_id", "observed_revision_id", "pinned_revision_id", "predicate", "provenance", "authority_scope"]);
 const ARTIFACT_FIELDS = new Set(["artifact_id", "kind", "title", "summary", "locator", "observed_revision_id", "pinned_revision_id"]);
 const LOCATOR_FIELDS = new Set(["uri", "media_type", "audience", "digest"]);
 const AUTHORIZATION_FIELDS = new Set(["session", "acting_role", "authority_basis", "human_confirmation", "causation", "correlation"]);
@@ -65,6 +65,7 @@ const HISTORY_REQUEST_FIELDS = new Set([
 const LIST_REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "statuses", "limit", "cursor", "configuration",
 ]);
+const PREPARE_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "base_revision", "documents", "machine_manifest", "configuration"]);
 const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded"]);
 const MAX_PAGE = 100;
 const L01_CATEGORY_HEADING = Object.freeze({
@@ -179,6 +180,10 @@ function normalizeReference(value, path, allowedKinds = REFERENCE_KINDS) {
   }
   const provenance = optionalString(value.provenance, `${path}.provenance`, 512);
   if (provenance != null) result.provenance = provenance;
+  if (value.authority_scope != null) {
+    if (value.authority_scope !== "external_read_only") throw new FrameRequestError(`${path}.authority_scope`, "external_read_only_marker_invalid", "The only supported authority marker is external_read_only.");
+    result.authority_scope = value.authority_scope;
+  }
   return result;
 }
 
@@ -247,11 +252,15 @@ function normalizeDiscoveryItem(value, index) {
   if (!Number.isInteger(value.display_order) || value.display_order < 0 || value.display_order > 1_000_000) throw new FrameRequestError(`${path}.display_order`, "display_order_invalid", "display_order must be a non-negative bounded integer.");
   if (!HUMAN_AUTHORITY.has(value.human_authority)) throw new FrameRequestError(`${path}.human_authority`, "human_authority_invalid", "human_authority is invalid.");
   if (!Array.isArray(value.dependencies) || value.dependencies.length > 128) throw new FrameRequestError(`${path}.dependencies`, "dependencies_invalid", "dependencies must be a bounded array.");
+  if (value.scope_namespace_ids != null && (!Array.isArray(value.scope_namespace_ids) || value.scope_namespace_ids.length > 64)) throw new FrameRequestError(`${path}.scope_namespace_ids`, "bounded_scope_required", "Discovery scope claims must be a bounded array.");
+  const scopeNamespaceIds = value.scope_namespace_ids?.map((id, index) => requiredId(id, `${path}.scope_namespace_ids[${index}]`, "namespace"));
+  if (scopeNamespaceIds && new Set(scopeNamespaceIds).size !== scopeNamespaceIds.length) throw new FrameRequestError(`${path}.scope_namespace_ids`, "duplicate_namespace", "Discovery scope claims must be unique.");
   const result = {
     id: requiredId(value.id, `${path}.id`, "discovery"), display_order: value.display_order, lifecycle, category,
     title: requiredString(value.title, `${path}.title`, 512), body: requiredString(value.body, `${path}.body`, 16_384),
     human_authority: value.human_authority,
     dependencies: value.dependencies.map((item, dependencyIndex) => normalizeReference(item, `${path}.dependencies[${dependencyIndex}]`)),
+    ...(scopeNamespaceIds == null ? {} : { scope_namespace_ids: scopeNamespaceIds }),
   };
   for (const key of ["display_label", "disposition", "resolution", "reopening_basis"]) {
     const item = optionalString(value[key], `${path}.${key}`, key === "display_label" ? 64 : 4_096);
@@ -267,7 +276,8 @@ function normalizeFrame(value) {
   const homeNamespaceId = requiredId(value.home_namespace_id, "frame.home_namespace_id", "namespace");
   if (!Array.isArray(value.authority_scope_namespace_ids) || value.authority_scope_namespace_ids.length < 1 || value.authority_scope_namespace_ids.length > 64) throw new FrameRequestError("frame.authority_scope_namespace_ids", "bounded_scope_required", "Explicit bounded authority scope is required.");
   const authorityScope = value.authority_scope_namespace_ids.map((id, index) => requiredId(id, `frame.authority_scope_namespace_ids[${index}]`, "namespace"));
-  if (authorityScope.length !== 1 || authorityScope[0] !== homeNamespaceId) throw new FrameRequestError("frame.authority_scope_namespace_ids", "cross_namespace_scope_unsupported", "Until L03-W03 scope policy exists, authority scope is exactly the Frame home namespace.");
+  if (new Set(authorityScope).size !== authorityScope.length) throw new FrameRequestError("frame.authority_scope_namespace_ids", "duplicate_namespace", "Authority scope namespaces must be unique.");
+  if (!authorityScope.includes(homeNamespaceId)) throw new FrameRequestError("frame.authority_scope_namespace_ids", "home_namespace_required", "Authority scope must include the Frame home namespace.");
   if (!FRAME_STATUSES.has(value.status)) throw new FrameRequestError("frame.status", "frame_status_invalid", "Frame descriptive status is invalid.");
   if (!Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > MAX_DISCOVERY) throw new FrameRequestError("frame.discovery", "complete_discovery_required", `One to ${MAX_DISCOVERY} selected Discovery items are required.`);
   const discovery = value.discovery.map(normalizeDiscoveryItem);
@@ -561,6 +571,67 @@ function hydrateListItem(item, statuses = new Set(["active"])) {
   };
 }
 
+function projectAuthorityScope(record, visibleNamespaceIds) {
+  const complete = record.authority_scope_namespace_ids ?? [];
+  const hiddenIds = new Set(complete.filter((namespaceId) => !visibleNamespaceIds.has(namespaceId)));
+  const redact = (value, key = "") => {
+    if (typeof value === "string") return hiddenIds.has(value) ? "[hidden_namespace]" : value;
+    if (Array.isArray(value)) {
+      if (key === "authority_scope_namespace_ids" || key === "scope_namespace_ids") return value.filter((item) => !hiddenIds.has(item)).map((item) => redact(item));
+      return value.map((item) => redact(item));
+    }
+    if (!object(value)) return value;
+    return Object.fromEntries(Object.entries(value).map(([childKey, child]) => [childKey, redact(child, childKey)]));
+  };
+  const projected = redact(record);
+  return { ...projected, ...(hiddenIds.size === 0 ? {} : { hidden_authority_scope_count: hiddenIds.size }) };
+}
+
+async function projectFrameForView(request, record) {
+  const visibility = await visibleNamespaceSet(request);
+  if (visibility.failure) return visibility;
+  const projected = projectAuthorityScope(record, visibility.ids);
+  let hiddenReferenceCount = 0;
+  const projectReferences = async (references) => {
+    const visible = [];
+    for (const reference of references ?? []) {
+      // The complete reference (including revision selectors and provenance) is
+      // one visibility unit.  Omitting it avoids leaking any nested identifier.
+      if (await visibleReferenceTarget(request, reference)) visible.push(reference);
+      else hiddenReferenceCount++;
+    }
+    return visible;
+  };
+  for (const key of ["case_links", "frame_links", "downstream_links"]) {
+    if (projected[key] != null) projected[key] = await projectReferences(projected[key]);
+  }
+  if (projected.discovery) {
+    projected.discovery = await Promise.all(projected.discovery.map(async (item) => ({
+      ...item,
+      dependencies: await projectReferences(item.dependencies),
+    })));
+  }
+  return { frame: { ...projected, ...(hiddenReferenceCount ? { hidden_reference_count: hiddenReferenceCount } : {}) } };
+}
+
+async function visibleNamespaceSet(request) {
+  const scope = await invokeSubstrateOperation({ operation: "read_active_view_scope", configuration: request.configuration, store_id: request.store_id, context: request.context });
+  if (!scope?.ok) return { failure: typedFailure("read", scope) };
+  return { ids: new Set(scope.result.namespace_ids) };
+}
+
+// Case references may name either the Case owner or one of its selected semantic
+// families. Resolve them through the same cohesive, bounded Case selection scan
+// used by the Case facade rather than mistaking every target for an owner ID.
+async function visibleReferenceTarget(request, link) {
+  const direct = await invokeSubstrateOperation({ operation: "read_owner_current", configuration: request.configuration, store_id: request.store_id, context: request.context, owner: { id: link.target_id, kind: link.target_kind } });
+  if (direct?.ok) return direct.result;
+  if (!["case", "knowledge", "source", "evidence"].includes(link.target_kind)) return null;
+  const corpus = await invokeSubstrateOperation({ operation: "read_owner_current_corpus", configuration: request.configuration, store_id: request.store_id, context: request.context, owner_kind: "case" });
+  if (!corpus?.ok) return null;
+  return corpus.result.items.find((item) => item.revision.selected_versions.some((version) => version.family_id === link.target_id)) ?? null;
+}
+
 function completionEvidence(frame) {
   const activeDiscovery = frame.discovery.filter((item) => item.lifecycle === "active").length;
   return {
@@ -622,6 +693,43 @@ async function mutateFrame(request, create) {
       }
     }
   }
+  // Scope is an authority claim, not a visibility mechanism.  Validate it only
+  // against the exact active view and the immediately preceding complete revision.
+  let priorScope = [];
+  if (!create) {
+    const current = await invokeSubstrateOperation({ operation: "read_owner_current", configuration: request.configuration, store_id: request.store_id, context: request.context, owner: { id: frame.id, kind: "frame" } });
+    if (!current?.ok) return typedFailure("commit_revision", current);
+    priorScope = hydrateFrame(current.result).frame.authority_scope_namespace_ids;
+  }
+  const priorSet = new Set(priorScope);
+  const added = frame.authority_scope_namespace_ids.filter((namespaceId) => !priorSet.has(namespaceId));
+  const removed = priorScope.filter((namespaceId) => !frame.authority_scope_namespace_ids.includes(namespaceId));
+  if (added.length) {
+    if (request.provenance?.authority_basis == null || request.provenance.authority_basis.trim() === "") throw new FrameRequestError("provenance.authority_basis", "scope_addition_authority_basis_required", "Authority-scope additions require an explicit authority-basis claim.");
+    const activeScope = await invokeSubstrateOperation({ operation: "read_active_view_scope", configuration: request.configuration, store_id: request.store_id, context: request.context });
+    if (!activeScope?.ok) return typedFailure(create ? "create" : "commit_revision", activeScope);
+    const grants = new Set(activeScope.result.namespace_ids);
+    if (!grants.has(frame.home_namespace_id) || added.some((namespaceId) => !grants.has(namespaceId))) throw new FrameRequestError("frame.authority_scope_namespace_ids", "scope_addition_not_granted", "The exact active view must grant the Frame home and every added namespace.");
+  }
+  if (removed.length && frame.discovery.some((item) => item.lifecycle === "active" && item.category !== "deferred" && item.scope_namespace_ids?.some((namespaceId) => removed.includes(namespaceId)))) {
+    throw new FrameRequestError("frame.discovery", "removed_scope_has_active_discovery", "Active Discovery claiming removed scope must be settled, deferred, or revised in the same complete revision.");
+  }
+  const frameScope = new Set(frame.authority_scope_namespace_ids);
+  if (frame.discovery.some((item) => item.scope_namespace_ids?.some((namespaceId) => !frameScope.has(namespaceId)))) throw new FrameRequestError("frame.discovery", "discovery_scope_outside_frame", "Discovery scope claims must remain within Frame authority scope.");
+  const links = [...(frame.case_links ?? []), ...(frame.frame_links ?? []), ...(frame.downstream_links ?? []), ...frame.discovery.flatMap((item) => item.dependencies)];
+  for (const [index, link] of links.entries()) {
+    if (link.authority_scope !== "external_read_only") continue;
+    const target = await visibleReferenceTarget(request, link);
+    if (!target) throw new FrameRequestError(`frame.references[${index}]`, "external_reference_not_visible", "External/read-only references must be mechanically visible under the exact request view.");
+  }
+  if (removed.length) {
+    for (const [index, link] of links.entries()) {
+      const target = await visibleReferenceTarget(request, link);
+      if (!target) throw new FrameRequestError(`frame.references[${index}]`, "scope_reduction_reference_target_not_visible", "Scope reduction requires every retained reference target to be visible under the exact request view.");
+      const outsideReducedScope = !frameScope.has(target.owner.home_namespace_id);
+      if (outsideReducedScope && link.authority_scope !== "external_read_only") throw new FrameRequestError(`frame.references[${index}]`, "removed_scope_reference_must_be_external_read_only", "References retained outside reduced authority scope must be explicitly external/read-only.");
+    }
+  }
   const { envelope, allocations } = assembleFrameEnvelope(request, frame, priorSelected, replayAllocated);
   const mechanical = await invokeSubstrateOperation({ operation: "commit_owner_revision", configuration: request.configuration, context: request.context, envelope });
   if (!mechanical?.ok) return typedFailure(create ? "create" : "commit_revision", mechanical);
@@ -660,7 +768,9 @@ async function readFrame(request) {
   if (!mechanical?.ok) return typedFailure("read", mechanical);
   try {
     const hydrated = hydrateFrame(mechanical.result);
-    return success("frame.read", { ...hydrated, completion_evidence: completionEvidence(hydrated.frame) });
+    const projection = await projectFrameForView(request, hydrated.frame);
+    if (projection.failure) return projection.failure;
+    return success("frame.read", { ...hydrated, frame: projection.frame, completion_evidence: completionEvidence(projection.frame) });
   } catch (error) {
     return failure("frame.stored_representation_incompatible", "The stored Frame cannot be hydrated through Frame representation version 1.", {
       failureClass: "frame.stored_representation_incompatible",
@@ -749,7 +859,9 @@ async function listFrames(request) {
       hasMore = items.length > limit || mechanical.result.has_more;
       if (items.length <= limit && mechanical.result.has_more) afterKey = mechanical.result.next_after_key;
     }
-    const pageItems = items.slice(0, limit);
+    const visibility = await visibleNamespaceSet(request);
+    if (visibility.failure) return visibility.failure;
+    const pageItems = items.slice(0, limit).map((item) => projectAuthorityScope(item, visibility.ids));
     return success("frame.list", {
       status: "found",
       items: pageItems,
@@ -792,7 +904,7 @@ async function readDiscovery(request) {
   const item = frameRead.result.frame.discovery.find((candidate) => candidate.id === request.discovery_item_id
     && (request.version_id == null || candidate.version_id === request.version_id));
   if (!item) return failure("frame.discovery_not_found_or_not_visible", "The Discovery item or selected version is unknown or not visible.", { failureClass: "frame.read_failure", evidence: {} });
-  return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, applied_view: frameRead.result.applied_view });
+  return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, ...(frameRead.result.frame.hidden_authority_scope_count == null ? {} : { hidden_authority_scope_count: frameRead.result.frame.hidden_authority_scope_count }), applied_view: frameRead.result.applied_view });
 }
 
 async function frameHistory(request) {
@@ -816,6 +928,174 @@ async function frameHistory(request) {
   return success("frame.history",{status:"found",items,index_state:"current",stable_sort:"revision_desc",snapshot_revision_fence:fence,next_cursor:lastNumber>1?encodeCursor(cursorKey,binding,fence,[String(lastNumber),request.frame_id]):null,result_completeness:"complete_within_bounds",applied_view:current.result.applied_view});
 }
 
+function decodeSnapshotText(bytes, path) {
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+  catch { throw new FrameRequestError(path, "utf8_required", "Legacy snapshots must be valid UTF-8."); }
+}
+
+async function immutableSnapshot(descriptor, path, allowedFields) {
+  if (!object(descriptor) || Object.keys(descriptor).some((key) => !allowedFields.has(key))) throw new FrameRequestError(path, "snapshot_descriptor_invalid", "Immutable snapshot descriptors are closed records.");
+  const digest = requiredString(descriptor.digest, `${path}.digest`, 80);
+  if (!/^sha256:[0-9a-f]{64}$/.test(digest)) throw new FrameRequestError(`${path}.digest`, "digest_invalid", "A lowercase sha256 digest is required.");
+  if (descriptor.bytes_base64 == null) throw new FrameRequestError(`${path}.bytes_base64`, "immutable_bytes_required", "Callers must supply the immutable bytes; locators alone are not reconciliation evidence.");
+  let bytes;
+  try {
+    const encoded = requiredString(descriptor.bytes_base64, `${path}.bytes_base64`, 2 * 1024 * 1024);
+    bytes = Buffer.from(encoded, "base64");
+    if (bytes.toString("base64").replace(/=+$/, "") !== encoded.replace(/=+$/, "")) throw new Error("non-canonical base64");
+  } catch { throw new FrameRequestError(`${path}.bytes_base64`, "base64_invalid", "Snapshot bytes must use canonical base64."); }
+  if (`sha256:${createHash("sha256").update(bytes).digest("hex")}` !== digest) throw new FrameRequestError(`${path}.digest`, "digest_mismatch", "Snapshot bytes do not match the claimed digest.");
+  return { ...(descriptor.filename == null ? {} : { filename: descriptor.filename }), ...(descriptor.locator == null ? {} : { locator: requiredString(descriptor.locator, `${path}.locator`, 4096) }), digest, bytes };
+}
+
+export function parseLegacyFrameMarkdown(text) {
+  const violations = [];
+  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
+  if (!match) return { violations: [{ path: "documents.frame.md", rule: "frontmatter_required" }] };
+  const frontmatter = {};
+  for (const [index, line] of match[1].split("\n").entries()) {
+    const field = /^([a-z_]+): (.+)$/.exec(line);
+    if (!field) { violations.push({ path: `documents.frame.md.frontmatter[${index}]`, rule: "frontmatter_line_invalid" }); continue; }
+    if (Object.hasOwn(frontmatter, field[1])) { violations.push({ path: `documents.frame.md.frontmatter.${field[1]}`, rule: "duplicate_field" }); continue; }
+    try { frontmatter[field[1]] = JSON.parse(field[2]); } catch { violations.push({ path: `documents.frame.md.frontmatter.${field[1]}`, rule: "json_scalar_invalid" }); }
+  }
+  const allowed = new Set(["type", "schema_version", "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title"]);
+  for (const key of Object.keys(frontmatter)) if (!allowed.has(key)) violations.push({ path: `documents.frame.md.frontmatter.${key}`, rule: "field_unsupported" });
+  if (frontmatter.type !== "frame") violations.push({ path: "documents.frame.md.frontmatter.type", rule: "frame_type_required" });
+  if (frontmatter.schema_version !== 1) violations.push({ path: "documents.frame.md.frontmatter.schema_version", rule: "schema_version_unsupported" });
+  const bodyPattern = /^(?:## Outcome\n```json\n([^\n]*)\n```\n\n)?(?:## Included Scope\n```json\n([^\n]*)\n```\n\n)?(?:## Excluded Scope\n```json\n([^\n]*)\n```\n\n)?(?:## Limitations\n```json\n([^\n]*)\n```\n\n)?(?:## Completion Condition\n```json\n([^\n]*)\n```\n\n)?## Discovery\nSee the manifest-selected Discovery file\.\n$/;
+  const body = bodyPattern.exec(match[2]);
+  if (!body) violations.push({ path: "documents.frame.md.body", rule: "renderer_structure_invalid" });
+  const parsed = { ...frontmatter };
+  if (body) for (const [index, key] of ["outcome", "included_scope", "excluded_scope", "limitations", "completion_condition"].entries()) {
+    if (body[index + 1] == null) continue;
+    try { parsed[key] = JSON.parse(body[index + 1]); } catch { violations.push({ path: `documents.frame.md.${key}`, rule: "json_value_invalid" }); }
+  }
+  const idFields = [["id", "frame"], ["home_namespace_id", "namespace"]];
+  for (const [key, prefix] of idFields) if (typeof parsed[key] !== "string" || !uuidId(prefix).test(parsed[key])) violations.push({ path: `documents.frame.md.frontmatter.${key}`, rule: `${prefix}_id_required` });
+  if (!Array.isArray(parsed.authority_scope_namespace_ids) || parsed.authority_scope_namespace_ids.length < 1 || parsed.authority_scope_namespace_ids.length > 64 || parsed.authority_scope_namespace_ids.some((id) => typeof id !== "string" || !uuidId("namespace").test(id)) || new Set(parsed.authority_scope_namespace_ids).size !== parsed.authority_scope_namespace_ids.length) violations.push({ path: "documents.frame.md.frontmatter.authority_scope_namespace_ids", rule: "bounded_unique_namespace_ids_required" });
+  if (!FRAME_STATUSES.has(parsed.status)) violations.push({ path: "documents.frame.md.frontmatter.status", rule: "frame_status_invalid" });
+  if (parsed.title != null && typeof parsed.title !== "string") violations.push({ path: "documents.frame.md.frontmatter.title", rule: "optional_string_required" });
+  for (const key of ["outcome", "limitations", "completion_condition"]) if (parsed[key] != null && typeof parsed[key] !== "string") violations.push({ path: `documents.frame.md.${key}`, rule: "optional_string_required" });
+  for (const key of ["included_scope", "excluded_scope"]) if (parsed[key] != null && (!Array.isArray(parsed[key]) || parsed[key].some((item) => typeof item !== "string"))) violations.push({ path: `documents.frame.md.${key}`, rule: "optional_string_array_required" });
+  return { value: parsed, violations };
+}
+
+export function parseLegacyDiscoveryMarkdown(text) {
+  const violations = [], items = [];
+  const categoryByHeading = new Map(Object.entries(L01_CATEGORY_HEADING).map(([key, heading]) => [heading, key]));
+  const lines = text.split("\n"); let index = 0, category, lastCategoryIndex = -1; const seenLabels = new Set();
+  // Renderer output always ends with exactly one empty line after the final
+  // item and never begins with or inserts an otherwise unconsumed blank.
+  if (lines[0] === "" || lines.at(-1) !== "" || lines.at(-2) !== "") violations.push({ path: "documents.discovery", rule: "renderer_structure_invalid" });
+  while (index < lines.length - 2) {
+    if (lines[index] === "") { violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "renderer_structure_invalid" }); break; }
+    const group = /^## (.+)$/.exec(lines[index]);
+    if (group) {
+      category = categoryByHeading.get(group[1]);
+      const categoryIndex = Object.keys(L01_CATEGORY_HEADING).indexOf(category);
+      if (!category) violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "category_heading_unsupported" });
+      else if (categoryIndex <= lastCategoryIndex) violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "category_order_or_duplicate_invalid" });
+      else lastCategoryIndex = categoryIndex;
+      if (lines[index + 1] !== "") violations.push({ path: `documents.discovery.line[${index + 2}]`, rule: "renderer_structure_invalid" });
+      index += 2; continue;
+    }
+    const heading = /^### (AT-\d{3}): (.+)$/.exec(lines[index]);
+    if (!heading || !category) { violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "renderer_structure_invalid" }); break; }
+    let title; try { title = JSON.parse(heading[2]); if (typeof title !== "string") throw new Error(); } catch { violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "title_json_string_required" }); }
+    if (heading[1] !== l01DiscoveryLabel(items.length) || seenLabels.has(heading[1])) violations.push({ path: `documents.discovery.${heading[1]}`, rule: "display_label_sequence_invalid" });
+    seenLabels.add(heading[1]);
+    const authority = /^- Human authority: (required|not_required|unclear)$/.exec(lines[index + 1] ?? "");
+    if (!authority || lines[index + 2] !== "" || lines[index + 3] !== "```json" || lines[index + 5] !== "```") { violations.push({ path: `documents.discovery.${heading[1]}`, rule: "renderer_structure_invalid" }); break; }
+    let body; try { body = JSON.parse(lines[index + 4]); if (typeof body !== "string") throw new Error(); } catch { violations.push({ path: `documents.discovery.${heading[1]}.body`, rule: "json_string_required" }); }
+    items.push({ source_index: items.length, display_label: heading[1], title, body, human_authority: authority?.[1], category });
+    index += 6;
+    if (lines[index] !== "") { violations.push({ path: `documents.discovery.line[${index + 1}]`, rule: "renderer_structure_invalid" }); break; }
+    index++;
+  }
+  if (index !== lines.length - 1) violations.push({ path: "documents.discovery", rule: "renderer_structure_invalid" });
+  if (!items.length) violations.push({ path: "documents.discovery", rule: "discovery_items_required" });
+  return { items, violations };
+}
+
+function structuralDiff(baseFrame, parsedFrame, parsedDiscovery, matches) {
+  const changed = [];
+  for (const key of ["home_namespace_id", "authority_scope_namespace_ids", "status", "title", "outcome", "included_scope", "excluded_scope", "limitations", "completion_condition"])
+    if (JSON.stringify(baseFrame[key] ?? null) !== JSON.stringify(parsedFrame[key] ?? null)) changed.push({ path: `frame.${key}`, before: baseFrame[key] ?? null, after: parsedFrame[key] ?? null });
+  const matched = new Set();
+  for (const match of matches.filter((item) => item.match === "exact")) {
+    matched.add(match.discovery_item_id);
+    const before = baseFrame.discovery.find((item) => item.id === match.discovery_item_id);
+    const after = parsedDiscovery[match.source_index];
+    for (const key of ["display_label", "title", "body", "human_authority", "category"])
+      if (JSON.stringify(before?.[key] ?? null) !== JSON.stringify(after?.[key] ?? null)) changed.push({ path: `discovery.${match.discovery_item_id}.${key}`, before: before?.[key] ?? null, after: after?.[key] ?? null });
+  }
+  return { additions: matches.filter((item) => item.match === "unmatched"), changes: changed, removals: baseFrame.discovery.filter((item) => !matched.has(item.id)).map((item) => ({ discovery_item_id: item.id })) };
+}
+
+async function prepareLegacyReconciliation(request) {
+  exactKeys(request, PREPARE_REQUEST_FIELDS, "request");
+  if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
+  requiredId(request.store_id, "store_id", "store"); requiredId(request.frame_id, "frame_id", "frame"); validateContext(request.context);
+  if (!object(request.base_revision) || !Number.isInteger(request.base_revision.number) || request.base_revision.number < 1 || Object.keys(request.base_revision).some((key) => !["id", "number"].includes(key))) throw new FrameRequestError("base_revision", "explicit_base_revision_required", "An explicit base revision is required.");
+  if (request.base_revision.id != null) requiredId(request.base_revision.id, "base_revision.id", "frame-revision");
+  const base = await readFrame({ protocol: request.protocol, operation: "frame.read", request_version: 1, store_id: request.store_id, context: request.context, frame_id: request.frame_id, revision_number: request.base_revision.number, configuration: request.configuration });
+  if (!base.ok) return base;
+  if (request.base_revision.id != null && base.result.revision.id !== request.base_revision.id) throw new FrameRequestError("base_revision.id", "requested_base_identity_mismatch", "The requested revision number and ID do not identify the same historical revision.");
+  const current = await readFrame({ protocol: request.protocol, operation: "frame.read", request_version: 1, store_id: request.store_id, context: request.context, frame_id: request.frame_id, configuration: request.configuration });
+  if (!current.ok) return current;
+  const baseCurrent = current.result.revision.id === base.result.revision.id;
+  const baseStale = !baseCurrent;
+  if (!Array.isArray(request.documents) || request.documents.length !== 2) throw new FrameRequestError("documents", "frame_and_discovery_required", "Exactly frame.md and one selected Discovery document are required.");
+  const snapshots = [];
+  for (let index = 0; index < request.documents.length; index++) snapshots.push(await immutableSnapshot(request.documents[index], `documents[${index}]`, new Set(["filename", "locator", "digest", "bytes_base64"])));
+  const names = snapshots.map((document) => document.filename);
+  if (names.filter((name) => name === "frame.md").length !== 1 || names.filter((name) => ["discovery.md", "discovery-map.md"].includes(name)).length !== 1) throw new FrameRequestError("documents", "legacy_document_selection_invalid", "Select frame.md and exactly one of discovery.md or discovery-map.md; dual Discovery files are rejected.");
+  if (request.machine_manifest == null) throw new FrameRequestError("machine_manifest", "verified_manifest_required", "Exact machine identity requires a digest-verified immutable manifest snapshot.");
+  const manifestSnapshot = await immutableSnapshot(request.machine_manifest, "machine_manifest", new Set(["locator", "digest", "bytes_base64"]));
+  let manifest; try { manifest = JSON.parse(decodeSnapshotText(manifestSnapshot.bytes, "machine_manifest.bytes")); } catch (error) { if (error instanceof FrameRequestError) throw error; throw new FrameRequestError("machine_manifest.bytes", "manifest_json_invalid", "Manifest bytes must contain one JSON value."); }
+  const manifestFields = new Set(["schema", "renderer", "frame_id", "base_revision_id", "base_revision_number", "documents", "discovery_items"]);
+  if (!object(manifest) || Object.keys(manifest).some((key) => !manifestFields.has(key)) || manifest.schema !== "casebook-frame-legacy-manifest@1") throw new FrameRequestError("machine_manifest", "manifest_schema_invalid", "The verified manifest must use the closed supported schema.");
+  if (!object(manifest.renderer) || manifest.renderer.id !== "casebook-l01-frame-markdown" || manifest.renderer.version !== 1 || Object.keys(manifest.renderer).some((key) => !["id", "version"].includes(key))) throw new FrameRequestError("machine_manifest.renderer", "renderer_incompatible", "The manifest renderer is unsupported.");
+  if (manifest.frame_id !== request.frame_id) throw new FrameRequestError("machine_manifest.frame_id", "manifest_frame_mismatch", "Manifest Frame identity differs from the request.");
+  if (manifest.base_revision_id !== base.result.revision.id || manifest.base_revision_number !== base.result.revision.number) throw new FrameRequestError("machine_manifest.base_revision", "manifest_base_drift", "Manifest base differs from the exact requested revision.");
+  if (!object(manifest.documents) || Object.keys(manifest.documents).length !== 2 || snapshots.some((snapshot) => manifest.documents[snapshot.filename] !== snapshot.digest)) throw new FrameRequestError("machine_manifest.documents", "manifest_document_binding_invalid", "Manifest must bind both selected filenames to their verified byte digests.");
+  const frameParsed = parseLegacyFrameMarkdown(decodeSnapshotText(snapshots.find((item) => item.filename === "frame.md").bytes, "documents.frame.md"));
+  const discoveryParsed = parseLegacyDiscoveryMarkdown(decodeSnapshotText(snapshots.find((item) => item.filename !== "frame.md").bytes, "documents.discovery"));
+  const violations = [...frameParsed.violations, ...discoveryParsed.violations];
+  if (frameParsed.value?.id !== request.frame_id) violations.push({ path: "documents.frame.md.frontmatter.id", rule: "frame_identity_mismatch" });
+  const identities = new Map(), boundIds = new Set();
+  if (!Array.isArray(manifest.discovery_items) || manifest.discovery_items.length > MAX_DISCOVERY) violations.push({ path: "machine_manifest.discovery_items", rule: "bounded_array_required" });
+  else for (const [index, item] of manifest.discovery_items.entries()) {
+    let valid = object(item) && !Object.keys(item).some((key) => !["display_label", "id", "version_id"].includes(key)) && /^AT-\d{3}$/.test(item.display_label ?? "");
+    try { requiredId(item?.id, `machine_manifest.discovery_items[${index}].id`, "discovery"); requiredId(item?.version_id, `machine_manifest.discovery_items[${index}].version_id`, "discovery-item-version"); } catch { valid = false; }
+    if (!valid || identities.has(item?.display_label) || boundIds.has(item?.id)) violations.push({ path: `machine_manifest.discovery_items[${index}]`, rule: "identity_binding_invalid" });
+    else { identities.set(item.display_label, item); boundIds.add(item.id); }
+  }
+  const known = new Map(base.result.frame.discovery.map((item) => [item.id, item]));
+  const expectedByLabel = new Map(base.result.frame.discovery.map((item, index) => [l01DiscoveryLabel(index), item]));
+  for (const [label, identity] of identities) {
+    const selected = known.get(identity.id);
+    const expected = expectedByLabel.get(label);
+    if (!selected || !expected) violations.push({ path: `machine_manifest.discovery_items.${label}`, rule: "identity_binding_extra" });
+    else if (selected.version_id !== identity.version_id) violations.push({ path: `machine_manifest.discovery_items.${label}`, rule: "identity_binding_stale" });
+    else if (identity.id !== expected.id || identity.version_id !== expected.version_id) violations.push({ path: `machine_manifest.discovery_items.${label}`, rule: "identity_binding_changed" });
+  }
+  // The manifest is exact over base identities, not over edited document rows.
+  // Consequently an edited addition has no binding and is reported unmatched,
+  // while a removed base item remains a valid manifest row and becomes a diff removal.
+  if (identities.size !== base.result.frame.discovery.length || [...known.keys()].some((id) => !boundIds.has(id))) violations.push({ path: "machine_manifest.discovery_items", rule: "identity_binding_not_one_to_one" });
+  const matches = discoveryParsed.items.map((item) => {
+    const identity = identities.get(item.display_label);
+    if (!identity) return { source_index: item.source_index, display_label: item.display_label, match: "unmatched", candidate_discovery_item_ids: [] };
+    const selected = known.get(identity.id);
+    if (!selected || selected.version_id !== identity.version_id) return { source_index: item.source_index, display_label: item.display_label, match: "ambiguous", candidate_discovery_item_ids: selected ? [selected.id] : [] };
+    return { source_index: item.source_index, display_label: item.display_label, match: "exact", discovery_item_id: selected.id, discovery_item_version_id: selected.version_id };
+  });
+  const diff = structuralDiff(base.result.frame, frameParsed.value ?? {}, discoveryParsed.items, matches);
+  return success("frame.legacy.prepare_reconciliation", { status: violations.length ? "invalid" : "prepared", frame_id: request.frame_id, base_revision: base.result.revision, current_revision: current.result.revision, base_current: baseCurrent, base_stale: baseStale, selected_discovery_filename: names.find((name) => name !== "frame.md"), immutable_documents: snapshots.map(({ bytes: _bytes, ...snapshot }) => snapshot), immutable_manifest: { ...(manifestSnapshot.locator == null ? {} : { locator: manifestSnapshot.locator }), digest: manifestSnapshot.digest }, violations, parsed: { frame: frameParsed.value, discovery: discoveryParsed.items }, structural_diff: diff, matches, mutation_performed: false, watch_started: false, rename_performed: false, writeback_performed: false, applied_view: base.result.applied_view });
+}
+
 export async function invokeFrameOperation(request) {
   try {
     if (request.operation === "frame.create") return await mutateFrame(request, true);
@@ -825,6 +1105,7 @@ export async function invokeFrameOperation(request) {
     if (request.operation === "frame.discovery.read") return await readDiscovery(request);
     if (request.operation === "frame.history") return await frameHistory(request);
     if (request.operation === "frame.list") return await listFrames(request);
+    if (request.operation === "frame.legacy.prepare_reconciliation") return await prepareLegacyReconciliation(request);
     return unsupported(request.operation);
   } catch (error) {
     if (error instanceof FrameRequestError) return invalidFrame(error);
