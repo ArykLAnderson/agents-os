@@ -719,7 +719,7 @@ test("complete Frame revisions settle, replay, reopen, and reject omissions befo
     crossScope.operation_id = "operation:l03-w01-cross-scope";
     crossScope.expected_revision = 4;
     crossScope.frame.authority_scope_namespace_ids.push("namespace:97617dba-ff62-4911-99c6-8a02196dbd4b");
-    assertInvalid(await invoke(sourceEntrypoint, root, crossScope), "frame", "frame.authority_scope_namespace_ids", "cross_namespace_scope_unsupported");
+    assertInvalid(await invoke(sourceEntrypoint, root, crossScope), "frame", "frame.authority_scope_namespace_ids", "scope_addition_not_granted");
     const activeReopen = structuredClone(reopenRequest);
     activeReopen.operation_id = "operation:l03-w01-active-reopen";
     activeReopen.expected_revision = 4;

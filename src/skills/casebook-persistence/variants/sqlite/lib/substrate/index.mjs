@@ -117,6 +117,7 @@ export async function inspectStore(binary, storePath) {
           'lifecycle', lifecycle
         ) FROM namespaces ORDER BY namespace_id LIMIT 1),
         'namespace_count', (SELECT count(*) FROM namespaces),
+        'active_namespace_count', (SELECT count(*) FROM namespaces WHERE lifecycle = 'active'),
         'view', (SELECT json_object(
           'view_id', vf.view_id,
           'view_policy_revision_id', vpr.view_policy_revision_id,
@@ -142,7 +143,19 @@ export async function inspectStore(binary, storePath) {
           FROM view_policy_revisions vpr
           JOIN view_policy_namespace_grants grant
             ON grant.view_policy_revision_id = vpr.view_policy_revision_id
+          JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'
           WHERE vpr.lifecycle = 'active'),
+        'active_policy_total_grant_count', (SELECT count(*)
+          FROM view_policy_revisions vpr
+          JOIN view_policy_namespace_grants grant
+            ON grant.view_policy_revision_id = vpr.view_policy_revision_id
+          WHERE vpr.lifecycle = 'active'),
+        'active_home_grant_count', (SELECT count(*)
+          FROM view_families vf
+          JOIN view_policy_revisions vpr ON vpr.view_id = vf.view_id AND vpr.lifecycle = 'active'
+          JOIN view_policy_namespace_grants grant ON grant.view_policy_revision_id = vpr.view_policy_revision_id
+            AND grant.namespace_id = vf.home_namespace_id
+          JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'),
         'grant_count', (SELECT count(*) FROM view_policy_namespace_grants),
         'migration', (SELECT json_object(
           'migration_id', migration_id,
@@ -193,16 +206,14 @@ export async function inspectStore(binary, storePath) {
 
   const complete = detail.metadata_count === 1
     && detail.metadata.store_id?.startsWith("store:")
-    && detail.namespace_count === 1
-    && detail.namespace?.namespace_key === "personal"
-    && detail.namespace?.lifecycle === "active"
+    && detail.namespace_count >= 1
+    && detail.active_namespace_count >= 1
     && detail.view_family_count === 1
     && detail.policy_revision_count >= 1
     && detail.active_view_count === 1
-    && detail.active_policy_grant_count === 1
-    && detail.view?.namespace_id === detail.namespace?.namespace_id
-    && detail.view?.granted_namespace_id === detail.namespace?.namespace_id
-    && detail.view?.granted_namespace_key === "personal"
+    && detail.active_policy_grant_count >= 1
+    && detail.active_policy_grant_count === detail.active_policy_total_grant_count
+    && detail.active_home_grant_count === 1
     && detail.view?.granted_namespace_lifecycle === "active"
     && detail.view?.audience_ceiling === "private"
     && detail.view?.store_operation_receipts_visible === 1
@@ -226,6 +237,8 @@ export async function inspectStore(binary, storePath) {
         policy_revisions: detail.policy_revision_count,
         active_views: detail.active_view_count,
         active_policy_grants: detail.active_policy_grant_count,
+        active_policy_total_grants: detail.active_policy_total_grant_count,
+        active_home_grants: detail.active_home_grant_count,
         grants: detail.grant_count,
         migrations: detail.migration_count,
         receipts: detail.receipt_count,
