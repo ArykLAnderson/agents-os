@@ -1,8 +1,5 @@
-import { invokeCaseOperation } from "../lib/case/index.mjs";
-import { invokeFrameOperation } from "../lib/frame/index.mjs";
-import { invokeCommonOperation } from "../lib/common/index.mjs";
-import { invokeExceptionalOperation } from "../lib/operations/index.mjs";
-import { diagnose } from "../lib/substrate/diagnostics.mjs";
+import { invokeMarkdownOperation } from "../lib/workspace.mjs";
+import { loadAndValidateManifest } from "../../../shared/manifest.mjs";
 import { failure, PROTOCOL_ID, PROTOCOL_VERSION } from "../../../shared/protocol.mjs";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
@@ -26,16 +23,19 @@ try {
       failureClass: "asset_incompatible",
       evidence: { expected: { id: PROTOCOL_ID, version: PROTOCOL_VERSION }, received: request?.protocol ?? null },
     });
-  } else if (request.operation === "diagnose") {
-    result = await diagnose(request);
-  } else if (request.operation === "case.create" || request.operation === "case.read") {
-    result = await invokeCaseOperation(request);
-  } else if (request.operation === "frame.create" || request.operation === "frame.read" || request.operation === "frame.list") {
-    result = await invokeFrameOperation(request);
-  } else if (["common.resolve", "common.list", "common.search", "interchange.export"].includes(request.operation)) {
-    result = await invokeCommonOperation(request);
+  } else if (Number(process.versions.node.split(".")[0]) < 22) {
+    result = failure("node_version_unsupported", "Node.js 22 or newer is required.", {
+      failureClass: "runtime_incompatible",
+      evidence: { actual: process.versions.node, minimum_major: 22 },
+    });
   } else {
-    result = await invokeExceptionalOperation(request);
+    const manifest = await loadAndValidateManifest();
+    result = manifest.ok
+      ? await invokeMarkdownOperation(request)
+      : failure("asset_incompatible", "Package manifest or asset verification failed.", {
+          failureClass: "asset_incompatible",
+          evidence: { problems: manifest.problems },
+        });
   }
 } catch (error) {
   result = failure(
@@ -45,7 +45,7 @@ try {
 }
 
 process.stderr.write(result.ok
-  ? `casebook-persistence: ${result.operation} completed with status ${result.result?.status ?? "passed"}\n`
-  : `casebook-persistence: ${result.failure.code}: ${result.failure.message}\n`);
+  ? `casebook-persistence-markdown: ${result.operation} completed with status ${result.result?.status ?? "passed"}\n`
+  : `casebook-persistence-markdown: ${result.failure.code}: ${result.failure.message}\n`);
 process.stdout.write(`${JSON.stringify(result)}\n`);
 process.exitCode = result.ok ? 0 : 2;

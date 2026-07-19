@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.1.0-l01-w04"
+    "version": "0.1.0-l01-w05"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,13 +21,18 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "d5622fd8fd890ced7a536c60471f78684fde0176649beb46ee869b496dfa321f"
+    "sha256": "57f6995daa1d1e34468f29bac3c0e2ad46dd95de8349757efb326cba0fec8253"
   },
   "entrypoints": [
     {
       "id": "sqlite-connector",
       "interpreter": "node",
       "path": "variants/sqlite/bin/casebook-persistence.mjs"
+    },
+    {
+      "id": "markdown-connector",
+      "interpreter": "node",
+      "path": "variants/markdown/bin/casebook-persistence.mjs"
     }
   ],
   "supported_operations": [
@@ -38,7 +43,12 @@
     "case.read",
     "frame.create",
     "frame.read",
-    "frame.list"
+    "frame.list",
+    "common.resolve",
+    "common.list",
+    "common.search",
+    "interchange.export",
+    "interchange.parse"
   ],
   "l01_operation_constraints": {
     "store_receipt_visible_operation_kinds": [
@@ -52,35 +62,39 @@
       "active"
     ],
     "discovery_dependencies": "empty_only",
-    "frame_list": "active_only_without_filters_history_or_paging"
+    "frame_list": "active_only_without_filters_history_or_paging",
+    "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
+    "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
+    "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only"
   },
   "unsupported_until_later_work_items": [
-    "case.commit_revision/search/export/history/include/filter/paging/lifecycle",
-    "frame.commit_revision/closed/settled/tombstoned/references/history/include/filter/paging/lifecycle/legacy-reconciliation",
-    "generic-search-and-export",
+    "case.commit_revision/history/include/filter/paging/lifecycle",
+    "frame.commit_revision/closed/settled/tombstoned/references/history/include/filter/paging/lifecycle/reconciliation",
+    "history/events/checkpoints/snapshots/global-search",
+    "full-atomic-markdown-write-and-generation-selection",
     "migration",
-    "export",
-    "snapshot",
-    "restore"
+    "backup",
+    "restore",
+    "purge"
   ],
   "assets": [
     {
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "35a30d9d07ed167f7e5e096201cff851391760f5e266f80a23e681a78d3ee935"
+      "sha256": "bdada295c5b6d934c1d1f37d9ef0a9b44649ebb1230eebbca13ea648d4f8ea51"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "37e511323765e1547d8045c2e91fe98711b7c7bf49fd984f58cdf757cd392362"
+      "sha256": "3680020d20c002c1ad69bbc56b8f7b65cfdd2c5247b52c09864e82145513c02a"
     },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "0c6820c0c0efe98c1143e7b0009768fab69b3b10749dfe8406c9ee0a43698a2e"
+      "sha256": "a80b4c6fbae2e0e1a81950bb85da3d54b383bc7738c43a3d30d34977eb79c6d2"
     },
     {
       "id": "shared-configuration",
@@ -95,16 +109,40 @@
       "sha256": "2e743ac84c44ecaf01d4579dd6217b545e9f73e493c3509bc37685a08ee80c86"
     },
     {
+      "id": "l01-interchange",
+      "path": "shared/l01-interchange.mjs",
+      "kind": "module",
+      "sha256": "3629f4382fdd38b8b56f8b342328d137eeb92aa907d9557ffb57167350c9fdb1"
+    },
+    {
       "id": "markdown-variant",
       "path": "variants/markdown/variant.json",
       "kind": "variant_manifest",
-      "sha256": "a62eae8b41338cb71b4662dcf1d1774203b292feabbbbbf8cfe1969ec61e7db1"
+      "sha256": "052d5d7cebdb58c20d6261eeb387676cc4b04066828ef394fc40f75e30c7d86d"
+    },
+    {
+      "id": "markdown-entrypoint",
+      "path": "variants/markdown/bin/casebook-persistence.mjs",
+      "kind": "entrypoint",
+      "sha256": "7047142c7e590e65571fe7b2d2dd06c705c58b4542b857c000eb30ce91469c4e"
+    },
+    {
+      "id": "markdown-workspace",
+      "path": "variants/markdown/lib/workspace.mjs",
+      "kind": "module",
+      "sha256": "d53534e5c36f7bdc734b711beac034f24b6bebb367a9b4bccf76bc6d3dcd1853"
+    },
+    {
+      "id": "markdown-interchange",
+      "path": "variants/markdown/lib/interchange.mjs",
+      "kind": "module",
+      "sha256": "8de8a59090eed896a9965cbc4041a72441037dc3697800d08a3fefe15f320941"
     },
     {
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "163ad393274a1e99a7b0d7b3250e50e88faf6529366f9e2d0ab0fd5ec24305a2"
+      "sha256": "84fd9b13d82f23e0eff0cf81c6e656dee18cd4dac0fd55f027ff31827d000cdc"
     },
     {
       "id": "sqlite-diagnostics",
@@ -128,13 +166,19 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "0668e02be619d798e4f0da43d379118f83980848daf25d8aa889aad084666f20"
+      "sha256": "622586519731f1c65185eb565654c6fd152548cb34e5b0fa27bb84e7c96b9115"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "c3468480f563404d265be35a3ba8439afeade2be5c0edc85986b61a9c693087a"
+      "sha256": "8352f27610134bf2f4c47885ac1bc3e79a8a2de2c8f2fdf04f9b9328f34d2d3f"
+    },
+    {
+      "id": "sqlite-common-subset",
+      "path": "variants/sqlite/lib/common/index.mjs",
+      "kind": "module",
+      "sha256": "889ef8847a571c48f6d0a4ecc8e4f080e94e3537726567319b7de21076d3b6b9"
     },
     {
       "id": "exceptional-operations",
@@ -158,7 +202,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "86d3dd1cd6830cc702d00bb5002c10ae9a06ff872a77fe3d6fa8231ee4429b8b"
+      "sha256": "b07590f9940d0608c5d9656f47ffb335cc5fd7dd853d0191bb4a3138b4d50ff8"
     }
   ]
 }

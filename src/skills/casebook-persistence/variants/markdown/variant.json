@@ -2,12 +2,44 @@
   "variant_manifest_version": 1,
   "id": "casebook-persistence-markdown",
   "authority_mode": "markdown",
-  "implementation_status": "not_yet_implemented",
+  "implementation_status": "l01_synthetic_interchange_only",
   "guarantees": "reduced-file-authoritative-common-subset",
+  "entrypoint": {
+    "interpreter": "node",
+    "path": "bin/casebook-persistence.mjs"
+  },
+  "supported_operations": [
+    "case.create",
+    "case.read",
+    "frame.create",
+    "frame.read",
+    "frame.list",
+    "common.resolve",
+    "common.list",
+    "common.search",
+    "interchange.parse"
+  ],
+  "identity_rule": "verified-frontmatter-and-authority-marker-digest-bound-manifest-only",
+  "selected_discovery_filenames": [
+    "discovery.md",
+    "discovery-map.md"
+  ],
   "forbids": [
     "sqlite-fallback",
     "writable-sqlite-mirror",
     "hot-switch",
-    "implicit-current-working-directory"
+    "implicit-current-working-directory",
+    "implicit-watch-or-import",
+    "text-similarity-exact-identity"
+  ],
+  "unsupported": [
+    "history",
+    "events",
+    "durable-receipts",
+    "checkpoints",
+    "snapshots",
+    "global-search",
+    "atomic-markdown-replacement",
+    "migration"
   ]
 }
