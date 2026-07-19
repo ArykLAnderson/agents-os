@@ -7,6 +7,12 @@ description: Builds the smallest disposable artifact that answers one explicit q
 
 A prototype is disposable evidence for one explicit question. The question and evaluator determine its form.
 
+## Execution Context
+
+When a Frame or another coordinating workflow needs a prototype, keep the coordinator as the control plane and delegate the prototype to one fresh-context worker. The coordinator bounds the question, evaluator, authorization, constraints, and evidence contract; the worker owns building, iterative debugging, execution, evaluation, and authorized disposal. Return a compact result with the artifact locator, exact evidence or verification commands, limitations, and residual state. Keep detailed logs and scratch output in the prototype artifact rather than the coordinator's conversation.
+
+An agent explicitly delegated the prototype is already the worker and does not delegate it again. Execute in the coordinating thread only when the discriminator is a single-pass operation requiring no iterative build or debugging and no substantial logs or scratch artifacts, or when the user explicitly requests inline execution. If fresh-context workers are unavailable, return the bounded prototype plan and the delegation limitation to the coordinator rather than silently running iterative work inline.
+
 ## 1. Bound The Question
 
 State one answerable question before building. If the request contains several independent uncertainties, ask the user to choose one or split the work into separate prototypes.
