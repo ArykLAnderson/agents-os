@@ -17,7 +17,7 @@ import {
 } from "../case/index.mjs";
 import {
   invokeFrameOperation,
-  l01DiscoveryLabel,
+  l01DiscoveryEntries,
   renderL01DiscoveryMarkdown,
   renderL01FrameMarkdown,
 } from "../frame/index.mjs";
@@ -63,8 +63,8 @@ function renderInterchange(records) {
       discovery_path: discoveryPath,
       discovery_sha256: sha256(discoveryContent),
       discovery_filename: "discovery.md",
-      discovery_items: record.discovery.map((discovery, index) => ({
-        label: l01DiscoveryLabel(index),
+      discovery_items: l01DiscoveryEntries(record).map(({ item: discovery, display_label: label }) => ({
+        label,
         id: discovery.id,
         display_order: discovery.display_order,
         ...(discovery.display_label == null ? {} : { display_label: discovery.display_label }),

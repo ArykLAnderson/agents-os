@@ -49,6 +49,27 @@ test("L03-W03 supported Frame and selected Discovery renderer parse completely",
   }]);
 });
 
+test("L03-W03 renderer assigns strict sequential labels in grouped category order", () => {
+  const categories = ["frontier", "out_of_scope", "fog", "contested", "blocked", "deferred"];
+  const discovery = categories.map((category, index) => ({
+    ...frame.discovery[0],
+    id: `discovery:33333333-3333-4333-8${String(330 + index).padStart(3, "0")}-333333333333`,
+    display_order: index,
+    category,
+    title: `${category} title`,
+  }));
+  const parsed = parseLegacyDiscoveryMarkdown(renderL01DiscoveryMarkdown({ ...frame, discovery }));
+  assert.deepEqual(parsed.violations, []);
+  assert.deepEqual(parsed.items.map((item) => [item.display_label, item.category, item.title]), [
+    ["AT-001", "fog", "fog title"],
+    ["AT-002", "frontier", "frontier title"],
+    ["AT-003", "blocked", "blocked title"],
+    ["AT-004", "contested", "contested title"],
+    ["AT-005", "deferred", "deferred title"],
+    ["AT-006", "out_of_scope", "out_of_scope title"],
+  ]);
+});
+
 test("L03-W03 strict parsers return schema and renderer violations instead of accepting arbitrary Markdown", () => {
   assert.deepEqual(parseLegacyFrameMarkdown('{"id":"not-a-frame"}').violations, [
     { path: "documents.frame.md", rule: "frontmatter_required" },

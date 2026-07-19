@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "1e21f18f5300a5721c7bf70544c36cdede8aa744e7e456e66ae8c756148cabf5"
+    "sha256": "b02ab77de3eb3fb7792209504eaaca6e46b2ae5f129049abb841a253abbc58b2"
   },
   "entrypoints": [
     {
@@ -191,13 +191,13 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "3c11aa6b058607a95372acd33606539b3e13e99a3b5d1957cc300bfa4743f00e"
+      "sha256": "ac5fcdd91c2a1322c758b0689c53c02a3e49df3ec9b10757692c2397885533c9"
     },
     {
       "id": "sqlite-common-subset",
       "path": "variants/sqlite/lib/common/index.mjs",
       "kind": "module",
-      "sha256": "889ef8847a571c48f6d0a4ecc8e4f080e94e3537726567319b7de21076d3b6b9"
+      "sha256": "168a37af89817efc622d9584f52396bf16ba13028daa6e4853b95af1529a9d1d"
     },
     {
       "id": "exceptional-operations",
