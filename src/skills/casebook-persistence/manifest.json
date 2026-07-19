@@ -1,0 +1,134 @@
+{
+  "manifest_version": 1,
+  "package": {
+    "id": "casebook-persistence",
+    "version": "0.1.0-l01-w01"
+  },
+  "protocol": {
+    "id": "casebook-persistence-json",
+    "version": 1,
+    "compatible_versions": [
+      1
+    ]
+  },
+  "schema": {
+    "id": "casebook-persistence-sqlite",
+    "version": 1,
+    "compatible_versions": [
+      1
+    ],
+    "store_initialization": "not_yet_implemented"
+  },
+  "content_digest": {
+    "algorithm": "sha256",
+    "sha256": "342cede0f828b77867de9be2f8779621cb75ac5940ece045af422c437d181ada"
+  },
+  "entrypoints": [
+    {
+      "id": "sqlite-connector",
+      "interpreter": "node",
+      "path": "variants/sqlite/bin/casebook-persistence.mjs"
+    }
+  ],
+  "supported_operations": [
+    "diagnose"
+  ],
+  "unsupported_until_later_work_items": [
+    "initialize_store",
+    "case.*",
+    "frame.*",
+    "operations.*"
+  ],
+  "assets": [
+    {
+      "id": "skill-guidance",
+      "path": "SKILL.md",
+      "kind": "model_guidance",
+      "sha256": "6eebf8f9625e64885a3aef79540e1f64659c671688cd79d8e20522833e01192f"
+    },
+    {
+      "id": "human-install-guidance",
+      "path": "INSTALL.md",
+      "kind": "human_documentation",
+      "sha256": "35d46c0465741065728baf7f1d099a81b9e45434fef2d25b6edce71de7537770"
+    },
+    {
+      "id": "shared-protocol",
+      "path": "shared/protocol.mjs",
+      "kind": "module",
+      "sha256": "46276ad23753c841957ca8fb466ebf8851452e1fbe5f537fd74878192a94d3eb"
+    },
+    {
+      "id": "shared-configuration",
+      "path": "shared/config.mjs",
+      "kind": "module",
+      "sha256": "3d20a70ed5e8c23a2f334a2bc390c67d99d03abd4d9f3ea5a1795943e6d608c9"
+    },
+    {
+      "id": "shared-manifest",
+      "path": "shared/manifest.mjs",
+      "kind": "module",
+      "sha256": "2e743ac84c44ecaf01d4579dd6217b545e9f73e493c3509bc37685a08ee80c86"
+    },
+    {
+      "id": "markdown-variant",
+      "path": "variants/markdown/variant.json",
+      "kind": "variant_manifest",
+      "sha256": "a62eae8b41338cb71b4662dcf1d1774203b292feabbbbbf8cfe1969ec61e7db1"
+    },
+    {
+      "id": "sqlite-entrypoint",
+      "path": "variants/sqlite/bin/casebook-persistence.mjs",
+      "kind": "entrypoint",
+      "sha256": "fda9e28d7a9d7673190b1e76b9132cd835f9fb98e69125c5c77c3e26ca899978"
+    },
+    {
+      "id": "sqlite-diagnostics",
+      "path": "variants/sqlite/lib/substrate/diagnostics.mjs",
+      "kind": "module",
+      "sha256": "e902edeaa9de346fc98edd71e1816c916bb33ce1d4e2a5ed9c8bdcae35741022"
+    },
+    {
+      "id": "sqlite-substrate",
+      "path": "variants/sqlite/lib/substrate/index.mjs",
+      "kind": "module",
+      "sha256": "4ba14de225fcf38ce22cd6214d79d0783c6c25a781513a8b393e311aebafc92b"
+    },
+    {
+      "id": "case-facade",
+      "path": "variants/sqlite/lib/case/index.mjs",
+      "kind": "module",
+      "sha256": "719f479b651352438844af891016ee3c188d0de9270877ff79de7c748975c67c"
+    },
+    {
+      "id": "frame-facade",
+      "path": "variants/sqlite/lib/frame/index.mjs",
+      "kind": "module",
+      "sha256": "1301bbcc4151c5d4fc781aa56fdcf89884d776c0e7e288bb8bd957cd069b3e45"
+    },
+    {
+      "id": "exceptional-operations",
+      "path": "variants/sqlite/lib/operations/index.mjs",
+      "kind": "module",
+      "sha256": "e2bbc4db3f734e2c5bd08a0143d5129a058dee93074fe8afe3b68dbfd27a2790"
+    },
+    {
+      "id": "sqlite-schema",
+      "path": "variants/sqlite/sql/schema-v1.sql",
+      "kind": "sql",
+      "sha256": "ba0e1b9dd26c7647cfe9938a3739a7f5d07abca2e6452d37a36f3a468ddd7ca7"
+    },
+    {
+      "id": "sqlite-migrations",
+      "path": "variants/sqlite/migrations/manifest.json",
+      "kind": "migration_manifest",
+      "sha256": "84d6f4e136c23a1c3b2c857fb66558c0eea290d3202eee027f62de4ba0c74f4a"
+    },
+    {
+      "id": "sqlite-runtime",
+      "path": "variants/sqlite/manifests/runtime.json",
+      "kind": "runtime_manifest",
+      "sha256": "7880761f95589aec027f80758611ddb835808ad3318cb7bebc259a8565cbb63c"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "protocol": {
+    "id": "casebook-persistence-json",
+    "version": 1
+  },
+  "operation": "diagnose",
+  "configuration": {
+    "source": {
+      "kind": "synthetic-test-request",
+      "locator": "fixture:sqlite-diagnostic-request"
+    },
+    "authority_mode": "sqlite",
+    "sqlite": {
+      "database_url": "file:__ABSOLUTE_SYNTHETIC_STORE__",
+      "sqlite_bin": "__ABSOLUTE_SQLITE_BINARY__"
+    }
+  },
+  "probe_directory": "__ABSOLUTE_DISPOSABLE_PROBE_DIRECTORY__"
+}

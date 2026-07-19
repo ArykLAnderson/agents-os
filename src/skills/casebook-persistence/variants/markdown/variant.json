@@ -1,0 +1,13 @@
+{
+  "variant_manifest_version": 1,
+  "id": "casebook-persistence-markdown",
+  "authority_mode": "markdown",
+  "implementation_status": "not_yet_implemented",
+  "guarantees": "reduced-file-authoritative-common-subset",
+  "forbids": [
+    "sqlite-fallback",
+    "writable-sqlite-mirror",
+    "hot-switch",
+    "implicit-current-working-directory"
+  ]
+}
