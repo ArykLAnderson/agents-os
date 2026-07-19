@@ -132,10 +132,19 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
     if (await stat(configuredStore).then(() => true).catch(() => false)) throw new Error(`${target} created configured store`);
     if ((await readdir(probeDirectory)).length !== 0) throw new Error(`${target} left probe debris`);
 
-    const unsupportedRequest = { ...request, operation: "commit_owner_revision" };
+    const unsupportedRequest = { ...request, operation: "case.create" };
     const unsupported = await invoke(nodeBinary, entrypoint, cwd, home, unsupportedRequest);
     if (unsupported.exitCode !== 2 || unsupported.json.failure?.code !== "not_yet_implemented") {
       throw new Error(`${target} did not fail closed for later operation`);
+    }
+    const mechanical = await invoke(nodeBinary, entrypoint, cwd, home, {
+      ...request,
+      operation: "commit_owner_revision",
+    });
+    if (mechanical.exitCode !== 2
+      || mechanical.json.failure?.code !== "not_yet_implemented"
+      || mechanical.json.failure?.evidence?.supported_operations?.includes("commit_owner_revision")) {
+      throw new Error(`${target} shipped connector exposed a generic mechanical operation`);
     }
 
     results.push({
@@ -146,6 +155,7 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
       assets_verified: copiedManifest.manifest.assets.length,
       diagnostic: "passed",
       unsupported_later_operation: "passed",
+      generic_mechanical_operation_rejected: "passed",
       configured_store_created: false,
       source_fallback: false,
     });

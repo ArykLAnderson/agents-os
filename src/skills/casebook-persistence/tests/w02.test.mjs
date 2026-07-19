@@ -429,7 +429,7 @@ test("receipt lookup and unsupported ordinary access do not implicitly initializ
 
     const unsupported = await invoke(sourceEntrypoint, root, {
       protocol,
-      operation: "commit_owner_revision",
+      operation: "case.create",
       configuration: configuration(storePath, sqliteBinary),
     });
     assert.equal(unsupported.exitCode, 2);

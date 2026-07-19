@@ -81,8 +81,130 @@ CREATE TABLE store_operation_receipts (
   settled_at TEXT NOT NULL,
   failure_class TEXT,
   retry_disposition TEXT NOT NULL CHECK (retry_disposition IN ('never', 'after_reconcile', 'after_operator_repair')),
-  operation_fence INTEGER NOT NULL CHECK (operation_fence > 0)
+  operation_fence INTEGER NOT NULL CHECK (operation_fence > 0),
+  owner_id TEXT,
+  owner_kind TEXT,
+  owner_home_namespace_id TEXT REFERENCES namespaces(namespace_id),
+  view_policy_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),
+  expected_revision INTEGER CHECK (expected_revision IS NULL OR expected_revision >= 0),
+  observed_revision INTEGER CHECK (observed_revision IS NULL OR observed_revision >= 0),
+  committed_revision INTEGER CHECK (committed_revision IS NULL OR committed_revision > 0),
+  event_id TEXT
 ) STRICT;
+
+CREATE TABLE owners (
+  owner_id TEXT PRIMARY KEY,
+  owner_kind TEXT NOT NULL,
+  home_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
+  created_at TEXT NOT NULL,
+  UNIQUE (owner_id, owner_kind)
+) STRICT;
+
+CREATE TABLE owner_family_bindings (
+  family_id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  created_at TEXT NOT NULL,
+  UNIQUE (family_id, owner_id)
+) STRICT;
+
+CREATE TABLE owner_versions (
+  version_id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  family_id TEXT NOT NULL REFERENCES owner_family_bindings(family_id),
+  content_json TEXT NOT NULL CHECK (json_valid(content_json)),
+  content_digest TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (owner_id, family_id, version_id),
+  FOREIGN KEY (family_id, owner_id) REFERENCES owner_family_bindings(family_id, owner_id)
+) STRICT;
+
+CREATE TABLE owner_revisions (
+  revision_id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  revision_number INTEGER NOT NULL CHECK (revision_number > 0),
+  normalized_json TEXT NOT NULL CHECK (json_valid(normalized_json)),
+  representation_id TEXT NOT NULL,
+  representation_version INTEGER NOT NULL CHECK (representation_version > 0),
+  operation_id TEXT NOT NULL UNIQUE,
+  committed_at TEXT NOT NULL,
+  UNIQUE (owner_id, revision_number)
+) STRICT;
+
+CREATE TABLE owner_revision_selections (
+  revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),
+  family_id TEXT NOT NULL,
+  version_id TEXT NOT NULL REFERENCES owner_versions(version_id),
+  PRIMARY KEY (revision_id, family_id)
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE owner_current (
+  owner_id TEXT PRIMARY KEY REFERENCES owners(owner_id),
+  revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),
+  revision_number INTEGER NOT NULL CHECK (revision_number > 0),
+  projection_json TEXT NOT NULL CHECK (json_valid(projection_json)),
+  updated_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE owner_events (
+  event_id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  owner_kind TEXT NOT NULL,
+  owner_revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),
+  owner_revision INTEGER NOT NULL CHECK (owner_revision > 0),
+  namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
+  event_type TEXT NOT NULL,
+  event_schema_version INTEGER NOT NULL CHECK (event_schema_version > 0),
+  operation_id TEXT NOT NULL UNIQUE,
+  causation TEXT,
+  correlation TEXT,
+  commit_sequence INTEGER NOT NULL UNIQUE CHECK (commit_sequence > 0),
+  committed_at TEXT NOT NULL,
+  visibility_ceiling TEXT NOT NULL CHECK (visibility_ceiling = 'private'),
+  payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
+  payload_digest TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE owner_outbox (
+  outbox_id TEXT PRIMARY KEY,
+  operation_id TEXT NOT NULL,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  outbox_kind TEXT NOT NULL,
+  payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
+  payload_digest TEXT NOT NULL,
+  commit_sequence INTEGER NOT NULL REFERENCES owner_events(commit_sequence),
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TRIGGER owners_identity_immutable
+BEFORE UPDATE OF owner_id, owner_kind, home_namespace_id ON owners
+BEGIN
+  SELECT RAISE(ABORT, 'owner identity is immutable');
+END;
+
+CREATE TRIGGER owner_family_bindings_immutable_update BEFORE UPDATE ON owner_family_bindings
+BEGIN SELECT RAISE(ABORT, 'owner family bindings are immutable'); END;
+CREATE TRIGGER owner_family_bindings_immutable_delete BEFORE DELETE ON owner_family_bindings
+BEGIN SELECT RAISE(ABORT, 'owner family bindings are immutable'); END;
+CREATE TRIGGER owner_versions_immutable_update BEFORE UPDATE ON owner_versions
+BEGIN SELECT RAISE(ABORT, 'owner versions are immutable'); END;
+CREATE TRIGGER owner_versions_immutable_delete BEFORE DELETE ON owner_versions
+BEGIN SELECT RAISE(ABORT, 'owner versions are immutable'); END;
+CREATE TRIGGER owner_revisions_immutable_update BEFORE UPDATE ON owner_revisions
+BEGIN SELECT RAISE(ABORT, 'owner revisions are immutable'); END;
+CREATE TRIGGER owner_revisions_immutable_delete BEFORE DELETE ON owner_revisions
+BEGIN SELECT RAISE(ABORT, 'owner revisions are immutable'); END;
+CREATE TRIGGER owner_revision_selections_immutable_update BEFORE UPDATE ON owner_revision_selections
+BEGIN SELECT RAISE(ABORT, 'owner revision selections are immutable'); END;
+CREATE TRIGGER owner_revision_selections_immutable_delete BEFORE DELETE ON owner_revision_selections
+BEGIN SELECT RAISE(ABORT, 'owner revision selections are immutable'); END;
+CREATE TRIGGER owner_events_immutable_update BEFORE UPDATE ON owner_events
+BEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END;
+CREATE TRIGGER owner_events_immutable_delete BEFORE DELETE ON owner_events
+BEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END;
+CREATE TRIGGER owner_outbox_immutable_update BEFORE UPDATE ON owner_outbox
+BEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END;
+CREATE TRIGGER owner_outbox_immutable_delete BEFORE DELETE ON owner_outbox
+BEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END;
 
 CREATE TRIGGER store_operation_receipts_immutable_update
 BEFORE UPDATE ON store_operation_receipts

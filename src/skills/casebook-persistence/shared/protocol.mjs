@@ -45,7 +45,11 @@ export function unsupported(operation) {
       failureClass: "operation_unsupported",
       correctiveGuidance: "Do not retry this operation. Complete and accept its owning later work item first.",
       evidence: {
-        supported_operations: ["diagnose", "initialize_store", "get_store_operation_receipt"],
+        supported_operations: [
+          "diagnose",
+          "initialize_store",
+          "get_store_operation_receipt",
+        ],
         requested_operation: operation ?? null,
       },
     },

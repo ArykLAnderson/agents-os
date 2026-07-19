@@ -24,7 +24,7 @@ Initialization creates the database only when the target is absent and its paren
 
 Retain the returned store ID, view ID, exact view-policy revision ID, and operation ID. If response delivery is uncertain, issue `get_store_operation_receipt` with those identities and an explicit purpose before considering a retry. Do not blindly retry.
 
-Case/Frame reads, writes, migration, export, recovery, and production cutover remain unavailable. Do not point this delivery slice at a live `.casebook` store.
+Typed Case/Frame operations, Markdown parity, migration, export, recovery, and production cutover remain unavailable. The private L01-W03 owner-neutral commit/read envelope is only an implementation seam for later typed façades and synthetic validation. Do not point this delivery slice at a live `.casebook` store.
 
 ## Safe diagnostic check
 
