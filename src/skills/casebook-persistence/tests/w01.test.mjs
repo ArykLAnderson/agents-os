@@ -14,7 +14,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 16);
+  assert.equal(check.manifest.assets.length, 21);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
@@ -24,6 +24,11 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "frame.create",
     "frame.read",
     "frame.list",
+    "common.resolve",
+    "common.list",
+    "common.search",
+    "interchange.export",
+    "interchange.parse",
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
   assert.deepEqual(check.manifest.l01_operation_constraints, {
@@ -33,6 +38,9 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     discovery_lifecycles: ["active"],
     discovery_dependencies: "empty_only",
     frame_list: "active_only_without_filters_history_or_paging",
+    common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
+    markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
+    exact_identity: "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
   assert.deepEqual(runtime.l01_operation_constraints, check.manifest.l01_operation_constraints);
@@ -78,6 +86,15 @@ test("module direction remains private and substrate owner-neutral", async () =>
   }
   const operations = await readFile(path.join(packageRoot, "variants/sqlite/lib/operations/index.mjs"), "utf8");
   assert.doesNotMatch(operations, /lib\/(case|frame)|\.\.\/(case|frame)/);
+  const sharedInterchange = await readFile(path.join(packageRoot, "shared/l01-interchange.mjs"), "utf8");
+  assert.doesNotMatch(sharedInterchange, /render(Case|Frame|Discovery)|owner_kind|discovery_items/);
+  const markdownModules = await Promise.all([
+    "variants/markdown/lib/interchange.mjs",
+    "variants/markdown/lib/workspace.mjs",
+  ].map((relative) => readFile(path.join(packageRoot, relative), "utf8")));
+  for (const source of markdownModules) assert.doesNotMatch(source, /variants\/sqlite|\.\.\/\.\.\/sqlite/);
+  const sqliteCommon = await readFile(path.join(packageRoot, "variants/sqlite/lib/common/index.mjs"), "utf8");
+  assert.doesNotMatch(sqliteCommon, /variants\/markdown|\.\.\/\.\.\/markdown/);
   const entrypoint = await readFile(path.join(packageRoot, "variants/sqlite/bin/casebook-persistence.mjs"), "utf8");
   assert.match(entrypoint, /operations\/index/);
   assert.doesNotMatch(entrypoint, /mechanical|commit_owner_revision|read_owner_current|get_owner_operation_receipt/);

@@ -10,6 +10,10 @@ import {
   canonicalCommitRequestDigest,
   mechanicalDigest,
 } from "../substrate/mechanical.mjs";
+import {
+  interchangeFrontmatter,
+  interchangeJsonSection,
+} from "../../../../shared/l01-interchange.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
@@ -23,6 +27,18 @@ const CREATE_REQUEST_FIELDS = new Set([
 const READ_REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "case_id", "configuration",
 ]);
+
+export function renderL01CaseMarkdown(record) {
+  return `${interchangeFrontmatter([
+    ["type", "case"],
+    ["schema_version", 1],
+    ["id", record.id],
+    ["home_namespace_id", record.home_namespace_id],
+    ["state", record.state],
+    ["title", record.title],
+    ["summary", record.summary],
+  ])}${interchangeJsonSection("Scope", record.scope)}## Knowledge\n\n## Sources\n`;
+}
 
 class CaseRequestError extends Error {
   constructor(path, rule, message) {

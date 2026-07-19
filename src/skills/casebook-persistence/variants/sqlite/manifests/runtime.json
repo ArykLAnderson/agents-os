@@ -23,7 +23,11 @@
     "case.read",
     "frame.create",
     "frame.read",
-    "frame.list"
+    "frame.list",
+    "common.resolve",
+    "common.list",
+    "common.search",
+    "interchange.export"
   ],
   "l01_operation_constraints": {
     "store_receipt_visible_operation_kinds": [
@@ -37,6 +41,9 @@
       "active"
     ],
     "discovery_dependencies": "empty_only",
-    "frame_list": "active_only_without_filters_history_or_paging"
+    "frame_list": "active_only_without_filters_history_or_paging",
+    "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
+    "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
+    "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only"
   }
 }

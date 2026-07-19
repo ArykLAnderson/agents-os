@@ -248,6 +248,8 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
     assert.deepEqual(rejected.json.failure.evidence.supported_operations, [
       "diagnose", "initialize_store", "get_store_operation_receipt",
       "case.create", "case.read", "frame.create", "frame.read", "frame.list",
+      "common.resolve", "common.list", "common.search",
+      "interchange.export (sqlite)", "interchange.parse (markdown)",
     ]);
     assert.equal(await stat(storePath).then(() => true).catch(() => false), false);
   } finally {

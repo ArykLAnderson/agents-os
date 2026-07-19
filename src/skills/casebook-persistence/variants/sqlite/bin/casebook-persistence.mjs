@@ -1,5 +1,6 @@
 import { invokeCaseOperation } from "../lib/case/index.mjs";
 import { invokeFrameOperation } from "../lib/frame/index.mjs";
+import { invokeCommonOperation } from "../lib/common/index.mjs";
 import { invokeExceptionalOperation } from "../lib/operations/index.mjs";
 import { diagnose } from "../lib/substrate/diagnostics.mjs";
 import { failure, PROTOCOL_ID, PROTOCOL_VERSION } from "../../../shared/protocol.mjs";
@@ -31,6 +32,8 @@ try {
     result = await invokeCaseOperation(request);
   } else if (request.operation === "frame.create" || request.operation === "frame.read" || request.operation === "frame.list") {
     result = await invokeFrameOperation(request);
+  } else if (["common.resolve", "common.list", "common.search", "interchange.export"].includes(request.operation)) {
+    result = await invokeCommonOperation(request);
   } else {
     result = await invokeExceptionalOperation(request);
   }

@@ -10,6 +10,10 @@ import {
   canonicalCommitRequestDigest,
   mechanicalDigest,
 } from "../substrate/mechanical.mjs";
+import {
+  interchangeFrontmatter,
+  interchangeJsonSection,
+} from "../../../../shared/l01-interchange.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
@@ -36,6 +40,57 @@ const READ_REQUEST_FIELDS = new Set([
 const LIST_REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "configuration",
 ]);
+const L01_CATEGORY_HEADING = Object.freeze({
+  fog: "Fog",
+  frontier: "Frontier",
+  blocked: "Blocked",
+  contested: "Contested",
+  deferred: "Deferred",
+  out_of_scope: "Out of Scope",
+});
+
+export function l01DiscoveryLabel(index) {
+  return `AT-${String(index + 1).padStart(3, "0")}`;
+}
+
+export function renderL01FrameMarkdown(record) {
+  let markdown = interchangeFrontmatter([
+    ["type", "frame"],
+    ["schema_version", 1],
+    ["id", record.id],
+    ["home_namespace_id", record.home_namespace_id],
+    ["authority_scope_namespace_ids", record.authority_scope_namespace_ids],
+    ["status", record.status],
+    ["title", record.title],
+  ]);
+  markdown += interchangeJsonSection("Outcome", record.outcome);
+  markdown += interchangeJsonSection("Included Scope", record.included_scope);
+  markdown += interchangeJsonSection("Excluded Scope", record.excluded_scope);
+  markdown += interchangeJsonSection("Limitations", record.limitations);
+  markdown += interchangeJsonSection("Completion Condition", record.completion_condition);
+  markdown += "## Discovery\nSee the manifest-selected Discovery file.\n";
+  return markdown;
+}
+
+export function renderL01DiscoveryMarkdown(record) {
+  const groups = new Map();
+  record.discovery.forEach((item, index) => {
+    const values = groups.get(item.category) ?? [];
+    values.push({ item, index });
+    groups.set(item.category, values);
+  });
+  let markdown = "";
+  for (const category of Object.keys(L01_CATEGORY_HEADING)) {
+    const values = groups.get(category);
+    if (!values?.length) continue;
+    markdown += `## ${L01_CATEGORY_HEADING[category]}\n\n`;
+    for (const { item, index } of values) {
+      markdown += `### ${l01DiscoveryLabel(index)}: ${JSON.stringify(item.title)}\n`;
+      markdown += `- Human authority: ${item.human_authority}\n\n\`\`\`json\n${JSON.stringify(item.body)}\n\`\`\`\n\n`;
+    }
+  }
+  return markdown;
+}
 
 class FrameRequestError extends Error {
   constructor(path, rule, message) {
