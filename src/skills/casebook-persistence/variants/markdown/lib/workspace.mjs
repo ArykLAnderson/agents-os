@@ -742,12 +742,22 @@ async function parseInterchange(request) {
   validateBase(request, []);
   const workspace = await loadWorkspace(request);
   const records = await parseRecords(workspace);
+  const requiresCaseReconcile = records.some((item) => item.owner_kind === "case");
   return success("interchange.parse", {
     status: "parsed",
     format: L01_INTERCHANGE_FORMAT,
     records: records.map((item) => ({ kind: item.owner_kind, id: item.id, record: item.record })),
     manifest_sha256: sha256(workspace.manifestBytes),
     identity_basis: "verified_frontmatter_and_manifest",
+    semantic_evidence: {
+      kind: "case.semantic_evidence",
+      affected_visible_ids: records.filter((item) => item.owner_kind === "case").map((item) => item.id).sort(),
+      violations: [],
+      requires_case_reconcile: requiresCaseReconcile,
+      mutation_performed: false,
+    },
+    reconcile_disposition: requiresCaseReconcile ? "requires-explicit-case-reconcile" : "not_applicable",
+    requires_case_reconcile: requiresCaseReconcile,
     mutation_performed: false,
     selected_discovery_filenames: workspace.manifest.records.filter((item) => item.kind === "frame").map((item) => ({ frame_id: item.id, filename: item.discovery_filename })),
     limitations: ["l01_synthetic_interchange_only", "not_l05_markdown_authority_format"],

@@ -337,6 +337,15 @@ test("synthetic Case, current Frame, and legacy Frame parse to identical W04 nor
     assert.equal(legacyParsed.exitCode, 0, legacyParsed.stderr);
     assert.deepEqual(currentParsed.json.result.records, records);
     assert.deepEqual(legacyParsed.json.result.records, records);
+    assert.equal(currentParsed.json.result.reconcile_disposition, "requires-explicit-case-reconcile");
+    assert.equal(currentParsed.json.result.requires_case_reconcile, true);
+    const frameOnlyRoot = path.join(root, "frame-only");
+    const frameOnly = await writeWorkspace(frameOnlyRoot, [records[1]]);
+    const frameOnlyParsed = await invoke(markdownEntrypoint, root, markdownRequest("interchange.parse", frameOnlyRoot, frameOnly.workspaceMarker));
+    assert.equal(frameOnlyParsed.exitCode, 0, frameOnlyParsed.stderr);
+    assert.equal(frameOnlyParsed.json.result.reconcile_disposition, "not_applicable");
+    assert.equal(frameOnlyParsed.json.result.requires_case_reconcile, false);
+    assert.deepEqual(frameOnlyParsed.json.result.semantic_evidence.affected_visible_ids, []);
     assert.deepEqual(currentParsed.json.result.selected_discovery_filenames, [{ frame_id: ids.frame, filename: "discovery.md" }]);
     assert.deepEqual(legacyParsed.json.result.selected_discovery_filenames, [{ frame_id: ids.frame, filename: "discovery-map.md" }]);
     const legacyDirectory = path.dirname(path.join(legacyRoot, legacy.rendered.files.find((file) => file.path.endsWith("discovery-map.md")).path));
