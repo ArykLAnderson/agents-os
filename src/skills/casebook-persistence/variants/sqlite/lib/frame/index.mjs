@@ -571,6 +571,23 @@ function hydrateFrame(mechanical) {
   };
 }
 
+async function linkedCaseIdsForListCandidate(request, item) {
+  // frame-current@1 predates this optional acceleration field. Hydrate the
+  // candidate revision selected by the fenced page, rather than a potentially
+  // newer current revision, so filtering and continuation remain snapshot-true.
+  const mechanical = await invokeSubstrateOperation({
+    operation: "read_owner_revision",
+    configuration: request.configuration,
+    store_id: request.store_id,
+    context: request.context,
+    owner: { id: item.owner.id, kind: "frame" },
+    revision_id: item.revision.id,
+  });
+  if (!mechanical?.ok) return { failure: typedFailure("list", mechanical) };
+  const frame = hydrateFrame(mechanical.result).frame;
+  return { ids: frame.case_links?.filter((link) => link.target_kind === "case").map((link) => link.target_id) ?? [] };
+}
+
 function hydrateListItem(item, statuses = new Set(["active"])) {
   const projection = item.current_projection;
   if (projection?.schema !== "frame-current@1" || projection.id !== item.owner.id) {
@@ -904,10 +921,16 @@ async function listFrames(request) {
       appliedView = mechanical.result.applied_view;
       for (const raw of mechanical.result.items) {
         const projection = raw.current_projection;
+        let linkedCaseIds = projection.linked_case_ids;
+        if (linkedCaseId != null && linkedCaseVisible && !Object.hasOwn(projection, "linked_case_ids")) {
+          const fallback = await linkedCaseIdsForListCandidate(request, raw);
+          if (fallback.failure) return fallback.failure;
+          linkedCaseIds = fallback.ids;
+        }
         const selected = linkedCaseVisible
           && (homeNamespaceId == null || projection.home_namespace_id === homeNamespaceId)
           && authorityScope.every((namespaceId) => projection.authority_scope_namespace_ids.includes(namespaceId))
-          && (linkedCaseId == null || projection.linked_case_ids?.includes(linkedCaseId));
+          && (linkedCaseId == null || linkedCaseIds.includes(linkedCaseId));
         const item = selected ? hydrateListItem(raw, statusSet) : null;
         if (item != null) items.push(item);
         afterKey = [raw.revision.committed_at, raw.owner.id];
