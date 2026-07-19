@@ -22,11 +22,11 @@ status: active
 ## Completion
 ```
 
-Omit empty sections. `Cases` lists created or reconciled Case references and may temporarily record `Pending disposition: <bounded result and why it is not yet classifiable>` or `No Case: <material omission and reason>`. Pending disposition is boundary state, not a substitute for classification; a Frame cannot complete while a material disposition remains pending. `Discovery` contains only a stable reference to `discovery-map.md` and, when useful, a concise knowledge boundary; never copy attention items, operation outputs, resolved history, routing, or recommendations. `Downstream Work` contains stable session references and the original artifact boundary, not copied drafts, findings, or document progress. `Active Authorizations` describes current scope and duration, not instructions to act. Renew authorization after resumption unless it explicitly survives the boundary.
+Omit empty sections. `Cases` lists created or reconciled Case references and may temporarily record `Pending disposition: <bounded result and why it is not yet classifiable>` or `No Case: <material omission and reason>`. Pending disposition is boundary state, not a substitute for classification; a Frame cannot complete while a material disposition remains pending. `Discovery` contains only a stable reference to `discovery.md` and, when useful, a concise knowledge boundary; never copy attention items, operation outputs, resolved history, routing, or recommendations. `Downstream Work` contains stable session references and the original artifact boundary, not copied drafts, findings, or document progress. `Active Authorizations` describes current scope and duration, not instructions to act. Renew authorization after resumption unless it explicitly survives the boundary.
 
 Statuses are descriptive: `active`, `completed`, `abandoned`, or `superseded`. They do not route work.
 
-`.casebook/frames/<frame-id>/discovery-map.md`:
+`.casebook/frames/<frame-id>/discovery.md`:
 
 ```markdown
 ## Fog

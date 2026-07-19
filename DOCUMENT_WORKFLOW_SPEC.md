@@ -65,7 +65,7 @@ The default workspace is project-local `.casebook/`:
   artifacts/<artifact-id>/artifact.md
   frames/<frame-id>/
     frame.md
-    discovery-map.md
+    discovery.md
   documents/<document-id>/
     document.md
     <representations and supporting artifacts>
@@ -98,7 +98,7 @@ It owns:
 
 - the outcome and expressed scope;
 - the current discovery boundary;
-- a compact discovery map;
+- compact Frame Discovery;
 - stable references to relevant Cases and downstream work;
 - factual active-authorization boundaries;
 - limitations and completion state.
@@ -111,7 +111,7 @@ A Frame does not own:
 - document drafts and document-local findings;
 - human judgment.
 
-The discovery map describes current fog, frontier, blockers, contestation, deferrals, and out-of-scope work. Status is descriptive (`active`, `completed`, `abandoned`, or `superseded`) and does not route work.
+Frame Discovery describes current fog, frontier, blockers, contestation, deferrals, and out-of-scope work. Status is descriptive (`active`, `completed`, `abandoned`, or `superseded`) and does not route work.
 
 Frame may use Prototype for one discriminating empirical question and Deliberate for a bounded comparison among credible alternatives. It reconciles reusable consequential meaning into Cases when useful. When the requested outcome includes a durable reader-facing artifact, it may continue through Document.
 
