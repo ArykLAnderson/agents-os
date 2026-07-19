@@ -14,6 +14,7 @@ const assetDefinitions = [
   ["sqlite-entrypoint", "variants/sqlite/bin/casebook-persistence.mjs", "entrypoint"],
   ["sqlite-diagnostics", "variants/sqlite/lib/substrate/diagnostics.mjs", "module"],
   ["sqlite-substrate", "variants/sqlite/lib/substrate/index.mjs", "module"],
+  ["sqlite-mechanical-envelope", "variants/sqlite/lib/substrate/mechanical.mjs", "module"],
   ["case-facade", "variants/sqlite/lib/case/index.mjs", "module"],
   ["frame-facade", "variants/sqlite/lib/frame/index.mjs", "module"],
   ["exceptional-operations", "variants/sqlite/lib/operations/index.mjs", "module"],

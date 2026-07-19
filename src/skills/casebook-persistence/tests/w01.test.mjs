@@ -14,13 +14,14 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 15);
+  assert.equal(check.manifest.assets.length, 16);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
     "get_store_operation_receipt",
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
+  assert.equal(check.manifest.assets.some((asset) => asset.path.includes("internal-mechanical-driver")), false);
 });
 
 test("diagnostics reject an older simulated Node.js runtime with classified version evidence", async () => {
@@ -64,6 +65,7 @@ test("module direction remains private and substrate owner-neutral", async () =>
   assert.doesNotMatch(operations, /lib\/(case|frame)|\.\.\/(case|frame)/);
   const entrypoint = await readFile(path.join(packageRoot, "variants/sqlite/bin/casebook-persistence.mjs"), "utf8");
   assert.match(entrypoint, /operations\/index/);
+  assert.doesNotMatch(entrypoint, /mechanical|commit_owner_revision|read_owner_current|get_owner_operation_receipt/);
 });
 
 test("human installation guidance is not referenced or embedded by model-loaded files", async () => {
@@ -88,6 +90,7 @@ test("sandboxed Pi, Codex, and OpenCode layouts validate from unrelated cwd and 
     for (const result of report.results) {
       assert.equal(result.diagnostic, "passed");
       assert.equal(result.unsupported_later_operation, "passed");
+      assert.equal(result.generic_mechanical_operation_rejected, "passed");
       assert.equal(result.configured_store_created, false);
       assert.equal(result.source_fallback, false);
     }

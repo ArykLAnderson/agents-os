@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.1.0-l01-w02"
+    "version": "0.1.0-l01-w03"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b62c62b25752c80e2cce72a6d98d6d3572eed0cea42346763ce775316338f76c"
+    "sha256": "31cc3e4c67dff5c8a5c3e71e5f4c34adc61586a8cbfda1a3bd15b4be16838247"
   },
   "entrypoints": [
     {
@@ -38,7 +38,6 @@
   "unsupported_until_later_work_items": [
     "case.*",
     "frame.*",
-    "commit_owner_revision",
     "migration",
     "export",
     "snapshot",
@@ -49,19 +48,19 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "2c1318d2e23cc6c874a18506ed8259b7b2782d30dbe1c84b84c985acfc459ac4"
+      "sha256": "242915acb95fb0b432c03e800cdc05473d12bf7f530a147c7d8a99b2c4ad53d9"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "ac99559d072ffc4f294905b804b05ba9c530292a08188987173d543f4878e7a9"
+      "sha256": "37e511323765e1547d8045c2e91fe98711b7c7bf49fd984f58cdf757cd392362"
     },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "fef837a2ed42a88a3384f79160fc1c2a7fc677421e9de901c2d560012140a7e9"
+      "sha256": "763c1b044915573b90cd3fd0c8f465ca8fc4a17d36ae14df8ec8a320348feb9e"
     },
     {
       "id": "shared-configuration",
@@ -97,7 +96,13 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "31ffab6eb739b5632766dd3aac69f23c2275b6bcfbf86a3b6acfb60ce6e167c0"
+      "sha256": "32420474191f413835a9db29de73db8881dc095fb424f4c49e6b4b511fcabe7d"
+    },
+    {
+      "id": "sqlite-mechanical-envelope",
+      "path": "variants/sqlite/lib/substrate/mechanical.mjs",
+      "kind": "module",
+      "sha256": "7f85c7937ad07f85a69cc2fff83f6bce10757f330ea905c127eb007dbd074efd"
     },
     {
       "id": "case-facade",
@@ -121,7 +126,7 @@
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "b2a384bdc9d9a6da111610dcc28e937a6751291b1a0d4b0980ef385ee403baf8"
+      "sha256": "5ca739b03f0a2de54bb1f038d812dcfc9244355eef48e93ef1e3f0422ee6c1a3"
     },
     {
       "id": "sqlite-migrations",

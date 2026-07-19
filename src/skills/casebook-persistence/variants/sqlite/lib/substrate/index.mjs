@@ -1,6 +1,6 @@
 import { link, lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { PROTOCOL_ID, PROTOCOL_VERSION, SCHEMA_ID, SCHEMA_VERSION } from "../../../../shared/protocol.mjs";
 import { sqlite } from "./diagnostics.mjs";
 
@@ -8,6 +8,14 @@ export const APPLICATION_ID = 0x43425031; // "CBP1"
 const SQL_ASSET = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../sql/schema-v1.sql");
 const REQUIRED_TABLES = Object.freeze([
   "namespaces",
+  "owner_current",
+  "owner_family_bindings",
+  "owner_events",
+  "owner_outbox",
+  "owner_revision_selections",
+  "owner_revisions",
+  "owner_versions",
+  "owners",
   "schema_migrations",
   "store_fence",
   "store_metadata",
@@ -23,13 +31,10 @@ function sqlText(value) {
 
 async function queryJson(binary, database, sqlTextValue, { readonly = true } = {}) {
   const args = ["-batch", "-bail", "-json"];
-  let selectedDatabase = database;
-  if (readonly) {
-    const immutableUrl = pathToFileURL(database);
-    immutableUrl.searchParams.set("immutable", "1");
-    selectedDatabase = immutableUrl.href;
-  }
-  const { stdout } = await sqlite(binary, selectedDatabase, sqlTextValue, { args, maxBuffer: 4 * 1024 * 1024 });
+  // query_only is WAL-aware and permits SQLite to maintain WAL shared-memory
+  // bookkeeping while rejecting every SQL write through this connection.
+  const query = readonly ? `PRAGMA query_only = ON;\n${sqlTextValue}` : sqlTextValue;
+  const { stdout } = await sqlite(binary, database, query, { args, maxBuffer: 4 * 1024 * 1024 });
   const parsed = JSON.parse(stdout || "[]");
   return parsed;
 }
@@ -192,7 +197,7 @@ export async function inspectStore(binary, storePath) {
     && detail.namespace?.namespace_key === "personal"
     && detail.namespace?.lifecycle === "active"
     && detail.view_family_count === 1
-    && detail.policy_revision_count === 1
+    && detail.policy_revision_count >= 1
     && detail.active_view_count === 1
     && detail.active_policy_grant_count === 1
     && detail.view?.namespace_id === detail.namespace?.namespace_id
@@ -201,7 +206,7 @@ export async function inspectStore(binary, storePath) {
     && detail.view?.granted_namespace_lifecycle === "active"
     && detail.view?.audience_ceiling === "private"
     && detail.view?.store_operation_receipts_visible === 1
-    && detail.grant_count === 1
+    && detail.grant_count >= 1
     && detail.migration_count === 1
     && detail.migration?.migration_id === "0001-initialize-store"
     && detail.migration?.schema_id === SCHEMA_ID
@@ -246,7 +251,9 @@ export async function readStoreOperationReceipt(binary, storePath, operationId) 
   const rows = await queryJson(binary, storePath, `
     SELECT operation_id, operation_kind, store_id, request_digest, outcome,
       result_json, result_digest, authority_claim_json, settled_at,
-      failure_class, retry_disposition, operation_fence
+      failure_class, retry_disposition, operation_fence, owner_id, owner_kind,
+      owner_home_namespace_id, view_policy_revision_id, expected_revision, observed_revision,
+      committed_revision, event_id
     FROM store_operation_receipts
     WHERE operation_id = ${sqlText(operationId)}
     LIMIT 1;
@@ -266,6 +273,14 @@ export async function readStoreOperationReceipt(binary, storePath, operationId) 
     failure_class: row.failure_class ?? null,
     retry_disposition: row.retry_disposition,
     operation_fence: row.operation_fence,
+    owner_id: row.owner_id ?? null,
+    owner_kind: row.owner_kind ?? null,
+    owner_home_namespace_id: row.owner_home_namespace_id ?? null,
+    view_policy_revision_id: row.view_policy_revision_id ?? null,
+    expected_revision: row.expected_revision ?? null,
+    observed_revision: row.observed_revision ?? null,
+    committed_revision: row.committed_revision ?? null,
+    event_id: row.event_id ?? null,
   };
 }
 
@@ -297,7 +312,11 @@ export async function createInitializedStore(binary, storePath, initialization) 
         ${sqlText(identities.viewPolicyRevisionId)}, ${sqlText(identities.namespaceId)}
       );
       INSERT INTO store_fence VALUES (1, 1);
-      INSERT INTO store_operation_receipts VALUES (
+      INSERT INTO store_operation_receipts (
+        operation_id, operation_kind, store_id, request_digest, outcome,
+        result_json, result_digest, authority_claim_json, settled_at,
+        failure_class, retry_disposition, operation_fence
+      ) VALUES (
         ${sqlText(receipt.operation_id)}, 'initialize_store', ${sqlText(identities.storeId)},
         ${sqlText(receipt.request_digest)}, 'initialized', ${sqlText(JSON.stringify(receipt.result))},
         ${sqlText(receipt.result_digest)}, ${sqlText(JSON.stringify(authorityClaim))},
@@ -310,7 +329,7 @@ export async function createInitializedStore(binary, storePath, initialization) 
       );
       PRAGMA user_version = ${SCHEMA_VERSION};
       COMMIT;
-      PRAGMA wal_checkpoint(TRUNCATE);
+      PRAGMA wal_checkpoint(FULL);
     `;
     await sqlite(binary, temporaryStore, command, {
       args: ["-batch", "-bail"],
