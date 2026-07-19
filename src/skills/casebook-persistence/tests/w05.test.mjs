@@ -666,7 +666,7 @@ test("dual mode, hot-switch, ambiguous identity, dual Discovery files, and unsup
     await writeFile(markerPath, canonicalJson({ ...written.workspaceMarker, authority_mode: "sqlite" }));
     const switched = await invoke(markdownEntrypoint, root, markdownRequest("common.list", workspaceRoot, written.workspaceMarker, { owner_kinds: ["frame"] }));
     assert.equal(switched.exitCode, 2);
-    assert.equal(switched.json.failure.code, "markdown.workspace_unavailable");
+    assert.equal(switched.json.failure.code, "authority_switch_requires_migration");
     await writeFile(markerPath, canonicalJson(written.workspaceMarker));
 
     await writeFile(markerPath, "x".repeat(256 * 1024 + 1));

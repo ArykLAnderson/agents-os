@@ -14,6 +14,21 @@ function nonEmpty(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function exactObjectKeys(value, allowed, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ConfigurationError("configuration_missing", `${field} must be an object.`, { field });
+  }
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      throw new ConfigurationError(
+        "configuration_field_unsupported",
+        `${field}.${key} is not part of the exclusive authority configuration.`,
+        { field: `${field}.${key}` },
+      );
+    }
+  }
+}
+
 function absoluteLocalPath(value, field) {
   if (!nonEmpty(value)) throw new ConfigurationError("configuration_missing", `${field} is required.`);
   if (!path.isAbsolute(value)) {
@@ -40,11 +55,10 @@ export function resolveDatabaseLocation(value) {
 }
 
 export function validateAuthorityConfiguration(configuration) {
-  if (!configuration || typeof configuration !== "object" || Array.isArray(configuration)) {
-    throw new ConfigurationError("configuration_missing", "configuration must be an object.");
-  }
+  exactObjectKeys(configuration, new Set(["source", "authority_mode", "sqlite", "markdown"]), "configuration");
   const { source, authority_mode: authorityMode } = configuration;
-  if (!source || typeof source !== "object" || !nonEmpty(source.kind) || !nonEmpty(source.locator)) {
+  exactObjectKeys(source, new Set(["kind", "locator"]), "configuration.source");
+  if (!nonEmpty(source.kind) || !nonEmpty(source.locator)) {
     throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required.");
   }
   if (!new Set(["sqlite", "markdown"]).has(authorityMode)) {
@@ -58,6 +72,7 @@ export function validateAuthorityConfiguration(configuration) {
     if (!configuration.sqlite || typeof configuration.sqlite !== "object") {
       throw new ConfigurationError("configuration_missing", "sqlite authority requires sqlite configuration.");
     }
+    exactObjectKeys(configuration.sqlite, new Set(["database_url", "sqlite_bin"]), "configuration.sqlite");
     return {
       source: { kind: source.kind, locator: source.locator },
       authority_mode: authorityMode,
@@ -77,6 +92,7 @@ export function validateAuthorityConfiguration(configuration) {
   if (!configuration.markdown || typeof configuration.markdown !== "object") {
     throw new ConfigurationError("configuration_missing", "markdown authority requires markdown configuration.");
   }
+  exactObjectKeys(configuration.markdown, new Set(["workspace_root"]), "configuration.markdown");
   return {
     source: { kind: source.kind, locator: source.locator },
     authority_mode: authorityMode,

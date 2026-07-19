@@ -403,7 +403,16 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
   let marker;
   try { marker = JSON.parse(markerBytes); } catch { throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_invalid", "The authority marker is invalid."); }
   exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "view", "interchange_manifest_sha256"]), "workspace_marker");
-  if (marker.configuration_version !== 1 || marker.authority_mode !== "markdown" || marker.profile !== L01_WORKSPACE_PROFILE) {
+  if (marker.authority_mode == null) {
+    throw new MarkdownError("authority_state_missing", `${WORKSPACE_MARKER}.authority_mode`, "installed_authority_required", "The workspace has no explicit installed authority; no fallback is attempted.");
+  }
+  if (marker.authority_mode === "sqlite") {
+    throw new MarkdownError("authority_switch_requires_migration", `${WORKSPACE_MARKER}.authority_mode`, "ordinary_hot_switch_rejected", "Changing an installed workspace authority is migration work, not an ordinary configuration switch.");
+  }
+  if (marker.authority_mode !== "markdown") {
+    throw new MarkdownError("authority_state_ambiguous", `${WORKSPACE_MARKER}.authority_mode`, "one_installed_authority_required", "The workspace authority marker must select exactly one Markdown authority.");
+  }
+  if (marker.configuration_version !== 1 || marker.profile !== L01_WORKSPACE_PROFILE) {
     throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "synthetic_profile_required", "Only an explicitly selected L-01 synthetic Markdown workspace is supported in this slice.");
   }
   requiredId(marker.workspace_id, "workspace_marker.workspace_id", "store");
