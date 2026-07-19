@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.1.0-l01-w05"
+    "version": "0.2.0-l02-w01"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "57f6995daa1d1e34468f29bac3c0e2ad46dd95de8349757efb326cba0fec8253"
+    "sha256": "f9d8f4bf89dbe7320a914543ee9d0c116ac0a41801b3b15621bd14868dae8115"
   },
   "entrypoints": [
     {
@@ -40,6 +40,7 @@
     "initialize_store",
     "get_store_operation_receipt",
     "case.create",
+    "case.commit_revision",
     "case.read",
     "frame.create",
     "frame.read",
@@ -68,7 +69,7 @@
     "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only"
   },
   "unsupported_until_later_work_items": [
-    "case.commit_revision/history/include/filter/paging/lifecycle",
+    "case.history/include/filter/paging/lifecycle",
     "frame.commit_revision/closed/settled/tombstoned/references/history/include/filter/paging/lifecycle/reconciliation",
     "history/events/checkpoints/snapshots/global-search",
     "full-atomic-markdown-write-and-generation-selection",
@@ -142,7 +143,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "84fd9b13d82f23e0eff0cf81c6e656dee18cd4dac0fd55f027ff31827d000cdc"
+      "sha256": "6e75830b655fdc595c9c86d28768d1bc4d2a4c92fd956dec63f6ddcddf1121c6"
     },
     {
       "id": "sqlite-diagnostics",
@@ -160,13 +161,13 @@
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "3f7536ce611bea924c9713b8b18a1b93408ee4f4514865bd5fbdfd249ca6540c"
+      "sha256": "300c5e24770594f59efc1616bd143ac9c32daa4223f18f738b21120c23d8adb4"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "622586519731f1c65185eb565654c6fd152548cb34e5b0fa27bb84e7c96b9115"
+      "sha256": "d5bae077615a71f7251b7148bde5495d14d3fcbb129d42aa82af295444a3abda"
     },
     {
       "id": "frame-facade",
@@ -202,7 +203,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "b07590f9940d0608c5d9656f47ffb335cc5fd7dd853d0191bb4a3138b4d50ff8"
+      "sha256": "2e614457225af56b2e0fe2dedc6bf90ed0e2a50e5db498d6ec8cf70e33826a60"
     }
   ]
 }

@@ -145,6 +145,20 @@ function validateEnvelope(value) {
   }
   requireObject(revision.normalized, "envelope.revision.normalized");
   requireObject(value.current_projection, "envelope.current_projection");
+  const structuralClaims = value.current_projection.structural_claims ?? [];
+  if (!Array.isArray(structuralClaims) || structuralClaims.length > MAX_SELECTIONS) {
+    throw new RequestError("representation_invalid", "envelope.current_projection.structural_claims must be a bounded array.");
+  }
+  const claimKeys = new Set();
+  for (const claim of structuralClaims) {
+    requireObject(claim, "envelope.current_projection.structural_claims[]");
+    const namespaceId = requireUuidId(claim.namespace_id, "envelope.current_projection.structural_claims[].namespace_id", "namespace");
+    const claimType = requireString(claim.claim_type, "envelope.current_projection.structural_claims[].claim_type", 128);
+    const normalizedValue = requireString(claim.normalized_value, "envelope.current_projection.structural_claims[].normalized_value", 512);
+    const key = `${namespaceId}\u0000${claimType}\u0000${normalizedValue}`;
+    if (claimKeys.has(key)) throw new RequestError("representation_invalid", "envelope.current_projection.structural_claims contains a duplicate claim.");
+    claimKeys.add(key);
+  }
   if (!Array.isArray(revision.versions) || revision.versions.length > MAX_VERSIONS) {
     throw new RequestError("representation_invalid", `revision.versions must be an array of at most ${MAX_VERSIONS} items.`);
   }
@@ -380,6 +394,22 @@ function sqlList(values) {
   return values.length ? values.map(sqlText).join(", ") : "NULL";
 }
 
+async function hasStructuralClaimConflict(binary, storePath, envelope) {
+  const claims = envelope.current_projection.structural_claims ?? [];
+  for (const claim of claims) {
+    const rows = await queryJson(binary, storePath, `SELECT EXISTS(
+      SELECT 1 FROM owner_current other
+      JOIN json_each(other.projection_json, '$.structural_claims') existing
+      WHERE other.owner_id <> ${sqlText(envelope.owner.id)}
+        AND json_extract(existing.value, '$.namespace_id') = ${sqlText(claim.namespace_id)}
+        AND json_extract(existing.value, '$.claim_type') = ${sqlText(claim.claim_type)}
+        AND json_extract(existing.value, '$.normalized_value') = ${sqlText(claim.normalized_value)}
+    ) AS claim_conflict;`);
+    if (rows[0]?.claim_conflict === 1) return true;
+  }
+  return false;
+}
+
 async function hasAllocatedIdentityConflict(binary, storePath, envelope) {
   const versionIds = envelope.revision.versions.map((item) => item.version_id);
   const familyIds = [...new Set([
@@ -524,6 +554,16 @@ function buildCommitSql(state, context, envelope, coreResult, now) {
       `INSERT INTO owner_revision_selections VALUES (${sqlText(revision.id)}, ${sqlText(selection.family_id)}, ${sqlText(selection.version_id)});`,
     );
   }
+  for (const claim of envelope.current_projection.structural_claims ?? []) {
+    statements.push(`INSERT INTO commit_guard VALUES (CASE WHEN NOT EXISTS(
+      SELECT 1 FROM owner_current other
+      JOIN json_each(other.projection_json, '$.structural_claims') existing
+      WHERE other.owner_id <> ${sqlText(owner.id)}
+        AND json_extract(existing.value, '$.namespace_id') = ${sqlText(claim.namespace_id)}
+        AND json_extract(existing.value, '$.claim_type') = ${sqlText(claim.claim_type)}
+        AND json_extract(existing.value, '$.normalized_value') = ${sqlText(claim.normalized_value)}
+    ) THEN 1 ELSE 0 END);`);
+  }
   if (envelope.expected_revision === 0) {
     statements.push(`INSERT INTO owner_current VALUES (
       ${sqlText(owner.id)}, ${sqlText(revision.id)}, ${revision.number},
@@ -635,7 +675,8 @@ async function commitOwnerRevision(request) {
     });
     return settleFailure(binary, storePath, state, envelope, context, rejected, observedRevision);
   }
-  if (await hasAllocatedIdentityConflict(binary, storePath, envelope)) {
+  if (await hasAllocatedIdentityConflict(binary, storePath, envelope)
+      || await hasStructuralClaimConflict(binary, storePath, envelope)) {
     return settleFailure(binary, storePath, state, envelope, context, identityConflict(), observedRevision);
   }
 
@@ -669,7 +710,8 @@ async function commitOwnerRevision(request) {
       && afterFailure.home_namespace_id === envelope.owner.home_namespace_id
       && afterFailure.revision_number !== envelope.expected_revision;
     const allocatedCollision = !concurrentConflict
-      && await hasAllocatedIdentityConflict(binary, storePath, envelope).catch(() => false);
+      && (await hasAllocatedIdentityConflict(binary, storePath, envelope).catch(() => false)
+        || await hasStructuralClaimConflict(binary, storePath, envelope).catch(() => false));
     const rejected = concurrentConflict
       ? failure("revision_conflict", "expected_revision does not match the current owner revision.", {
         failureClass: "revision_conflict",
@@ -729,7 +771,42 @@ async function getOwnerOperationReceipt(request) {
   if (receipt.owner_home_namespace_id !== target.home_namespace_id) {
     return success("get_owner_operation_receipt", { status: "not_visible" });
   }
-  return success("get_owner_operation_receipt", { status: "settled", receipt });
+  let committed_revision_state = null;
+  let observed_revision_state = null;
+  let expected_revision_state = null;
+  const loadRevisionState = async (revisionNumber) => {
+    const revisions = await queryJson(binary, storePath, `
+      SELECT revision_id, revision_number, normalized_json, representation_id, representation_version, committed_at
+      FROM owner_revisions
+      WHERE owner_id = ${sqlText(target.id)} AND revision_number = ${revisionNumber}
+      LIMIT 1;
+    `);
+    if (revisions.length) {
+      const selections = await queryJson(binary, storePath, `
+        SELECT s.family_id, v.version_id, v.content_json, v.content_digest
+        FROM owner_revision_selections s JOIN owner_versions v ON v.version_id = s.version_id
+        WHERE s.revision_id = ${sqlText(revisions[0].revision_id)} ORDER BY s.family_id;
+      `);
+      return {
+        id: revisions[0].revision_id,
+        number: revisions[0].revision_number,
+        normalized: JSON.parse(revisions[0].normalized_json),
+        representation: { id: revisions[0].representation_id, version: revisions[0].representation_version },
+        committed_at: revisions[0].committed_at,
+        selected_versions: selections.map((item) => ({ family_id: item.family_id, version_id: item.version_id, content: JSON.parse(item.content_json), content_digest: item.content_digest })),
+      };
+    }
+    return null;
+  };
+  if (receipt.outcome === "committed" && receipt.committed_revision != null) {
+    committed_revision_state = await loadRevisionState(receipt.committed_revision);
+  } else if (receipt.outcome === "rejected") {
+    if (receipt.observed_revision > 0) observed_revision_state = await loadRevisionState(receipt.observed_revision);
+    if (receipt.expected_revision > 0) expected_revision_state = receipt.expected_revision === receipt.observed_revision
+      ? observed_revision_state
+      : await loadRevisionState(receipt.expected_revision);
+  }
+  return success("get_owner_operation_receipt", { status: "settled", receipt, committed_revision_state, observed_revision_state, expected_revision_state });
 }
 
 async function readOwnerCurrent(request) {

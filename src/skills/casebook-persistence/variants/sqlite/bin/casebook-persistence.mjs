@@ -28,7 +28,7 @@ try {
     });
   } else if (request.operation === "diagnose") {
     result = await diagnose(request);
-  } else if (request.operation === "case.create" || request.operation === "case.read") {
+  } else if (["case.create", "case.commit_revision", "case.read"].includes(request.operation)) {
     result = await invokeCaseOperation(request);
   } else if (request.operation === "frame.create" || request.operation === "frame.read" || request.operation === "frame.list") {
     result = await invokeFrameOperation(request);

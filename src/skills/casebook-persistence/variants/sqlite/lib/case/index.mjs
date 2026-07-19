@@ -1,394 +1,92 @@
 import { createHash } from "node:crypto";
-import {
-  failure,
-  RETRY_DISPOSITIONS,
-  success,
-  unsupported,
-} from "../../../../shared/protocol.mjs";
+import { failure, RETRY_DISPOSITIONS, success, unsupported } from "../../../../shared/protocol.mjs";
 import { invokeSubstrateOperation } from "../substrate/index.mjs";
-import {
-  canonicalCommitRequestDigest,
-  mechanicalDigest,
-} from "../substrate/mechanical.mjs";
-import {
-  interchangeFrontmatter,
-  interchangeJsonSection,
-} from "../../../../shared/l01-interchange.mjs";
+import { canonicalCommitRequestDigest, mechanicalDigest } from "../substrate/mechanical.mjs";
+import { interchangeFrontmatter, interchangeJsonSection } from "../../../../shared/l01-interchange.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
-const CASE_REPRESENTATION = Object.freeze({ id: "case-minimal", version: 1 });
-const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope"]);
+const UUID_RE = new RegExp(`^([a-z][a-z0-9_-]*):${UUID}$`);
+const DIGEST = /^[0-9a-f]{64}$/;
+const CASE_REPRESENTATION = Object.freeze({ id: "case-canonical", version: 1 });
+const LEGACY_REPRESENTATION = Object.freeze({ id: "case-minimal", version: 1 });
 const CONTEXT_FIELDS = new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]);
-const CREATE_REQUEST_FIELDS = new Set([
-  "protocol", "operation", "request_version", "operation_id", "store_id", "context",
-  "expected_revision", "commit_basis", "provenance", "case", "configuration",
-]);
-const READ_REQUEST_FIELDS = new Set([
-  "protocol", "operation", "request_version", "store_id", "context", "case_id", "configuration",
-]);
+const REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "operation_id", "store_id", "context", "expected_revision", "commit_basis", "provenance", "case", "configuration"]);
+const READ_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "case_id", "configuration"]);
+const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope", "provenance", "aliases", "facets", "entries", "sources", "relationships", "references"]);
+const AUDIENCES = new Set(["private", "internal", "restricted", "portable", "public"]);
+const STATES = new Set(["active", "tombstoned"]);
+const CLASSIFICATIONS = new Set(["accepted", "provisional", "contested", "superseded"]);
 
 export function renderL01CaseMarkdown(record) {
-  return `${interchangeFrontmatter([
-    ["type", "case"],
-    ["schema_version", 1],
-    ["id", record.id],
-    ["home_namespace_id", record.home_namespace_id],
-    ["state", record.state],
-    ["title", record.title],
-    ["summary", record.summary],
-  ])}${interchangeJsonSection("Scope", record.scope)}## Knowledge\n\n## Sources\n`;
+  return `${interchangeFrontmatter([["type", "case"], ["schema_version", 1], ["id", record.id], ["home_namespace_id", record.home_namespace_id], ["state", record.state], ["title", record.title], ["summary", record.summary]])}${interchangeJsonSection("Scope", record.scope)}## Knowledge\n\n## Sources\n`;
 }
 
-class CaseRequestError extends Error {
-  constructor(path, rule, message) {
-    super(message);
-    this.path = path;
-    this.rule = rule;
-  }
+class CaseRequestError extends Error { constructor(path, rule, message = rule) { super(message); this.path = path; this.rule = rule; } }
+const object = (v) => v && typeof v === "object" && !Array.isArray(v);
+function exact(value, fields, path) { for (const key of Object.keys(value)) if (!fields.has(key)) throw new CaseRequestError(`${path}.${key}`, "field_unsupported"); }
+function string(value, path, max = 16_384) { if (typeof value !== "string" || !value.trim() || value.length > max) throw new CaseRequestError(path, "required_bounded_string"); return value; }
+function id(value, path, prefix) { string(value, path, 128); const match = UUID_RE.exec(value); if (!match || (prefix && match[1] !== prefix)) throw new CaseRequestError(path, "uuid_identity_required"); return value; }
+function selectedVersion(value, path) { string(value, path, 128); if (!(new RegExp(`^(?:version|case-version):${UUID}$`)).test(value)) throw new CaseRequestError(path, "uuid_identity_required"); return value; }
+function mechanicalVersion(value) { return value.startsWith("case-version:") ? `version:${value.slice(13)}` : value; }
+function revisionId(value,path){string(value,path,128);if(!(new RegExp(`^(?:owner-revision|case-revision):${UUID}$`)).test(value))throw new CaseRequestError(path,"uuid_identity_required");return value;}
+function mechanicalRevision(value){return value.startsWith("case-revision:")?`owner-revision:${value.slice(14)}`:value;}
+function array(value, path, max = 256) { if (!Array.isArray(value) || value.length > max) throw new CaseRequestError(path, "bounded_array_required"); return value; }
+function obj(value, path) { if (!object(value)) throw new CaseRequestError(path, "object_required"); return value; }
+function unique(items, key, path, rule = "duplicate_stable_id") { const seen = new Set(); for (let i=0;i<items.length;i++) { const v=key(items[i]); if (seen.has(v)) throw new CaseRequestError(`${path}[${i}]`, rule); seen.add(v); } }
+function timestamp(value, path) { string(value,path,64); if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z$/.test(value) || Number.isNaN(Date.parse(value))) throw new CaseRequestError(path,"iso_instant_required"); return value; }
+function digest(value,path) { if (value != null && !DIGEST.test(value)) throw new CaseRequestError(path,"sha256_required"); return value; }
+function audience(value,path) { if (!AUDIENCES.has(value)) throw new CaseRequestError(path,"audience_required"); return value; }
+function lifecycle(value,path) { if (!STATES.has(value)) throw new CaseRequestError(path,"lifecycle_invalid"); return value; }
+
+function validateContext(value) { obj(value,"context"); exact(value,CONTEXT_FIELDS,"context"); id(value.view_id,"context.view_id","view"); id(value.view_policy_revision_id,"context.view_policy_revision_id","view-policy"); string(value.purpose,"context.purpose",512); if (value.requested_audience_ceiling != null && value.requested_audience_ceiling !== "private") throw new CaseRequestError("context.requested_audience_ceiling","audience_ceiling_invalid"); }
+function provenance(value,path,required=true) { if (value == null) { if(required) throw new CaseRequestError(path,"provenance_required"); return undefined; } obj(value,path); const out={}; for(const [k,v] of Object.entries(value)) { if(!["causation","correlation","session","acting_role","authority_basis","support","authority","scope","note"].includes(k)) throw new CaseRequestError(`${path}.${k}`,"field_unsupported"); out[k]=string(v,`${path}.${k}`,4096); } if(required && !Object.keys(out).length) throw new CaseRequestError(path,"provenance_required"); return out; }
+function ref(value,path) { obj(value,path); exact(value,new Set(["target_kind","target_id","observed_revision_id","pinned_revision_id","predicate","provenance"]),path); const kind=string(value.target_kind,`${path}.target_kind`,64); const target=id(value.target_id,`${path}.target_id`); if (target.slice(0,target.indexOf(":")) !== kind) throw new CaseRequestError(`${path}.target_id`,"reference_target_kind_mismatch"); revisionId(value.observed_revision_id,`${path}.observed_revision_id`); if(value.pinned_revision_id != null) revisionId(value.pinned_revision_id,`${path}.pinned_revision_id`); if(value.predicate != null) string(value.predicate,`${path}.predicate`,128); provenance(value.provenance,`${path}.provenance`,false); return structuredClone(value); }
+function references(value,path) { const out=array(value,path).map((v,i)=>ref(v,`${path}[${i}]`)); unique(out,v=>`${v.target_kind}\0${v.target_id}\0${v.predicate??""}`,path,"duplicate_reference"); return out; }
+function structuralClaim(value,path) { obj(value,path); exact(value,new Set(["sources","support","authority","note"]),path); const refs=(key)=>array(value[key]??[],`${path}.${key}`).map((v,i)=>{const p=`${path}.${key}[${i}]`;obj(v,p);exact(v,new Set(["kind","id"]),p);const kind=string(v.kind,`${p}.kind`,64),target=id(v.id,`${p}.id`);if(target.slice(0,target.indexOf(":"))!==kind)throw new CaseRequestError(`${p}.id`,"claim_target_kind_mismatch");return{kind,id:target};}); const result={sources:refs("sources"),support:refs("support"),authority:refs("authority")}; if(value.note!=null)result.note=string(value.note,`${path}.note`,4096); return result; }
+
+function endpoint(v,path,known) { obj(v,path); exact(v,new Set(["kind","id"]),path); const kind=string(v.kind,`${path}.kind`,64); const target=id(v.id,`${path}.id`); if(target.slice(0,target.indexOf(":"))!==kind) throw new CaseRequestError(`${path}.id`,"relationship_endpoint_kind_mismatch"); if (!known.has(target)) return {kind,id:target,external:true}; return {kind,id:target}; }
+function normalizeRelationship(s,path,known) { obj(s,path); exact(s,new Set(["id","state","selected_version_id","version"]),path); const family=id(s.id,`${path}.id`,"relationship"); lifecycle(s.state,`${path}.state`); if(s.selected_version_id != null) { selectedVersion(s.selected_version_id,`${path}.selected_version_id`); if(s.version != null) throw new CaseRequestError(path,"selection_shape_invalid"); return {kind:"relationship",family_id:family,state:s.state,existing_version_id:mechanicalVersion(s.selected_version_id)}; }
+  const v=obj(s.version,`${path}.version`); exact(v,new Set(["subject","predicate","object","visibility","provenance"]),`${path}.version`); const content={schema:"case-relationship@1",family_id:family,state:s.state,subject:endpoint(v.subject,`${path}.version.subject`,known),predicate:string(v.predicate,`${path}.version.predicate`,256),object:endpoint(v.object,`${path}.version.object`,known),visibility:audience(v.visibility,`${path}.version.visibility`),provenance:provenance(v.provenance,`${path}.version.provenance`,false)}; return {kind:"relationship",family_id:family,state:s.state,content}; }
+
+function normalizeCase(value, expectedRevision) {
+  obj(value,"case"); exact(value,CASE_FIELDS,"case");
+  for (const family of ["aliases","facets","entries","relationships"]) for (const [i, selection] of (value[family] ?? []).entries()) if (selection?.selected_version_id != null && selection?.version != null) throw new CaseRequestError(`case.${family}[${i}]`,"selection_shape_invalid");
+  for (const [i, source] of (value.sources ?? []).entries()) { if (source?.selected_version_id != null && source?.version != null) throw new CaseRequestError(`case.sources[${i}]`,"selection_shape_invalid"); for (const [j, fragment] of (source?.fragments ?? []).entries()) if (fragment?.selected_version_id != null && fragment?.version != null) throw new CaseRequestError(`case.sources[${i}].fragments[${j}]`,"selection_shape_invalid"); }
+  const base={id:id(value.id,"case.id","case"),home_namespace_id:id(value.home_namespace_id,"case.home_namespace_id","namespace"),state:lifecycle(value.state,"case.state"),title:string(value.title,"case.title",512),summary:string(value.summary,"case.summary",4096),scope:string(value.scope,"case.scope"),provenance:value.provenance==null?undefined:structuralClaim(value.provenance,"case.provenance")};
+  const complete=["aliases","facets","entries","sources","relationships","references"].some(k=>value[k] != null) || expectedRevision > 0;
+  if(!complete) return {...base, legacy:true};
+  for(const key of ["aliases","facets","entries","sources","relationships","references"]) if(!Array.isArray(value[key])) throw new CaseRequestError(`case.${key}`,"complete_selection_required");
+  const families=[]; const stable=new Set([base.id]); const labels=new Set();
+  const addStable=(v,path)=>{if(stable.has(v)) throw new CaseRequestError(path,"duplicate_stable_id"); stable.add(v);};
+  const aliases=value.aliases.map((s,i)=>{const p=`case.aliases[${i}]`; obj(s,p); exact(s,new Set(["id","state","selected_version_id","version"]),p); const fid=id(s.id,`${p}.id`,`alias`); addStable(fid,`${p}.id`); lifecycle(s.state,`${p}.state`); if(s.selected_version_id){selectedVersion(s.selected_version_id,`${p}.selected_version_id`); return families.push({kind:"alias",family_id:fid,state:s.state,existing_version_id:mechanicalVersion(s.selected_version_id)}),{id:fid,state:s.state,selected_version_id:s.selected_version_id};} const v=obj(s.version,`${p}.version`); exact(v,new Set(["value","kind"]),`${p}.version`); const normalized=string(v.value,`${p}.version.value`,256).trim().toLocaleLowerCase("en-US"); const kind=string(v.kind,`${p}.version.kind`,64); const aliasKey=`${kind}\0${normalized}`; if(labels.has(aliasKey)) throw new CaseRequestError(`${p}.version.value`,`alias_not_unique`); labels.add(aliasKey); const content={schema:"case-alias@1",family_id:fid,state:s.state,namespace_id:base.home_namespace_id,value:v.value,normalized_value:normalized,kind}; families.push({kind:"alias",family_id:fid,state:s.state,content}); return {id:fid,state:s.state,version:v};});
+  const facets=value.facets.map((s,i)=>{const p=`case.facets[${i}]`; obj(s,p); exact(s,new Set(["id","state","selected_version_id","version"]),p); const fid=id(s.id,`${p}.id`,`facet`); addStable(fid,`${p}.id`); lifecycle(s.state,`${p}.state`); if(s.selected_version_id){selectedVersion(s.selected_version_id,`${p}.selected_version_id`); families.push({kind:"facet",family_id:fid,state:s.state,existing_version_id:mechanicalVersion(s.selected_version_id)}); return structuredClone(s);} const v=obj(s.version,`${p}.version`); exact(v,new Set(["key","value","visibility","provenance"]),`${p}.version`); const content={schema:"case-facet@1",family_id:fid,state:s.state,key:string(v.key,`${p}.version.key`,128),value:string(v.value,`${p}.version.value`,512),visibility:audience(v.visibility,`${p}.version.visibility`),provenance:provenance(v.provenance,`${p}.version.provenance`,false)}; families.push({kind:"facet",family_id:fid,state:s.state,content}); return structuredClone(s);});
+  const entries=value.entries.map((s,i)=>{const p=`case.entries[${i}]`; obj(s,p); exact(s,new Set(["id","state","selected_version_id","version"]),p); const fid=id(s.id,`${p}.id`,`knowledge`); addStable(fid,`${p}.id`); lifecycle(s.state,`${p}.state`); if(s.selected_version_id){selectedVersion(s.selected_version_id,`${p}.selected_version_id`); families.push({kind:"knowledge",family_id:fid,state:s.state,existing_version_id:mechanicalVersion(s.selected_version_id)}); return structuredClone(s);} const v=obj(s.version,`${p}.version`); exact(v,new Set(["display_label","title","purpose","classification","body","scope","provenance","support","authority","authority_required","positions","supersession","relationships","references"]),`${p}.version`); const classification=v.classification; if(!CLASSIFICATIONS.has(classification)) throw new CaseRequestError(`${p}.version.classification`,`classification_invalid`); const display=string(v.display_label,`${p}.version.display_label`,64); if(labels.has(`label\0${display}`)) throw new CaseRequestError(`${p}.version.display_label`,`display_label_duplicate`); labels.add(`label\0${display}`); const positions=array(v.positions??[],`${p}.version.positions`).map((x,j)=>{const q=`${p}.version.positions[${j}]`; obj(x,q); exact(x,new Set(["title","body","scope","provenance","support","authority"]),q); return {title:string(x.title,`${q}.title`,512),body:string(x.body,`${q}.body`),scope:x.scope==null?undefined:string(x.scope,`${q}.scope`),provenance:provenance(x.provenance,`${q}.provenance`),support:provenance(x.support,`${q}.support`),authority:provenance(x.authority,`${q}.authority`,false)};}); if(classification==="contested" && positions.length<2) throw new CaseRequestError(`${p}.version.positions`,`contested_positions_required`); if(v.authority_required===true && v.authority==null) throw new CaseRequestError(`${p}.version.authority`,`authority_claim_required`); let supersession; if(classification==="superseded"){const x=obj(v.supersession,`${p}.version.supersession`); exact(x,new Set(["successor","basis"]),`${p}.version.supersession`); supersession={successor:ref(x.successor,`${p}.version.supersession.successor`),basis:references(x.basis,`${p}.version.supersession.basis`)}; if(!supersession.basis.length) throw new CaseRequestError(`${p}.version.supersession.basis`,`supersession_basis_required`);} const content={schema:"case-knowledge@1",family_id:fid,state:s.state,display_label:display,title:string(v.title,`${p}.version.title`,512),purpose:string(v.purpose,`${p}.version.purpose`,2048),classification,body:string(v.body,`${p}.version.body`),scope:v.scope==null?undefined:string(v.scope,`${p}.version.scope`),provenance:provenance(v.provenance,`${p}.version.provenance`),support:provenance(v.support,`${p}.version.support`,false),authority:provenance(v.authority,`${p}.version.authority`,false),positions,supersession,references:references(v.references??[],`${p}.version.references`),relationship_ids:array(v.relationships??[],`${p}.version.relationships`).map((x,j)=>id(x,`${p}.version.relationships[${j}]`,`relationship`))}; families.push({kind:"knowledge",family_id:fid,state:s.state,content}); return structuredClone(s);});
+  const sources=value.sources.map((s,i)=>{const p=`case.sources[${i}]`; obj(s,p); exact(s,new Set(["id","state","display_label","selected_version_id","version","fragments"]),p); const fid=id(s.id,`${p}.id`,`source`); addStable(fid,`${p}.id`); lifecycle(s.state,`${p}.state`); const display=string(s.display_label,`${p}.display_label`,64); if(labels.has(`label\0${display}`)) throw new CaseRequestError(`${p}.display_label`,`display_label_duplicate`); labels.add(`label\0${display}`); let sourceSel;if(s.selected_version_id){selectedVersion(s.selected_version_id,`${p}.selected_version_id`); families.push({kind:"source",family_id:fid,state:s.state,existing_version_id:mechanicalVersion(s.selected_version_id)}); sourceSel=structuredClone(s);}else{const v=obj(s.version,`${p}.version`); exact(v,new Set(["title","author","accessed_at","examined_for","digest","locators","provenance"]),`${p}.version`); const locators=array(v.locators,`${p}.version.locators`).map((x,j)=>{const q=`${p}.version.locators[${j}]`; obj(x,q); exact(x,new Set(["kind","uri","audience","version_ref","digest"]),q); if(!["origin","evidence","reader","internal"].includes(x.kind)) throw new CaseRequestError(`${q}.kind`,`locator_kind_invalid`); const uri=string(x.uri,`${q}.uri`,4096); let parsed; try{parsed=new URL(uri);}catch{throw new CaseRequestError(`${q}.uri`,`absolute_uri_required`);} if(parsed.protocol==="file:" && !uri.startsWith("file:///")) throw new CaseRequestError(`${q}.uri`,`normalized_file_uri_required`); digest(x.digest,`${q}.digest`); return {...x,audience:audience(x.audience,`${q}.audience`)};}); if(!locators.length) throw new CaseRequestError(`${p}.version.locators`,`source_locator_required`); digest(v.digest,`${p}.version.digest`); const content={schema:"case-source@1",family_id:fid,state:s.state,display_label:display,title:v.title,author:v.author,accessed_at:timestamp(v.accessed_at,`${p}.version.accessed_at`),examined_for:string(v.examined_for,`${p}.version.examined_for`,4096),digest:v.digest,locators,provenance:provenance(v.provenance,`${p}.version.provenance`,false)}; families.push({kind:"source",family_id:fid,state:s.state,content}); sourceSel=structuredClone(s);} const fragments=array(s.fragments,`${p}.fragments`).map((f,j)=>{const q=`${p}.fragments[${j}]`; obj(f,q); exact(f,new Set(["id","state","selected_version_id","version"]),q); const ff=id(f.id,`${q}.id`,`evidence`); addStable(ff,`${q}.id`); lifecycle(f.state,`${q}.state`); if(f.selected_version_id){selectedVersion(f.selected_version_id,`${q}.selected_version_id`); families.push({kind:"evidence",family_id:ff,state:f.state,existing_version_id:mechanicalVersion(f.selected_version_id)}); return structuredClone(f);} const v=obj(f.version,`${q}.version`); exact(v,new Set(["source_version_id","excerpt","purpose","captured_at","digest","provenance"]),`${q}.version`); if(v.source_version_id != null) selectedVersion(v.source_version_id,`${q}.version.source_version_id`); if(v.excerpt!=null && (typeof v.excerpt!=="string" || v.excerpt.length>16_384)) throw new CaseRequestError(`${q}.version.excerpt`,`bounded_excerpt_required`); digest(v.digest,`${q}.version.digest`); const content={schema:"case-evidence@1",family_id:ff,state:f.state,...v,source_family_id:fid,purpose:string(v.purpose,`${q}.version.purpose`,2048),captured_at:timestamp(v.captured_at,`${q}.version.captured_at`),provenance:provenance(v.provenance,`${q}.version.provenance`,false)}; families.push({kind:"evidence",family_id:ff,state:f.state,content}); return structuredClone(f);}); sourceSel.fragments=fragments; return sourceSel;});
+  const known=new Set(stable); for(const r of value.relationships) known.add(r.id); const relationships=value.relationships.map((s,i)=>{const n=normalizeRelationship(s,`case.relationships[${i}]`,known); addStable(n.family_id,`case.relationships[${i}].id`); families.push(n); return structuredClone(s);});
+  const relationshipIds=new Set(relationships.map(x=>x.id));
+  for (const [i, entry] of entries.entries()) for (const [j, relationshipId] of (entry.version?.relationships ?? []).entries()) if (!relationshipIds.has(relationshipId)) throw new CaseRequestError(`case.entries[${i}].version.relationships[${j}]`,"relationship_membership_invalid");
+  const refs=references(value.references,"case.references");
+  return {...base,aliases,facets,entries,sources,relationships,references:refs,families};
 }
 
-function object(value) {
-  return value && typeof value === "object" && !Array.isArray(value);
-}
+function suppliedProvenance(request){const supplied=request.provenance;if(supplied!=null)obj(supplied,"provenance");const result={commit_basis:string(request.commit_basis,"commit_basis",2048)};for(const key of ["causation","correlation","session","acting_role","authority_basis"])if(supplied?.[key]!=null)result[key]=string(supplied[key],`provenance.${key}`,512);if(supplied)exact(supplied,new Set(["causation","correlation","session","acting_role","authority_basis"]),"provenance");return result;}
+function allocatedUuid(seed){const bytes=createHash("sha256").update(seed).digest().subarray(0,16);bytes[6]=(bytes[6]&15)|80;bytes[8]=(bytes[8]&63)|128;const h=bytes.toString("hex");return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
+function allocate(prefix,request,digest,role){return `${prefix}:${allocatedUuid(`${request.store_id}\0case\0${request.operation_id}\0${digest}\0${role}`)}`;}
+function typed(prefix,v){return `${prefix}:${v.slice(v.indexOf(":")+1)}`;}
 
-function exactKeys(value, allowed, path) {
-  for (const key of Object.keys(value)) {
-    if (!allowed.has(key)) throw new CaseRequestError(`${path}.${key}`, "field_unsupported", "Field is outside the exact L-01 Case request shape.");
-  }
-}
+function semanticDigest(request,normalized){const semanticCase=structuredClone(normalized);for(const family of semanticCase.families??[])delete family.resolved_content;return mechanicalDigest({operation:request.operation,request_version:1,store_id:request.store_id,context:request.context,operation_id:request.operation_id,expected_revision:request.expected_revision,commit_basis:request.commit_basis,provenance:request.provenance??{},case:semanticCase});}
+function assemble(request, normalized){const semantic=semanticDigest(request,normalized); const rev=allocate("owner-revision",request,semantic,"revision"),event=allocate("event",request,semantic,"event"),outbox=allocate("outbox",request,semantic,"outbox"); let profile={schema:normalized.legacy?"case-profile@1":"case-profile@2",...normalized}; delete profile.families; delete profile.legacy; profile=JSON.parse(JSON.stringify(profile)); const caseVersion=allocate("version",request,semantic,"case-profile"); const versions=[{family_id:normalized.id,version_id:caseVersion,content:profile,content_digest:mechanicalDigest(profile)}], selections=[{family_id:normalized.id,version_id:caseVersion}], selectedByFamily=new Map([[normalized.id,caseVersion]]), versionIds={case:typed("case-version",caseVersion)}, changed={aliases:[],facets:[],entries:[],sources:[],evidence:[],relationships:[]};
+  for(const f of normalized.families??[]){let vid=f.existing_version_id;if(!vid){vid=allocate("version",request,semantic,`${f.kind}:${f.family_id}`);const content=JSON.parse(JSON.stringify(f.content));if(f.kind==="evidence"){content.source_version_id=content.source_version_id??selectedByFamily.get(content.source_family_id);}versions.push({family_id:f.family_id,version_id:vid,content,content_digest:mechanicalDigest(content)});changed[{alias:"aliases",facet:"facets",knowledge:"entries",source:"sources",evidence:"evidence",relationship:"relationships"}[f.kind]]?.push(f.family_id);} selectedByFamily.set(f.family_id,vid); selections.push({family_id:f.family_id,version_id:vid});versionIds[f.family_id]=typed("case-version",vid);}
+  const eventPayload={schema:"case-change@2",change:request.expected_revision===0?"created":"revised",case_id:normalized.id,changed_family_ids:[normalized.id,...Object.values(changed).flat()],allocated_version_ids:versions.map(v=>v.version_id),changed}; const outPayload={schema:"case-projection-work@2",case_id:normalized.id,revision_id:rev}; const envelope={envelope_version:1,operation_id:request.operation_id,store_id:request.store_id,request_digest:"0".repeat(64),owner:{id:normalized.id,kind:"case",home_namespace_id:normalized.home_namespace_id},expected_revision:request.expected_revision,representation:normalized.legacy?LEGACY_REPRESENTATION:CASE_REPRESENTATION,revision:{id:rev,number:request.expected_revision+1,normalized:{schema:normalized.legacy?"case-minimal-selection@1":"case-canonical-selection@1",semantic_request_digest:semantic,case_family_id:normalized.id,case_version_id:caseVersion,selected_family_ids:selections.map(s=>s.family_id)},versions,selections},current_projection:{schema:"case-current@2",id:normalized.id,home_namespace_id:normalized.home_namespace_id,state:normalized.state,title:normalized.title,summary:normalized.summary,case_version_id:caseVersion,aliases:(normalized.families??[]).filter(x=>x.kind==="alias"&&(x.content??x.resolved_content)?.state==="active").map(x=>({type:(x.content??x.resolved_content)?.kind,normalized_value:(x.content??x.resolved_content)?.normalized_value})).filter(x=>x.type&&x.normalized_value),structural_claims:(normalized.families??[]).filter(x=>x.kind==="alias"&&(x.content??x.resolved_content)?.state==="active").map(x=>({namespace_id:normalized.home_namespace_id,claim_type:`alias:${(x.content??x.resolved_content)?.kind}`,normalized_value:(x.content??x.resolved_content)?.normalized_value}))},event:{id:event,type:"case.revision.committed",schema_version:1,visibility_ceiling:"private",payload:eventPayload,payload_digest:mechanicalDigest(eventPayload)},outbox:[{id:outbox,kind:"case.current_projection.refresh",payload:outPayload,payload_digest:mechanicalDigest(outPayload)}],provenance:suppliedProvenance(request)};envelope.request_digest=canonicalCommitRequestDigest(request.store_id,request.context,envelope);return{envelope,allocations:{revision:rev,event,outbox,versionIds}};}
 
-function requiredString(value, path, max = 16_384) {
-  if (typeof value !== "string" || value.trim().length === 0 || value.length > max) {
-    throw new CaseRequestError(path, "required_bounded_string", "A non-empty bounded string is required.");
-  }
-  return value;
-}
+function typedFailure(operation,result){const s=result.failure,common={retryDisposition:s.retry_disposition,correctiveGuidance:s.corrective_guidance};if(s.code==="not_visible")return failure("case.not_found_or_not_visible","The Case is unknown or not visible under the exact view.",{...common,failureClass:"case.read_failure",evidence:{}});if(s.code==="revision_conflict")return failure(operation==="case.create"?"case.create_identity_exists":"case.revision_conflict","The expected Case revision is no longer current.",{...common,failureClass:"case.mutation_conflict",evidence:{current_revision:s.evidence?.current_revision?.id?{id:typed("case-revision",s.evidence.current_revision.id),number:s.evidence.current_revision.number}:s.evidence?.current_revision??null}});const mapped={idempotency_mismatch:"case.idempotency_mismatch",identity_conflict:"case.identity_conflict",view_invalid:"case.view_invalid_or_unavailable"}[s.code]??"case.substrate_failure";return failure(mapped,`The typed Case ${operation} operation did not complete.`,{...common,failureClass:mapped,evidence:s.code==="idempotency_mismatch"?{operation_id:s.evidence?.operation_id??null}:{}});}
+function invalid(error){return failure("case.invalid_representation","The complete Case representation is structurally invalid.",{failureClass:"case.invalid_representation",retryDisposition:RETRY_DISPOSITIONS.NEVER,correctiveGuidance:"Correct the typed Case request; no mechanical envelope was submitted.",evidence:{violations:[{path:error.path,rule:error.rule}]}});}
 
-function requiredId(value, path, prefix) {
-  requiredString(value, path, 128);
-  if (!uuidId(prefix).test(value)) throw new CaseRequestError(path, "uuid_identity_required", `A lowercase UUID-based ${prefix}: identity is required.`);
-  return value;
-}
-
-function validateContext(value) {
-  if (!object(value)) throw new CaseRequestError("context", "view_context_required", "An exact view context is required.");
-  exactKeys(value, CONTEXT_FIELDS, "context");
-  requiredId(value.view_id, "context.view_id", "view");
-  requiredId(value.view_policy_revision_id, "context.view_policy_revision_id", "view-policy");
-  requiredString(value.purpose, "context.purpose", 512);
-  if (value.requested_audience_ceiling != null && value.requested_audience_ceiling !== "private") {
-    throw new CaseRequestError("context.requested_audience_ceiling", "audience_ceiling_invalid", "L-01 permits only the private audience ceiling.");
-  }
-}
-
-function validateCommonCreate(request) {
-  exactKeys(request, CREATE_REQUEST_FIELDS, "request");
-  if (request.request_version !== 1) throw new CaseRequestError("request_version", "version_incompatible", "request_version must be 1.");
-  requiredString(request.operation_id, "operation_id", 256);
-  requiredId(request.store_id, "store_id", "store");
-  if (request.expected_revision !== 0) throw new CaseRequestError("expected_revision", "create_requires_absent_revision", "Case create requires expected_revision 0.");
-  requiredString(request.commit_basis, "commit_basis", 2_048);
-  validateContext(request.context);
-}
-
-function normalizeCase(value) {
-  if (!object(value)) throw new CaseRequestError("case", "object_required", "case must be an object.");
-  exactKeys(value, CASE_FIELDS, "case");
-  const normalized = {
-    id: requiredId(value.id, "case.id", "case"),
-    home_namespace_id: requiredId(value.home_namespace_id, "case.home_namespace_id", "namespace"),
-    state: value.state,
-    title: requiredString(value.title, "case.title", 512),
-    summary: requiredString(value.summary, "case.summary", 4_096),
-    scope: requiredString(value.scope, "case.scope", 16_384),
-  };
-  if (normalized.state !== "active") {
-    throw new CaseRequestError("case.state", "create_requires_active_case", "The minimal create operation accepts only an active Case.");
-  }
-  return normalized;
-}
-
-function provenance(request) {
-  const supplied = request.provenance;
-  if (supplied != null && !object(supplied)) throw new CaseRequestError("provenance", "object_required", "provenance must be an object when present.");
-  const result = { commit_basis: request.commit_basis };
-  for (const key of ["causation", "correlation", "session", "acting_role", "authority_basis"]) {
-    if (supplied?.[key] != null) result[key] = requiredString(supplied[key], `provenance.${key}`, 512);
-  }
-  if (supplied) exactKeys(supplied, new Set(["causation", "correlation", "session", "acting_role", "authority_basis"]), "provenance");
-  return result;
-}
-
-function semanticCreateDigest(request, normalized) {
-  return mechanicalDigest({
-    operation: "case.create",
-    request_version: 1,
-    store_id: request.store_id,
-    context: request.context,
-    operation_id: request.operation_id,
-    expected_revision: 0,
-    commit_basis: request.commit_basis,
-    provenance: request.provenance ?? {},
-    case: normalized,
-  });
-}
-
-function allocatedUuid(seed) {
-  const bytes = createHash("sha256").update(seed).digest().subarray(0, 16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x50;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-function allocate(prefix, request, semanticDigest, role) {
-  return `${prefix}:${allocatedUuid(`${request.store_id}\u0000case\u0000${request.operation_id}\u0000${semanticDigest}\u0000${role}`)}`;
-}
-
-function assembleCaseCreateEnvelope(request, normalized) {
-  const semanticDigest = semanticCreateDigest(request, normalized);
-  const allocations = {
-    case_version_id: allocate("version", request, semanticDigest, "case-version"),
-    revision_id: allocate("owner-revision", request, semanticDigest, "owner-revision"),
-    event_id: allocate("event", request, semanticDigest, "event"),
-    outbox_id: allocate("outbox", request, semanticDigest, "outbox"),
-  };
-  const content = {
-    schema: "case-profile@1",
-    ...normalized,
-  };
-  const eventPayload = {
-    schema: "case-change@1",
-    change: "created",
-    case_id: normalized.id,
-    changed_family_ids: [normalized.id],
-    allocated_version_ids: [allocations.case_version_id],
-  };
-  const outboxPayload = {
-    schema: "case-projection-work@1",
-    case_id: normalized.id,
-    revision_id: allocations.revision_id,
-  };
-  const envelope = {
-    envelope_version: 1,
-    operation_id: request.operation_id,
-    store_id: request.store_id,
-    request_digest: "0".repeat(64),
-    owner: { id: normalized.id, kind: "case", home_namespace_id: normalized.home_namespace_id },
-    expected_revision: 0,
-    representation: CASE_REPRESENTATION,
-    revision: {
-      id: allocations.revision_id,
-      number: 1,
-      normalized: {
-        schema: "case-minimal-selection@1",
-        semantic_request_digest: semanticDigest,
-        case_family_id: normalized.id,
-        case_version_id: allocations.case_version_id,
-      },
-      versions: [{
-        family_id: normalized.id,
-        version_id: allocations.case_version_id,
-        content,
-        content_digest: mechanicalDigest(content),
-      }],
-      selections: [{ family_id: normalized.id, version_id: allocations.case_version_id }],
-    },
-    current_projection: {
-      schema: "case-current@1",
-      id: normalized.id,
-      home_namespace_id: normalized.home_namespace_id,
-      state: normalized.state,
-      title: normalized.title,
-      summary: normalized.summary,
-      case_version_id: allocations.case_version_id,
-    },
-    event: {
-      id: allocations.event_id,
-      type: "case.revision.committed",
-      schema_version: 1,
-      visibility_ceiling: "private",
-      payload: eventPayload,
-      payload_digest: mechanicalDigest(eventPayload),
-    },
-    outbox: [{
-      id: allocations.outbox_id,
-      kind: "case.current_projection.refresh",
-      payload: outboxPayload,
-      payload_digest: mechanicalDigest(outboxPayload),
-    }],
-    provenance: provenance(request),
-  };
-  envelope.request_digest = canonicalCommitRequestDigest(request.store_id, request.context, envelope);
-  return { envelope, allocations, semanticDigest };
-}
-
-function caseTypedId(prefix, mechanicalId) {
-  return `${prefix}:${mechanicalId.slice(mechanicalId.indexOf(":") + 1)}`;
-}
-
-function typedFailure(operation, result) {
-  const source = result.failure;
-  const common = {
-    retryDisposition: source.retry_disposition,
-    correctiveGuidance: source.corrective_guidance,
-  };
-  if (source.code === "not_visible") {
-    return failure("case.not_found_or_not_visible", "The Case is unknown or not visible under the exact view.", {
-      ...common, failureClass: "case.read_failure", evidence: {},
-    });
-  }
-  if (source.code === "revision_conflict") {
-    return failure("case.create_identity_exists", "The Case identity already has a current revision.", {
-      ...common,
-      failureClass: "case.mutation_conflict",
-      evidence: {
-        current_revision: source.evidence?.current_revision?.id
-          ? {
-              id: caseTypedId("case-revision", source.evidence.current_revision.id),
-              number: source.evidence.current_revision.number,
-            }
-          : source.evidence?.current_revision ?? null,
-      },
-    });
-  }
-  const mapped = {
-    idempotency_mismatch: "case.idempotency_mismatch",
-    identity_conflict: "case.identity_conflict",
-    view_invalid: "case.view_invalid_or_unavailable",
-  }[source.code] ?? "case.substrate_failure";
-  const safeEvidence = source.code === "idempotency_mismatch"
-    ? { operation_id: source.evidence?.operation_id ?? null }
-    : {};
-  return failure(mapped, `The typed Case ${operation} operation did not complete.`, {
-    ...common,
-    failureClass: mapped,
-    evidence: safeEvidence,
-  });
-}
-
-function invalidCase(error) {
-  return failure("case.invalid_representation", "The minimal Case request is structurally invalid.", {
-    failureClass: "case.invalid_representation",
-    retryDisposition: RETRY_DISPOSITIONS.NEVER,
-    correctiveGuidance: "Correct the typed Case request; do not construct or submit a mechanical envelope.",
-    evidence: { violations: [{ path: error.path, rule: error.rule }] },
-  });
-}
-
-function hydrateCase(mechanical) {
-  const revision = mechanical.revision;
-  if (revision.representation?.id !== CASE_REPRESENTATION.id || revision.representation?.version !== CASE_REPRESENTATION.version) {
-    throw new CaseRequestError("stored.representation", "representation_incompatible", "Stored Case representation is incompatible.");
-  }
-  const normalized = revision.normalized;
-  const selected = revision.selected_versions;
-  if (normalized?.schema !== "case-minimal-selection@1" || !Array.isArray(selected) || selected.length !== 1) {
-    throw new CaseRequestError("stored.selection", "selection_incomplete", "Stored Case selection is incomplete.");
-  }
-  const version = selected[0];
-  if (version.family_id !== mechanical.owner.id
-    || version.version_id !== normalized.case_version_id
-    || version.content_digest !== mechanicalDigest(version.content)
-    || version.content?.schema !== "case-profile@1") {
-    throw new CaseRequestError("stored.case_version", "version_inconsistent", "Stored Case version is inconsistent.");
-  }
-  const { schema: _schema, ...caseState } = version.content;
-  return {
-    status: "found",
-    case: caseState,
-    revision: {
-      id: caseTypedId("case-revision", revision.id),
-      number: revision.number,
-      committed_at: revision.committed_at,
-      version_ids: { case: caseTypedId("case-version", version.version_id) },
-    },
-    applied_view: mechanical.applied_view,
-  };
-}
-
-function caseCreateReceipt(mechanicalReceipt, normalized, allocations) {
-  return {
-    operation_id: mechanicalReceipt.operation_id,
-    operation: "case.create",
-    store_id: mechanicalReceipt.store_id,
-    case_id: normalized.id,
-    request_digest: mechanicalReceipt.request_digest,
-    expected_revision: 0,
-    committed_revision: { id: caseTypedId("case-revision", allocations.revision_id), number: 1 },
-    outcome: "committed",
-    event_id: allocations.event_id,
-    result_digest: mechanicalReceipt.result_digest,
-    settled_at: mechanicalReceipt.settled_at,
-    retry_disposition: mechanicalReceipt.retry_disposition,
-    operation_fence: mechanicalReceipt.operation_fence,
-  };
-}
-
-async function createCase(request) {
-  validateCommonCreate(request);
-  const normalized = normalizeCase(request.case);
-  const { envelope, allocations } = assembleCaseCreateEnvelope(request, normalized);
-  const mechanical = await invokeSubstrateOperation({
-    operation: "commit_owner_revision",
-    configuration: request.configuration,
-    context: request.context,
-    envelope,
-  });
-  if (!mechanical?.ok) return typedFailure("create", mechanical);
-  return success("case.create", {
-    status: "settled",
-    case: normalized,
-    revision: {
-      id: caseTypedId("case-revision", allocations.revision_id),
-      number: 1,
-      committed_at: mechanical.result.receipt.settled_at,
-      version_ids: { case: caseTypedId("case-version", allocations.case_version_id) },
-    },
-    event_id: allocations.event_id,
-    receipt: caseCreateReceipt(mechanical.result.receipt, normalized, allocations),
-    idempotent_replay: mechanical.result.idempotent_replay,
-    applied_view: mechanical.result.applied_view,
-  });
-}
-
-async function readCase(request) {
-  exactKeys(request, READ_REQUEST_FIELDS, "request");
-  if (request.request_version !== 1) throw new CaseRequestError("request_version", "version_incompatible", "request_version must be 1.");
-  const caseId = requiredId(request.case_id, "case_id", "case");
-  requiredId(request.store_id, "store_id", "store");
-  validateContext(request.context);
-  const mechanical = await invokeSubstrateOperation({
-    operation: "read_owner_current",
-    configuration: request.configuration,
-    store_id: request.store_id,
-    context: request.context,
-    owner: { id: caseId, kind: "case" },
-  });
-  if (!mechanical?.ok) return typedFailure("read", mechanical);
-  try {
-    return success("case.read", hydrateCase(mechanical.result));
-  } catch (error) {
-    return failure("case.stored_representation_incompatible", "The stored Case cannot be hydrated through Case representation version 1.", {
-      failureClass: "case.stored_representation_incompatible",
-      retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
-      evidence: { violations: [{ path: error.path ?? "stored", rule: error.rule ?? "incompatible" }] },
-    });
-  }
-}
-
-export async function invokeCaseOperation(request) {
-  try {
-    if (request.operation === "case.create") return await createCase(request);
-    if (request.operation === "case.read") return await readCase(request);
-    return unsupported(request.operation);
-  } catch (error) {
-    if (error instanceof CaseRequestError) return invalidCase(error);
-    return failure("case.internal_failure", "The typed Case operation failed without exposing owner state.", {
-      failureClass: "case.internal_failure",
-      retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
-      evidence: {},
-    });
-  }
-}
+async function visibleTarget(request,kind,targetId){const direct=await invokeSubstrateOperation({operation:"read_owner_current",configuration:request.configuration,store_id:request.store_id,context:request.context,owner:{id:targetId,kind}});if(direct?.ok)return direct.result;const listed=await invokeSubstrateOperation({operation:"list_owner_current",configuration:request.configuration,store_id:request.store_id,context:request.context,owner_kind:"case"});if(!listed?.ok)return null;for(const item of listed.result.items){const found=await invokeSubstrateOperation({operation:"read_owner_current",configuration:request.configuration,store_id:request.store_id,context:request.context,owner:item.owner});if(found?.ok&&found.result.revision.selected_versions.some(v=>v.family_id===targetId))return found.result;}return null;}
+async function validateVisibleLinks(request,normalized){for(const family of normalized.families??[]){if(family.kind!=="relationship"||!family.content)continue;for(const endpoint of [family.content.subject,family.content.object])if(endpoint.external&&!await visibleTarget(request,endpoint.kind,endpoint.id))throw new CaseRequestError("case.relationships","relationship_target_not_visible");}const allRefs=[...(normalized.references??[])];for(const entry of normalized.entries??[]){allRefs.push(...(entry.version?.references??[]));if(entry.version?.supersession){allRefs.push(entry.version.supersession.successor,...entry.version.supersession.basis);}}for(const reference of allRefs){const target=await visibleTarget(request,reference.target_kind,reference.target_id);if(!target)throw new CaseRequestError("case.references","reference_target_not_visible");const visibleRevision=target.revision.id;if(mechanicalRevision(reference.observed_revision_id)!==visibleRevision||reference.pinned_revision_id!=null&&mechanicalRevision(reference.pinned_revision_id)!==visibleRevision)throw new CaseRequestError("case.references","reference_revision_not_visible_for_target");}}
+function currentSelection(mechanical){return new Map(mechanical.revision.selected_versions.map(v=>[v.family_id,v]));}
+function validateCompleteUpdate(normalized,current){const selected=currentSelection(current), expected=new Set(current.revision.normalized.selected_family_ids ?? selected.keys()), supplied=new Set([normalized.id,...normalized.families.map(f=>f.family_id)]); if([...expected].some(x=>!supplied.has(x)))throw new CaseRequestError("case","complete_selection_required"); for(const f of normalized.families){const prior=selected.get(f.family_id);if(f.existing_version_id&&!prior)throw new CaseRequestError(`case.${f.kind}.selected_version_id`,"selected_version_not_current");if(f.existing_version_id&&f.existing_version_id!==prior.version_id)throw new CaseRequestError(`case.${f.kind}.selected_version_id`,"selected_version_not_current");if(f.existing_version_id&&f.state!==prior.content.state)throw new CaseRequestError(`case.${f.kind}.state`,"selected_version_state_mismatch");if(f.existing_version_id){f.state=prior.content.state;f.resolved_content=prior.content;}}}
+function hydrate(mechanical){const revision=mechanical.revision,canonical=revision.representation?.id===CASE_REPRESENTATION.id;if(!canonical&&revision.representation?.id!==LEGACY_REPRESENTATION.id)throw new CaseRequestError("stored.representation","representation_incompatible");const n=revision.normalized,selected=revision.selected_versions;if(!Array.isArray(selected))throw new CaseRequestError("stored.selection","selection_incomplete");const profile=selected.find(v=>v.family_id===mechanical.owner.id);if(!profile||profile.version_id!==n.case_version_id||profile.content_digest!==mechanicalDigest(profile.content))throw new CaseRequestError("stored.case_version","version_inconsistent");if(canonical){const expected=new Set(n.selected_family_ids);if(expected.size!==selected.length||selected.some(v=>!expected.has(v.family_id)||v.content_digest!==mechanicalDigest(v.content)))throw new CaseRequestError("stored.selection","selection_incomplete");}const {schema:_s,...caseState}=profile.content;if(canonical){const bySchema=new Map();for(const v of selected){if(v===profile)continue;const {schema,family_id,state,...stored}=v.content;let version=stored;if(schema==="case-alias@1"){const {namespace_id,normalized_value,...semantic}=stored;version=semantic;}else if(schema==="case-knowledge@1"){const {relationship_ids,...semantic}=stored;version={...semantic,relationships:relationship_ids??[]};}else if(schema==="case-relationship@1"){version={...stored,subject:Object.fromEntries(Object.entries(stored.subject).filter(([k])=>k!=="external")),object:Object.fromEntries(Object.entries(stored.object).filter(([k])=>k!=="external"))};}else if(schema==="case-evidence@1"){const {source_family_id,...semantic}=stored;version=semantic;}else if(schema==="case-source@1"){const {display_label,...semantic}=stored;version=semantic;}const item={id:v.family_id,state,version};if(schema==="case-source@1")item.display_label=stored.display_label;(bySchema.get(schema)??bySchema.set(schema,[]).get(schema)).push(item);}caseState.aliases=bySchema.get("case-alias@1")??[];caseState.facets=bySchema.get("case-facet@1")??[];caseState.entries=bySchema.get("case-knowledge@1")??[];caseState.relationships=bySchema.get("case-relationship@1")??[];const evidence=bySchema.get("case-evidence@1")??[];caseState.sources=(bySchema.get("case-source@1")??[]).map(s=>({...s,fragments:evidence.filter(e=>revision.selected_versions.find(v=>v.family_id===e.id)?.content.source_family_id===s.id||e.version.source_version_id===revision.selected_versions.find(v=>v.family_id===s.id)?.version_id)}));}const ids={case:typed("case-version",profile.version_id)};for(const v of selected)if(v!==profile)ids[v.family_id]=typed("case-version",v.version_id);return{status:"found",case:caseState,revision:{id:typed("case-revision",revision.id),number:revision.number,committed_at:revision.committed_at,version_ids:ids},applied_view:mechanical.applied_view};}
+async function commit(request){exact(request,REQUEST_FIELDS,"request");if(request.request_version!==1)throw new CaseRequestError("request_version","version_incompatible");string(request.operation_id,"operation_id",256);id(request.store_id,"store_id","store");if(!Number.isInteger(request.expected_revision)||request.expected_revision<0)throw new CaseRequestError("expected_revision","expected_revision_required");validateContext(request.context);const normalized=normalizeCase(request.case,request.expected_revision);const mismatch=()=>typedFailure(request.operation,{failure:{code:"idempotency_mismatch",retry_disposition:"never",corrective_guidance:"Reconcile against the settled receipt.",evidence:{operation_id:request.operation_id}}});const priorOperation=await invokeSubstrateOperation({operation:"get_owner_operation_receipt",configuration:request.configuration,store_id:request.store_id,context:request.context,operation_id:request.operation_id,owner:{id:normalized.id,kind:"case",home_namespace_id:normalized.home_namespace_id}});if(priorOperation?.ok&&priorOperation.result.status==="settled"){const settled=priorOperation.result,stored=settled.committed_revision_state;if(settled.receipt.operation_kind!=="commit_owner_revision")return mismatch();if(settled.receipt.outcome==="rejected"){if(request.expected_revision>0){const historical=settled.expected_revision_state;if(!historical||historical.number!==settled.receipt.expected_revision)return mismatch();try{validateCompleteUpdate(normalized,{revision:historical});}catch{return mismatch();}}const historical=assemble(request,normalized).envelope;if(historical.request_digest!==settled.receipt.request_digest)return mismatch();return typedFailure(request.operation,settled.receipt.result);}if(!stored||stored.normalized?.semantic_request_digest!==semanticDigest(request,normalized))return mismatch();const versionIds={};for(const selected of stored.selected_versions)versionIds[selected.family_id===normalized.id?"case":selected.family_id]=typed("case-version",selected.version_id);return success(request.operation,{status:"settled",case:request.case,revision:{id:typed("case-revision",stored.id),number:stored.number,committed_at:stored.committed_at,version_ids:versionIds},event_id:settled.receipt.event_id,receipt:{operation_id:settled.receipt.operation_id,operation:request.operation,store_id:settled.receipt.store_id,case_id:normalized.id,request_digest:settled.receipt.request_digest,expected_revision:settled.receipt.expected_revision,committed_revision:{id:typed("case-revision",stored.id),number:stored.number},outcome:"committed",event_id:settled.receipt.event_id,result_digest:settled.receipt.result_digest,settled_at:settled.receipt.settled_at,retry_disposition:settled.receipt.retry_disposition,operation_fence:settled.receipt.operation_fence},idempotent_replay:true,applied_view:{view_id:request.context.view_id,view_policy_revision_id:request.context.view_policy_revision_id}});}if(request.expected_revision>0){const current=await invokeSubstrateOperation({operation:"read_owner_current",configuration:request.configuration,store_id:request.store_id,context:request.context,owner:{id:normalized.id,kind:"case"}});if(!current?.ok)return typedFailure(request.operation,current);if(current.result.revision.number!==request.expected_revision)return typedFailure(request.operation,{failure:{code:"revision_conflict",retry_disposition:"after_refresh",corrective_guidance:"Read the current revision and retry.",evidence:{current_revision:current.result.revision}}});validateCompleteUpdate(normalized,current.result);}if(request.operation==="case.create"&&request.expected_revision!==0)throw new CaseRequestError("expected_revision","create_requires_absent_revision");await validateVisibleLinks(request,normalized);const {envelope,allocations}=assemble(request,normalized);const mechanical=await invokeSubstrateOperation({operation:"commit_owner_revision",configuration:request.configuration,context:request.context,envelope});if(!mechanical?.ok)return typedFailure(request.operation,mechanical);const receipt=mechanical.result.receipt;return success(request.operation,{status:"settled",case:normalized.legacy?Object.fromEntries(Object.entries(normalized).filter(([k])=>k!=="legacy")):request.case,revision:{id:typed("case-revision",allocations.revision),number:request.expected_revision+1,committed_at:receipt.settled_at,version_ids:allocations.versionIds},event_id:allocations.event,receipt:{operation_id:receipt.operation_id,operation:request.operation,store_id:receipt.store_id,case_id:normalized.id,request_digest:receipt.request_digest,expected_revision:request.expected_revision,committed_revision:{id:typed("case-revision",allocations.revision),number:request.expected_revision+1},outcome:"committed",event_id:allocations.event,result_digest:receipt.result_digest,settled_at:receipt.settled_at,retry_disposition:receipt.retry_disposition,operation_fence:receipt.operation_fence},idempotent_replay:mechanical.result.idempotent_replay,applied_view:mechanical.result.applied_view});}
+async function readCase(request){exact(request,READ_FIELDS,"request");if(request.request_version!==1)throw new CaseRequestError("request_version","version_incompatible");const caseId=id(request.case_id,"case_id","case");id(request.store_id,"store_id","store");validateContext(request.context);const mechanical=await invokeSubstrateOperation({operation:"read_owner_current",configuration:request.configuration,store_id:request.store_id,context:request.context,owner:{id:caseId,kind:"case"}});if(!mechanical?.ok)return typedFailure("read",mechanical);try{return success("case.read",hydrate(mechanical.result));}catch(error){return failure("case.stored_representation_incompatible","The stored Case cannot be hydrated through a supported Case representation.",{failureClass:"case.stored_representation_incompatible",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{violations:[{path:error.path??"stored",rule:error.rule??"incompatible"}]}});}}
+export async function invokeCaseOperation(request){try{if(request.operation==="case.create"||request.operation==="case.commit_revision")return await commit(request);if(request.operation==="case.read")return await readCase(request);return unsupported(request.operation);}catch(error){if(error instanceof CaseRequestError)return invalid(error); return failure("case.internal_failure","The typed Case operation failed without exposing owner state.",{failureClass:"case.internal_failure",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});}}
