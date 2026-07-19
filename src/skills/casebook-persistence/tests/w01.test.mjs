@@ -15,8 +15,12 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
   assert.equal(check.manifest.assets.length, 15);
-  assert.deepEqual(check.manifest.supported_operations, ["diagnose"]);
-  assert.equal(check.manifest.schema.store_initialization, "not_yet_implemented");
+  assert.deepEqual(check.manifest.supported_operations, [
+    "diagnose",
+    "initialize_store",
+    "get_store_operation_receipt",
+  ]);
+  assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
 });
 
 test("diagnostics reject an older simulated Node.js runtime with classified version evidence", async () => {
@@ -56,8 +60,10 @@ test("module direction remains private and substrate owner-neutral", async () =>
     assert.match(source, /shared\/protocol\.mjs/);
     assert.match(source, /substrate\/index\.mjs/);
   }
+  const operations = await readFile(path.join(packageRoot, "variants/sqlite/lib/operations/index.mjs"), "utf8");
+  assert.doesNotMatch(operations, /lib\/(case|frame)|\.\.\/(case|frame)/);
   const entrypoint = await readFile(path.join(packageRoot, "variants/sqlite/bin/casebook-persistence.mjs"), "utf8");
-  assert.doesNotMatch(entrypoint, /operations\/index/);
+  assert.match(entrypoint, /operations\/index/);
 });
 
 test("human installation guidance is not referenced or embedded by model-loaded files", async () => {

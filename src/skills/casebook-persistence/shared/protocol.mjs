@@ -40,11 +40,14 @@ export function failure(code, message, options = {}) {
 export function unsupported(operation) {
   return failure(
     "not_yet_implemented",
-    `Operation ${JSON.stringify(operation)} is outside L01-W01 and is not implemented.`,
+    `Operation ${JSON.stringify(operation)} is outside the current accepted delivery slice and is not implemented.`,
     {
       failureClass: "operation_unsupported",
       correctiveGuidance: "Do not retry this operation. Complete and accept its owning later work item first.",
-      evidence: { supported_operations: ["diagnose"], requested_operation: operation ?? null },
+      evidence: {
+        supported_operations: ["diagnose", "initialize_store", "get_store_operation_receipt"],
+        requested_operation: operation ?? null,
+      },
     },
   );
 }

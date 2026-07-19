@@ -2,6 +2,16 @@
   "migration_manifest_version": 1,
   "schema_id": "casebook-persistence-sqlite",
   "schema_version": 1,
-  "implementation_status": "not_yet_implemented",
-  "migrations": []
+  "implementation_status": "initialization_available",
+  "migrations": [
+    {
+      "id": "0001-initialize-store",
+      "from_version": 0,
+      "to_version": 1,
+      "asset": "../sql/schema-v1.sql",
+      "application_id": 1128419377,
+      "ordinary_access_allowed": false,
+      "requires_human_authority_claim": true
+    }
+  ]
 }

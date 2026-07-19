@@ -57,7 +57,7 @@ async function findOnPath(name) {
   return null;
 }
 
-async function selectSqliteBinary(configured) {
+export async function selectSqliteBinary(configured) {
   const candidate = configured ?? await findOnPath("sqlite3");
   if (!candidate) throw new ConfigurationError("sqlite_binary_unavailable", "No capability-checkable sqlite3 binary was selected.");
   await access(candidate, fsConstants.X_OK).catch(() => {
@@ -66,16 +66,17 @@ async function selectSqliteBinary(configured) {
   return { path: await realpath(candidate), source: configured ? "configuration.sqlite.sqlite_bin" : "PATH" };
 }
 
-async function sqlite(binary, database, sql) {
-  return execFileWithInput(binary, [database], {
+export async function sqlite(binary, database, sql, options = {}) {
+  const args = [...(options.args ?? []), database];
+  return execFileWithInput(binary, args, {
     encoding: "utf8",
-    timeout: 10_000,
-    maxBuffer: 1024 * 1024,
+    timeout: options.timeout ?? 10_000,
+    maxBuffer: options.maxBuffer ?? 1024 * 1024,
     env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" },
   }, sql);
 }
 
-async function probeSqlite(binary, probeDirectory) {
+export async function probeSqlite(binary, probeDirectory) {
   if (!path.isAbsolute(probeDirectory)) {
     throw new ConfigurationError("relative_path_rejected", "probe_directory must be absolute.", { field: "probe_directory" });
   }

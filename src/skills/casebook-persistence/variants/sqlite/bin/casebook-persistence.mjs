@@ -1,5 +1,6 @@
 import { diagnose } from "../lib/substrate/diagnostics.mjs";
-import { failure, PROTOCOL_ID, PROTOCOL_VERSION, unsupported } from "../../../shared/protocol.mjs";
+import { invokeExceptionalOperation } from "../lib/operations/index.mjs";
+import { failure, PROTOCOL_ID, PROTOCOL_VERSION } from "../../../shared/protocol.mjs";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
 
@@ -25,7 +26,7 @@ try {
   } else if (request.operation === "diagnose") {
     result = await diagnose(request);
   } else {
-    result = unsupported(request.operation);
+    result = await invokeExceptionalOperation(request);
   }
 } catch (error) {
   result = failure(
@@ -35,7 +36,7 @@ try {
 }
 
 process.stderr.write(result.ok
-  ? `casebook-persistence: ${result.operation} passed; configured store was not accessed\n`
+  ? `casebook-persistence: ${result.operation} completed with status ${result.result?.status ?? "passed"}\n`
   : `casebook-persistence: ${result.failure.code}: ${result.failure.message}\n`);
 process.stdout.write(`${JSON.stringify(result)}\n`);
 process.exitCode = result.ok ? 0 : 2;
