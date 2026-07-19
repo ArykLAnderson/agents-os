@@ -1,8 +1,10 @@
 import { constants as fsConstants } from "node:fs";
+import { randomBytes } from "node:crypto";
 import {
   access,
   lstat,
   mkdir,
+  open,
   readFile,
   realpath,
   rename,
@@ -11,6 +13,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { validateAuthorityConfiguration, ConfigurationError } from "../../../shared/config.mjs";
 import {
   canonicalJson,
@@ -32,6 +35,8 @@ import {
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_RECORDS = 256;
 const MAX_SEARCH_LIMIT = 50;
+const FILE_AUTHORITY_PROFILE = "file-authoritative-markdown-v1";
+const CASE_STAGE_PREFIX = ".casebook-owned-case-stage-";
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const idPattern = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
 const OWNER_ID = new RegExp(`^(case|frame):${UUID}$`);
@@ -47,6 +52,7 @@ const CATEGORY = Object.freeze({
   "Out of Scope": "out_of_scope",
 });
 const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
+const DIGEST = /^[0-9a-f]{64}$/;
 
 export class MarkdownError extends Error {
   constructor(code, pathName, rule, message, evidence = {}) {
@@ -390,16 +396,28 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   return record;
 }
 
-async function loadWorkspace(request, { allowEmpty = false } = {}) {
+async function loadAuthorityWorkspace(request) {
   const configuration = validateAuthorityConfiguration(request.configuration);
   if (configuration.authority_mode !== "markdown") {
     throw new MarkdownError("markdown_authority_required", "configuration.authority_mode", "explicit_markdown_selection_required", "This connector requires explicitly selected Markdown authority.");
   }
-  const root = await realpath(configuration.markdown.workspace_root).catch(() => null);
-  if (!root) throw new MarkdownError("markdown.workspace_unavailable", "configuration.markdown.workspace_root", "workspace_missing", "The configured Markdown workspace does not exist.");
+  const configuredRoot = path.resolve(configuration.markdown.workspace_root);
+  const configuredEntry = await lstat(configuredRoot).catch(() => null);
+  if (!configuredEntry) throw new MarkdownError("markdown.workspace_unavailable", "configuration.markdown.workspace_root", "workspace_missing", "The configured Markdown workspace does not exist.");
+  if (configuredEntry.isSymbolicLink() || !configuredEntry.isDirectory()) {
+    throw new MarkdownError("markdown.path_invalid", "configuration.markdown.workspace_root", "real_workspace_root_required", "The configured Markdown workspace root must be a real directory, not a symlink or another file type.");
+  }
+  const root = await realpath(configuredRoot);
   const markerPath = path.join(root, WORKSPACE_MARKER);
-  const markerBytes = await boundedMetadataRead(root, WORKSPACE_MARKER, WORKSPACE_MARKER, { required: false });
-  if (!markerBytes) throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_required", "An explicit Markdown authority marker is required; no fallback is attempted.");
+  const markerEntry = await lstat(markerPath).catch(() => null);
+  if (!markerEntry) throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_required", "An explicit Markdown authority marker is required; no fallback is attempted.");
+  if (markerEntry.isSymbolicLink() || !markerEntry.isFile()) {
+    throw new MarkdownError("markdown.path_invalid", WORKSPACE_MARKER, "regular_authority_marker_required", "The authority marker must be a real file in the workspace root.");
+  }
+  if (markerEntry.size > MAX_FILE_BYTES) {
+    throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "bounded_authority_marker_required", "The authority marker must remain bounded.");
+  }
+  const markerBytes = await readFile(markerPath, "utf8");
   let marker;
   try { marker = JSON.parse(markerBytes); } catch { throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_invalid", "The authority marker is invalid."); }
   exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "view", "interchange_manifest_sha256"]), "workspace_marker");
@@ -412,12 +430,12 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
   if (marker.authority_mode !== "markdown") {
     throw new MarkdownError("authority_state_ambiguous", `${WORKSPACE_MARKER}.authority_mode`, "one_installed_authority_required", "The workspace authority marker must select exactly one Markdown authority.");
   }
-  if (marker.configuration_version !== 1 || marker.profile !== L01_WORKSPACE_PROFILE) {
-    throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "synthetic_profile_required", "Only an explicitly selected L-01 synthetic Markdown workspace is supported in this slice.");
+  if (marker.configuration_version !== 1) {
+    throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "workspace_profile_incompatible", "The Markdown authority workspace profile is incompatible.");
   }
   requiredId(marker.workspace_id, "workspace_marker.workspace_id", "store");
   if (request.store_id !== marker.workspace_id) throw new MarkdownError("markdown.not_visible", "store_id", "workspace_identity_mismatch", "The requested workspace is not visible.");
-  if (!object(marker.view)) throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view", "view_marker_required", "A private synthetic view marker is required.");
+  if (!object(marker.view)) throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view", "view_marker_required", "A private workspace view marker is required.");
   exactKeys(marker.view, new Set(["id", "policy_revision_id", "audience_ceiling"]), "workspace_marker.view");
   const viewId = requiredId(marker.view.id, "workspace_marker.view.id", "view");
   const policyId = requiredId(marker.view.policy_revision_id, "workspace_marker.view.policy_revision_id", "view-policy");
@@ -430,6 +448,15 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
     || request.context.requested_audience_ceiling !== "private" || typeof request.context.purpose !== "string"
     || !request.context.purpose.trim() || request.context.purpose.length > 512) {
     throw new MarkdownError("markdown.not_visible", "context", "exact_active_view_required", "The exact selected private view is required.");
+  }
+  return { configuration, root, marker, markerPath, appliedView: { view_id: viewId, view_policy_revision_id: policyId } };
+}
+
+async function loadWorkspace(request, { allowEmpty = false } = {}) {
+  const authority = await loadAuthorityWorkspace(request);
+  const { configuration, root, marker, markerPath, appliedView } = authority;
+  if (marker.profile !== L01_WORKSPACE_PROFILE) {
+    throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "synthetic_profile_required", "This operation requires the explicitly selected L-01 synthetic Markdown profile.");
   }
   const manifestPath = path.join(root, INTERCHANGE_MANIFEST);
   let manifestBytes = await boundedMetadataRead(root, INTERCHANGE_MANIFEST, INTERCHANGE_MANIFEST, { required: false });
@@ -450,7 +477,7 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
     || manifest.records.length > MAX_RECORDS) {
     throw new MarkdownError("markdown.manifest_incompatible", INTERCHANGE_MANIFEST, "manifest_schema_incompatible", "The L-01 identity manifest is incompatible.");
   }
-  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath, appliedView: { view_id: viewId, view_policy_revision_id: policyId } };
+  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath, appliedView };
 }
 
 async function parseRecords(workspace) {
@@ -522,6 +549,63 @@ function normalizeCase(value) {
   };
   if (record.state !== "active") throw new MarkdownError("case.invalid_representation", "case.state", "create_requires_active_case", "Only an active Case is supported.");
   return record;
+}
+
+function normalizeReplacementCase(value) {
+  try {
+    return normalizeCase(value);
+  } catch (error) {
+    if (!(error instanceof MarkdownError)) throw error;
+    throw new MarkdownError("case.invalid_representation", error.pathName, error.rule, "The complete Case dossier representation is structurally invalid.");
+  }
+}
+
+function caseRelativePath(caseId) {
+  return `cases/${caseId.slice(caseId.indexOf(":") + 1)}.md`;
+}
+
+async function readRegularNoFollow(root, relativePath, label) {
+  if (typeof relativePath !== "string" || relativePath.length === 0 || path.isAbsolute(relativePath)) {
+    throw new MarkdownError("markdown.path_invalid", label, "relative_path_required", "A relative workspace file path is required.");
+  }
+  const destination = path.resolve(root, relativePath);
+  assertChild(root, destination, label);
+  const parent = path.dirname(destination);
+  const parentEntry = await lstat(parent).catch(() => null);
+  if (!parentEntry || parentEntry.isSymbolicLink() || !parentEntry.isDirectory() || await realpath(parent) !== parent) {
+    throw new MarkdownError("markdown.path_invalid", label, "real_directory_parent_required", "The Case dossier parent must be an unchanged real workspace directory.");
+  }
+  assertWithinRoot(root, parent, label);
+  const entry = await lstat(destination).catch(() => null);
+  if (!entry) throw new MarkdownError("case.not_found_or_not_visible", label, "case_dossier_missing", "The Case dossier is unknown or not visible in the selected workspace.");
+  if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_FILE_BYTES) {
+    throw new MarkdownError("markdown.path_invalid", label, "bounded_regular_dossier_required", "The Case dossier must be a bounded real file, not a symlink or another file type.");
+  }
+  const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
+  let handle;
+  try {
+    handle = await open(destination, flags);
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > MAX_FILE_BYTES || opened.dev !== entry.dev || opened.ino !== entry.ino) {
+      throw new MarkdownError("markdown.path_invalid", label, "stable_regular_dossier_required", "The Case dossier changed identity while it was being opened.");
+    }
+    const bytes = await handle.readFile("utf8");
+    return { bytes, digest: sha256(bytes), destination, parent };
+  } finally {
+    await handle?.close();
+  }
+}
+
+async function syncDirectoryAsAvailable(directory) {
+  let handle;
+  try {
+    handle = await open(directory, fsConstants.O_RDONLY | (fsConstants.O_DIRECTORY ?? 0));
+    await handle.sync();
+  } catch (error) {
+    if (!["EINVAL", "ENOTSUP", "EISDIR", "EPERM"].includes(error.code)) throw error;
+  } finally {
+    await handle?.close();
+  }
 }
 
 function normalizeFrame(value) {
@@ -677,6 +761,120 @@ async function createCase(request) {
   return success("case.create", { status: "settled", case: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_or_revision_history"] });
 }
 
+async function loadFileAuthorityCase(request, caseId) {
+  const workspace = await loadAuthorityWorkspace(request);
+  if (workspace.marker.profile !== FILE_AUTHORITY_PROFILE || workspace.marker.interchange_manifest_sha256 != null) {
+    throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "file_authority_profile_required", "Atomic Case replacement requires the selected file-authoritative Markdown profile.");
+  }
+  const relativePath = caseRelativePath(caseId);
+  const selected = await readRegularNoFollow(workspace.root, relativePath, relativePath);
+  let record;
+  try {
+    record = parseCase(selected.bytes, { id: caseId, path: relativePath });
+  } catch (error) {
+    if (error instanceof MarkdownError && error.code === "markdown.identity_unverified") {
+      throw new MarkdownError("case.identity_conflict", error.pathName, error.rule, "The selected Case dossier does not preserve its stable identity.");
+    }
+    throw error;
+  }
+  return { ...workspace, ...selected, relativePath, record };
+}
+
+async function commitFileAuthorityCase(request) {
+  validateBase(request, ["operation_id", "expected_digest", "commit_basis", "provenance", "case"]);
+  requiredString(request.operation_id, "operation_id", 256);
+  if (!DIGEST.test(request.expected_digest)) {
+    throw new MarkdownError("case.invalid_representation", "expected_digest", "sha256_required", "A lowercase SHA-256 expected dossier digest is required.");
+  }
+  requiredString(request.commit_basis, "commit_basis", 2_048);
+  validateProvenance(request.provenance);
+  const record = normalizeReplacementCase(request.case);
+  let workspace;
+  try {
+    workspace = await loadFileAuthorityCase(request, record.id);
+  } catch (error) {
+    if (error instanceof MarkdownError && error.code === "case.not_found_or_not_visible") {
+      throw new MarkdownError("case.identity_conflict", "case.id", "existing_stable_case_required", "Atomic Case replacement cannot create or substitute a stable Case identity.");
+    }
+    throw error;
+  }
+  if (workspace.digest !== request.expected_digest) {
+    return failure("case.digest_conflict", "The selected Case dossier changed; replacement did not merge or overwrite it.", {
+      failureClass: "case.mutation_conflict",
+      retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      correctiveGuidance: "Read the current dossier, reconcile explicitly, and retry with its exact digest.",
+      evidence: { expected_digest: request.expected_digest, current_digest: workspace.digest },
+    });
+  }
+  const rendered = renderInterchange([{ kind: "case", id: record.id, record }]).files[0];
+  if (rendered.path !== workspace.relativePath || Buffer.byteLength(rendered.content) > MAX_FILE_BYTES) {
+    throw new MarkdownError("case.invalid_representation", "case", "canonical_bounded_dossier_required", "The rendered Case dossier is outside the canonical bounded layout.");
+  }
+  const parsedCandidate = parseCase(rendered.content, { id: record.id, path: rendered.path });
+  if (!isDeepStrictEqual(parsedCandidate, record)) {
+    throw new MarkdownError("case.invalid_representation", "case", "complete_round_trip_required", "The complete Case dossier must round-trip through the selected parser before replacement.");
+  }
+
+  const key = record.id.slice(record.id.indexOf(":") + 1);
+  const stageName = `${CASE_STAGE_PREFIX}${key}-${process.pid}-${randomBytes(8).toString("hex")}.tmp`;
+  const stagePath = path.join(workspace.parent, stageName);
+  let stageSelected = false;
+  try {
+    const stageHandle = await open(stagePath, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | (fsConstants.O_NOFOLLOW ?? 0), 0o600);
+    try {
+      await stageHandle.writeFile(rendered.content, "utf8");
+      await stageHandle.sync();
+    } finally {
+      await stageHandle.close();
+    }
+    if (workspace.configuration.source.kind === "synthetic-test" && process.env.CASEBOOK_MARKDOWN_TEST_FAULT === "corrupt_staged_case") {
+      await writeFile(stagePath, "invalid staged Case\n");
+    }
+    const stagedEntry = await lstat(stagePath);
+    if (stagedEntry.isSymbolicLink() || !stagedEntry.isFile() || stagedEntry.size > MAX_FILE_BYTES) {
+      throw new MarkdownError("markdown.path_invalid", stageName, "bounded_regular_stage_required", "The owned Case stage must remain a bounded regular file.");
+    }
+    const stagedBytes = await readFile(stagePath, "utf8");
+    const stagedRecord = parseCase(stagedBytes, { id: record.id, path: workspace.relativePath });
+    if (!isDeepStrictEqual(stagedRecord, record) || sha256(stagedBytes) !== rendered.sha256) {
+      throw new MarkdownError("case.invalid_representation", "case", "staged_round_trip_mismatch", "The flushed Case stage did not validate as the complete requested dossier.");
+    }
+    if (workspace.configuration.source.kind === "synthetic-test" && process.env.CASEBOOK_MARKDOWN_TEST_FAULT === "stop_after_case_stage_flush") {
+      process.kill(process.pid, "SIGSTOP");
+    }
+    const observed = await readRegularNoFollow(workspace.root, workspace.relativePath, workspace.relativePath);
+    if (observed.digest !== request.expected_digest) {
+      return failure("case.digest_conflict", "The selected Case dossier changed while replacement was staged; no merge or overwrite occurred.", {
+        failureClass: "case.mutation_conflict",
+        retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+        correctiveGuidance: "Read the current dossier, reconcile explicitly, and retry with its exact digest.",
+        evidence: { expected_digest: request.expected_digest, current_digest: observed.digest },
+      });
+    }
+    await rename(stagePath, workspace.destination);
+    stageSelected = true;
+    await syncDirectoryAsAvailable(workspace.parent);
+    return success("case.commit_revision", {
+      status: "settled",
+      case: record,
+      previous_digest: request.expected_digest,
+      current_digest: rendered.sha256,
+      persistence: {
+        authority_mode: "markdown",
+        selected_file: workspace.relativePath,
+        replacement: "same_directory_atomic_rename",
+        stage_flush: "fsync",
+        directory_flush: "fsync_as_available",
+        interruption_debris: { owner: "casebook-persistence", filename_prefix: CASE_STAGE_PREFIX },
+      },
+      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge"],
+      applied_view: workspace.appliedView,
+    });
+  } finally {
+    if (!stageSelected) await rm(stagePath, { force: true });
+  }
+}
+
 async function createFrame(request) {
   validateBase(request, ["operation_id", "expected_revision", "commit_basis", "provenance", "frame"]);
   requiredString(request.operation_id, "operation_id", 256);
@@ -694,6 +892,19 @@ async function readOwner(request, kind) {
   const key = `${kind}_id`;
   validateBase(request, [key]);
   const id = requiredId(request[key], key, kind);
+  if (kind === "case") {
+    const authority = await loadAuthorityWorkspace(request);
+    if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
+      const workspace = await loadFileAuthorityCase(request, id);
+      return success("case.read", {
+        status: "found",
+        case: workspace.record,
+        persistence: { authority_mode: "markdown", selected_file: workspace.relativePath, content_digest: workspace.digest },
+        limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"],
+        applied_view: workspace.appliedView,
+      });
+    }
+  }
   const workspace = await loadWorkspace(request);
   const records = await parseRecords(workspace);
   const found = records.find((item) => item.owner_kind === kind && item.id === id);
@@ -795,6 +1006,7 @@ function asFailure(error) {
 export async function invokeMarkdownOperation(request) {
   try {
     if (request.operation === "case.create") return await createCase(request);
+    if (request.operation === "case.commit_revision") return await commitFileAuthorityCase(request);
     if (request.operation === "case.read") return await readOwner(request, "case");
     if (request.operation === "frame.create") return await createFrame(request);
     if (request.operation === "frame.read") return await readOwner(request, "frame");
