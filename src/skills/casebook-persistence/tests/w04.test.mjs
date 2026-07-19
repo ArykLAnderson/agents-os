@@ -341,6 +341,13 @@ test("typed façades create/read by stable ID, hide owner receipts, and prove th
     assert.equal(activeOnly.json.result.applied_lifecycle_scope, "active_only");
     assert.equal(activeOnly.json.result.result_completeness, "complete_within_bounds");
 
+    // Simulate a projection written before L03-W04 added linked_case_ids.
+    await execFileAsync(sqliteBinary, [storePath, `
+      UPDATE owner_current
+      SET projection_json=json_remove(projection_json, '$.linked_case_ids')
+      WHERE owner_id='${ids.activeFrame}';
+    `], { encoding: "utf8" });
+
     const linkedVisible = await invoke(sourceEntrypoint, root, {
       ...frameList(storePath, sqliteBinary, initialized), linked_case_id: ids.case,
     });
@@ -885,9 +892,19 @@ async function runGeneratedTypedProof(generated, report, root) {
   });
   const createdCase = await invoke(connector, cwd, caseRequest);
   assert.equal(createdCase.exitCode, 0, createdCase.stderr);
+  await execFileAsync(report.sqlite_binary, [storePath, `
+    INSERT INTO namespaces VALUES ('${ids.hiddenNamespace}', 'hidden-w04', 'active', '2026-01-01T00:00:00.000Z');
+    INSERT INTO owners VALUES ('${ids.hiddenCase}', 'case', '${ids.hiddenNamespace}', '2026-01-01T00:00:00.000Z');
+    INSERT INTO owner_revisions VALUES ('owner-revision:247e0a31-5a21-44cf-94ee-506ee2d94ae9', '${ids.hiddenCase}', 1, '{}', 'case-canonical', 2, 'synthetic-hidden-case', '2026-01-01T00:00:00.000Z');
+    INSERT INTO owner_current VALUES ('${ids.hiddenCase}', 'owner-revision:247e0a31-5a21-44cf-94ee-506ee2d94ae9', 1, '{}', '2026-01-01T00:00:00.000Z');
+    UPDATE store_fence SET operation_fence=operation_fence+1 WHERE singleton=1;
+  `], { encoding: "utf8" });
   const frameRequest = frameCreate(storePath, report.sqlite_binary, initialized, {
     operationId: `operation:w04-${generated.target}-frame`,
-    frameOverrides: { case_links: [{ target_kind: "case", target_id: ids.case, predicate: "frames" }] },
+    frameOverrides: { case_links: [
+      { target_kind: "case", target_id: ids.case, predicate: "frames" },
+      { target_kind: "case", target_id: ids.hiddenCase, predicate: "frames" },
+    ] },
   });
   const createdFrame = await invoke(connector, cwd, frameRequest);
   assert.equal(createdFrame.exitCode, 0, createdFrame.stderr);
@@ -1001,12 +1018,22 @@ async function runGeneratedTypedProof(generated, report, root) {
   assert.equal(typeof selectedPage.json.result.next_cursor, "string");
   const selectorMismatch = await invoke(connector, cwd, { ...selectedPageRequest, authority_scope_namespace_ids: [initialized.namespace.id], cursor: selectedPage.json.result.next_cursor });
   assert.equal(selectorMismatch.json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  // Generated packages must retain query completeness for pre-L03-W04 projections.
+  await execFileAsync(report.sqlite_binary, [storePath, `
+    UPDATE owner_current
+    SET projection_json=json_remove(projection_json, '$.linked_case_ids')
+    WHERE owner_id='${ids.activeFrame}';
+  `], { encoding: "utf8" });
   const linkedVisible = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), linked_case_id: ids.case });
   assert.deepEqual(linkedVisible.json.result.items.map((item) => item.id), [ids.activeFrame]);
   const linkedUnknown = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), linked_case_id: ids.unknownCase });
   assert.deepEqual(linkedUnknown.json.result.items, []);
   assert.equal(linkedUnknown.json.result.next_cursor, null);
   assert.doesNotMatch(JSON.stringify(linkedUnknown.json), new RegExp(ids.activeFrame));
+  const linkedHidden = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), linked_case_id: ids.hiddenCase });
+  assert.deepEqual(linkedHidden.json.result.items, linkedUnknown.json.result.items);
+  assert.equal(linkedHidden.json.result.next_cursor, linkedUnknown.json.result.next_cursor);
+  assert.doesNotMatch(JSON.stringify(linkedHidden.json), new RegExp(ids.activeFrame));
   const missingRevision = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), revision_number: 99 });
   const missingDiscovery = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.closedDiscovery });
   assert.equal(missingRevision.json.failure.code, "frame.revision_not_found_or_not_visible");
@@ -1069,6 +1096,7 @@ async function runGeneratedTypedProof(generated, report, root) {
   assertInvalid(await invoke(connector, cwd, laterCreate), "case", "request.include");
 
   assert.deepEqual(await ownerFacts(report.sqlite_binary, storePath), [
+    { owner_kind: "case", owner_id: ids.hiddenCase, revision_number: 1 },
     { owner_kind: "case", owner_id: ids.case, revision_number: 1 },
     { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 6 },
     { owner_kind: "frame", owner_id: ids.secondActiveFrame, revision_number: 1 },
