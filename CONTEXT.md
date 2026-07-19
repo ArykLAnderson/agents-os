@@ -14,6 +14,16 @@
 | Prototype | A disposable artifact built to answer one explicit question through observable evidence and exactly one verdict: supported, rejected, or inconclusive. | Treating runnable prototype code as production-ready or requiring prototypes to persist through Casebook. |
 | Deliberation | A bounded comparison of two or three credible alternatives through decision-specific forced perspectives, preserving consequential disagreement and remaining human judgment. | Voting, confidence averaging, fixed debate theater, or treating a recommendation as a decision. |
 
+## Casebook Actors
+
+| Term | Definition | Avoid |
+|---|---|---|
+| Architect | Human owner of design, consequential judgment, and semantic acceptance. | Treating agent recommendation or silence as Architect authority. |
+| Steward | The Architect's Casebook interface for custody, continuity, session surfaces, briefing, and attention. | Making Steward a semantic owner or implementation coordinator. |
+| Marshal | Actor that runs a delivery operation through Deliver, coordinating Hand work and Clerk engagement against an accepted Route. | Allowing coordination to override Clerk judgment, redesign accepted intent, or absorb Steward custody. |
+| Clerk | Independent checker of conformance, evidence, and workmanship. | Coordinating the work it must independently judge or allowing Marshal to rewrite/suppress findings. |
+| Hand | Actor performing bounded implementation or other execution work. | Making a Hand responsible for consequential design, coordination authority, or human acceptance. |
+
 ## Casebook Boundaries
 
 - Cases own reusable subject meaning.

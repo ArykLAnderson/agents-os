@@ -9,7 +9,7 @@ Use the research shape the current uncertainty needs:
 3. **Focus:** investigate decision-critical claims and discriminating evidence.
 4. **Challenge:** seek contradictions, omitted perspectives, failure modes, and disconfirming evidence.
 
-Run independent evidence gathering in parallel when useful. Centralize synthesis, user interaction, Discovery Map mutation, deliberation, and Case reconciliation.
+Apply Frame's clean-context legwork rule to each bounded evidence operation. Run independent gathering in parallel when useful. Centralize synthesis, user interaction, Discovery Map mutation, deliberation, and Case reconciliation.
 
 Reuse stable contextual Case knowledge by default. Refresh knowledge that is decision-critical, challenged, volatile, weakly scoped, relitigated, or costly if wrong.
 
