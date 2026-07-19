@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l02-w03-l03-w04"
+    "version": "0.2.0-l03-w03-legacy-preparation"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "5164d6cb5fb4baeaa67b78c89f75b16862470b75e81c86b6b4455c41e0bdd6df"
+    "sha256": "98f1e74c042b5219b14d17d172667538b14e029d6a59f4147756528624b3deb3"
   },
   "entrypoints": [
     {
@@ -57,6 +57,7 @@
     "frame.resolve",
     "frame.read",
     "frame.discovery.read",
+    "frame.disposition.read",
     "frame.history",
     "frame.list",
     "frame.legacy.prepare_reconciliation",
@@ -73,7 +74,7 @@
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
-    "frame_revision_assembly": "complete canonical Frame/Discovery create and commit_revision",
+    "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     "frame_statuses": [
       "active",
       "completed",
@@ -86,18 +87,18 @@
       "tombstoned"
     ],
     "discovery_dependencies": "typed stable references",
-    "frame_query": "exact receipt/resolve/current/history/discovery reads, active-only/all-selected Discovery projection, and selector-bound fenced paging",
+    "frame_query": "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
-    "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",
+    "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
-    "legacy_reconciliation": "immutable non-mutating preparation only; no writeback, rename, watcher, or view lifecycle creation",
+    "legacy_reconciliation": "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
     "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals"
   },
   "unsupported_until_later_work_items": [
     "case purge execution and publication",
     "case closed-list and broader include/filter/lifecycle-query breadth",
-    "frame.include/filter/lifecycle-query/reconciliation-commit-writeback",
+    "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "events/checkpoints/snapshots/global-search",
     "full-atomic-markdown-write-and-generation-selection",
     "migration",
@@ -110,7 +111,7 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "828583a91e0324c691b37c2395c864049544bb9837707805f307c3bf37a9650e"
+      "sha256": "8e1ed47d067e40cb951df941a8605a8097e30b5a5c1ac5e4771eb650cfb718fc"
     },
     {
       "id": "human-install-guidance",
@@ -122,7 +123,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "7c447511b676f64ff72bdfe128227e4d941a7dfa252d7ae2b58b99be191aa89f"
+      "sha256": "99b48a8f230bb552f566dc235fd65d5474629ba9064465c34aecbdad75e36ce6"
     },
     {
       "id": "shared-configuration",
@@ -170,7 +171,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "1b9d2739221c7ddc5faa1d5a4881fd6abc48402a761aad7d1e107eb550793f6a"
+      "sha256": "992cdb1dd748a4726c89492526baa5dfd90f97a8cdaddf26795b47eada845898"
     },
     {
       "id": "sqlite-diagnostics",
@@ -200,7 +201,7 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "303bf65fd6191ad4478bb97d127c98c64fcf80f7b3acad6bee2ff07be80ba53a"
+      "sha256": "0346cea822fb57f3729a63c0ba89b238909c0c9aec84c0fe6a2badd931befcb7"
     },
     {
       "id": "sqlite-common-subset",
@@ -230,7 +231,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "d4beed351457d2ea5f3905e1bf692a27405886d23bd3af47886591986d5474bc"
+      "sha256": "41897722a8018a7e526fec6c7200cb29df978b3f6b8dd2fea86f42e333d36697"
     }
   ]
 }

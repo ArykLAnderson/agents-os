@@ -30,7 +30,7 @@ try {
     result = await diagnose(request);
   } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse"].includes(request.operation)) {
     result = await invokeCaseOperation(request);
-  } else if (["frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read", "frame.discovery.read", "frame.history", "frame.list", "frame.legacy.prepare_reconciliation"].includes(request.operation)) {
+  } else if (["frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read", "frame.discovery.read", "frame.disposition.read", "frame.history", "frame.list", "frame.legacy.prepare_reconciliation"].includes(request.operation)) {
     result = await invokeFrameOperation(request);
   } else if (["common.resolve", "common.list", "common.search", "interchange.export"].includes(request.operation)) {
     result = await invokeCommonOperation(request);
