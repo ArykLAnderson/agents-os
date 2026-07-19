@@ -23,6 +23,7 @@
     "case.commit_revision",
     "case.read",
     "frame.create",
+    "frame.commit_revision",
     "frame.read",
     "frame.list",
     "common.resolve",
@@ -30,18 +31,25 @@
     "common.search",
     "interchange.export"
   ],
-  "l01_operation_constraints": {
+  "implemented_slice_constraints": {
     "store_receipt_visible_operation_kinds": [
       "initialize_store"
     ],
     "typed_read_target": "stable_owner_id_under_exact_active_view",
+    "case_revision_assembly": "complete canonical Case create and commit_revision",
+    "frame_revision_assembly": "complete canonical Frame/Discovery create and commit_revision",
     "frame_statuses": [
-      "active"
+      "active",
+      "completed",
+      "abandoned",
+      "superseded"
     ],
     "discovery_lifecycles": [
-      "active"
+      "active",
+      "settled",
+      "tombstoned"
     ],
-    "discovery_dependencies": "empty_only",
+    "discovery_dependencies": "typed stable references",
     "frame_list": "active_only_without_filters_history_or_paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",

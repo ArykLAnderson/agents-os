@@ -683,6 +683,7 @@ async function commitOwnerRevision(request) {
   const coreResult = {
     status: "settled",
     owner: envelope.owner,
+    observed_revision: current == null ? null : { id: current.revision_id, number: observedRevision },
     committed_revision: { id: envelope.revision.id, number: envelope.revision.number },
     allocations: {
       version_ids: envelope.revision.versions.map((item) => item.version_id),
@@ -781,22 +782,25 @@ async function getOwnerOperationReceipt(request) {
       WHERE owner_id = ${sqlText(target.id)} AND revision_number = ${revisionNumber}
       LIMIT 1;
     `);
-    if (revisions.length) {
-      const selections = await queryJson(binary, storePath, `
-        SELECT s.family_id, v.version_id, v.content_json, v.content_digest
-        FROM owner_revision_selections s JOIN owner_versions v ON v.version_id = s.version_id
-        WHERE s.revision_id = ${sqlText(revisions[0].revision_id)} ORDER BY s.family_id;
-      `);
-      return {
-        id: revisions[0].revision_id,
-        number: revisions[0].revision_number,
-        normalized: JSON.parse(revisions[0].normalized_json),
-        representation: { id: revisions[0].representation_id, version: revisions[0].representation_version },
-        committed_at: revisions[0].committed_at,
-        selected_versions: selections.map((item) => ({ family_id: item.family_id, version_id: item.version_id, content: JSON.parse(item.content_json), content_digest: item.content_digest })),
-      };
-    }
-    return null;
+    if (!revisions.length) return null;
+    const selections = await queryJson(binary, storePath, `
+      SELECT s.family_id, v.version_id, v.content_json, v.content_digest
+      FROM owner_revision_selections s JOIN owner_versions v ON v.version_id = s.version_id
+      WHERE s.revision_id = ${sqlText(revisions[0].revision_id)} ORDER BY s.family_id;
+    `);
+    return {
+      id: revisions[0].revision_id,
+      number: revisions[0].revision_number,
+      normalized: JSON.parse(revisions[0].normalized_json),
+      representation: { id: revisions[0].representation_id, version: revisions[0].representation_version },
+      committed_at: revisions[0].committed_at,
+      selected_versions: selections.map((item) => ({
+        family_id: item.family_id,
+        version_id: item.version_id,
+        content: JSON.parse(item.content_json),
+        content_digest: item.content_digest,
+      })),
+    };
   };
   if (receipt.outcome === "committed" && receipt.committed_revision != null) {
     committed_revision_state = await loadRevisionState(receipt.committed_revision);
@@ -806,7 +810,14 @@ async function getOwnerOperationReceipt(request) {
       ? observed_revision_state
       : await loadRevisionState(receipt.expected_revision);
   }
-  return success("get_owner_operation_receipt", { status: "settled", receipt, committed_revision_state, observed_revision_state, expected_revision_state });
+  return success("get_owner_operation_receipt", {
+    status: "settled",
+    receipt,
+    committed_revision_state,
+    observed_revision_state,
+    expected_revision_state,
+    recovery_selection: committed_revision_state?.selected_versions ?? observed_revision_state?.selected_versions ?? [],
+  });
 }
 
 async function readOwnerCurrent(request) {
