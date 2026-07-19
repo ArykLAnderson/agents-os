@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "a9dfe570723479d8e1b3a305db78a2de0f57ff466ea3b7908dbe9b10c631a7f5"
+    "sha256": "98f1e74c042b5219b14d17d172667538b14e029d6a59f4147756528624b3deb3"
   },
   "entrypoints": [
     {
@@ -201,7 +201,7 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "2fc35cdb59e3382f705f25a8fc00ac468e441309347248aabb103cb2c139d780"
+      "sha256": "0346cea822fb57f3729a63c0ba89b238909c0c9aec84c0fe6a2badd931befcb7"
     },
     {
       "id": "sqlite-common-subset",

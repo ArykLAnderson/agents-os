@@ -768,11 +768,31 @@ function hydrateFrame(mechanical) {
   }
   const { schema: _schema, ...metadata } = frameVersion.content;
   if (!FRAME_STATUSES.has(metadata.status)) throw new FrameRequestError("stored.frame_version", "status_invalid", "Stored Frame status is invalid.");
+  const withoutVersionId = ({ version_id: _versionId, ...item }) => item;
+  const storedFrame = {
+    ...metadata,
+    discovery: discovery.map(withoutVersionId),
+    ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : {
+      disposition_boundaries: dispositionBoundaries.map(withoutVersionId),
+      case_dispositions: caseDispositions.map(withoutVersionId),
+    }),
+  };
+  // Immutable rows can still be externally damaged after trigger removal or an
+  // unsafe restore. Reapply the complete owner representation invariants while
+  // hydrating so coherent digests do not make impossible Frame policy visible.
+  const normalizedStoredFrame = normalizeFrame(storedFrame);
+  if (normalizedStoredFrame.id !== mechanical.owner.id) {
+    throw new FrameRequestError("stored.frame_version", "owner_identity_mismatch", "Stored Frame identity does not match its mechanical owner.");
+  }
   return {
     status: "found",
     frame: {
-      ...metadata, discovery,
-      ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : { disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions }),
+      ...normalizedStoredFrame,
+      discovery: normalizedStoredFrame.discovery.map((item, index) => ({ ...item, version_id: discovery[index].version_id })),
+      ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : {
+        disposition_boundaries: normalizedStoredFrame.disposition_boundaries.map((item, index) => ({ ...item, version_id: dispositionBoundaries[index].version_id })),
+        case_dispositions: normalizedStoredFrame.case_dispositions.map((item, index) => ({ ...item, version_id: caseDispositions[index].version_id })),
+      }),
     },
     revision: {
       id: frameTypedId("frame-revision", revision.id),
@@ -1302,12 +1322,18 @@ async function listFrames(request) {
     const selectorsVisible = (homeNamespaceId == null || visibility.ids.has(homeNamespaceId))
       && authorityScope.every((namespaceId) => visibility.ids.has(namespaceId));
     const pageItems = selectorsVisible ? items.slice(0, limit).map((item) => projectAuthorityScope(item, visibility.ids)) : [];
+    const projectedSelectors = {
+      ...selectors,
+      home_namespace_id: homeNamespaceId == null || visibility.ids.has(homeNamespaceId) ? homeNamespaceId : null,
+      authority_scope_namespace_ids: authorityScope.filter((namespaceId) => visibility.ids.has(namespaceId)),
+      linked_case_id: linkedCaseVisible ? linkedCaseId : null,
+    };
     return success("frame.list", {
       status: "found",
       items: pageItems,
       applied_lifecycle_scope: statuses.length === 1 && statuses[0] === "active" ? "active_only" : "explicit_statuses",
       applied_statuses: statuses,
-      applied_selectors: selectors,
+      applied_selectors: projectedSelectors,
       next_cursor: selectorsVisible && hasMore && pageItems.length ? encodeCursor(cursorKey, binding, fence, listSortKey(pageItems.at(-1))) : null,
       index_state: "current",
       result_completeness: "complete_within_bounds",
