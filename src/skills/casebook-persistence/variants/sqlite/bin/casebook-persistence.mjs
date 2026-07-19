@@ -30,7 +30,7 @@ try {
     result = await diagnose(request);
   } else if (request.operation === "case.create" || request.operation === "case.read") {
     result = await invokeCaseOperation(request);
-  } else if (request.operation === "frame.create" || request.operation === "frame.read" || request.operation === "frame.list") {
+  } else if (["frame.create", "frame.commit_revision", "frame.read", "frame.list"].includes(request.operation)) {
     result = await invokeFrameOperation(request);
   } else if (["common.resolve", "common.list", "common.search", "interchange.export"].includes(request.operation)) {
     result = await invokeCommonOperation(request);
