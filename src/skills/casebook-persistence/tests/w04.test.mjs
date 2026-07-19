@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -306,6 +307,88 @@ test("typed façades create/read by stable ID, hide owner receipts, and prove th
   }
 });
 
+test("Frame list defaults active-only while compact fenced cursors reject changed state, tampering, oversized input, and query mismatch", async () => {
+  const sqliteBinary = await selectCompatibleSqliteBinary();
+  const root = await makeRoot("l03-w02-frame-list");
+  try {
+    const storePath = path.join(root, "store.sqlite3");
+    const initialized = await initialize(sourceEntrypoint, root, storePath, sqliteBinary, "operation:l03-w02-list-init");
+    for (const [frameId, discoveryId, operationId] of [[ids.activeFrame, ids.activeDiscovery, "one"], [ids.secondActiveFrame, ids.secondActiveDiscovery, "two"]]) {
+      const created = await invoke(sourceEntrypoint, root, frameCreate(storePath, sqliteBinary, initialized, { frameId, discoveryId, operationId: `operation:l03-w02-${operationId}` }));
+      assert.equal(created.exitCode, 0, created.stderr);
+    }
+    const firstRequest = { ...frameList(storePath, sqliteBinary, initialized), limit: 1 };
+    const first = await invoke(sourceEntrypoint, root, firstRequest);
+    assert.equal(first.exitCode, 0, first.stderr);
+    assert.equal(first.json.result.items.length, 1);
+    assert.equal(typeof first.json.result.next_cursor, "string");
+    assert.ok(first.json.result.next_cursor.length < 1024);
+    const decodedCursor = JSON.parse(Buffer.from(first.json.result.next_cursor, "base64url").toString());
+    assert.doesNotMatch(decodedCursor.p, /snapshot_items|discovery|authority_scope_namespace_ids/);
+    assert.deepEqual(Object.keys(JSON.parse(decodedCursor.p)).sort(), ["f", "k", "q", "v"]);
+    const second = await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: first.json.result.next_cursor });
+    assert.equal(second.exitCode, 0, second.stderr);
+    assert.equal(second.json.result.items.length, 1);
+    assert.notEqual(second.json.result.items[0].id, first.json.result.items[0].id);
+    assert.equal(second.json.result.snapshot_query_fence, first.json.result.snapshot_query_fence);
+    const tampered = `${first.json.result.next_cursor.slice(0, -1)}${first.json.result.next_cursor.endsWith("A") ? "B" : "A"}`;
+    assert.equal((await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: tampered })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+    const forgedEnvelope = JSON.parse(Buffer.from(first.json.result.next_cursor, "base64url").toString());
+    const forgedPayload = JSON.stringify({ ...JSON.parse(forgedEnvelope.p), k: ["2099-01-01T00:00:00.000Z", ids.activeFrame] });
+    forgedEnvelope.p = forgedPayload;
+    forgedEnvelope.d = createHash("sha256").update(`casebook-frame-cursor@1\0${forgedPayload}`).digest("hex");
+    const forgedCursor = Buffer.from(JSON.stringify(forgedEnvelope)).toString("base64url");
+    assert.equal((await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: forgedCursor })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+    assert.equal((await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: "x".repeat(1025) })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+    const closed = frameCreate(storePath, sqliteBinary, initialized, { frameId: ids.closedFrame, discoveryId: ids.closedDiscovery, operationId: "operation:l03-w02-closed", frameOverrides: { status: "completed" }, discoveryOverrides: { lifecycle: "settled", category: "settled", disposition: "accepted" } });
+    assert.equal((await invoke(sourceEntrypoint, root, closed)).exitCode, 0);
+    const changedFence = await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: first.json.result.next_cursor });
+    assert.equal(changedFence.json.failure.evidence.violations[0].rule, "cursor_fence_expired");
+    const defaults = await invoke(sourceEntrypoint, root, frameList(storePath, sqliteBinary, initialized));
+    assert.equal(defaults.json.result.items.some((item) => item.id === ids.closedFrame), false);
+    const explicitClosed = await invoke(sourceEntrypoint, root, { ...frameList(storePath, sqliteBinary, initialized), statuses: ["completed"] });
+    assert.deepEqual(explicitClosed.json.result.items.map((item) => item.id), [ids.closedFrame]);
+    const wrongQuery = await invoke(sourceEntrypoint, root, { ...firstRequest, statuses: ["completed"], cursor: first.json.result.next_cursor });
+    assert.equal(wrongQuery.json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  } finally { await removeAndVerify(root); }
+});
+
+test("Frame list paginates every visible Frame beyond the former 256-owner scan bound", async () => {
+  const sqliteBinary = await selectCompatibleSqliteBinary();
+  const root = await makeRoot("l03-w02-frame-list-300");
+  try {
+    const storePath = path.join(root, "store.sqlite3");
+    const initialized = await initialize(sourceEntrypoint, root, storePath, sqliteBinary, "operation:l03-w02-list-300-init");
+    const statements = ["PRAGMA foreign_keys=ON;", "BEGIN IMMEDIATE;"];
+    for (let index = 0; index < 300; index++) {
+      const suffix = String(index + 1).padStart(12, "0");
+      const frameId = `frame:00000000-0000-4000-8000-${suffix}`;
+      const revisionId = `owner-revision:10000000-0000-4000-8000-${suffix}`;
+      const timestamp = `2026-01-01T00:${String(Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}.000Z`;
+      const projection = JSON.stringify({ schema: "frame-current@1", id: frameId, home_namespace_id: initialized.namespace.id, authority_scope_namespace_ids: [initialized.namespace.id], status: "active", title: `Synthetic Frame ${index + 1}` }).replaceAll("'", "''");
+      statements.push(
+        `INSERT INTO owners VALUES ('${frameId}','frame','${initialized.namespace.id}','${timestamp}');`,
+        `INSERT INTO owner_revisions VALUES ('${revisionId}','${frameId}',1,'{}','frame-canonical',2,'synthetic-operation-${index}','${timestamp}');`,
+        `INSERT INTO owner_current VALUES ('${frameId}','${revisionId}',1,'${projection}','${timestamp}');`,
+      );
+    }
+    statements.push("UPDATE store_fence SET operation_fence=operation_fence+1 WHERE singleton=1;", "COMMIT;");
+    await execFileWithInput(sqliteBinary, [storePath, "-batch", "-bail"], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }, statements.join("\n"));
+
+    const request = { ...frameList(storePath, sqliteBinary, initialized), limit: 75 };
+    const found = [];
+    let cursor = null;
+    do {
+      const page = await invoke(sourceEntrypoint, root, { ...request, ...(cursor == null ? {} : { cursor }) });
+      assert.equal(page.exitCode, 0, page.stderr);
+      found.push(...page.json.result.items.map((item) => item.id));
+      cursor = page.json.result.next_cursor;
+    } while (cursor != null);
+    assert.equal(found.length, 300);
+    assert.equal(new Set(found).size, 300);
+  } finally { await removeAndVerify(root); }
+});
+
 test("façade allocations replay stably while changed reuse, create conflicts, and unknown/hidden reads remain indistinguishable", async () => {
   const sqliteBinary = await selectCompatibleSqliteBinary();
   const root = await makeRoot("w04-replay-conflict");
@@ -379,7 +462,7 @@ test("façade allocations replay stably while changed reuse, create conflicts, a
   }
 });
 
-test("typed request selectors outside the implemented query surface reject without mutation", async () => {
+test("typed request selectors outside the implemented Case and bounded Frame query surfaces reject without mutation", async () => {
   const sqliteBinary = await selectCompatibleSqliteBinary();
   const root = await makeRoot("w04-exact-shapes");
   try {
@@ -415,7 +498,6 @@ test("typed request selectors outside the implemented query surface reject witho
 
     const readFrames = [
       ["home_namespace_id", initialized.namespace.id],
-      ["revision_id", "frame-revision:5133301d-0ba2-4185-babf-a375e92d3d52"],
       ["include", ["discovery", "history"]],
       ["history", true],
       ["filter", { status: "active" }],
@@ -438,8 +520,6 @@ test("typed request selectors outside the implemented query surface reject witho
       ["revision_id", "frame-revision:5133301d-0ba2-4185-babf-a375e92d3d52"],
       ["include", ["history"]],
       ["filter", { status: "active" }],
-      ["limit", 1],
-      ["cursor", "later"],
     ];
     for (const [selector, value] of listSelectors) {
       const request = frameList(storePath, sqliteBinary, initialized);
@@ -547,6 +627,26 @@ test("complete Frame revisions settle, replay, reopen, and reject omissions befo
     assert.equal(settled.json.result.revision.version_ids.frame, created.json.result.revision.version_ids.frame);
     assert.notEqual(settled.json.result.frame.discovery[0].version_id, created.json.result.frame.discovery[0].version_id);
     assert.doesNotMatch(JSON.stringify(settled.json.result.receipt), /owner-revision:/);
+
+    const historicalRead = frameRead(storePath, sqliteBinary, initialized);
+    historicalRead.revision_id = created.json.result.revision.id;
+    const historical = await invoke(sourceEntrypoint, root, historicalRead);
+    assert.equal(historical.exitCode, 0, historical.stderr);
+    assert.equal(historical.json.result.frame.discovery[0].lifecycle, "active");
+    const discoveryRead = { ...frameRead(storePath, sqliteBinary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.activeDiscovery, revision_number: 2 };
+    const discovery = await invoke(sourceEntrypoint, root, discoveryRead);
+    assert.equal(discovery.exitCode, 0, discovery.stderr);
+    assert.equal(discovery.json.result.discovery_item.lifecycle, "settled");
+    const historyRequest = { ...frameRead(storePath, sqliteBinary, initialized), operation: "frame.history", limit: 1 };
+    const historyPageOne = await invoke(sourceEntrypoint, root, historyRequest);
+    assert.equal(historyPageOne.exitCode, 0, historyPageOne.stderr);
+    assert.equal(historyPageOne.json.result.items.length, 1);
+    assert.equal(historyPageOne.json.result.items[0].revision.number, 2);
+    assert.equal(typeof historyPageOne.json.result.next_cursor, "string");
+    const historyPageTwo = await invoke(sourceEntrypoint, root, { ...historyRequest, cursor: historyPageOne.json.result.next_cursor });
+    assert.equal(historyPageTwo.json.result.items[0].revision.number, 1);
+    const mismatchedCursor = await invoke(sourceEntrypoint, root, { ...historyRequest, limit: 2, cursor: historyPageOne.json.result.next_cursor });
+    assert.equal(mismatchedCursor.json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
     const revisionOneReplay = await invoke(sourceEntrypoint, root, createdRequest);
     assert.equal(revisionOneReplay.exitCode, 0, revisionOneReplay.stderr);
     assert.equal(revisionOneReplay.json.result.idempotent_replay, true);
@@ -734,7 +834,36 @@ async function runGeneratedTypedProof(generated, report, root) {
   const listFrameResult = await invoke(connector, cwd, frameList(storePath, report.sqlite_binary, initialized));
   assert.equal(readCaseResult.json.result.case.id, ids.case);
   assert.equal(readFrameResult.json.result.frame.id, ids.activeFrame);
+  assert.equal(readFrameResult.json.result.completion_evidence.overall_completion_asserted, false);
   assert.deepEqual(listFrameResult.json.result.items.map((item) => item.id), [ids.activeFrame]);
+  assert.equal(listFrameResult.json.result.index_state, "current");
+  assert.equal(listFrameResult.json.result.applied_lifecycle_scope, "active_only");
+  const closedOnly = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), statuses: ["completed"] });
+  assert.deepEqual(closedOnly.json.result.items, []);
+  const resolved = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.resolve" });
+  assert.equal(resolved.json.result.frame_id, ids.activeFrame);
+  const discovery = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.activeDiscovery });
+  assert.equal(discovery.json.result.discovery_item.id, ids.activeDiscovery);
+  const historyRequest = { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.history", limit: 2 };
+  const historyOne = await invoke(connector, cwd, historyRequest);
+  assert.equal(historyOne.json.result.index_state, "current");
+  assert.deepEqual(historyOne.json.result.items.map((item) => item.revision.number), [5, 4]);
+  assert.ok(historyOne.json.result.next_cursor.length < 1024);
+  const historyTwo = await invoke(connector, cwd, { ...historyRequest, cursor: historyOne.json.result.next_cursor });
+  assert.deepEqual(historyTwo.json.result.items.map((item) => item.revision.number), [3, 2]);
+  const tamperedHistoryCursor = `${historyOne.json.result.next_cursor.slice(0, -1)}${historyOne.json.result.next_cursor.endsWith("A") ? "B" : "A"}`;
+  assert.equal((await invoke(connector, cwd, { ...historyRequest, cursor: tamperedHistoryCursor })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  const forgedHistoryEnvelope = JSON.parse(Buffer.from(historyOne.json.result.next_cursor, "base64url").toString());
+  const forgedHistoryPayload = JSON.stringify({ ...JSON.parse(forgedHistoryEnvelope.p), f: 999 });
+  forgedHistoryEnvelope.p = forgedHistoryPayload;
+  forgedHistoryEnvelope.d = createHash("sha256").update(`casebook-frame-cursor@1\0${forgedHistoryPayload}`).digest("hex");
+  assert.equal((await invoke(connector, cwd, { ...historyRequest, cursor: Buffer.from(JSON.stringify(forgedHistoryEnvelope)).toString("base64url") })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  assert.equal((await invoke(connector, cwd, { ...historyRequest, cursor: "x".repeat(1025) })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  const fenceAdvance = structuredClone(generatedReturnA);
+  fenceAdvance.operation_id += "-fence-advance";
+  fenceAdvance.expected_revision = 5;
+  assert.equal((await invoke(connector, cwd, fenceAdvance)).exitCode, 0);
+  assert.equal((await invoke(connector, cwd, { ...historyRequest, cursor: historyOne.json.result.next_cursor })).json.failure.evidence.violations[0].rule, "cursor_fence_expired");
 
   for (const operationId of [caseRequest.operation_id, frameRequest.operation_id, commitFrameRequest.operation_id]) {
     const receipt = await invoke(connector, cwd, storeReceipt(
@@ -749,7 +878,9 @@ async function runGeneratedTypedProof(generated, report, root) {
 
   const historicalFrame = frameRead(storePath, report.sqlite_binary, initialized);
   historicalFrame.revision_id = createdFrame.json.result.revision.id;
-  assertInvalid(await invoke(connector, cwd, historicalFrame), "frame", "request.revision_id");
+  const historicalResult = await invoke(connector, cwd, historicalFrame);
+  assert.equal(historicalResult.exitCode, 0, historicalResult.stderr);
+  assert.equal(historicalResult.json.result.revision.id, createdFrame.json.result.revision.id);
 
   const includeClosed = frameList(storePath, report.sqlite_binary, initialized);
   includeClosed.include_closed = true;
@@ -763,7 +894,7 @@ async function runGeneratedTypedProof(generated, report, root) {
 
   assert.deepEqual(await ownerFacts(report.sqlite_binary, storePath), [
     { owner_kind: "case", owner_id: ids.case, revision_number: 1 },
-    { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 5 },
+    { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 6 },
   ]);
 }
 
