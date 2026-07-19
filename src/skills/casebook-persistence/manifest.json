@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l02-w02-l03-w02"
+    "version": "0.2.0-l02-w02-l03-w03"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b02ab77de3eb3fb7792209504eaaca6e46b2ae5f129049abb841a253abbc58b2"
+    "sha256": "f1736bfc8540b01eba07808ce6b1fcdc742e4bded8be7368011a0f83d9b11b72"
   },
   "entrypoints": [
     {
@@ -221,7 +221,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "f3fb4a66785dd2bc0fa8eb116bc23d6ba4846b40a406e1c52ed6a948c30a75cb"
+      "sha256": "c3ec9a0954423ad0a0aaaafa3dc18272a053f234fa3dcb095128735c7872742c"
     }
   ]
 }

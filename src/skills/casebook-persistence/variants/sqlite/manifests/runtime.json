@@ -1,5 +1,9 @@
 {
   "runtime_manifest_version": 1,
+  "package": {
+    "id": "casebook-persistence",
+    "version": "0.2.0-l02-w02-l03-w03"
+  },
   "protocol": {
     "id": "casebook-persistence-json",
     "version": 1
