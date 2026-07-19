@@ -28,7 +28,7 @@ try {
     });
   } else if (request.operation === "diagnose") {
     result = await diagnose(request);
-  } else if (["case.create", "case.commit_revision", "case.read", "case.resolve", "case.search", "case.traverse"].includes(request.operation)) {
+  } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse"].includes(request.operation)) {
     result = await invokeCaseOperation(request);
   } else if (["frame.create", "frame.commit_revision", "frame.resolve", "frame.read", "frame.discovery.read", "frame.history", "frame.list"].includes(request.operation)) {
     result = await invokeFrameOperation(request);

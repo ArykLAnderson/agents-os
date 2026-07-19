@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "d8c3f1099d413ccb1a9036f3c57e64b4d384ba3987fd8c31efc03e4dbc0184dd"
+    "sha256": "68965098fb121a30ae6bff77cef7c9201a6c4d1f0fd68f4038326e8132e3954a"
   },
   "entrypoints": [
     {
@@ -45,6 +45,12 @@
     "case.resolve",
     "case.search",
     "case.traverse",
+    "case.tombstone.stage",
+    "case.tombstone.commit",
+    "case.purge.inspect",
+    "case.export.fragment",
+    "case.markdown.render",
+    "case.markdown.stage_reconciliation",
     "frame.create",
     "frame.commit_revision",
     "frame.resolve",
@@ -81,10 +87,11 @@
     "frame_query": "exact resolve/current/history/discovery reads and query-bound fenced paging; list defaults active-only",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
-    "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only"
+    "exact_identity": "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only",
+    "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals"
   },
   "unsupported_until_later_work_items": [
-    "case.include/filter/lifecycle/export",
+    "case purge execution and publication",
     "frame.include/filter/lifecycle-query/reconciliation",
     "frame authority-scope mutation and legacy preparation",
     "events/checkpoints/snapshots/global-search",
@@ -99,7 +106,7 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "1c14a788a9bf84941d3a6026c7b7b8cf2039c4ed1e16edfa3215cd853a2b44f1"
+      "sha256": "1af79180e48abaf04b3ee781d1c14adaeb4e8841fc76d75c7b36520f8aa6bc09"
     },
     {
       "id": "human-install-guidance",
@@ -159,7 +166,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "9f0a34f77f609114448d9ab85b98171d8c29a4d3ce31abf8f624edb9cba33905"
+      "sha256": "365a04849ce334b709af5169404b463cf038d9cb781e9a82022d5df40c5980a5"
     },
     {
       "id": "sqlite-diagnostics",
@@ -183,7 +190,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "16d2fae84ee039a8397eaa2b70e2b8a246e70de8bcc9007723e7757c91a37088"
+      "sha256": "fb8c91af574d675aa6dc25997c6fd962a17f9604a03fe54361179ab759d7deb0"
     },
     {
       "id": "frame-facade",
@@ -219,7 +226,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "d4b3b254a8e7aa82be4f1aecb5084281485e425c2bd971f6fd642dcdf4e21fad"
+      "sha256": "fd86687603a0354aeadf976c5fad958f2de2a6ff243e319fa0bef0ab8b38e61d"
     }
   ]
 }
