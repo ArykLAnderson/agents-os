@@ -31,7 +31,8 @@ Omit empty sections.
 - `Evidence And Findings` retains compact locators and semantic disposition, not copied logs.
 - `Source-System Locators` names commits, PRs, checks, deployments, Runtime sessions, or configured tracker records without absorbing their truth.
 - `Temporary Effects` records semantic cleanup obligations and settlement evidence; tools/Runtime retain concrete resource state.
-- `Effect Authorizations` records scope, duration, and survival boundary, not instructions to act.
+- `Effect Authorizations` records scope, duration, and survival boundary, not instructions to act. Unless that boundary explicitly expires, completing a Work Item, review, commit, wave, or Leg does not consume the authorization.
+- Persist the next eligible frontier before any forced interaction/runtime return. On resume, continue from that frontier without asking for routine reauthorization.
 
 Statuses are descriptive: `active`, `completed`, `route-invalidated`, `failed`, or `cancelled`.
 
