@@ -395,6 +395,22 @@ test("Frame list defaults active-only while compact fenced cursors reject change
     assert.equal(second.json.result.items.length, 1);
     assert.notEqual(second.json.result.items[0].id, first.json.result.items[0].id);
     assert.equal(second.json.result.snapshot_query_fence, first.json.result.snapshot_query_fence);
+    const homeSelectedRequest = { ...firstRequest, home_namespace_id: initialized.namespace.id };
+    const homeSelected = await invoke(sourceEntrypoint, root, homeSelectedRequest);
+    assert.equal(homeSelected.exitCode, 0, homeSelected.stderr);
+    assert.equal(homeSelected.json.result.items.length, 1);
+    assert.equal(typeof homeSelected.json.result.next_cursor, "string");
+    const scopeSelected = await invoke(sourceEntrypoint, root, {
+      ...frameList(storePath, sqliteBinary, initialized),
+      authority_scope_namespace_ids: [initialized.namespace.id],
+    });
+    assert.deepEqual(new Set(scopeSelected.json.result.items.map((item) => item.id)), new Set([ids.activeFrame, ids.secondActiveFrame]));
+    const selectorMismatch = await invoke(sourceEntrypoint, root, {
+      ...homeSelectedRequest,
+      authority_scope_namespace_ids: [initialized.namespace.id],
+      cursor: homeSelected.json.result.next_cursor,
+    });
+    assert.equal(selectorMismatch.json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
     const tampered = `${first.json.result.next_cursor.slice(0, -1)}${first.json.result.next_cursor.endsWith("A") ? "B" : "A"}`;
     assert.equal((await invoke(sourceEntrypoint, root, { ...firstRequest, cursor: tampered })).json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
     const forgedEnvelope = JSON.parse(Buffer.from(first.json.result.next_cursor, "base64url").toString());
@@ -693,6 +709,25 @@ test("complete Frame revisions settle, replay, reopen, and reject omissions befo
     const historical = await invoke(sourceEntrypoint, root, historicalRead);
     assert.equal(historical.exitCode, 0, historical.stderr);
     assert.equal(historical.json.result.frame.discovery[0].lifecycle, "active");
+    const activeOnlyRead = await invoke(sourceEntrypoint, root, frameRead(storePath, sqliteBinary, initialized));
+    assert.deepEqual(activeOnlyRead.json.result.frame.discovery, []);
+    assert.equal(activeOnlyRead.json.result.applied_discovery_scope, "active_only");
+    const allSelectedRead = await invoke(sourceEntrypoint, root, {
+      ...frameRead(storePath, sqliteBinary, initialized), include: { discovery: "all_selected" },
+    });
+    assert.equal(allSelectedRead.json.result.frame.discovery[0].lifecycle, "settled");
+    assert.equal(allSelectedRead.json.result.applied_discovery_scope, "all_selected");
+    const missingRevision = await invoke(sourceEntrypoint, root, {
+      ...frameRead(storePath, sqliteBinary, initialized), revision_number: 99,
+    });
+    assert.equal(missingRevision.json.failure.code, "frame.revision_not_found_or_not_visible");
+    const missingDiscovery = await invoke(sourceEntrypoint, root, {
+      ...frameRead(storePath, sqliteBinary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.secondActiveDiscovery,
+    });
+    assert.equal(missingDiscovery.json.failure.code, "frame.discovery_not_found_or_not_visible");
+    assert.notEqual(missingDiscovery.json.failure.code, missingRevision.json.failure.code);
+    assert.deepEqual(missingRevision.json.failure.evidence, {});
+    assert.deepEqual(missingDiscovery.json.failure.evidence, {});
     const discoveryRead = { ...frameRead(storePath, sqliteBinary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.activeDiscovery, revision_number: 2 };
     const discovery = await invoke(sourceEntrypoint, root, discoveryRead);
     assert.equal(discovery.exitCode, 0, discovery.stderr);
@@ -852,6 +887,7 @@ async function runGeneratedTypedProof(generated, report, root) {
   assert.equal(createdCase.exitCode, 0, createdCase.stderr);
   const frameRequest = frameCreate(storePath, report.sqlite_binary, initialized, {
     operationId: `operation:w04-${generated.target}-frame`,
+    frameOverrides: { case_links: [{ target_kind: "case", target_id: ids.case, predicate: "frames" }] },
   });
   const createdFrame = await invoke(connector, cwd, frameRequest);
   assert.equal(createdFrame.exitCode, 0, createdFrame.stderr);
@@ -930,15 +966,54 @@ async function runGeneratedTypedProof(generated, report, root) {
   unavailableReceiptRequest.configuration.sqlite.sqlite_bin = path.join(root, `missing-sqlite-${generated.target}`);
   assert.deepEqual((await invoke(connector, cwd, unavailableReceiptRequest)).json.result, { status: "store_unavailable" });
 
+  const secondFrame = await invoke(connector, cwd, frameCreate(storePath, report.sqlite_binary, initialized, {
+    frameId: ids.secondActiveFrame,
+    discoveryId: ids.secondActiveDiscovery,
+    operationId: `operation:w04-${generated.target}-second-frame`,
+  }));
+  assert.equal(secondFrame.exitCode, 0, secondFrame.stderr);
   const readCaseResult = await invoke(connector, cwd, caseRead(storePath, report.sqlite_binary, initialized));
   const readFrameResult = await invoke(connector, cwd, frameRead(storePath, report.sqlite_binary, initialized));
+  const settledReadRequest = { ...frameRead(storePath, report.sqlite_binary, initialized), revision_number: 2 };
+  const activeOnlyFrameResult = await invoke(connector, cwd, settledReadRequest);
+  const allSelectedFrameResult = await invoke(connector, cwd, { ...settledReadRequest, include: { discovery: "all_selected" } });
   const listFrameResult = await invoke(connector, cwd, frameList(storePath, report.sqlite_binary, initialized));
   assert.equal(readCaseResult.json.result.case.id, ids.case);
   assert.equal(readFrameResult.json.result.frame.id, ids.activeFrame);
+  assert.equal(readFrameResult.json.result.frame.discovery[0].lifecycle, "active");
+  assert.deepEqual(activeOnlyFrameResult.json.result.frame.discovery, []);
+  assert.equal(activeOnlyFrameResult.json.result.applied_discovery_scope, "active_only");
+  assert.equal(allSelectedFrameResult.json.result.frame.discovery[0].lifecycle, "settled");
+  assert.equal(allSelectedFrameResult.json.result.applied_discovery_scope, "all_selected");
   assert.equal(readFrameResult.json.result.completion_evidence.overall_completion_asserted, false);
-  assert.deepEqual(listFrameResult.json.result.items.map((item) => item.id), [ids.activeFrame]);
+  assert.deepEqual(new Set(listFrameResult.json.result.items.map((item) => item.id)), new Set([ids.activeFrame, ids.secondActiveFrame]));
   assert.equal(listFrameResult.json.result.index_state, "current");
   assert.equal(listFrameResult.json.result.applied_lifecycle_scope, "active_only");
+  for (const selectors of [
+    { home_namespace_id: initialized.namespace.id },
+    { authority_scope_namespace_ids: [initialized.namespace.id] },
+  ]) {
+    const selected = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), ...selectors });
+    assert.deepEqual(new Set(selected.json.result.items.map((item) => item.id)), new Set([ids.activeFrame, ids.secondActiveFrame]));
+  }
+  const selectedPageRequest = { ...frameList(storePath, report.sqlite_binary, initialized), home_namespace_id: initialized.namespace.id, limit: 1 };
+  const selectedPage = await invoke(connector, cwd, selectedPageRequest);
+  assert.equal(typeof selectedPage.json.result.next_cursor, "string");
+  const selectorMismatch = await invoke(connector, cwd, { ...selectedPageRequest, authority_scope_namespace_ids: [initialized.namespace.id], cursor: selectedPage.json.result.next_cursor });
+  assert.equal(selectorMismatch.json.failure.evidence.violations[0].rule, "cursor_invalid_or_query_mismatch");
+  const linkedVisible = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), linked_case_id: ids.case });
+  assert.deepEqual(linkedVisible.json.result.items.map((item) => item.id), [ids.activeFrame]);
+  const linkedUnknown = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), linked_case_id: ids.unknownCase });
+  assert.deepEqual(linkedUnknown.json.result.items, []);
+  assert.equal(linkedUnknown.json.result.next_cursor, null);
+  assert.doesNotMatch(JSON.stringify(linkedUnknown.json), new RegExp(ids.activeFrame));
+  const missingRevision = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), revision_number: 99 });
+  const missingDiscovery = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.discovery.read", discovery_item_id: ids.closedDiscovery });
+  assert.equal(missingRevision.json.failure.code, "frame.revision_not_found_or_not_visible");
+  assert.equal(missingDiscovery.json.failure.code, "frame.discovery_not_found_or_not_visible");
+  assert.notEqual(missingRevision.json.failure.code, missingDiscovery.json.failure.code);
+  assert.deepEqual(missingRevision.json.failure.evidence, {});
+  assert.deepEqual(missingDiscovery.json.failure.evidence, {});
   const closedOnly = await invoke(connector, cwd, { ...frameList(storePath, report.sqlite_binary, initialized), statuses: ["completed"] });
   assert.deepEqual(closedOnly.json.result.items, []);
   const resolved = await invoke(connector, cwd, { ...frameRead(storePath, report.sqlite_binary, initialized), operation: "frame.resolve" });
@@ -996,6 +1071,7 @@ async function runGeneratedTypedProof(generated, report, root) {
   assert.deepEqual(await ownerFacts(report.sqlite_binary, storePath), [
     { owner_kind: "case", owner_id: ids.case, revision_number: 1 },
     { owner_kind: "frame", owner_id: ids.activeFrame, revision_number: 6 },
+    { owner_kind: "frame", owner_id: ids.secondActiveFrame, revision_number: 1 },
   ]);
 }
 
