@@ -76,6 +76,9 @@ const RESOLVE_REQUEST_FIELDS = new Set([
 const DISCOVERY_READ_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "frame_id", "discovery_item_id", "version_id", "revision_id", "revision_number", "configuration",
 ]);
+const DISPOSITION_READ_FIELDS = new Set([
+  "protocol", "operation", "request_version", "store_id", "context", "frame_id", "family_id", "revision_id", "revision_number", "configuration",
+]);
 const HISTORY_REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "store_id", "context", "frame_id", "limit", "cursor", "configuration",
 ]);
@@ -643,13 +646,16 @@ function typedFailure(operation, result) {
   const common = { retryDisposition: source.retry_disposition, correctiveGuidance: source.corrective_guidance };
   if (source.code === "not_visible") {
     const code = operation === "discovery.read" ? "frame.discovery_not_found_or_not_visible"
+      : operation === "disposition.read" ? "frame.disposition_not_found_or_not_visible"
       : operation === "read_revision" ? "frame.revision_not_found_or_not_visible"
       : "frame.not_found_or_not_visible";
     return failure(code, operation === "read_revision"
       ? "The selected Frame revision is unknown or not visible under the exact view."
       : operation === "discovery.read"
         ? "The Discovery item or selected version is unknown or not visible."
-        : "The Frame is unknown or not visible under the exact view.", {
+        : operation === "disposition.read"
+          ? "The disposition family or selected version is unknown or not visible."
+          : "The Frame is unknown or not visible under the exact view.", {
       ...common, failureClass: "frame.read_failure", evidence: {},
     });
   }
@@ -880,9 +886,39 @@ async function visibleReferenceTarget(request, link) {
 
 function completionEvidence(frame) {
   const activeDiscovery = frame.discovery.filter((item) => item.lifecycle === "active").length;
+  const boundaries = frame.disposition_boundaries ?? [];
+  const dispositions = frame.case_dispositions ?? [];
+  const pendingIds = dispositions.filter((item) => item.classification_state === "pending_classification").map((item) => item.id);
+  const awaitingIds = dispositions.filter((item) => item.realization_state === "awaiting_case").map((item) => item.id);
+  const settledIds = dispositions.filter((item) => item.realization_state === "settled").map((item) => item.id);
+  const completionBlocks = [
+    ...(pendingIds.length ? [{ kind: "pending_classification", case_disposition_ids: pendingIds }] : []),
+    ...(awaitingIds.length ? [{ kind: "awaiting_case", case_disposition_ids: awaitingIds }] : []),
+  ];
+  const caseRealizationStatus = awaitingIds.length
+    ? (settledIds.length ? "partially_settled" : "awaiting_case")
+    : (settledIds.length ? "settled" : "not_applicable");
   return {
-    frame: { descriptive_status: frame.status, closed: CLOSED_STATUSES.has(frame.status), active_discovery_items: activeDiscovery },
-    case_reconciliation: { status: "not_evaluated", linked_cases: frame.case_links?.filter((link) => link.target_kind === "case").length ?? 0 },
+    frame: {
+      descriptive_status: frame.status,
+      closed: CLOSED_STATUSES.has(frame.status),
+      active_discovery_items: activeDiscovery,
+      open_disposition_boundaries: boundaries.filter((item) => item.closure === "open").length,
+      pending_case_dispositions: pendingIds.length,
+      awaiting_case_realizations: awaitingIds.length,
+      completion_blocked: completionBlocks.length > 0,
+    },
+    case_reconciliation: {
+      status: caseRealizationStatus,
+      linked_cases: frame.case_links?.filter((link) => link.target_kind === "case").length ?? 0,
+      awaiting_case_realizations: awaitingIds.length,
+      settled_case_realizations: settledIds.length,
+    },
+    cross_owner_completion: {
+      state: completionBlocks.length ? "partial" : "settled",
+      independent_owner_transactions: true,
+    },
+    completion_blocks: completionBlocks,
     overall_completion_asserted: false,
   };
 }
@@ -1055,13 +1091,21 @@ async function mutateFrame(request, create) {
   });
 }
 
-function discoveryInclude(request) {
-  if (request.include == null) return "active_only";
-  if (!object(request.include) || Object.keys(request.include).length !== 1
-    || !["active_only", "all_selected"].includes(request.include.discovery)) {
+function frameIncludes(request) {
+  if (request.include == null) return { discovery: "active_only", case_dispositions: "all_selected" };
+  if (!object(request.include) || Object.keys(request.include).length < 1
+    || Object.keys(request.include).some((key) => !["discovery", "case_dispositions"].includes(key))) {
+    throw new FrameRequestError("include", "frame_include_invalid", "include accepts only Discovery and Case-disposition scopes.");
+  }
+  const discovery = request.include.discovery ?? "active_only";
+  const caseDispositions = request.include.case_dispositions ?? "all_selected";
+  if (!["active_only", "all_selected"].includes(discovery)) {
     throw new FrameRequestError("include.discovery", "discovery_include_invalid", "include.discovery must be active_only or all_selected.");
   }
-  return request.include.discovery;
+  if (!["current", "all_selected"].includes(caseDispositions)) {
+    throw new FrameRequestError("include.case_dispositions", "case_disposition_include_invalid", "include.case_dispositions must be current or all_selected.");
+  }
+  return { discovery, case_dispositions: caseDispositions };
 }
 
 async function readFrame(request) {
@@ -1073,7 +1117,7 @@ async function readFrame(request) {
   if (request.revision_id != null && request.revision_number != null) throw new FrameRequestError("revision_id", "revision_selector_ambiguous", "Select a revision by ID or number, not both.");
   if (request.revision_id != null) requiredId(request.revision_id, "revision_id", "frame-revision");
   if (request.revision_number != null && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) throw new FrameRequestError("revision_number", "positive_revision_required", "revision_number must be positive.");
-  const discoveryMode = discoveryInclude(request);
+  const include = frameIncludes(request);
   const historical = request.revision_id != null || request.revision_number != null;
   const mechanical = await invokeSubstrateOperation({
     operation: historical ? "read_owner_revision" : "read_owner_current",
@@ -1087,10 +1131,23 @@ async function readFrame(request) {
   if (!mechanical?.ok) return typedFailure(historical ? "read_revision" : "read", mechanical);
   try {
     const hydrated = hydrateFrame(mechanical.result);
-    if (discoveryMode === "active_only") hydrated.frame.discovery = hydrated.frame.discovery.filter((item) => item.lifecycle === "active");
+    const completeFrame = hydrated.frame;
+    const completion = completionEvidence(completeFrame);
+    if (include.discovery === "active_only") hydrated.frame.discovery = hydrated.frame.discovery.filter((item) => item.lifecycle === "active");
+    if (include.case_dispositions === "current" && hydrated.frame.disposition_boundaries != null) {
+      const currentBoundaryIds = new Set(hydrated.frame.disposition_boundaries.filter((item) => item.closure === "open").map((item) => item.id));
+      hydrated.frame.disposition_boundaries = hydrated.frame.disposition_boundaries.filter((item) => currentBoundaryIds.has(item.id));
+      hydrated.frame.case_dispositions = hydrated.frame.case_dispositions.filter((item) => currentBoundaryIds.has(item.boundary_id));
+    }
     const projection = await projectFrameForView(request, hydrated.frame);
     if (projection.failure) return projection.failure;
-    return success("frame.read", { ...hydrated, frame: projection.frame, applied_discovery_scope: discoveryMode, completion_evidence: completionEvidence(projection.frame) });
+    return success("frame.read", {
+      ...hydrated,
+      frame: projection.frame,
+      applied_discovery_scope: include.discovery,
+      applied_case_disposition_scope: include.case_dispositions,
+      completion_evidence: completion,
+    });
   } catch (error) {
     return failure("frame.stored_representation_incompatible", "The stored Frame cannot be hydrated through Frame representation version 1.", {
       failureClass: "frame.stored_representation_incompatible",
@@ -1322,6 +1379,50 @@ async function readDiscovery(request) {
   return success("frame.discovery.read", { status: "found", frame_id: request.frame_id, discovery_item: item, frame_revision: frameRead.result.revision, ...(frameRead.result.frame.hidden_authority_scope_count == null ? {} : { hidden_authority_scope_count: frameRead.result.frame.hidden_authority_scope_count }), ...(frameRead.result.frame.hidden_reference_count == null ? {} : { hidden_reference_count: frameRead.result.frame.hidden_reference_count }), applied_view: frameRead.result.applied_view });
 }
 
+async function readDisposition(request) {
+  exactKeys(request, DISPOSITION_READ_FIELDS, "request");
+  if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
+  requiredId(request.store_id, "store_id", "store");
+  requiredId(request.frame_id, "frame_id", "frame");
+  validateContext(request.context);
+  if (request.revision_id != null && request.revision_number != null) throw new FrameRequestError("revision_id", "revision_selector_ambiguous", "Select a revision by ID or number, not both.");
+  if (request.revision_id != null) requiredId(request.revision_id, "revision_id", "frame-revision");
+  if (request.revision_number != null && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) throw new FrameRequestError("revision_number", "positive_revision_required", "revision_number must be positive.");
+  const familyId = requiredString(request.family_id, "family_id", 128);
+  const familyKind = uuidId("disposition-boundary").test(familyId) ? "disposition_boundary"
+    : uuidId("case-disposition").test(familyId) ? "case_disposition"
+      : null;
+  if (familyKind == null) throw new FrameRequestError("family_id", "disposition_family_id_required", "family_id must identify a disposition boundary or Case disposition family.");
+  const frameRead = await readFrame({
+    protocol: request.protocol,
+    operation: "frame.read",
+    request_version: request.request_version,
+    store_id: request.store_id,
+    context: request.context,
+    frame_id: request.frame_id,
+    ...(request.revision_id == null ? {} : { revision_id: request.revision_id }),
+    ...(request.revision_number == null ? {} : { revision_number: request.revision_number }),
+    include: { discovery: "all_selected", case_dispositions: "all_selected" },
+    configuration: request.configuration,
+  });
+  if (!frameRead.ok) return frameRead;
+  const value = familyKind === "disposition_boundary"
+    ? frameRead.result.frame.disposition_boundaries?.find((item) => item.id === familyId)
+    : frameRead.result.frame.case_dispositions?.find((item) => item.id === familyId);
+  if (!value) return failure("frame.disposition_not_found_or_not_visible", "The disposition family or selected version is unknown or not visible.", {
+    failureClass: "frame.read_failure", evidence: {},
+  });
+  return success("frame.disposition.read", {
+    status: "found",
+    frame_id: request.frame_id,
+    family_kind: familyKind,
+    ...(familyKind === "disposition_boundary" ? { disposition_boundary: value } : { case_disposition: value }),
+    frame_revision: frameRead.result.revision,
+    completion_evidence: frameRead.result.completion_evidence,
+    applied_view: frameRead.result.applied_view,
+  });
+}
+
 async function frameHistory(request) {
   exactKeys(request, HISTORY_REQUEST_FIELDS, "request");
   if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
@@ -1520,6 +1621,7 @@ export async function invokeFrameOperation(request) {
     if (request.operation === "frame.resolve") return await resolveFrame(request);
     if (request.operation === "frame.read") return await readFrame(request);
     if (request.operation === "frame.discovery.read") return await readDiscovery(request);
+    if (request.operation === "frame.disposition.read") return await readDisposition(request);
     if (request.operation === "frame.history") return await frameHistory(request);
     if (request.operation === "frame.list") return await listFrames(request);
     if (request.operation === "frame.legacy.prepare_reconciliation") return await prepareLegacyReconciliation(request);
