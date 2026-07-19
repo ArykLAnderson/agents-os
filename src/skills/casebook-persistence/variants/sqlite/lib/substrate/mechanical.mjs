@@ -642,6 +642,7 @@ async function commitOwnerRevision(request) {
   const coreResult = {
     status: "settled",
     owner: envelope.owner,
+    observed_revision: current == null ? null : { id: current.revision_id, number: observedRevision },
     committed_revision: { id: envelope.revision.id, number: envelope.revision.number },
     allocations: {
       version_ids: envelope.revision.versions.map((item) => item.version_id),
@@ -729,7 +730,29 @@ async function getOwnerOperationReceipt(request) {
   if (receipt.owner_home_namespace_id !== target.home_namespace_id) {
     return success("get_owner_operation_receipt", { status: "not_visible" });
   }
-  return success("get_owner_operation_receipt", { status: "settled", receipt });
+  const recoveryRevisionId = receipt.result?.committed_revision?.id
+    ?? (receipt.observed_revision == null ? null : (await queryJson(binary, storePath, `
+      SELECT revision_id FROM owner_revisions
+      WHERE owner_id = ${sqlText(target.id)} AND revision_number = ${receipt.observed_revision}
+      LIMIT 1;
+    `))[0]?.revision_id);
+  const recoverySelection = recoveryRevisionId == null ? [] : await queryJson(binary, storePath, `
+    SELECT s.family_id, v.version_id, v.content_json, v.content_digest
+    FROM owner_revision_selections s
+    JOIN owner_versions v ON v.version_id = s.version_id
+    WHERE s.revision_id = ${sqlText(recoveryRevisionId)}
+    ORDER BY s.family_id
+  `);
+  return success("get_owner_operation_receipt", {
+    status: "settled",
+    receipt,
+    recovery_selection: recoverySelection.map((item) => ({
+      family_id: item.family_id,
+      version_id: item.version_id,
+      content: JSON.parse(item.content_json),
+      content_digest: item.content_digest,
+    })),
+  });
 }
 
 async function readOwnerCurrent(request) {

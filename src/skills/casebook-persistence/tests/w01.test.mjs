@@ -22,6 +22,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "case.create",
     "case.read",
     "frame.create",
+    "frame.commit_revision",
     "frame.read",
     "frame.list",
     "common.resolve",
@@ -31,19 +32,21 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "interchange.parse",
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
-  assert.deepEqual(check.manifest.l01_operation_constraints, {
+  assert.deepEqual(check.manifest.implemented_slice_constraints, {
     store_receipt_visible_operation_kinds: ["initialize_store"],
     typed_read_target: "stable_owner_id_under_exact_active_view",
-    frame_statuses: ["active"],
-    discovery_lifecycles: ["active"],
-    discovery_dependencies: "empty_only",
+    frame_revision_assembly: "complete canonical Frame/Discovery create and commit_revision",
+    frame_statuses: ["active", "completed", "abandoned", "superseded"],
+    discovery_lifecycles: ["active", "settled", "tombstoned"],
+    discovery_dependencies: "typed stable references",
     frame_list: "active_only_without_filters_history_or_paging",
     common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
     markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
     exact_identity: "UUID-based frontmatter plus authority-marker-bound digest-verified manifest only",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
-  assert.deepEqual(runtime.l01_operation_constraints, check.manifest.l01_operation_constraints);
+  assert.deepEqual(runtime.implemented_slice_constraints, check.manifest.implemented_slice_constraints);
+  assert.deepEqual(runtime.supported_operations, check.manifest.supported_operations.filter((operation) => operation !== "interchange.parse"));
   assert.equal(check.manifest.assets.some((asset) => asset.path.includes("internal-mechanical-driver")), false);
 });
 
