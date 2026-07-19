@@ -9,13 +9,13 @@ Guide one natural-language outcome from uncertainty to human acceptance. Own nav
 
 ## Start Or Resume
 
-Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Treat it as private and Git-ignored. Create or resume `frames/<frame-id>/frame.md` and `discovery-map.md` beneath that root using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
+Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Treat it as private and Git-ignored. Create or resume `frames/<frame-id>/frame.md` and `discovery.md` beneath that root using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
 
 Scale persisted state to the outcome. An explicit framing request always opens or resumes a Frame, even when the outcome needs only bounded discovery and a short artifact. Keep such Frames compact rather than routing around them.
 
 ## Clean-Context Legwork
 
-The Frame thread is the coordinator, not the workbench. Delegate bounded autonomous operations that create substantial iterative context—research, prototyping, repository archaeology, fault injection, broad evidence extraction—to fresh-context workers by default. Keep user interaction, scope and authorization, synthesis, Discovery Map mutation, Case reconciliation, and consequential decisions in the Frame thread.
+The Frame thread is the coordinator, not the workbench. Delegate bounded autonomous operations that create substantial iterative context—research, prototyping, repository archaeology, fault injection, broad evidence extraction—to fresh-context workers by default. Keep user interaction, scope and authorization, synthesis, Frame Discovery mutation, Case reconciliation, and consequential decisions in the Frame thread.
 
 Before delegation, define the operation question and output, evidence standard, authorized environment and effects, prohibited resources, and the minimum relevant Case/source context. The worker owns execution, debugging, evaluation, and authorized disposal inside that boundary. It returns a compact result with the artifact locator, exact evidence or verification commands, limitations, and residual state. Preserve detailed logs in the artifact rather than streaming them into the Frame thread.
 

@@ -6,6 +6,6 @@ Generate only the independent review mandates justified by the actual claims, ri
 
 Use fresh-context reviewers in parallel when available. Ask each for concrete findings, severity, evidence, affected claims, and a suggested correction. Reviewers advise; they do not decide by consensus.
 
-Centralize findings. Convert material unresolved issues into Discovery Map items. Reconcile accepted reusable conclusions into Cases. Retain a readable review artifact only when its argument has independent lasting value.
+Centralize findings. Convert material unresolved issues into Frame Discovery items. Reconcile accepted reusable conclusions into Cases. Retain a readable review artifact only when its argument has independent lasting value.
 
 Review completes when every material finding is resolved, deliberately deferred, or preserved as contested with its consequence visible.
