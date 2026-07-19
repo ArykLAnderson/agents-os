@@ -49,6 +49,40 @@ test("L03-W03 supported Frame and selected Discovery renderer parse completely",
   }]);
 });
 
+test("L03-W03 disposition-aware renderer parses strict boundary and Case-disposition candidates", () => {
+  const dispositionFrame = {
+    ...structuredClone(frame),
+    disposition_boundaries: [{
+      id: "disposition-boundary:44444444-4444-4444-8444-444444444444",
+      version_id: "disposition-boundary-version:55555555-5555-4555-8555-555555555555",
+      display_label: "Natural boundary",
+      display_order: 0,
+      title: "Retained results",
+      closure: "open",
+      disposition_ids: ["case-disposition:66666666-6666-4666-8666-666666666666"],
+    }],
+    case_dispositions: [{
+      id: "case-disposition:66666666-6666-4666-8666-666666666666",
+      version_id: "case-disposition-version:77777777-7777-4777-8777-777777777777",
+      boundary_id: "disposition-boundary:44444444-4444-4444-8444-444444444444",
+      result_summary: "A result awaits classification",
+      classification_state: "pending_classification",
+      pending_reason: "Human judgment is required.",
+      resume_condition: "Review retained evidence.",
+    }],
+  };
+  const parsed = parseLegacyFrameMarkdown(renderL01FrameMarkdown(dispositionFrame));
+  assert.deepEqual(parsed.violations, []);
+  assert.equal(parsed.disposition_state, "present");
+  assert.equal(parsed.disposition_boundaries[0].source_label, "DB-001");
+  assert.equal(parsed.disposition_boundaries[0].id, dispositionFrame.disposition_boundaries[0].id);
+  assert.equal(parsed.case_dispositions[0].source_label, "CD-001");
+  assert.equal(parsed.case_dispositions[0].classification_state, "pending_classification");
+
+  const malformed = renderL01FrameMarkdown(dispositionFrame).replace('"source_label":"CD-001"', '"source_label":"DB-001"');
+  assert.equal(parseLegacyFrameMarkdown(malformed).violations.some((item) => item.rule === "source_label_invalid"), true);
+});
+
 test("L03-W03 renderer assigns strict sequential labels in grouped category order", () => {
   const categories = ["frontier", "out_of_scope", "fog", "contested", "blocked", "deferred"];
   const discovery = categories.map((category, index) => ({

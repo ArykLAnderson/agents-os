@@ -61,9 +61,9 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     frame_query: "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
     markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
-    exact_identity: "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",
+    exact_identity: "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     frame_authority_scope: "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
-    legacy_reconciliation: "immutable non-mutating preparation only; no writeback, rename, watcher, or view lifecycle creation",
+    legacy_reconciliation: "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
   assert.deepEqual(runtime.implemented_slice_constraints, check.manifest.implemented_slice_constraints);
