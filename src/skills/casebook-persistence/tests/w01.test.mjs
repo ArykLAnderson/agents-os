@@ -53,7 +53,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
     case_lifecycle_portability: "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
-    frame_revision_assembly: "complete canonical Frame/Discovery create and commit_revision",
+    frame_revision_assembly: "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     frame_statuses: ["active", "completed", "abandoned", "superseded"],
     discovery_lifecycles: ["active", "settled", "tombstoned"],
     discovery_dependencies: "typed stable references",

@@ -18,7 +18,8 @@ import {
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
-const FRAME_REPRESENTATION = Object.freeze({ id: "frame-canonical", version: 2 });
+const FRAME_REPRESENTATION = Object.freeze({ id: "frame-canonical", version: 3 });
+const PRE_DISPOSITION_FRAME_REPRESENTATION = Object.freeze({ id: "frame-canonical", version: 2 });
 const LEGACY_FRAME_REPRESENTATION = Object.freeze({ id: "frame-minimal", version: 1 });
 const ACTIVE_CATEGORIES = new Set(["fog", "frontier", "blocked", "contested", "deferred", "out_of_scope"]);
 const FRAME_STATUSES = new Set(["active", "completed", "abandoned", "superseded"]);
@@ -30,6 +31,7 @@ const FRAME_FIELDS = new Set([
   "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title", "outcome",
   "included_scope", "excluded_scope", "limitations", "completion_condition", "case_links", "frame_links",
   "downstream_links", "artifact_links", "authorization_provenance", "discovery",
+  "disposition_boundaries", "case_dispositions",
 ]);
 const DISCOVERY_FIELDS = new Set([
   "id", "display_label", "display_order", "lifecycle", "category", "title", "body",
@@ -38,6 +40,18 @@ const DISCOVERY_FIELDS = new Set([
 const REFERENCE_FIELDS = new Set(["target_kind", "target_id", "observed_revision_id", "pinned_revision_id", "predicate", "provenance", "authority_scope"]);
 const ARTIFACT_FIELDS = new Set(["artifact_id", "kind", "title", "summary", "locator", "observed_revision_id", "pinned_revision_id"]);
 const LOCATOR_FIELDS = new Set(["uri", "media_type", "audience", "digest"]);
+const DISPOSITION_BOUNDARY_FIELDS = new Set([
+  "id", "display_label", "display_order", "title", "basis", "evidence_locators", "disposition_ids", "closure",
+]);
+const CASE_DISPOSITION_FIELDS = new Set([
+  "id", "boundary_id", "result_summary", "classification_state", "disposition", "rationale", "evidence_locators",
+  "pending_reason", "resume_condition", "realization_state", "case_id", "case_operation_id",
+  "observed_case_revision_id", "pinned_case_revision_id", "affected_case_entry_display_ids", "no_case_reason",
+]);
+const CLASSIFICATION_STATES = new Set(["pending_classification", "classified"]);
+const CASE_DISPOSITIONS = new Set(["intake", "reconcile", "no_case"]);
+const CASE_REALIZATION_STATES = new Set(["awaiting_case", "settled"]);
+const BOUNDARY_CLOSURES = new Set(["open", "closed"]);
 const AUTHORIZATION_FIELDS = new Set(["session", "acting_role", "authority_basis", "human_confirmation", "causation", "correlation"]);
 const HUMAN_CONFIRMATION_FIELDS = new Set(["reference", "confirmed_at", "scope", "expires_at"]);
 const TARGET_PREFIX = Object.freeze({ case: "case", frame: "frame", artifact: "artifact", document: "document", blueprint: "blueprint", route: "route", map: "map", knowledge: "entry", source: "source", evidence: "evidence" });
@@ -227,6 +241,102 @@ function normalizeArtifact(value, path) {
   return result;
 }
 
+function normalizeEvidenceLocator(value, path) {
+  if (!object(value)) throw new FrameRequestError(path, "object_required", "An immutable evidence locator is required.");
+  exactKeys(value, LOCATOR_FIELDS, path);
+  if (!["private", "project", "public"].includes(value.audience)) throw new FrameRequestError(`${path}.audience`, "audience_invalid", "Evidence locator audience is invalid.");
+  const result = {
+    uri: requiredString(value.uri, `${path}.uri`, 4_096),
+    audience: value.audience,
+  };
+  for (const key of ["media_type", "digest"]) {
+    const item = optionalString(value[key], `${path}.${key}`, 512);
+    if (item != null) result[key] = item;
+  }
+  return result;
+}
+
+function normalizeEvidenceLocators(value, path) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length > 32) throw new FrameRequestError(path, "bounded_array_required", "Evidence locators must be a bounded array.");
+  return value.map((item, index) => normalizeEvidenceLocator(item, `${path}[${index}]`));
+}
+
+function normalizeDispositionBoundary(value, index) {
+  const path = `frame.disposition_boundaries[${index}]`;
+  if (!object(value)) throw new FrameRequestError(path, "object_required", "A complete disposition boundary is required.");
+  exactKeys(value, DISPOSITION_BOUNDARY_FIELDS, path);
+  if (!Number.isInteger(value.display_order) || value.display_order < 0 || value.display_order > 1_000_000) throw new FrameRequestError(`${path}.display_order`, "display_order_invalid", "display_order must be a non-negative bounded integer.");
+  if (!BOUNDARY_CLOSURES.has(value.closure)) throw new FrameRequestError(`${path}.closure`, "boundary_closure_invalid", "Boundary closure must be open or closed.");
+  const title = optionalString(value.title, `${path}.title`, 512);
+  const basis = optionalString(value.basis, `${path}.basis`, 4_096);
+  if (title == null && basis == null) throw new FrameRequestError(path, "boundary_title_or_basis_required", "A disposition boundary requires a title or bounded basis.");
+  if (!Array.isArray(value.disposition_ids) || value.disposition_ids.length < 1 || value.disposition_ids.length > 128) throw new FrameRequestError(`${path}.disposition_ids`, "bounded_array_required", "A declared boundary requires a bounded material-result inventory.");
+  const dispositionIds = value.disposition_ids.map((id, dispositionIndex) => requiredId(id, `${path}.disposition_ids[${dispositionIndex}]`, "case-disposition"));
+  if (new Set(dispositionIds).size !== dispositionIds.length) throw new FrameRequestError(`${path}.disposition_ids`, "duplicate_disposition_membership", "A boundary inventory cannot repeat a disposition family.");
+  const result = {
+    id: requiredId(value.id, `${path}.id`, "disposition-boundary"), display_order: value.display_order,
+    closure: value.closure, disposition_ids: dispositionIds,
+  };
+  if (value.display_label != null) result.display_label = requiredString(value.display_label, `${path}.display_label`, 64);
+  if (title != null) result.title = title;
+  if (basis != null) result.basis = basis;
+  if (value.evidence_locators != null) result.evidence_locators = normalizeEvidenceLocators(value.evidence_locators, `${path}.evidence_locators`);
+  return result;
+}
+
+function normalizeCaseDisposition(value, index) {
+  const path = `frame.case_dispositions[${index}]`;
+  if (!object(value)) throw new FrameRequestError(path, "object_required", "A complete Case disposition is required.");
+  exactKeys(value, CASE_DISPOSITION_FIELDS, path);
+  if (!CLASSIFICATION_STATES.has(value.classification_state)) throw new FrameRequestError(`${path}.classification_state`, "classification_state_invalid", "Classification state must be pending_classification or classified.");
+  const result = {
+    id: requiredId(value.id, `${path}.id`, "case-disposition"),
+    boundary_id: requiredId(value.boundary_id, `${path}.boundary_id`, "disposition-boundary"),
+    result_summary: requiredString(value.result_summary, `${path}.result_summary`, 4_096),
+    classification_state: value.classification_state,
+  };
+  if (value.evidence_locators != null) result.evidence_locators = normalizeEvidenceLocators(value.evidence_locators, `${path}.evidence_locators`);
+  const present = (key) => value[key] != null;
+  if (value.classification_state === "pending_classification") {
+    const forbidden = ["disposition", "realization_state", "case_id", "case_operation_id", "observed_case_revision_id", "pinned_case_revision_id", "affected_case_entry_display_ids", "no_case_reason"];
+    if (forbidden.some(present)) throw new FrameRequestError(path, "pending_classification_shape_invalid", "Pending classification cannot assert a disposition or Case realization.");
+    result.pending_reason = requiredString(value.pending_reason, `${path}.pending_reason`, 4_096);
+    result.resume_condition = requiredString(value.resume_condition, `${path}.resume_condition`, 4_096);
+    if (value.rationale != null) result.rationale = requiredString(value.rationale, `${path}.rationale`, 4_096);
+    return result;
+  }
+  if (present("pending_reason") || present("resume_condition")) throw new FrameRequestError(path, "classified_pending_fields_forbidden", "Classified dispositions cannot retain pending-only fields.");
+  if (!CASE_DISPOSITIONS.has(value.disposition)) throw new FrameRequestError(`${path}.disposition`, "classified_disposition_required", "Classified state requires intake, reconcile, or no_case.");
+  result.disposition = value.disposition;
+  if (value.disposition === "no_case") {
+    const forbidden = ["realization_state", "case_id", "case_operation_id", "observed_case_revision_id", "pinned_case_revision_id", "affected_case_entry_display_ids"];
+    if (forbidden.some(present)) throw new FrameRequestError(path, "no_case_shape_invalid", "No Case cannot carry Case realization or reference fields.");
+    result.no_case_reason = requiredString(value.no_case_reason, `${path}.no_case_reason`, 4_096);
+    if (value.rationale != null) result.rationale = requiredString(value.rationale, `${path}.rationale`, 4_096);
+    return result;
+  }
+  if (present("no_case_reason")) throw new FrameRequestError(`${path}.no_case_reason`, "no_case_reason_forbidden", "No Case reason is valid only for no_case.");
+  result.rationale = requiredString(value.rationale, `${path}.rationale`, 4_096);
+  if (!CASE_REALIZATION_STATES.has(value.realization_state)) throw new FrameRequestError(`${path}.realization_state`, "case_realization_state_required", "Intake/Reconcile requires awaiting_case or settled realization.");
+  result.realization_state = value.realization_state;
+  result.case_id = requiredId(value.case_id, `${path}.case_id`, "case");
+  result.case_operation_id = requiredString(value.case_operation_id, `${path}.case_operation_id`, 256);
+  for (const key of ["observed_case_revision_id", "pinned_case_revision_id"]) {
+    if (value[key] != null) result[key] = requiredId(value[key], `${path}.${key}`, "case-revision");
+  }
+  if (value.realization_state === "awaiting_case" && (result.observed_case_revision_id != null || result.pinned_case_revision_id != null)) {
+    throw new FrameRequestError(path, "awaiting_case_revision_forbidden", "Awaiting Case realization cannot claim a committed Case revision.");
+  }
+  if (value.realization_state === "settled" && result.observed_case_revision_id == null && result.pinned_case_revision_id == null) {
+    throw new FrameRequestError(path, "settled_case_revision_required", "Settled Case realization requires an observed or pinned committed Case revision.");
+  }
+  if (value.affected_case_entry_display_ids != null) {
+    result.affected_case_entry_display_ids = stringArray(value.affected_case_entry_display_ids, `${path}.affected_case_entry_display_ids`, { max: 128 });
+  }
+  return result;
+}
+
 function normalizeAuthorization(value) {
   if (value == null) return {};
   if (!object(value)) throw new FrameRequestError("frame.authorization_provenance", "object_required", "Authorization provenance must be an object.");
@@ -294,13 +404,49 @@ function normalizeFrame(value) {
   if (!FRAME_STATUSES.has(value.status)) throw new FrameRequestError("frame.status", "frame_status_invalid", "Frame descriptive status is invalid.");
   if (!Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > MAX_DISCOVERY) throw new FrameRequestError("frame.discovery", "complete_discovery_required", `One to ${MAX_DISCOVERY} selected Discovery items are required.`);
   const discovery = value.discovery.map(normalizeDiscoveryItem);
+  const dispositionBoundaries = value.disposition_boundaries == null ? [] : (() => {
+    if (!Array.isArray(value.disposition_boundaries) || value.disposition_boundaries.length > 64) throw new FrameRequestError("frame.disposition_boundaries", "bounded_array_required", "Disposition boundaries must be a bounded array.");
+    return value.disposition_boundaries.map(normalizeDispositionBoundary);
+  })();
+  const caseDispositions = value.case_dispositions == null ? [] : (() => {
+    if (!Array.isArray(value.case_dispositions) || value.case_dispositions.length > 128) throw new FrameRequestError("frame.case_dispositions", "bounded_array_required", "Case dispositions must be a bounded array.");
+    return value.case_dispositions.map(normalizeCaseDisposition);
+  })();
+  if ((value.disposition_boundaries == null) !== (value.case_dispositions == null)) throw new FrameRequestError("frame.disposition_boundaries", "complete_disposition_sets_required", "Disposition boundaries and Case dispositions must be supplied together.");
+  if (1 + discovery.length + dispositionBoundaries.length + caseDispositions.length > 256) throw new FrameRequestError("frame", "complete_selection_too_large", "The cohesive Frame selection exceeds the bounded owner revision.");
+  const boundaryIds = new Set(); const boundaryOrders = new Set(); const memberships = new Map();
+  for (const boundary of dispositionBoundaries) {
+    if (boundaryIds.has(boundary.id)) throw new FrameRequestError("frame.disposition_boundaries", "duplicate_boundary_id", "Disposition boundary stable IDs must be unique.");
+    if (boundaryOrders.has(boundary.display_order)) throw new FrameRequestError("frame.disposition_boundaries", "duplicate_display_order", "Disposition boundary display orders must be unique.");
+    boundaryIds.add(boundary.id); boundaryOrders.add(boundary.display_order);
+    for (const dispositionId of boundary.disposition_ids) {
+      if (memberships.has(dispositionId)) throw new FrameRequestError("frame.disposition_boundaries", "duplicate_disposition_membership", "Each disposition belongs to exactly one selected boundary.");
+      memberships.set(dispositionId, boundary.id);
+    }
+  }
+  const dispositionIds = new Set();
+  for (const disposition of caseDispositions) {
+    if (dispositionIds.has(disposition.id)) throw new FrameRequestError("frame.case_dispositions", "duplicate_case_disposition_id", "Case disposition stable IDs must be unique.");
+    dispositionIds.add(disposition.id);
+    if (!boundaryIds.has(disposition.boundary_id) || memberships.get(disposition.id) !== disposition.boundary_id) throw new FrameRequestError("frame.case_dispositions", "disposition_membership_incomplete", "Every selected disposition must be selected exactly once by its declared boundary.");
+  }
+  if (memberships.size !== caseDispositions.length || [...memberships.keys()].some((id) => !dispositionIds.has(id))) throw new FrameRequestError("frame.disposition_boundaries", "disposition_membership_incomplete", "Boundary inventories and selected Case dispositions must be complete and identical.");
+  for (const boundary of dispositionBoundaries) {
+    const members = caseDispositions.filter((item) => item.boundary_id === boundary.id);
+    if (boundary.closure === "closed" && members.some((item) => item.classification_state === "pending_classification" || item.realization_state === "awaiting_case")) throw new FrameRequestError("frame.disposition_boundaries", "closed_boundary_unsettled", "A closed boundary cannot retain pending classification or awaiting Case realization.");
+  }
+  if (value.status === "completed" && caseDispositions.some((item) => item.classification_state === "pending_classification" || item.realization_state === "awaiting_case")) throw new FrameRequestError("frame.case_dispositions", "completed_frame_unsettled_disposition", "A completed Frame cannot retain pending classification or awaiting Case realization.");
   const ids = new Set(); const orders = new Set();
   for (const item of discovery) {
     if (ids.has(item.id)) throw new FrameRequestError("frame.discovery", "duplicate_discovery_id", "Discovery stable IDs must be unique in a Frame revision.");
     if (orders.has(item.display_order)) throw new FrameRequestError("frame.discovery", "duplicate_display_order", "Discovery display orders must be unique in a Frame revision.");
     ids.add(item.id); orders.add(item.display_order);
   }
-  const result = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: homeNamespaceId, authority_scope_namespace_ids: authorityScope, status: value.status, discovery };
+  const result = {
+    id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: homeNamespaceId,
+    authority_scope_namespace_ids: authorityScope, status: value.status, discovery,
+    ...(value.disposition_boundaries == null ? {} : { disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions }),
+  };
   for (const key of ["title", "outcome", "limitations", "completion_condition"]) { const item = optionalString(value[key], `frame.${key}`, key === "title" ? 512 : 4_096); if (item != null) result[key] = item; }
   for (const key of ["included_scope", "excluded_scope"]) if (value[key] != null) result[key] = stringArray(value[key], `frame.${key}`);
   const linkKinds = { case_links: new Set(["case", "knowledge", "source", "evidence"]), frame_links: new Set(["frame"]), downstream_links: new Set(["document", "blueprint", "route", "map", "frame"]) };
@@ -377,7 +523,7 @@ function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replay
     return prior?.content_digest === mechanicalDigest(content) ? { version_id: prior.version_id, changed: false }
       : { version_id: allocate("version", request, semanticDigest, role), changed: true };
   };
-  const { discovery, ...metadata } = frame;
+  const { discovery, disposition_boundaries: dispositionBoundaries = [], case_dispositions: caseDispositions = [], ...metadata } = frame;
   const metadataContent = { schema: "frame-profile@1", ...metadata };
   const frameSelection = selectVersion(frame.id, metadataContent, "frame-version");
   const frameVersionId = frameSelection.version_id;
@@ -385,10 +531,22 @@ function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replay
     const content = { schema: "frame-discovery-item@1", ...item };
     return { discovery_item_id: item.id, content, ...selectVersion(item.id, content, `discovery-version:${item.id}`) };
   });
+  const boundarySelections = dispositionBoundaries.map((item) => {
+    const content = { schema: "frame-disposition-boundary@1", ...item };
+    return { disposition_boundary_id: item.id, content, ...selectVersion(item.id, content, `disposition-boundary-version:${item.id}`) };
+  });
+  const caseDispositionSelections = caseDispositions.map((item) => {
+    const content = { schema: "frame-case-disposition@1", ...item };
+    return { case_disposition_id: item.id, content, ...selectVersion(item.id, content, `case-disposition-version:${item.id}`) };
+  });
   const discoveryAllocations = discoverySelections.map(({ discovery_item_id, version_id }) => ({ discovery_item_id, version_id }));
+  const boundaryAllocations = boundarySelections.map(({ disposition_boundary_id, version_id }) => ({ disposition_boundary_id, version_id }));
+  const caseDispositionAllocations = caseDispositionSelections.map(({ case_disposition_id, version_id }) => ({ case_disposition_id, version_id }));
   const allocations = {
     frame_version_id: frameVersionId,
     discovery_item_version_ids: discoveryAllocations,
+    disposition_boundary_version_ids: boundaryAllocations,
+    case_disposition_version_ids: caseDispositionAllocations,
     revision_id: allocate("owner-revision", request, semanticDigest, "owner-revision"),
     event_id: allocate("event", request, semanticDigest, "event"),
     outbox_id: allocate("outbox", request, semanticDigest, "outbox"),
@@ -400,11 +558,21 @@ function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replay
     if (item.changed) versions.push({ family_id: item.discovery_item_id, version_id: item.version_id, content: item.content, content_digest: mechanicalDigest(item.content) });
     selections.push({ family_id: item.discovery_item_id, version_id: item.version_id });
   }
+  for (const item of boundarySelections) {
+    if (item.changed) versions.push({ family_id: item.disposition_boundary_id, version_id: item.version_id, content: item.content, content_digest: mechanicalDigest(item.content) });
+    selections.push({ family_id: item.disposition_boundary_id, version_id: item.version_id });
+  }
+  for (const item of caseDispositionSelections) {
+    if (item.changed) versions.push({ family_id: item.case_disposition_id, version_id: item.version_id, content: item.content, content_digest: mechanicalDigest(item.content) });
+    selections.push({ family_id: item.case_disposition_id, version_id: item.version_id });
+  }
   const eventPayload = {
     schema: "frame-change@1",
     change: request.expected_revision === 0 ? "created" : "revised",
     frame_id: frame.id,
     changed_discovery_item_ids: discoverySelections.filter((item) => item.changed).map((item) => item.discovery_item_id),
+    changed_disposition_boundary_ids: boundarySelections.filter((item) => item.changed).map((item) => item.disposition_boundary_id),
+    changed_case_disposition_ids: caseDispositionSelections.filter((item) => item.changed).map((item) => item.case_disposition_id),
     allocated_version_ids: versions.map((version) => version.version_id),
   };
   const outboxPayload = {
@@ -424,11 +592,13 @@ function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replay
       id: allocations.revision_id,
       number: request.expected_revision + 1,
       normalized: {
-        schema: "frame-canonical-selection@2",
+        schema: "frame-canonical-selection@3",
         semantic_request_digest: semanticDigest,
         frame_family_id: frame.id,
         frame_version_id: frameVersionId,
         discovery_selections: discoveryAllocations,
+        disposition_boundary_selections: boundaryAllocations,
+        case_disposition_selections: caseDispositionAllocations,
       },
       versions,
       selections,
@@ -521,11 +691,18 @@ function invalidFrame(error) {
 function hydrateFrame(mechanical) {
   const revision = mechanical.revision;
   const representationCompatible = (revision.representation?.id === FRAME_REPRESENTATION.id && revision.representation?.version === FRAME_REPRESENTATION.version)
+    || (revision.representation?.id === PRE_DISPOSITION_FRAME_REPRESENTATION.id && revision.representation?.version === PRE_DISPOSITION_FRAME_REPRESENTATION.version)
     || (revision.representation?.id === LEGACY_FRAME_REPRESENTATION.id && revision.representation?.version === LEGACY_FRAME_REPRESENTATION.version);
   if (!representationCompatible) throw new FrameRequestError("stored.representation", "representation_incompatible", "Stored Frame representation is incompatible.");
   const normalized = revision.normalized;
-  if (!new Set(["frame-minimal-selection@1", "frame-canonical-selection@2"]).has(normalized?.schema) || !Array.isArray(normalized.discovery_selections)) {
+  if (!new Set(["frame-minimal-selection@1", "frame-canonical-selection@2", "frame-canonical-selection@3"]).has(normalized?.schema) || !Array.isArray(normalized.discovery_selections)) {
     throw new FrameRequestError("stored.selection", "selection_incomplete", "Stored Frame selection is incomplete.");
+  }
+  const dispositionBoundarySelections = normalized.disposition_boundary_selections ?? [];
+  const caseDispositionSelections = normalized.case_disposition_selections ?? [];
+  if (!Array.isArray(dispositionBoundarySelections) || !Array.isArray(caseDispositionSelections)
+    || (normalized.schema === "frame-canonical-selection@3" && (!Object.hasOwn(normalized, "disposition_boundary_selections") || !Object.hasOwn(normalized, "case_disposition_selections")))) {
+    throw new FrameRequestError("stored.selection", "disposition_selection_incomplete", "Stored disposition selections are incomplete.");
   }
   const selected = new Map(revision.selected_versions.map((version) => [version.family_id, version]));
   const frameVersion = selected.get(mechanical.owner.id);
@@ -547,14 +724,37 @@ function hydrateFrame(mechanical) {
     }
     return { ...item, version_id: frameTypedId("discovery-item-version", version.version_id) };
   });
-  if (selected.size !== discovery.length + 1) {
+  const dispositionBoundaries = dispositionBoundarySelections.map((selection) => {
+    const version = selected.get(selection.disposition_boundary_id);
+    if (!version || version.version_id !== selection.version_id
+      || version.content_digest !== mechanicalDigest(version.content)
+      || version.content?.schema !== "frame-disposition-boundary@1") {
+      throw new FrameRequestError("stored.disposition_boundary_version", "version_inconsistent", "Stored disposition boundary version is inconsistent.");
+    }
+    const { schema: _schema, ...item } = version.content;
+    return { ...item, version_id: frameTypedId("disposition-boundary-version", version.version_id) };
+  });
+  const caseDispositions = caseDispositionSelections.map((selection) => {
+    const version = selected.get(selection.case_disposition_id);
+    if (!version || version.version_id !== selection.version_id
+      || version.content_digest !== mechanicalDigest(version.content)
+      || version.content?.schema !== "frame-case-disposition@1") {
+      throw new FrameRequestError("stored.case_disposition_version", "version_inconsistent", "Stored Case disposition version is inconsistent.");
+    }
+    const { schema: _schema, ...item } = version.content;
+    return { ...item, version_id: frameTypedId("case-disposition-version", version.version_id) };
+  });
+  if (selected.size !== discovery.length + dispositionBoundaries.length + caseDispositions.length + 1) {
     throw new FrameRequestError("stored.selection", "unexpected_family", "Stored Frame contains an unexpected selected family.");
   }
   const { schema: _schema, ...metadata } = frameVersion.content;
   if (!FRAME_STATUSES.has(metadata.status)) throw new FrameRequestError("stored.frame_version", "status_invalid", "Stored Frame status is invalid.");
   return {
     status: "found",
-    frame: { ...metadata, discovery },
+    frame: {
+      ...metadata, discovery,
+      ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : { disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions }),
+    },
     revision: {
       id: frameTypedId("frame-revision", revision.id),
       number: revision.number,
@@ -564,6 +764,14 @@ function hydrateFrame(mechanical) {
         discovery_items: normalized.discovery_selections.map((selection) => ({
           discovery_item_id: selection.discovery_item_id,
           version_id: frameTypedId("discovery-item-version", selection.version_id),
+        })),
+        disposition_boundaries: dispositionBoundarySelections.map((selection) => ({
+          disposition_boundary_id: selection.disposition_boundary_id,
+          version_id: frameTypedId("disposition-boundary-version", selection.version_id),
+        })),
+        case_dispositions: caseDispositionSelections.map((selection) => ({
+          case_disposition_id: selection.case_disposition_id,
+          version_id: frameTypedId("case-disposition-version", selection.version_id),
         })),
       },
     },
@@ -692,6 +900,35 @@ function frameMutationReceipt(mechanicalReceipt, mechanicalResult, request, fram
   };
 }
 
+async function validateCaseRealizationEvidence(request, frame) {
+  for (const [index, disposition] of (frame.case_dispositions ?? []).entries()) {
+    if (disposition.realization_state !== "settled") continue;
+    const revisionIds = [disposition.observed_case_revision_id, disposition.pinned_case_revision_id].filter(Boolean);
+    let owner = null;
+    for (const revisionId of revisionIds) {
+      const mechanical = await invokeSubstrateOperation({
+        operation: "read_owner_revision", configuration: request.configuration, store_id: request.store_id, context: request.context,
+        owner: { id: disposition.case_id, kind: "case" },
+        revision_id: `owner-revision:${revisionId.slice("case-revision:".length)}`,
+      });
+      if (!mechanical?.ok || mechanical.result.owner.id !== disposition.case_id) {
+        throw new FrameRequestError(`frame.case_dispositions[${index}]`, "case_realization_evidence_not_visible", "Settled Case realization evidence is not visible or committed under the exact view.");
+      }
+      owner = mechanical.result.owner;
+    }
+    const receipt = await invokeSubstrateOperation({
+      operation: "get_owner_operation_receipt", configuration: request.configuration, store_id: request.store_id, context: request.context,
+      operation_id: disposition.case_operation_id,
+      owner: { id: disposition.case_id, kind: "case", home_namespace_id: owner.home_namespace_id },
+    });
+    const committedId = receipt?.result?.committed_revision_state?.id;
+    if (!receipt?.ok || receipt.result.status !== "settled" || receipt.result.receipt?.outcome !== "committed"
+      || !revisionIds.some((revisionId) => committedId === `owner-revision:${revisionId.slice("case-revision:".length)}`)) {
+      throw new FrameRequestError(`frame.case_dispositions[${index}]`, "case_realization_evidence_not_visible", "Settled Case realization evidence is not visible or committed under the exact view.");
+    }
+  }
+}
+
 async function mutateFrame(request, create) {
   validateMutation(request, create);
   const frame = normalizeFrame(request.frame);
@@ -731,6 +968,25 @@ async function mutateFrame(request, create) {
       }
     }
   }
+  if (!create) {
+    const priorBoundaryIds = [...priorSelected.values()]
+      .filter((version) => version.content?.schema === "frame-disposition-boundary@1")
+      .map((version) => version.family_id);
+    const priorDispositionIds = [...priorSelected.values()]
+      .filter((version) => version.content?.schema === "frame-case-disposition@1")
+      .map((version) => version.family_id);
+    if (frame.disposition_boundaries == null && (priorBoundaryIds.length > 0 || priorDispositionIds.length > 0)) {
+      throw new FrameRequestError("frame.disposition_boundaries", "complete_disposition_sets_required", "A Frame with declared disposition state must explicitly submit both complete disposition sets.");
+    }
+    const submittedBoundaryIds = new Set(frame.disposition_boundaries?.map((boundary) => boundary.id));
+    if (priorBoundaryIds.some((id) => !submittedBoundaryIds.has(id))) {
+      throw new FrameRequestError("frame.disposition_boundaries", "selected_boundary_family_omitted", "Every previously selected disposition boundary family must remain explicitly selected.");
+    }
+    const submittedDispositionIds = new Set(frame.case_dispositions?.map((disposition) => disposition.id));
+    if (priorDispositionIds.some((id) => !submittedDispositionIds.has(id))) {
+      throw new FrameRequestError("frame.case_dispositions", "selected_disposition_family_omitted", "Every previously selected material-result disposition family must remain explicitly selected.");
+    }
+  }
   // Scope is an authority claim, not a visibility mechanism.  Validate it only
   // against the exact active view and the immediately preceding complete revision.
   let priorScope = [];
@@ -768,16 +1024,31 @@ async function mutateFrame(request, create) {
       if (outsideReducedScope && link.authority_scope !== "external_read_only") throw new FrameRequestError(`frame.references[${index}]`, "removed_scope_reference_must_be_external_read_only", "References retained outside reduced authority scope must be explicitly external/read-only.");
     }
   }
+  await validateCaseRealizationEvidence(request, frame);
   const { envelope, allocations } = assembleFrameEnvelope(request, frame, priorSelected, replayAllocated);
   const mechanical = await invokeSubstrateOperation({ operation: "commit_owner_revision", configuration: request.configuration, context: request.context, envelope });
   if (!mechanical?.ok) return typedFailure(create ? "create" : "commit_revision", mechanical);
   const versions = new Map(allocations.discovery_item_version_ids.map((item) => [item.discovery_item_id, frameTypedId("discovery-item-version", item.version_id)]));
+  const boundaryVersions = new Map(allocations.disposition_boundary_version_ids.map((item) => [item.disposition_boundary_id, frameTypedId("disposition-boundary-version", item.version_id)]));
+  const caseDispositionVersions = new Map(allocations.case_disposition_version_ids.map((item) => [item.case_disposition_id, frameTypedId("case-disposition-version", item.version_id)]));
   const operation = create ? "frame.create" : "frame.commit_revision";
   return success(operation, {
-    status: "settled", frame: { ...frame, discovery: frame.discovery.map((item) => ({ ...item, version_id: versions.get(item.id) })) },
+    status: "settled", frame: {
+      ...frame,
+      discovery: frame.discovery.map((item) => ({ ...item, version_id: versions.get(item.id) })),
+      ...(frame.disposition_boundaries == null ? {} : {
+        disposition_boundaries: frame.disposition_boundaries.map((item) => ({ ...item, version_id: boundaryVersions.get(item.id) })),
+        case_dispositions: frame.case_dispositions.map((item) => ({ ...item, version_id: caseDispositionVersions.get(item.id) })),
+      }),
+    },
     revision: { id: frameTypedId("frame-revision", allocations.revision_id), number: request.expected_revision + 1,
       committed_at: mechanical.result.receipt.settled_at,
-      version_ids: { frame: frameTypedId("frame-version", allocations.frame_version_id), discovery_items: allocations.discovery_item_version_ids.map((item) => ({ discovery_item_id: item.discovery_item_id, version_id: frameTypedId("discovery-item-version", item.version_id) })) } },
+      version_ids: {
+        frame: frameTypedId("frame-version", allocations.frame_version_id),
+        discovery_items: allocations.discovery_item_version_ids.map((item) => ({ discovery_item_id: item.discovery_item_id, version_id: frameTypedId("discovery-item-version", item.version_id) })),
+        disposition_boundaries: allocations.disposition_boundary_version_ids.map((item) => ({ disposition_boundary_id: item.disposition_boundary_id, version_id: frameTypedId("disposition-boundary-version", item.version_id) })),
+        case_dispositions: allocations.case_disposition_version_ids.map((item) => ({ case_disposition_id: item.case_disposition_id, version_id: frameTypedId("case-disposition-version", item.version_id) })),
+      } },
     event_id: allocations.event_id, receipt: frameMutationReceipt(mechanical.result.receipt, mechanical.result, request, frame),
     completion_evidence: completionEvidence(frame),
     idempotent_replay: mechanical.result.idempotent_replay, applied_view: mechanical.result.applied_view,

@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "5164d6cb5fb4baeaa67b78c89f75b16862470b75e81c86b6b4455c41e0bdd6df"
+    "sha256": "1e41053da9c380827428517e2e52b517ad41d956ff6580b8e97569bdb0b7a13d"
   },
   "entrypoints": [
     {
@@ -73,7 +73,7 @@
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
-    "frame_revision_assembly": "complete canonical Frame/Discovery create and commit_revision",
+    "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     "frame_statuses": [
       "active",
       "completed",
@@ -200,7 +200,7 @@
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "303bf65fd6191ad4478bb97d127c98c64fcf80f7b3acad6bee2ff07be80ba53a"
+      "sha256": "b0bf1abecf92f71ff8cd6d173911ed7e94f233733102ff8c897d65ab2dead4e4"
     },
     {
       "id": "sqlite-common-subset",
@@ -230,7 +230,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "d4beed351457d2ea5f3905e1bf692a27405886d23bd3af47886591986d5474bc"
+      "sha256": "f60f142dbadf42202b0d5849bd55eae1444bcc1c2dc0aea48b24875fc5fd256b"
     }
   ]
 }
