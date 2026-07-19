@@ -2,7 +2,7 @@
   "runtime_manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l02-w03-l03-w03"
+    "version": "0.2.0-l02-w03-l03-w04"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -37,6 +37,7 @@
     "case.markdown.stage_reconciliation",
     "frame.create",
     "frame.commit_revision",
+    "frame.get_operation_receipt",
     "frame.resolve",
     "frame.read",
     "frame.discovery.read",
@@ -69,7 +70,7 @@
       "tombstoned"
     ],
     "discovery_dependencies": "typed stable references",
-    "frame_query": "exact resolve/current/history/discovery reads and query-bound fenced paging; list defaults active-only",
+    "frame_query": "exact receipt/resolve/current/history/discovery reads, active-only/all-selected Discovery projection, and selector-bound fenced paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
     "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, and version IDs with exact one-to-one digest-verified manifest bindings",

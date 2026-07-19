@@ -23,6 +23,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "case.markdown.stage_reconciliation",
   "frame.create",
   "frame.commit_revision",
+  "frame.get_operation_receipt",
   "frame.resolve",
   "frame.read",
   "frame.discovery.read",
