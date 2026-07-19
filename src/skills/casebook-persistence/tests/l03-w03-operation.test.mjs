@@ -29,6 +29,13 @@ const ids = Object.freeze({
   discoveryFrontier: "discovery:b0396989-ce32-4a09-8c8e-ba5d63755037",
   discoveryFog: "discovery:5666763c-1322-4e42-bdb2-0b4e3caeb2b4",
   discoveryAdded: "discovery:7a12e9d1-cd83-497b-bd77-6c74e4f1a7aa",
+  boundary: "disposition-boundary:854e9776-f3e6-49ca-82c2-c3fd13809ed8",
+  boundaryAdded: "disposition-boundary:a8bb2fcc-eea5-4f9f-aaac-92a7e1c530ca",
+  pendingDisposition: "case-disposition:366021a5-40a1-43d4-b786-3cb7eae349b0",
+  noCaseDisposition: "case-disposition:b0ff1f87-58a4-44c8-bd8c-1d185018532a",
+  addedDisposition: "case-disposition:06450871-49f7-442c-a896-29d9cddc83e0",
+  addedBoundaryVersion: "disposition-boundary-version:d8f9f787-9855-4eb7-8abd-a862e5d3fb70",
+  addedDispositionVersion: "case-disposition-version:d6ba0cfc-51f7-4bb4-9729-d04c76f91db8",
   caseB: "case:f8399e63-a6f2-4ea6-aa75-c0d71ac5b028",
   caseC: "case:2a9be58b-921f-475b-8652-c5aafd1cae03",
   policyAOnly: "view-policy:6a0ce39d-9368-4600-b10c-955f0ae0c918",
@@ -168,6 +175,32 @@ function baseFrame(state) {
         scope_namespace_ids: [state.initialized.namespace.id],
       },
     ],
+    disposition_boundaries: [{
+      id: ids.boundary,
+      display_label: "DB-001",
+      display_order: 0,
+      title: "First natural boundary",
+      closure: "open",
+      disposition_ids: [ids.pendingDisposition, ids.noCaseDisposition],
+    }],
+    case_dispositions: [{
+      id: ids.pendingDisposition,
+      boundary_id: ids.boundary,
+      result_summary: "A hidden Case endpoint still awaits realization",
+      classification_state: "classified",
+      disposition: "intake",
+      rationale: "The result is reusable.",
+      realization_state: "awaiting_case",
+      case_id: ids.caseB,
+      case_operation_id: "operation:l03-w03-later-case",
+    }, {
+      id: ids.noCaseDisposition,
+      boundary_id: ids.boundary,
+      result_summary: "Transient result",
+      classification_state: "classified",
+      disposition: "no_case",
+      no_case_reason: "The result is disposable test output.",
+    }],
   };
 }
 
@@ -197,11 +230,31 @@ function snapshot(filename, text) {
   return { filename, digest: sha256(bytes), bytes_base64: bytes.toString("base64") };
 }
 
-function manifestFor(frame, revision, frameSnapshot, discoverySnapshot) {
+function frameWithVersions(frame, revision) {
+  const copy = structuredClone(frame);
+  copy.discovery = copy.discovery.map((item) => ({
+    ...item,
+    version_id: revision.version_ids.discovery_items.find((entry) => entry.discovery_item_id === item.id)?.version_id,
+  }));
+  if (copy.disposition_boundaries != null) {
+    copy.disposition_boundaries = copy.disposition_boundaries.map((item) => ({
+      ...item,
+      version_id: revision.version_ids.disposition_boundaries.find((entry) => entry.disposition_boundary_id === item.id)?.version_id,
+    }));
+    copy.case_dispositions = copy.case_dispositions.map((item) => ({
+      ...item,
+      version_id: revision.version_ids.case_dispositions.find((entry) => entry.case_disposition_id === item.id)?.version_id,
+    }));
+  }
+  return copy;
+}
+
+function manifestFor(frame, revision, frameSnapshot, discoverySnapshot, { includeDispositionBindings = true } = {}) {
   return {
     schema: "casebook-frame-legacy-manifest@1",
     renderer: { id: "casebook-l01-frame-markdown", version: 1 },
     frame_id: frame.id,
+    frame_version_id: revision.version_ids.frame,
     base_revision_id: revision.id,
     base_revision_number: revision.number,
     documents: {
@@ -213,13 +266,26 @@ function manifestFor(frame, revision, frameSnapshot, discoverySnapshot) {
       id: item.id,
       version_id: revision.version_ids.discovery_items.find((entry) => entry.discovery_item_id === item.id).version_id,
     })),
+    ...(includeDispositionBindings && frame.disposition_boundaries != null ? {
+      disposition_boundaries: frame.disposition_boundaries.map((item, index) => ({
+        source_label: `DB-${String(index + 1).padStart(3, "0")}`,
+        id: item.id,
+        version_id: revision.version_ids.disposition_boundaries.find((entry) => entry.disposition_boundary_id === item.id).version_id,
+      })),
+      case_dispositions: frame.case_dispositions.map((item, index) => ({
+        source_label: `CD-${String(index + 1).padStart(3, "0")}`,
+        id: item.id,
+        version_id: revision.version_ids.case_dispositions.find((entry) => entry.case_disposition_id === item.id).version_id,
+      })),
+    } : {}),
   };
 }
 
 function prepareRequest(state, revision, frame, options = {}) {
-  const frameDocument = snapshot("frame.md", options.frameMarkdown ?? renderL01FrameMarkdown(frame));
+  const renderedFrame = options.renderedFrame ?? frameWithVersions(frame, revision);
+  const frameDocument = snapshot("frame.md", options.frameMarkdown ?? renderL01FrameMarkdown(renderedFrame));
   const discoveryDocument = snapshot(options.discoveryFilename ?? "discovery.md", options.discoveryMarkdown ?? renderL01DiscoveryMarkdown(frame));
-  const manifest = options.manifest ?? manifestFor(frame, revision, frameDocument, discoveryDocument);
+  const manifest = options.manifest ?? manifestFor(frame, revision, frameDocument, discoveryDocument, options);
   const manifestBytes = Buffer.from(JSON.stringify(manifest));
   return {
     protocol,
@@ -285,10 +351,20 @@ async function exerciseScopeAndPreparation(state, label, { exhaustive = false } 
   const currentRequest = prepareRequest(state, created.json.result.revision, frame);
   const current = await invoke(state.entrypoint, state.root, currentRequest);
   assert.equal(current.code, 0, JSON.stringify(current.json));
-  assert.equal(current.json.result.status, "prepared");
+  assert.equal(current.json.result.status, "prepared", JSON.stringify(current.json));
   assert.equal(current.json.result.base_current, true);
   assert.deepEqual(current.json.result.structural_diff, { additions: [], changes: [], removals: [] });
+  assert.equal(current.json.result.absent_in_legacy, false);
+  assert.equal(current.json.result.legacy_disposition_state, "present");
+  assert.equal(current.json.result.requires_semantic_reconcile, true);
+  assert.equal(current.json.result.parsed.disposition_boundaries.length, 1);
+  assert.equal(current.json.result.parsed.case_dispositions.length, 2);
+  assert.equal(current.json.result.frame_match.match, "exact");
+  assert.deepEqual(current.json.result.disposition_boundary_matches.map((item) => item.match), ["exact"]);
+  assert.deepEqual(current.json.result.case_disposition_matches.map((item) => item.match), ["exact", "exact"]);
   assert.equal(current.json.result.mutation_performed, false);
+  assert.equal(current.json.result.watch_started, false);
+  assert.equal(current.json.result.rename_performed, false);
   assert.equal(current.json.result.writeback_performed, false);
   assert.deepEqual(await ownerCounts(state), beforePrepare);
 
@@ -306,6 +382,12 @@ async function exerciseScopeAndPreparation(state, label, { exhaustive = false } 
 
   if (exhaustive) {
     const beforeExhaustivePreparation = await ownerCounts(state);
+    const discoveryMap = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
+      discoveryFilename: "discovery-map.md",
+    }));
+    assert.equal(discoveryMap.code, 0, JSON.stringify(discoveryMap.json));
+    assert.equal(discoveryMap.json.result.selected_discovery_filename, "discovery-map.md");
+
     const addedFrame = structuredClone(frame);
     addedFrame.discovery.push({
       id: ids.discoveryAdded,
@@ -323,6 +405,59 @@ async function exerciseScopeAndPreparation(state, label, { exhaustive = false } 
     assert.equal(addition.code, 0, JSON.stringify(addition.json));
     assert.equal(addition.json.result.status, "prepared");
     assert.deepEqual(addition.json.result.structural_diff.additions.map((item) => item.display_label), ["AT-003"]);
+
+    const absentFrame = structuredClone(frame);
+    delete absentFrame.disposition_boundaries;
+    delete absentFrame.case_dispositions;
+    const absent = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
+      frameMarkdown: renderL01FrameMarkdown(absentFrame),
+    }));
+    assert.equal(absent.code, 0, JSON.stringify(absent.json));
+    assert.equal(absent.json.result.status, "prepared");
+    assert.equal(absent.json.result.absent_in_legacy, true);
+    assert.equal(absent.json.result.legacy_disposition_state, "absent_in_legacy");
+    assert.equal(absent.json.result.requires_semantic_reconcile, true);
+    assert.deepEqual(absent.json.result.parsed.disposition_boundaries, []);
+    assert.deepEqual(absent.json.result.structural_diff.removals.filter((item) => item.disposition_boundary_id != null), [{ disposition_boundary_id: ids.boundary }]);
+    assert.deepEqual(absent.json.result.structural_diff.removals.filter((item) => item.case_disposition_id != null).map((item) => item.case_disposition_id), [ids.pendingDisposition, ids.noCaseDisposition]);
+
+    const changedDispositionFrame = frameWithVersions(frame, created.json.result.revision);
+    changedDispositionFrame.disposition_boundaries[0].title = "Edited but manifest-bound boundary";
+    changedDispositionFrame.case_dispositions[0].result_summary = "Edited but manifest-bound result";
+    const changedDisposition = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
+      renderedFrame: changedDispositionFrame,
+    }));
+    assert.equal(changedDisposition.code, 0, JSON.stringify(changedDisposition.json));
+    assert.deepEqual(changedDisposition.json.result.disposition_boundary_matches.map((item) => item.match), ["exact"]);
+    assert.deepEqual(changedDisposition.json.result.case_disposition_matches.map((item) => item.match), ["exact", "exact"]);
+    assert.equal(changedDisposition.json.result.structural_diff.changes.some((item) => item.path === `disposition_boundaries.${ids.boundary}.title`), true);
+    assert.equal(changedDisposition.json.result.structural_diff.changes.some((item) => item.path === `case_dispositions.${ids.pendingDisposition}.result_summary`), true);
+
+    const addedDispositionFrame = frameWithVersions(frame, created.json.result.revision);
+    addedDispositionFrame.disposition_boundaries.push({
+      id: ids.boundaryAdded, version_id: ids.addedBoundaryVersion, display_label: "DB-002", display_order: 1,
+      title: "Unbound addition", closure: "open", disposition_ids: [ids.addedDisposition],
+    });
+    addedDispositionFrame.case_dispositions.push({
+      id: ids.addedDisposition, version_id: ids.addedDispositionVersion, boundary_id: ids.boundaryAdded,
+      result_summary: "Unbound disposition addition", classification_state: "pending_classification",
+      pending_reason: "No manifest identity exists.", resume_condition: "Semantic owner classifies it.",
+    });
+    const addedDisposition = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
+      renderedFrame: addedDispositionFrame,
+    }));
+    assert.equal(addedDisposition.code, 0, JSON.stringify(addedDisposition.json));
+    assert.equal(addedDisposition.json.result.disposition_boundary_matches.at(-1).match, "unmatched");
+    assert.equal(addedDisposition.json.result.case_disposition_matches.at(-1).match, "unmatched");
+    assert.equal(addedDisposition.json.result.structural_diff.additions.some((item) => item.source_label === "DB-002"), true);
+    assert.equal(addedDisposition.json.result.structural_diff.additions.some((item) => item.source_label === "CD-003"), true);
+
+    const ambiguous = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
+      includeDispositionBindings: false,
+    }));
+    assert.equal(ambiguous.code, 0, JSON.stringify(ambiguous.json));
+    assert.deepEqual(ambiguous.json.result.disposition_boundary_matches.map((item) => item.match), ["ambiguous"]);
+    assert.deepEqual(ambiguous.json.result.case_disposition_matches.map((item) => item.match), ["ambiguous", "ambiguous"]);
 
     const removedFrame = { ...structuredClone(frame), discovery: [structuredClone(frame.discovery[1])] };
     const removal = await invoke(state.entrypoint, state.root, prepareRequest(state, created.json.result.revision, frame, {
@@ -414,14 +549,17 @@ async function exerciseScopeAndPreparation(state, label, { exhaustive = false } 
   };
   const currentRead = await invoke(state.entrypoint, state.root, readRequest);
   assert.equal(currentRead.code, 0, JSON.stringify(currentRead.json));
-  assert.equal(currentRead.json.result.frame.hidden_reference_count, 3);
+  assert.equal(currentRead.json.result.frame.hidden_reference_count, 4);
   assert.deepEqual(currentRead.json.result.frame.case_links, []);
   assert.deepEqual(currentRead.json.result.frame.discovery[0].dependencies, []);
+  assert.equal(JSON.stringify(currentRead.json).includes(ids.caseB), false);
+  assert.equal(currentRead.json.result.frame.case_dispositions[0].case_id, undefined);
+  assert.equal(currentRead.json.result.frame.case_dispositions[0].case_operation_id, undefined);
 
   const historical = await invoke(state.entrypoint, state.root, { ...readRequest, revision_number: 2 });
   assert.equal(historical.code, 0, JSON.stringify(historical.json));
   assert.equal(historical.json.result.frame.hidden_authority_scope_count, 2);
-  assert.equal(historical.json.result.frame.hidden_reference_count, 3);
+  assert.equal(historical.json.result.frame.hidden_reference_count, 4);
   assert.deepEqual(historical.json.result.frame.authority_scope_namespace_ids, [state.initialized.namespace.id]);
 
   const discoveryRead = await invoke(state.entrypoint, state.root, {
@@ -437,7 +575,7 @@ async function exerciseScopeAndPreparation(state, label, { exhaustive = false } 
   });
   assert.equal(discoveryRead.code, 0, JSON.stringify(discoveryRead.json));
   assert.equal(discoveryRead.json.result.hidden_authority_scope_count, 2);
-  assert.equal(discoveryRead.json.result.hidden_reference_count, 3);
+  assert.equal(discoveryRead.json.result.hidden_reference_count, 4);
 }
 
 test("source entrypoint prepares current/stale legacy diffs, rejects malformed snapshots, and projects scoped reads without mutation", async () => {
