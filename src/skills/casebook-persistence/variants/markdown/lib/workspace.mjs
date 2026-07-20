@@ -1888,7 +1888,8 @@ async function parseInterchange(request) {
   const fileAuthority = authority.marker.profile === FILE_AUTHORITY_PROFILE;
   const workspace = fileAuthority ? await fileAuthorityRecords(authority) : await loadWorkspace(request);
   const records = fileAuthority ? workspace.records : await parseRecords(workspace);
-  const requiresCaseReconcile = records.some((item) => item.owner_kind === "case");
+  const caseOwnerIds = records.filter((item) => item.owner_kind === "case").map((item) => item.id).sort();
+  const requiresCaseReconcile = caseOwnerIds.length > 0;
   const selectedDiscoveryFilenames = fileAuthority
     ? await Promise.all(records.filter((item) => item.owner_kind === "frame").map(async (item) => {
         const selected = await loadFileAuthorityFrame(request, item.id);
@@ -1903,10 +1904,16 @@ async function parseInterchange(request) {
     identity_basis: fileAuthority ? "verified_frontmatter_and_selected_owner_generation" : "verified_frontmatter_and_manifest",
     semantic_evidence: {
       kind: "case.semantic_evidence",
-      affected_visible_ids: records.filter((item) => item.owner_kind === "case").map((item) => item.id).sort(),
+      affected_visible_ids: caseOwnerIds,
       violations: [],
       requires_case_reconcile: requiresCaseReconcile,
       mutation_performed: false,
+      owner_reconciliation_handoff: requiresCaseReconcile ? {
+        required: true,
+        handoff_kind: "owner_reconciliation",
+        owners: caseOwnerIds.map((id) => ({ id, kind: "case", operation: "case.commit_revision" })),
+        automatic_mutation_performed: false,
+      } : null,
     },
     reconcile_disposition: requiresCaseReconcile ? "requires-explicit-case-reconcile" : "not_applicable",
     requires_case_reconcile: requiresCaseReconcile,
