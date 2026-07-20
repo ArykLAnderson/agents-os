@@ -16,4 +16,4 @@ Check every Case for:
 - content that still fits the title, summary, and scope;
 - cohesion across subject, authority, lifecycle, retrieval, and distribution boundaries.
 
-Repair derived indexes and mechanical references when safe. Never silently change semantic meaning, classification, or authority.
+Repair derived indexes and mechanical references only through a supported typed operation on the already selected authority. Never edit authority files as a repair shortcut, fall back to another variant, or silently change semantic meaning, classification, provenance, or human authority.
