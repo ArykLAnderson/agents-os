@@ -60,7 +60,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     discovery_dependencies: "typed stable references",
     frame_query: "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     common_subset: "typed resolve/list/bounded lexical search over case/frame normalized records",
-    markdown_profile: "synthetic interchange only; full file-authoritative operation remains L-05",
+    markdown_profile: "exclusive Markdown installation with full typed reduced common operations, digest-guarded atomic Case replacement, manifest-selected coherent Frame/Discovery/disposition generations, deterministic interchange, and explicit omitted SQLite guarantees",
     exact_identity: "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     frame_authority_scope: "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
     legacy_reconciliation: "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",

@@ -666,7 +666,7 @@ test("dual mode, hot-switch, ambiguous identity, dual Discovery files, and unsup
     await writeFile(markerPath, canonicalJson({ ...written.workspaceMarker, authority_mode: "sqlite" }));
     const switched = await invoke(markdownEntrypoint, root, markdownRequest("common.list", workspaceRoot, written.workspaceMarker, { owner_kinds: ["frame"] }));
     assert.equal(switched.exitCode, 2);
-    assert.equal(switched.json.failure.code, "markdown.workspace_unavailable");
+    assert.equal(switched.json.failure.code, "authority_switch_requires_migration");
     await writeFile(markerPath, canonicalJson(written.workspaceMarker));
 
     await writeFile(markerPath, "x".repeat(256 * 1024 + 1));
@@ -708,13 +708,23 @@ test("dual mode, hot-switch, ambiguous identity, dual Discovery files, and unsup
     await rm(path.join(path.dirname(selected), "discovery-map.md"));
 
     const before = sha256(await readFile(manifestPath));
-    const unsupportedBreadth = ["case.history", "events.read", "checkpoint.read", "snapshot.create", "global.search"];
-    for (const operation of [...unsupportedBreadth, "frame.commit_revision", "interchange.export"]) {
+    const unsupportedBreadth = [
+      ["case.history", "revisions"],
+      ["events.read", "events"],
+      ["checkpoint.read", "checkpoints"],
+      ["snapshot.create", "snapshots"],
+      ["global.search", "namespace_global_queries"],
+    ];
+    for (const [operation, capability] of unsupportedBreadth) {
       const rejected = await invoke(markdownEntrypoint, root, markdownRequest(operation, workspaceRoot, written.workspaceMarker));
       assert.equal(rejected.exitCode, 2, operation);
-      assert.equal(rejected.json.failure.code, "not_yet_implemented", operation);
+      assert.equal(rejected.json.failure.code, "markdown.capability_unsupported", operation);
+      assert.equal(rejected.json.failure.evidence.capability, capability, operation);
     }
-    for (const operation of [...unsupportedBreadth, "interchange.parse"]) {
+    const markdownExport = await invoke(markdownEntrypoint, root, markdownRequest("interchange.export", workspaceRoot, written.workspaceMarker, { owner_ids: [ids.frame] }));
+    assert.equal(markdownExport.exitCode, 0, markdownExport.stderr);
+    assert.equal(markdownExport.json.result.authority_selected, false);
+    for (const operation of [...unsupportedBreadth.map(([name]) => name), "interchange.parse"]) {
       const rejected = await invoke(sqliteEntrypoint, root, {
         protocol,
         operation,

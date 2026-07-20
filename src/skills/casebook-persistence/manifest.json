@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "98f1e74c042b5219b14d17d172667538b14e029d6a59f4147756528624b3deb3"
+    "sha256": "292895df028d2c6eb8e553851cf282be09620f6c99beccda4b0514f28d4f5a21"
   },
   "entrypoints": [
     {
@@ -89,7 +89,7 @@
     "discovery_dependencies": "typed stable references",
     "frame_query": "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
-    "markdown_profile": "synthetic interchange only; full file-authoritative operation remains L-05",
+    "markdown_profile": "exclusive Markdown installation with full typed reduced common operations, digest-guarded atomic Case replacement, manifest-selected coherent Frame/Discovery/disposition generations, deterministic interchange, and explicit omitted SQLite guarantees",
     "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
     "legacy_reconciliation": "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
@@ -100,7 +100,6 @@
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "events/checkpoints/snapshots/global-search",
-    "full-atomic-markdown-write-and-generation-selection",
     "migration",
     "backup",
     "restore",
@@ -129,7 +128,7 @@
       "id": "shared-configuration",
       "path": "shared/config.mjs",
       "kind": "module",
-      "sha256": "3d20a70ed5e8c23a2f334a2bc390c67d99d03abd4d9f3ea5a1795943e6d608c9"
+      "sha256": "30869f26e0cd13fd5bffcf16dce226bd0927f1e2aa3af4573661bb5a6fc183ac"
     },
     {
       "id": "shared-manifest",
@@ -147,7 +146,7 @@
       "id": "markdown-variant",
       "path": "variants/markdown/variant.json",
       "kind": "variant_manifest",
-      "sha256": "052d5d7cebdb58c20d6261eeb387676cc4b04066828ef394fc40f75e30c7d86d"
+      "sha256": "722dbf0683f7548b12818d0cd5ba77e6a8baddd4a970c0de5aeb240d5d9068a1"
     },
     {
       "id": "markdown-entrypoint",
@@ -159,13 +158,13 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "10d98cfd961aa9813eb0857907c9c75e45e2a072b79ddc7c72ac970008c61e0f"
+      "sha256": "5033fafb20bf3f69bc14d525411a6037bc5b5751a24ffd85406a30d4d2c0fbaa"
     },
     {
       "id": "markdown-interchange",
       "path": "variants/markdown/lib/interchange.mjs",
       "kind": "module",
-      "sha256": "8de8a59090eed896a9965cbc4041a72441037dc3697800d08a3fefe15f320941"
+      "sha256": "5f009309c2d9b9d2bdfc79bbdc87f7e0d697e98bdc61bfad40a8fc4e98559519"
     },
     {
       "id": "sqlite-entrypoint",
@@ -231,7 +230,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "41897722a8018a7e526fec6c7200cb29df978b3f6b8dd2fea86f42e333d36697"
+      "sha256": "302d972490a720bcbd6c75b7403c8af74e81ac419f8a683c8aa5782986d97284"
     }
   ]
 }
