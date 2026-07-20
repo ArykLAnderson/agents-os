@@ -1,10 +1,17 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { validateAuthorityConfiguration } from "../../../../shared/config.mjs";
 import { failure, RETRY_DISPOSITIONS, success, unsupported } from "../../../../shared/protocol.mjs";
 import { invokeCaseOperation } from "../case/index.mjs";
 import { invokeFrameOperation } from "../frame/index.mjs";
-import { invokeSubstrateOperation } from "../substrate/index.mjs";
+import {
+  inspectStore,
+  invokeSubstrateOperation,
+  readStoreOperationReceipt,
+  settleStoreOperationReceipt,
+} from "../substrate/index.mjs";
+import { selectSqliteBinary } from "../substrate/diagnostics.mjs";
 import { canonicalJson, mechanicalDigest } from "../substrate/mechanical.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
@@ -23,6 +30,14 @@ const REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "operation_id", "store_id", "context",
   "authority_claim", "mode", "audience", "destination", "owners", "document_trace", "configuration",
 ]);
+const FINALIZE_REQUEST_FIELDS = new Set([
+  "protocol", "operation", "request_version", "operation_id", "store_id", "context",
+  "authority_claim", "destination", "expected", "configuration",
+]);
+const FINALIZE_EXPECTED_FIELDS = new Set([
+  "observation_fence", "manifest_digest", "bundle_digest", "destination_digest",
+]);
+const FINALIZATION_MARKER = ".casebook-finalization.json";
 const CONTEXT_FIELDS = new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]);
 const AUTHORITY_FIELDS = new Set(["human_authorized", "acting_role", "authority_basis", "human_confirmation_reference", "causation", "correlation", "session"]);
 const OWNER_FIELDS = new Set(["kind", "id", "requirement", "revision_id", "evidence_selection"]);
@@ -121,6 +136,20 @@ function validateDocumentTrace(trace) {
   return structuredClone(trace);
 }
 
+function validateDestination(destination) {
+  exact(destination, DESTINATION_FIELDS, "destination");
+  if (!DESTINATIONS.has(destination.classification)) throw new ExportError("export.destination_invalid", "Destination classification is invalid.");
+  for (const key of ["temporary_path", "final_path"]) {
+    if (!nonEmpty(destination[key], 4_096) || !path.isAbsolute(destination[key])) throw new ExportError("export.destination_invalid", `${key} must be an explicit absolute path.`);
+  }
+  const temporary = path.resolve(destination.temporary_path);
+  const final = path.resolve(destination.final_path);
+  if (temporary === final || temporary.startsWith(`${final}${path.sep}`) || final.startsWith(`${temporary}${path.sep}`)) {
+    throw new ExportError("export.destination_invalid", "Temporary and final destinations must be distinct, non-overlapping paths.");
+  }
+  return { temporary, final };
+}
+
 function validateRequest(request) {
   exact(request, REQUEST_FIELDS, "request");
   if (request.request_version !== 1) throw new ExportError("export.request_invalid", "request_version must be 1.");
@@ -139,17 +168,9 @@ function validateRequest(request) {
   }
   if (!MODES.has(request.mode)) throw new ExportError("export.request_invalid", "mode must be current or historical.");
   if (!AUDIENCES.has(request.audience)) throw new ExportError("export.request_invalid", "audience is invalid.");
-  exact(request.destination, DESTINATION_FIELDS, "destination");
+  const { temporary, final } = validateDestination(request.destination);
   const destinationAudiences = DESTINATIONS.get(request.destination.classification);
   if (!destinationAudiences?.has(request.audience)) throw new ExportError("export.destination_invalid", "Destination classification is incompatible with the requested audience.");
-  for (const key of ["temporary_path", "final_path"]) {
-    if (!nonEmpty(request.destination[key], 4_096) || !path.isAbsolute(request.destination[key])) throw new ExportError("export.destination_invalid", `${key} must be an explicit absolute path.`);
-  }
-  const temporary = path.resolve(request.destination.temporary_path);
-  const final = path.resolve(request.destination.final_path);
-  if (temporary === final || temporary.startsWith(`${final}${path.sep}`) || final.startsWith(`${temporary}${path.sep}`)) {
-    throw new ExportError("export.destination_invalid", "Temporary and final destinations must be distinct, non-overlapping paths.");
-  }
   if (!Array.isArray(request.owners) || request.owners.length < 1 || request.owners.length > MAX_OWNERS) {
     throw new ExportError("export.request_invalid", `owners must contain 1 to ${MAX_OWNERS} selections.`);
   }
@@ -589,10 +610,379 @@ async function buildPreflight(request) {
   });
 }
 
-export async function invokeExportOperation(request) {
-  if (request.operation !== "export.preflight") return unsupported(request.operation);
+function validateFinalizeRequest(request) {
+  exact(request, FINALIZE_REQUEST_FIELDS, "request");
+  if (request.request_version !== 1 || request.operation !== "export.finalize") {
+    throw new ExportError("export.request_invalid", "export.finalize requires request_version 1.");
+  }
+  if (!nonEmpty(request.operation_id, 256) || !new RegExp(`^store:${UUID}$`).test(request.store_id ?? "")) {
+    throw new ExportError("export.request_invalid", "A bounded operation_id and exact store identity are required.");
+  }
+  exact(request.context, CONTEXT_FIELDS, "context");
+  if (!new RegExp(`^view:${UUID}$`).test(request.context.view_id ?? "")
+    || !new RegExp(`^view-policy:${UUID}$`).test(request.context.view_policy_revision_id ?? "")
+    || !nonEmpty(request.context.purpose)
+    || (request.context.requested_audience_ceiling != null && request.context.requested_audience_ceiling !== "private")) {
+    throw new ExportError("export.view_invalid_or_unavailable", "Finalization requires one exact private active view context.");
+  }
+  exact(request.authority_claim, AUTHORITY_FIELDS, "authority_claim");
+  if (request.authority_claim.human_authorized !== true
+    || !nonEmpty(request.authority_claim.acting_role)
+    || !nonEmpty(request.authority_claim.authority_basis)) {
+    throw new ExportError("export.human_authority_required", "Finalization requires a separate explicit human authorization claim.");
+  }
+  const { temporary, final } = validateDestination(request.destination);
+  exact(request.expected, FINALIZE_EXPECTED_FIELDS, "expected");
+  if (!Number.isInteger(request.expected.observation_fence) || request.expected.observation_fence < 0
+    || !DIGEST.test(request.expected.manifest_digest ?? "")
+    || !DIGEST.test(request.expected.bundle_digest ?? "")
+    || !DIGEST.test(request.expected.destination_digest ?? "")) {
+    throw new ExportError("export.request_invalid", "Finalization expected bindings must contain one fence and lowercase SHA-256 digests.");
+  }
+  return { temporary, final };
+}
+
+function finalizationRequestDigest(request) {
+  return mechanicalDigest({
+    protocol: request.protocol,
+    operation: request.operation,
+    request_version: request.request_version,
+    operation_id: request.operation_id,
+    store_id: request.store_id,
+    context: request.context,
+    authority_claim: request.authority_claim,
+    destination: request.destination,
+    expected: request.expected,
+  });
+}
+
+async function prepareFinalizationStore(request) {
+  let configuration;
   try {
-    return await buildPreflight(request);
+    configuration = validateAuthorityConfiguration(request.configuration);
+  } catch {
+    throw new ExportError("export.store_unavailable", "Finalization requires explicitly selected SQLite authority.");
+  }
+  if (configuration.authority_mode !== "sqlite") {
+    throw new ExportError("export.store_unavailable", "Finalization requires explicitly selected SQLite authority.");
+  }
+  const selected = await selectSqliteBinary(configuration.sqlite.sqlite_bin);
+  const state = await inspectStore(selected.path, configuration.sqlite.store_path);
+  if (state.status !== "available" || state.metadata.store_id !== request.store_id) {
+    throw new ExportError("export.store_unavailable", "The exact export store is unavailable.");
+  }
+  return { binary: selected.path, storePath: configuration.sqlite.store_path, state };
+}
+
+function replayFinalizationReceipt(receipt, requestDigest) {
+  if (!receipt) return null;
+  if (receipt.operation_kind !== "export.finalize" || receipt.request_digest !== requestDigest) {
+    return failure("export.idempotency_mismatch", "operation_id is already settled for a different canonical request.", {
+      failureClass: "idempotency_mismatch",
+      retryDisposition: RETRY_DISPOSITIONS.NEVER,
+      evidence: { operation_id: receipt.operation_id, settled_kind: receipt.operation_kind },
+    });
+  }
+  return success("export.finalize", { ...receipt.result, idempotent_replay: true, receipt });
+}
+
+function expectedBundleFiles(manifest) {
+  return [
+    ...(manifest.owners ?? []).map((owner) => owner.file).filter(Boolean),
+    ...(manifest.document_trace?.file ? [manifest.document_trace.file] : []),
+  ];
+}
+
+async function listBundleFiles(root, relative = "") {
+  const entries = await readdir(path.join(root, relative), { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const item = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isSymbolicLink() || (!entry.isDirectory() && !entry.isFile())) {
+      throw new ExportError("export.bundle_verification_failed", "The bundle contains a non-regular path.");
+    }
+    if (entry.isDirectory()) files.push(...await listBundleFiles(root, item));
+    else files.push(item);
+  }
+  return files.sort(codepointCompare);
+}
+
+function finalizationMarker(request, requestDigest) {
+  const core = {
+    marker_schema: "casebook-export-finalization@1",
+    operation_id: request.operation_id,
+    store_id: request.store_id,
+    view_id: request.context.view_id,
+    view_policy_revision_id: request.context.view_policy_revision_id,
+    observation_fence: request.expected.observation_fence,
+    manifest_digest: request.expected.manifest_digest,
+    bundle_digest: request.expected.bundle_digest,
+    destination_digest: request.expected.destination_digest,
+    request_digest: requestDigest,
+    authority: { finalization: "human_authorized", publication: "not_granted", canonical_mutation: "not_granted" },
+  };
+  return { ...core, digest: mechanicalDigest(core) };
+}
+
+async function verifyFinalizationMarker(root, expectedMarker) {
+  let observed;
+  try {
+    observed = JSON.parse(await readFile(path.join(root, FINALIZATION_MARKER), "utf8"));
+  } catch {
+    return false;
+  }
+  const { digest, ...core } = observed;
+  return digest === mechanicalDigest(core) && canonicalJson(observed) === canonicalJson(expectedMarker);
+}
+
+async function verifyBundle(root, request, { marker = null, requirePrivate = false } = {}) {
+  const rootInfo = await lstat(root).catch(() => null);
+  if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) return { ok: false, code: "verified_preflight_bundle_unavailable" };
+  if (requirePrivate && (rootInfo.mode & 0o077) !== 0) return { ok: false, code: "private_preflight_permissions_invalid" };
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(path.join(root, "manifest.json"), "utf8"));
+  } catch {
+    return { ok: false, code: "manifest_unavailable" };
+  }
+  const { digest: manifestDigest, bundle_digest: recordedBundleDigest, ...bundleManifestCore } = manifest;
+  if (manifestDigest !== mechanicalDigest({ ...bundleManifestCore, bundle_digest: recordedBundleDigest })
+    || manifestDigest !== request.expected.manifest_digest) return { ok: false, code: "manifest_digest_mismatch" };
+  if (recordedBundleDigest !== request.expected.bundle_digest) return { ok: false, code: "bundle_digest_mismatch" };
+  if (manifest.observation_fence !== request.expected.observation_fence) return { ok: false, code: "observation_fence_mismatch" };
+  if (manifest.applied_policy?.view_id !== request.context.view_id
+    || manifest.applied_policy?.view_policy_revision_id !== request.context.view_policy_revision_id) return { ok: false, code: "policy_binding_mismatch" };
+  if (manifest.destination_classification !== request.destination.classification) return { ok: false, code: "destination_classification_mismatch" };
+  if (manifest.blockers?.length || manifest.currentness === "not_claimed_blocked") return { ok: false, code: "preflight_not_ready" };
+  const descriptors = expectedBundleFiles(manifest);
+  for (const descriptor of descriptors) {
+    const filePath = path.join(root, descriptor.path);
+    const info = await lstat(filePath).catch(() => null);
+    if (!info?.isFile() || info.isSymbolicLink() || (requirePrivate && (info.mode & 0o077) !== 0)) {
+      return { ok: false, code: "bundle_file_invalid" };
+    }
+    const bytes = await readFile(filePath);
+    if (bytes.length !== descriptor.bytes || sha256(bytes) !== descriptor.sha256) return { ok: false, code: "bundle_file_digest_mismatch" };
+  }
+  const computedBundleDigest = mechanicalDigest({ manifest: bundleManifestCore, files: descriptors });
+  if (computedBundleDigest !== request.expected.bundle_digest) return { ok: false, code: "bundle_digest_mismatch" };
+  let files;
+  try {
+    files = await listBundleFiles(root);
+  } catch (error) {
+    return { ok: false, code: error instanceof ExportError ? "bundle_path_invalid" : "bundle_unavailable" };
+  }
+  const allowed = ["manifest.json", ...descriptors.map((file) => file.path), ...(marker ? [FINALIZATION_MARKER] : [])].sort(codepointCompare);
+  if (canonicalJson(files) !== canonicalJson(allowed)) return { ok: false, code: "bundle_membership_mismatch" };
+  if (marker && !await verifyFinalizationMarker(root, marker)) return { ok: false, code: "finalization_marker_mismatch" };
+  return { ok: true, manifest, descriptors };
+}
+
+function controlledFinalizationBoundary(name) {
+  const fault = process.env.CASEBOOK_PERSISTENCE_TEST_FAULT;
+  if (fault === name) process.kill(process.pid, "SIGKILL");
+}
+
+async function removeTemporary(temporary) {
+  await rm(temporary, { recursive: true, force: true });
+  return !await pathExists(temporary);
+}
+
+function resultCore(request, requestDigest, terminal, finalization) {
+  return {
+    status: "settled",
+    terminal,
+    bindings: {
+      operation_id: request.operation_id,
+      store_id: request.store_id,
+      view_id: request.context.view_id,
+      view_policy_revision_id: request.context.view_policy_revision_id,
+      observation_fence: request.expected.observation_fence,
+      manifest_digest: request.expected.manifest_digest,
+      bundle_digest: request.expected.bundle_digest,
+      destination_digest: request.expected.destination_digest,
+      request_digest: requestDigest,
+    },
+    finalization,
+    authority: { finalization: "human_authorized", publication: "not_granted", canonical_mutation: "not_granted" },
+    canonical_owner_mutation_performed: false,
+    publication_performed: false,
+  };
+}
+
+async function settleFinalization(prepared, request, requestDigest, core) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await readStoreOperationReceipt(prepared.binary, prepared.storePath, request.operation_id);
+    const replay = replayFinalizationReceipt(existing, requestDigest);
+    if (replay) return replay;
+    const state = await inspectStore(prepared.binary, prepared.storePath);
+    if (state.status !== "available" || state.metadata.store_id !== request.store_id) break;
+    const settledAt = new Date().toISOString();
+    const receiptCoreDigest = mechanicalDigest(core);
+    const receiptSummary = {
+      operation_id: request.operation_id,
+      operation_kind: "export.finalize",
+      store_id: request.store_id,
+      request_digest: requestDigest,
+      outcome: core.terminal.outcome,
+      result_digest: receiptCoreDigest,
+      settled_at: settledAt,
+      failure_class: core.terminal.failure_class,
+      retry_disposition: core.terminal.retry_disposition,
+      operation_fence: state.operation_fence + 1,
+      view_policy_revision_id: request.context.view_policy_revision_id,
+    };
+    const result = { ...core, idempotent_replay: false, receipt: receiptSummary };
+    try {
+      const settled = await settleStoreOperationReceipt(prepared.binary, prepared.storePath, {
+        receipt: receiptSummary,
+        authorityClaim: request.authority_claim,
+        result,
+        expectedOperationFence: state.operation_fence,
+        viewPolicyRevisionId: request.context.view_policy_revision_id,
+      });
+      if (settled?.operation_kind === "export.finalize" && settled.request_digest === requestDigest) {
+        controlledFinalizationBoundary("export_after_receipt_before_response");
+        return success("export.finalize", settled.result);
+      }
+    } catch {
+      // A concurrent receipt or fence advance is reconciled at the top of the loop.
+    }
+  }
+  return failure("export.receipt_unavailable", "Finalization reached a terminal state but its durable receipt could not be settled.", {
+    failureClass: "receipt_unavailable",
+    retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+    correctiveGuidance: "Look up this exact operation receipt before any retry.",
+    evidence: { operation_id: request.operation_id, final_output_path: request.destination.final_path },
+  });
+}
+
+async function blockedFinalization(prepared, request, requestDigest, code, { cleanup = true } = {}) {
+  const cleaned = cleanup ? await removeTemporary(request.destination.temporary_path) : !await pathExists(request.destination.temporary_path);
+  const core = resultCore(request, requestDigest, {
+    outcome: "blocked",
+    code,
+    failure_class: code,
+    retry_disposition: RETRY_DISPOSITIONS.NEVER,
+    canonical_state_effect: "none",
+    destination_effect: "none",
+  }, {
+    atomicity: code === "non_atomic_destination_requires_separate_authorization" ? "non_atomic_declared_before_effect" : "not_performed",
+    effect_performed: false,
+    recovered_after_interruption: false,
+    temporary_output: { path: request.destination.temporary_path, cleaned },
+    final_output: { path: request.destination.final_path, created: false },
+    non_atomic_authorization: code === "non_atomic_destination_requires_separate_authorization"
+      ? "separate_explicit_authorization_and_cleanup_plan_required"
+      : "not_applicable",
+  });
+  return settleFinalization(prepared, request, requestDigest, core);
+}
+
+async function finalizeExport(request) {
+  validateFinalizeRequest(request);
+  const requestDigest = finalizationRequestDigest(request);
+  const prepared = await prepareFinalizationStore(request);
+
+  // Receipt-first: a terminal receipt wins before destination inspection or any
+  // attempt to repeat the external filesystem effect.
+  const existing = await readStoreOperationReceipt(prepared.binary, prepared.storePath, request.operation_id);
+  const replay = replayFinalizationReceipt(existing, requestDigest);
+  if (replay) return replay;
+
+  const destinationDigest = mechanicalDigest(request.destination);
+  if (destinationDigest !== request.expected.destination_digest) {
+    return blockedFinalization(prepared, request, requestDigest, "destination_digest_mismatch");
+  }
+
+  const marker = finalizationMarker(request, requestDigest);
+  const finalExists = await pathExists(request.destination.final_path);
+  const temporaryExists = await pathExists(request.destination.temporary_path);
+  let recovered = false;
+  if (finalExists) {
+    const finalVerification = await verifyBundle(request.destination.final_path, request, { marker });
+    if (!finalVerification.ok) return blockedFinalization(prepared, request, requestDigest, "final_destination_conflict");
+    recovered = true;
+    if (temporaryExists) {
+      const temporaryVerification = await verifyBundle(request.destination.temporary_path, request, { requirePrivate: true });
+      if (temporaryVerification.ok) await removeTemporary(request.destination.temporary_path);
+    }
+  } else {
+    if (!temporaryExists) return blockedFinalization(prepared, request, requestDigest, "verified_preflight_bundle_unavailable");
+    const markerPath = path.join(request.destination.temporary_path, FINALIZATION_MARKER);
+    const markerPresent = await pathExists(markerPath);
+    const verification = await verifyBundle(request.destination.temporary_path, request, {
+      requirePrivate: true,
+      marker: markerPresent ? marker : null,
+    });
+    if (!verification.ok) return blockedFinalization(prepared, request, requestDigest, verification.code);
+
+    const policy = await currentCorpus(request, "case");
+    if (!policy?.ok) return blockedFinalization(prepared, request, requestDigest, "policy_binding_unavailable");
+
+    const finalParent = await realpath(path.dirname(request.destination.final_path)).catch(() => null);
+    const [temporaryInfo, finalParentInfo] = await Promise.all([
+      stat(request.destination.temporary_path).catch(() => null),
+      finalParent == null ? null : stat(finalParent).catch(() => null),
+    ]);
+    const atomicSupported = process.env.CASEBOOK_PERSISTENCE_TEST_FAULT !== "export_force_non_atomic_destination"
+      && temporaryInfo?.isDirectory() && finalParentInfo?.isDirectory() && temporaryInfo.dev === finalParentInfo.dev;
+    if (!atomicSupported) {
+      return blockedFinalization(prepared, request, requestDigest, "non_atomic_destination_requires_separate_authorization");
+    }
+
+    if (markerPresent) {
+      recovered = true;
+      if (!await verifyFinalizationMarker(request.destination.temporary_path, marker)) {
+        return blockedFinalization(prepared, request, requestDigest, "finalization_marker_conflict");
+      }
+    } else {
+      await writeFile(markerPath, `${canonicalJson(marker)}\n`, { mode: 0o600, flag: "wx" });
+    }
+    controlledFinalizationBoundary("export_after_intent_before_rename");
+    try {
+      await rename(request.destination.temporary_path, request.destination.final_path);
+    } catch {
+      const raced = await verifyBundle(request.destination.final_path, request, { marker });
+      if (!raced.ok) return blockedFinalization(prepared, request, requestDigest, "atomic_finalization_failed", { cleanup: false });
+      recovered = true;
+    }
+    controlledFinalizationBoundary("export_after_rename_before_receipt");
+  }
+
+  const finalVerification = await verifyBundle(request.destination.final_path, request, { marker });
+  if (!finalVerification.ok) {
+    return failure("export.final_verification_failed", "Atomic final output exists but failed exact post-effect verification.", {
+      failureClass: "final_output_uncertain",
+      retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+      correctiveGuidance: "Do not publish or delete the output. Look up the receipt and inspect the exact final destination.",
+      evidence: { operation_id: request.operation_id, final_output_path: request.destination.final_path },
+    });
+  }
+  const temporaryCleaned = !await pathExists(request.destination.temporary_path);
+  const core = resultCore(request, requestDigest, {
+    outcome: "finalized",
+    code: "atomic_finalization_completed",
+    failure_class: null,
+    retry_disposition: RETRY_DISPOSITIONS.NEVER,
+    canonical_state_effect: "none",
+    destination_effect: "atomic_directory_rename",
+  }, {
+    atomicity: "atomic_rename",
+    effect_performed: true,
+    recovered_after_interruption: recovered,
+    marker: { path: FINALIZATION_MARKER, digest: marker.digest },
+    temporary_output: { path: request.destination.temporary_path, cleaned: temporaryCleaned },
+    final_output: { path: request.destination.final_path, created: true, verified: true },
+    non_atomic_authorization: "not_applicable",
+  });
+  return settleFinalization(prepared, request, requestDigest, core);
+}
+
+export async function invokeExportOperation(request) {
+  if (!["export.preflight", "export.finalize"].includes(request.operation)) return unsupported(request.operation);
+  try {
+    return request.operation === "export.preflight" ? await buildPreflight(request) : await finalizeExport(request);
   } catch (error) {
     if (error instanceof ExportError) {
       return failure(error.code, error.message, {
@@ -601,10 +991,13 @@ export async function invokeExportOperation(request) {
         evidence: error.evidence,
       });
     }
-    return failure("export.preflight_unavailable", "Export preflight failed without exposing owner or destination state.", {
-      failureClass: "export.preflight_unavailable",
-      retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
-      evidence: {},
-    });
+    return failure(request.operation === "export.finalize" ? "export.finalization_unavailable" : "export.preflight_unavailable",
+      request.operation === "export.finalize"
+        ? "Export finalization failed without claiming a destination effect."
+        : "Export preflight failed without exposing owner or destination state.", {
+        failureClass: request.operation === "export.finalize" ? "export.finalization_unavailable" : "export.preflight_unavailable",
+        retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+        evidence: {},
+      });
   }
 }

@@ -18,6 +18,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "reconciliation_snapshot.finish",
   "impact.project",
   "export.preflight",
+  "export.finalize",
   "case.create",
   "case.commit_revision",
   "case.read",

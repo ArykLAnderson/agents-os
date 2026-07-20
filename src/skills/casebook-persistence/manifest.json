@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "964fc1296e689e6bc1593adbe562d07516f555b1a17d796de38821a363148bd3"
+    "sha256": "568dbdb5a068693f292e8d65e428b312240f3509aeda2d10244a068bb0fb0075"
   },
   "entrypoints": [
     {
@@ -54,6 +54,7 @@
     "reconciliation_snapshot.finish",
     "impact.project",
     "export.preflight",
+    "export.finalize",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -92,7 +93,8 @@
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
-      "view_policy.retire"
+      "view_policy.retire",
+      "export.finalize"
     ],
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
@@ -101,6 +103,7 @@
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "logical_export_preflight": "deterministic current/historical Case+Frame fragment aggregation under one exact active-policy observation fence with required/optional admission, dependency classification, private temporary rendering, integrity manifest/bundle digests, and no finalization or publication authority",
     "document_claim_trace": "Document-owned consequence classifications with mechanically verified claim text, trace, evidence-fragment membership, evidence and reader-locator digests; missing consequential evidence blocks preflight without semantic classification or Document mutation",
+    "export_finalization": "separately human-authorized exact binding of operation, active policy, observation fence, manifest, bundle, and destination digests; atomic directory rename when supported, explicit pre-effect non-atomic refusal, operation-bound marker, durable receipt-first recovery, and no publication or canonical-owner authority",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -152,7 +155,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "24291c1b0f78061906cff671a976b476096d1b48fa4d0debc9c77940057a9c23"
+      "sha256": "37c8e3802997d6d8c0d8852fea6e13e7f284f049b4a68eaefb98ad1b2918ebfa"
     },
     {
       "id": "shared-configuration",
@@ -200,7 +203,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "109808cfdb84ecb19963b42d2eded411593ba7650ae8ceef60cd7ed362ec345f"
+      "sha256": "eca991a9ca994a7397d9d8f5d4081bbaea5a6bd65f2c80140baac4018d9a5bfb"
     },
     {
       "id": "sqlite-diagnostics",
@@ -212,7 +215,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "a7f21bdc8e7c199f1eed53a64a5106823cbfd93e15b53c8f588ee550376f83c1"
+      "sha256": "bcc1b38147aac0644134a0200f1dec61ca35b3aa25799af3e92e8170d7418702"
     },
     {
       "id": "sqlite-identity-discovery",
@@ -260,13 +263,13 @@
       "id": "logical-export-preflight",
       "path": "variants/sqlite/lib/export/index.mjs",
       "kind": "module",
-      "sha256": "5a7819af0b16b0a56e4d298c1afa407c0f571341fcb8f44a1f0358500734f754"
+      "sha256": "1cce8722b96ecb6874d99f4738c1abc081c8f5005695c341bfbccbfd059a0058"
     },
     {
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "2b1e97d594520191e5a49184ab707077046478c37971d2e2e6ef7f39cadbe524"
+      "sha256": "90b39edd1c179d4967f30b79e49c3bd9a4bb13cb237c2eb03e3cbda6dd8ac260"
     },
     {
       "id": "sqlite-schema",
@@ -290,7 +293,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "f73ef949bc76b328ef0648b85039604d63c1859e4ffb7c53fe0c9683bb21fa85"
+      "sha256": "4b882262543c4d534af2c0cd385b697d9c33bee7e5f9be542c44cd7d962a52eb"
     }
   ]
 }
