@@ -38,7 +38,7 @@ These are condition-selected operations, not a fixed one-pass pipeline. New evid
 
 Blueprint may resolve an isolated design-local choice directly when accepted behavior is stable and the choice does not expose a broader decision cluster. When design work exposes multiple related human questions, missing behavior, consequential trade-offs, authority-dependent judgment, or uncertainty whose answers may reshape one another, create or resume a bounded Frame instead of interviewing piecemeal inside Blueprint.
 
-Frame owns the dependency-ordered interview and attention state. Ask one consequential question at a time, but accumulate answers and provisional implications through the bounded interview objective. Do not rewrite Cases, governing Contracts, or the candidate package after every answer. Persist working reality only at natural boundaries; when the interview objective resolves or reaches a coherent checkpoint, present the compact reconciled decision set, reconcile durable meaning into Cases as one cohesive batch, then resume Blueprint against those accepted revisions.
+Frame owns the dependency-ordered interview and attention state. Accumulate answers and provisional implications through the bounded interview objective. Do not rewrite Cases, governing Contracts, or the candidate package after every answer. Persist working reality only at natural boundaries; when the interview objective resolves or reaches a coherent checkpoint, present the compact reconciled decision set, reconcile durable meaning into Cases as one cohesive batch, then resume Blueprint against those accepted revisions.
 
 Adjacent questions remain in Frame Discovery rather than expanding the current interview. A reviewer-discovered cluster of missing semantics is a Frame attention surface, not permission for Blueprint to turn every suggested mechanism into sequential acceptance prompts.
 
@@ -46,16 +46,7 @@ Use `prototype` when an uncertain proposition materially determines authority, s
 
 ## Human Decision Card
 
-When Blueprint reaches human authority, optimize the turn for the next decision rather than presenting a mini-RFC. Default to one compact bounded card:
-
-- **Context:** one or two sentences containing only what makes the decision intelligible.
-- **Definitions:** only unfamiliar terms needed to answer.
-- **Decision:** one explicit choice or trade-off.
-- **Recommendation:** the strongest supported option.
-- **Consequences:** one to three decisive consequences.
-- **Question:** one answerable prompt.
-
-Keep detailed alternatives, walkthroughs, evidence, and rationale in Blueprint/Case artifacts. Offer or provide depth when the user asks, or when the decision cannot be made responsibly from a compact card. Conceptual size alone does not justify making every turn a comprehensive design document.
+Apply `decision-card` to every context-bearing human question. Keep Blueprint-specific alternatives, walkthroughs, evidence, and rationale in Blueprint/Case artifacts.
 
 ## Authority And Stops
 

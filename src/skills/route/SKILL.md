@@ -5,7 +5,7 @@ description: Designs a safe, evidence-bearing realization graph from an accepted
 
 # Route
 
-Own one resumable delivery-design session and its current candidate realization graph. Turn an accepted Blueprint into a Deliver-ready transition without redefining behavior, architecture, or implementation truth.
+Own one resumable delivery-design session and its current candidate realization graph. Turn an accepted Blueprint into an implementation-ready transition without redefining behavior, architecture, or implementation truth.
 
 ## Start Or Resume
 
@@ -29,14 +29,14 @@ Continue model-resolvable local, non-destructive delivery design without asking 
 3. [Work Items](references/work-items.md) — identify bounded contributions needed inside each Leg.
 4. [Dependencies](references/dependencies.md) — name real delivery prerequisites and expose hidden convergence work.
 5. [Coverage](references/coverage.md) — map every material current-to-Blueprint delta, temporary mechanism, and evidence obligation.
-6. [Review](references/review.md) — challenge Route fidelity, vertical closure, intermediate states, reversibility, and Deliver readiness.
+6. [Review](references/review.md) — challenge Route fidelity, vertical closure, intermediate states, reversibility, and implementation readiness.
 
 These are condition-selected operations, not mandatory sequential phases. New findings route by meaning:
 
 - missing/contradictory behavior → Frame or human reconciliation;
 - bad responsibility/module/Contract → Blueprint;
 - bad transition, Leg, dependency, migration, compatibility, or evidence strategy → Route;
-- local implementation defect → Deliver after Route acceptance.
+- local implementation defect → the separately authorized implementation workflow after Route acceptance.
 
 Use `prototype` for the smallest discriminating test when realization materially depends on uncertain migration, compatibility, platform, external mutation, failure recovery, or rollback behavior. Happy-path contact is insufficient when failure behavior determines the Route.
 
@@ -46,16 +46,7 @@ An isolated delivery-local choice may remain in Route. Multiple related human qu
 
 ## Human Decision Card
 
-When human judgment is required, default to one bounded card:
-
-- **Context:** one or two sentences.
-- **Definitions:** only unfamiliar terms needed to answer.
-- **Decision:** one explicit delivery trade-off.
-- **Recommendation:** strongest supported option.
-- **Consequences:** one to three decisive effects.
-- **Question:** one answerable prompt.
-
-Keep detailed graphs, evidence, and rationale in Route artifacts. Expand only when the decision cannot be made responsibly from the card or the user requests depth.
+Apply `decision-card` to every context-bearing human question. Keep Route-specific graphs, evidence, and rationale in Route artifacts.
 
 ## Authority And Stops
 
@@ -88,8 +79,8 @@ Recommend acceptance only when:
 - temporary mechanisms have cleanup/retirement dispositions;
 - material platform assumptions receive early reality contact;
 - findings have correct semantic destinations;
-- Deliver can execute without inventing architecture, strategy, dependency meaning, or acceptance evidence.
+- the selected implementation capability can execute without inventing architecture, strategy, dependency meaning, or acceptance evidence.
 
 The human explicitly accepts the current Route revision, consequential transition trade-offs, and deferrals. Route may instead end `rejected`, `abandoned`, or `superseded`.
 
-Route acceptance authorizes no implementation by itself. Deliver begins only under the configured execution and authorization workflow.
+Route acceptance authorizes no implementation by itself. Implementation begins only through a separately selected and authorized execution workflow.

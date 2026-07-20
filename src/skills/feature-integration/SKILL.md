@@ -1,6 +1,6 @@
 ---
 name: feature-integration
-description: Integrate one completed ticket wave or several completed branches into a feature integration branch, reconciling architectural seams and returning an integration SHA with focused evidence. Used by `implement-feature` after tickets are independently verified and reviewed.
+description: Integrate one completed ticket wave or several completed branches into an integration branch, reconciling architectural seams and returning an integration SHA with focused evidence. The owning coordinator is currently under redesign.
 user-invocable: false
 ---
 
@@ -22,7 +22,7 @@ Require:
 - approved baseline revision and graph fingerprint shared by every branch assignment
 - current integration starting SHA
 
-Every branch must be `READY TO INTEGRATE` under the owning `implement-feature` run.
+Every branch must be explicitly approved as ready under the owning authorized execution context.
 
 ## Process
 
@@ -38,7 +38,7 @@ Every branch must be `READY TO INTEGRATE` under the owning `implement-feature` r
 8. For an internal redesign, return a focused corrective brief under the owning approved ticket. Preserve reproducible integration state, state which contracts remain stable, and let the coordinator dispatch a fresh writer plus normal TDD, verification, and review. If a new graph node or edge is required, return `BASELINE_REALIGNMENT_REQUIRED` instead. The integration agent must not improvise the refactor.
 9. Resume integration after the refactor lands.
 10. Run focused smoke/integration checks for the newly combined wave.
-11. Return the resulting integration SHA, included ticket SHAs, checks/evidence, drift observations, and unresolved risks to `implement-feature`.
+11. Return the resulting integration SHA, included ticket SHAs, checks/evidence, drift observations, and unresolved risks to the owning authorized coordinator.
 
 ## Write Ownership
 
@@ -48,7 +48,7 @@ The integration role may perform mechanical merges and approved conflict resolut
 
 ## Scope and Verification
 
-A broad failing check does not grant broad edit authority. Classify whether a failure is feature-caused, pre-existing, environmental, unrelated, or unknown and return the evidence to `implement-feature` for diagnosis/fixer routing.
+A broad failing check does not grant broad edit authority. Classify whether a failure is feature-caused, pre-existing, environmental, unrelated, or unknown and return the evidence to the owning authorized coordinator for diagnosis/fixer routing.
 
 Tie integration evidence to the resulting integration SHA. If HEAD changes, affected evidence becomes stale.
 

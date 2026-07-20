@@ -20,7 +20,7 @@
 |---|---|---|
 | Architect | Human owner of design, consequential judgment, and semantic acceptance. | Treating agent recommendation or silence as Architect authority. |
 | Steward | The Architect's Casebook interface for custody, continuity, session surfaces, briefing, and attention. | Making Steward a semantic owner or implementation coordinator. |
-| Marshal | Actor that runs a delivery operation through Deliver, coordinating Hand work and Clerk engagement against an accepted Route. | Allowing coordination to override Clerk judgment, redesign accepted intent, or absorb Steward custody. |
+| Marshal | Historical actor from the archived Deliver design. No installed capability currently assigns this role; replacement implementation coordination is under redesign. | Treating Marshal or Deliver as an active execution path, or allowing future coordination to override independent findings, redesign accepted intent, or absorb Steward custody. |
 | Clerk | Independent checker of conformance, evidence, and workmanship. | Coordinating the work it must independently judge or allowing Marshal to rewrite/suppress findings. |
 | Hand | Actor performing bounded implementation or other execution work. | Making a Hand responsible for consequential design, coordination authority, or human acceptance. |
 

@@ -63,7 +63,7 @@ Show counts and a one-line summary per issue. Let the maintainer pick.
 
 ## Work discovery and active implementation claims
 
-Before recommending an issue or keystone as available work, inspect its labels/project status, open PRs, recent comments, and any machine-readable `<!-- agent-os:implement-feature-claim:v1 -->` comment.
+Before recommending an issue or keystone as available work, inspect its labels/project status, open PRs, recent comments, and any retained legacy implementation-claim comment. The former Implement Feature claim protocol is archival evidence, not an installed coordinator.
 
 - Treat an `in-progress` status/label plus a claim heartbeat less than 24 hours old as actively owned. Identify it as already underway and skip it when looking for the next task.
 - A claim in `VERIFYING`, `REPORTING`, or `PR READY` is also unavailable work even if no writer is currently running.

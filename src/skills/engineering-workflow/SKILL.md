@@ -12,7 +12,7 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 
 - Broken, failing, intermittent, or slow behavior → `diagnosing-bugs`.
 - Ordinary in-progress merge/rebase conflicts → `resolving-merge-conflicts`.
-- Accepted ticket graph/keystone requiring end-to-end implementation → `implement-feature`.
+- Accepted Route, ticket graph, or keystone requiring end-to-end implementation → no installed coordinator currently; the replacement implementation package is under redesign. Do not invent or restore one implicitly.
 - Integration of a completed ticket wave or several completed branches → `feature-integration`.
 - Clear, single-ticket behavior change → `ticket-executor` or direct implementation when no tracker contract is needed.
 - Idea needing one-session alignment → `grill`, invoking `domain-modeling` when language changes.
@@ -23,21 +23,18 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 - Settled spec needing executable vertical tickets → `to-tickets`.
 - Architectural health survey → `improve-architecture`; selected module/interface design → `codebase-design`.
 - Coordinator trapped in repeated local fixes or incompatible intentions → `zoom-out`, then return to the owning workflow.
-- Local markdown milestone execution where tracker tickets are intentionally inappropriate → `slice-build`.
 
 ## Normal flow
 
-`grill` → optional evidence (`research`, `prototype`, `deliberate`) → `to-spec` → `to-tickets` → `implement-feature` → `implementation-report` archive during feature finalization.
+No canonical implementation flow is currently installed. The former Deliver and Implement Feature coordinators are archived pending a substantially different Route implementation design.
 
-Inside `implement-feature`, ticket work is delegated to fresh `ticket-executor` writers and completed waves are reconciled through `feature-integration`.
-
-Wayfinder feeds this flow once its fog is cleared. Research produces evidence, not decisions. Improve-architecture produces candidates, not refactors. Domain-modeling and codebase-design are shared vocabulary layers beneath other workflows.
+Existing planning and evidence capabilities may still produce accepted artifacts, but an accepted Route, ticket graph, or keystone does not select or authorize an implementation coordinator by implication. Research produces evidence, not decisions. Improve-architecture produces candidates, not refactors.
 
 ## Routing rules
 
 - Keep discovery through ticket creation in one context when it remains sharp; use a durable handoff when it does not.
 - Start implementation ticket writers in fresh contexts.
-- Do not invoke `implement-feature` until an accepted ticket graph/keystone exists. The parent agent may choose `to-spec` and `to-tickets` first.
+- Do not restore or emulate the archived Deliver or Implement Feature workflows. Stop at the implementation boundary unless a separately authorized bounded execution path is explicit.
 - Do not triage tickets produced by `to-tickets`; triage is for raw incoming reports and requests.
 - Do not route a multi-ticket feature to `ticket-executor` merely because one ticket number appears in the prompt.
 - Re-route when the kind of uncertainty changes. Do not force the current skill to absorb another skill's responsibility.
