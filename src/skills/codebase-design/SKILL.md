@@ -30,4 +30,4 @@ Use these terms consistently. Prefer `seam` over the overloaded `boundary`, and 
 - Prefer the highest seam that captures the real behavior. Fewer, deeper seams are usually better than many shallow ones.
 - When the correct shape is unclear, design the interface at least twice and compare depth, locality, and migration cost.
 
-This skill owns the vocabulary. Workflow skills such as `improve-architecture`, `diagnosing-bugs`, `to-spec`, and `feature-integration` decide when and how to apply it.
+This skill owns the vocabulary. Workflow skills such as `improve-architecture`, `diagnosing-bugs`, `to-spec`, `coding-worker`, and `software-implementation` decide when and how to apply it.

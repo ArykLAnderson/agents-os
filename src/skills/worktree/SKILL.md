@@ -1,89 +1,74 @@
 ---
 name: worktree
-description: Worktree lifecycle management — setup, bootstrap, and teardown. Use when creating new worktrees for feature development, finishing features and cleaning up worktrees, or when worktree operations are relevant.
+description: Discover Git repository topology and manage explicit persistent worktrees safely. Use when allocating, bootstrapping, inspecting, or retiring worktrees.
 user-invocable: false
 ---
 
-# Worktree Lifecycle Management
+# Persistent Worktree Lifecycle
 
-All projects use bare git repositories with worktrees for development. This skill covers the full lifecycle: creating, bootstrapping, and tearing down worktrees.
+Support ordinary repositories, bare repositories with sibling worktrees, and linked-worktree checkouts. Discover the actual topology before choosing paths; do not assume every project uses one directory layout.
 
-## Standard Project Layout
+## Discover Topology
 
+From an existing checkout, inspect:
+
+```bash
+git rev-parse --show-toplevel
+git rev-parse --git-common-dir
+git rev-parse --is-bare-repository
+git worktree list --porcelain
+git status --short --branch
 ```
-project/
-  HEAD, config, refs/, objects/   # bare git data (no working files)
-  _plans/                         # shared planning docs (untracked, cross-branch)
-  main/                           # worktree: trunk branch
-  dev/                            # worktree: development branch (if used)
-  feature-xyz/                    # worktree: feature branch
+
+Resolve relative `--git-common-dir` output against the current checkout. `git worktree list --porcelain` is authoritative for registered paths, branches, and detached checkouts. Identify the named integration base from the Delivery/Task Contract; never substitute a guessed `main`, `dev`, or current branch.
+
+Before reuse, inspect cleanliness, branch identity, ownership, and known writer activity. Unknown prior writer activity is unsafe: confirm cessation/cancellation or quarantine that worktree and allocate a fresh one from the last safe integrated baseline.
+
+## Allocate Explicit Persistent Worktrees
+
+Use an absolute, stable path outside temporary harness-managed patch worktrees:
+
+```bash
+git worktree add -b <task-branch> <absolute-worktree-path> <named-baseline>
+# or, for an already-created branch
+git worktree add <absolute-worktree-path> <existing-branch>
 ```
 
-## Setup — Creating a New Worktree
+Run this from any valid checkout or the common Git directory as topology permits. For coordinated work:
 
-1. **Find the bare repo root**: Walk up from cwd. The bare repo root is the directory where `git rev-parse --is-bare-repository` returns true, or the parent of a worktree directory.
+- one writer owns one worktree and branch at a time;
+- every task worktree starts at its current integrated prerequisite baseline;
+- dependent worktrees are created or refreshed only after prerequisites integrate;
+- keep a separate integration worktree when waves must converge;
+- validators use a dedicated verification checkout when certification requires candidate-state isolation; and
+- pass the same explicit cwd to the harness child for every launch or replacement.
 
-2. **Create the worktree**:
+A future portable Workspace Operator CLI may automate these operations. Until it exists, these commands and checks realize the seam; do not invent runtime state, leases, or a different source-authority model.
+
+## Bootstrap
+
+Inspect repository instructions and project manifests before installing anything. Run only the project's documented local bootstrap steps. Keep worktree-local dependencies and generated files within that checkout when possible. Namespace containers/services by worktree and respect any declared single-stack or port constraints.
+
+Report the worktree path, branch, named baseline, topology, bootstrap commands/results, and effective validator enforcement tier when allocating a verification checkout.
+
+## Retire Safely
+
+1. Confirm the writer has stopped and inspect worktree cleanliness.
+2. Verify integration/retention disposition; do not discard unintegrated work.
+3. Stop worktree-owned local services.
+4. Move the controlling shell outside the worktree.
+5. Remove and prune:
+
    ```bash
-   cd <bare-repo-root>
-   git worktree add <name> -b <branch>        # new branch
-   git worktree add <name> <existing-branch>   # existing branch
-   ```
-
-3. **Bootstrap the worktree**:
-   - Detect the project type (look for package.json, pubspec.yaml, Cargo.toml, requirements.txt, etc.)
-   - Install dependencies for the detected project type
-   - Run environment config generation scripts if they exist (look in `scripts/` for `generate-*` patterns)
-   - Note infrastructure namespacing: container orchestration tools should use the worktree name as the project/namespace to avoid conflicts with other worktrees
-
-4. **Ensure `_plans/` exists** at the bare repo root:
-   ```bash
-   mkdir -p <bare-repo-root>/_plans
-   ```
-
-5. **Report**: Worktree path, branch name, what was bootstrapped, next steps (infrastructure to start, etc.)
-
-## Teardown — Finishing a Feature
-
-1. **Verify the branch is merged**: Check if the feature branch has been merged into the target branch. If not, confirm with the user before proceeding.
-
-2. **Stop infrastructure**: If any containers or services are running for this worktree, stop them.
-
-3. **Navigate away**: You can't remove a worktree you're currently inside. Switch to a different worktree first.
-
-4. **Remove the worktree**:
-   ```bash
-   cd <bare-repo-root>
-   git worktree remove <name>
-   ```
-
-5. **Clean up the branch** (if merged):
-   ```bash
-   git branch -d <branch>                    # delete local branch
-   git push origin --delete <branch>         # delete remote branch (confirm with user first)
-   ```
-
-6. **Prune stale references**:
-   ```bash
+   git worktree remove <absolute-worktree-path>
    git worktree prune
    ```
 
-7. **Clean up planning docs**: If there are plans in `_plans/` related to the completed feature, note them to the user — they may want to archive or delete them since the work is now in the code.
+6. Delete a local branch only after its disposition is proven. Remote deletion, force removal, and destructive cleanup require explicit authority.
 
-## Useful Commands
+## Invariants
 
-| Command | Purpose |
-|---|---|
-| `git worktree list` | Show all active worktrees |
-| `git worktree add <path> <branch>` | Create a worktree for an existing branch |
-| `git worktree add <path> -b <branch>` | Create a worktree with a new branch |
-| `git worktree remove <path>` | Remove a worktree |
-| `git worktree prune` | Clean up stale worktree references |
-
-## Key Rules
-
-- **Never work in the bare repo root** — it has no working files
-- **Each worktree is fully independent** — own dependencies, own infrastructure, own environment
-- **Infrastructure namespacing** — use the worktree name to namespace containers and avoid port/name conflicts
-- **One infrastructure stack at a time** unless ports are explicitly configured per-worktree
-- **Planning docs go in `_plans/`** at the bare repo root — shared across all worktrees, not version controlled
+- Never edit product files as part of administrative worktree operation.
+- Never assign two writers to one worktree.
+- Never use a temporary harness worktree where the Contract requires a persistent explicit cwd.
+- Never infer a safe baseline, merge, cleanup, or remote mutation from path conventions.
