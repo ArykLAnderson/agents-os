@@ -9,6 +9,8 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "diagnose",
   "initialize_store",
   "migrate_store",
+  "snapshot_store",
+  "restore_store",
   "get_store_operation_receipt",
   "events.page",
   "checkpoint.read",
