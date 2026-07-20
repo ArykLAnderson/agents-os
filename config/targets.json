@@ -15,6 +15,57 @@
     "codex": "~/.codex/AGENTS.md",
     "opencode": "~/.config/opencode/AGENTS.md"
   },
+  "adapterSurfaces": {
+    "pi": {
+      "generateAgents": true,
+      "skills": {
+        "path": "~/.pi/agent/skills/agents-os",
+        "mode": "namespace"
+      },
+      "agents": {
+        "path": "~/.pi/agent/agents/agents-os",
+        "files": "all"
+      },
+      "dependencies": [
+        "~/.pi/agent/npm/node_modules/pi-subagents/package.json"
+      ]
+    },
+    "codex": {
+      "generateAgents": false,
+      "skills": {
+        "path": "~/.codex/skills",
+        "mode": "entries"
+      },
+      "agents": null,
+      "dependencies": []
+    },
+    "opencode": {
+      "generateAgents": true,
+      "skills": {
+        "path": "~/.config/opencode/skills",
+        "mode": "entries"
+      },
+      "agents": {
+        "path": "~/.config/opencode/agent",
+        "files": [
+          "focused-validator.md"
+        ]
+      },
+      "dependencies": []
+    }
+  },
+  "requiredPublicSkills": [
+    "coding-worker",
+    "focused-validator",
+    "software-implementation"
+  ],
+  "retiredSkills": [
+    "deliver",
+    "feature-integration",
+    "implement-feature",
+    "slice-build",
+    "ticket-executor"
+  ],
   "scope": "global",
   "scopeRule": "Scope is inferred from the Agent OS root; src internals are identical across global and project roots."
 }

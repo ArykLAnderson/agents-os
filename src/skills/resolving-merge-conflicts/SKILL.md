@@ -25,4 +25,4 @@ Do not bury a redesign inside lightweight conflict resolution. If a correct resu
 - affected specification and ticket criteria;
 - the reproducible merge state.
 
-When called by `feature-integration`, return control to that coordinator for a dedicated refactor cycle. For a standalone merge with no coordinator, surface the brief to the human. Do not abort merely because the conflict is difficult.
+When called by a Software Implementation Integration Worker, return the brief to the coordinator for writer routing under the Convergence Contract. For a standalone merge with no coordinator, surface the brief to the human. Do not abort merely because the conflict is difficult.
