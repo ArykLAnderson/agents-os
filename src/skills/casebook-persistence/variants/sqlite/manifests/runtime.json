@@ -58,6 +58,7 @@
     "case.tombstone.commit",
     "case.purge.inspect",
     "case.purge.plan",
+    "case.purge.execute",
     "case.export.fragment",
     "case.markdown.render",
     "case.markdown.stage_reconciliation",
@@ -88,7 +89,8 @@
       "view_policy.revise",
       "view_policy.activate",
       "view_policy.retire",
-      "export.finalize"
+      "export.finalize",
+      "case_purge"
     ],
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
@@ -106,7 +108,8 @@
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
     "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
-    "purge_planning": "non-mutating synthetic-disposable Case payload plan binding exact store/schema/revision/fence, complete history scope, semantic-owner tombstone disposition, human confirmation, impact dependencies, verified snapshot and external-copy disclosure, exclusions, and retained non-payload audit evidence; execution remains unavailable",
+    "purge_planning": "non-mutating synthetic-disposable Case payload plan binding exact store/schema/revision/fence, complete history scope, semantic-owner tombstone disposition, human confirmation, impact dependencies, verified snapshot and external-copy disclosure, exclusions, and retained non-payload audit evidence",
+    "purge_execution": "separately human-authorized exact still-current W01 plan execution against one named synthetic-disposable SQLite store; atomic payload-only deletion with retained identity/history/audit, durable receipt-first replay, truthful deleted/not_deleted outcomes, and no snapshot or external-authority effect",
     "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     "frame_statuses": [
       "active",
