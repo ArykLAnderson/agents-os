@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "77785cbf977fbaea6f8b14c4887947c5f58fae3ccad57d7b884cc09da3d12aef"
+    "sha256": "0d44a7213eac8ea79752170bb917ff40662c9b59de5a5e9fa4b5b673ba0674e9"
   },
   "entrypoints": [
     {
@@ -72,6 +72,7 @@
     "frame.get_operation_receipt",
     "frame.resolve",
     "frame.read",
+    "frame.export.fragment",
     "frame.discovery.read",
     "frame.disposition.read",
     "frame.history",
@@ -148,7 +149,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "078d7f708f25ff99e1212dfa6048d22cda9759e2a4b1122c3ea812756509d0db"
+      "sha256": "ac647c43cfacda68e47162beaa19604857557ff8006dbba5d80706d15d60a9c2"
     },
     {
       "id": "shared-configuration",
@@ -196,7 +197,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "ccd89f59c92498dc8f4f7e3dcb54fc30eeac8afbc851bdd4c6ec183ddf3cbda5"
+      "sha256": "ca468c7a6ba82d7287b6b705fe29df5516906ba95d38393d97aeba4cedf01478"
     },
     {
       "id": "sqlite-diagnostics",
@@ -238,13 +239,13 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "62a7ef6cf2e01a2a3739170049f6a0fbd2124b390bf77730afcc71dc416d1703"
+      "sha256": "2820c5ec1c366987b4d5a3af1499d3263dbaa0cfbc49f14764fb98963337c55c"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "da831f31c1b98b870dbd68383050f378cdc1f01792c33478e0c6e44548519153"
+      "sha256": "ec171c38fb4032b1cde173481fe55a4fc1217004167b001c3ed1e91efa42d3e0"
     },
     {
       "id": "sqlite-common-subset",
@@ -280,7 +281,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "53241b9eca405a2173f2d3fd54ccf0c6e5c5a266646b963a0cbd081be61ed4dc"
+      "sha256": "75c0132b4737994f1316e54f646e1a824da199e6b3477bbe0c95e1a62bafb36f"
     }
   ]
 }

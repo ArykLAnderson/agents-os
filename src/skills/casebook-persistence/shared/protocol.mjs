@@ -34,6 +34,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "frame.get_operation_receipt",
   "frame.resolve",
   "frame.read",
+  "frame.export.fragment",
   "frame.discovery.read",
   "frame.disposition.read",
   "frame.history",
