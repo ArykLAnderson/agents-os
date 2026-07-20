@@ -4,7 +4,6 @@ import {
   streamSimpleOpenAICodexResponses,
   type Model,
 } from "@earendil-works/pi-ai";
-import { openaiCodexOAuthProvider } from "@earendil-works/pi-ai/oauth";
 
 const PROVIDER = "openai-codex";
 const API = "openai-codex-responses" as const;
@@ -31,10 +30,8 @@ export default function focusedOpenAICodex(pi: ExtensionAPI): void {
     }));
 
   pi.registerProvider(PROVIDER, {
-    name: openaiCodexOAuthProvider.name,
-    baseUrl: "https://chatgpt.com/backend-api",
+    // OAuth is intentionally omitted so Pi preserves the built-in Codex auth.
     api: API,
-    oauth: openaiCodexOAuthProvider,
     models: [...builtInModels, ...focusedModels],
     streamSimple(model, context, options) {
       const upstreamModel = model.id.endsWith(FOCUSED_SUFFIX)
