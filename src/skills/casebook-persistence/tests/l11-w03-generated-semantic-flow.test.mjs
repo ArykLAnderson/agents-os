@@ -118,7 +118,7 @@ async function validateGeneratedBytes(generatorRoot) {
     const packageRoot = path.join(skillsRoot, "casebook-persistence");
     const manifestBytes = await readFile(path.join(packageRoot, "manifest.json"));
     const manifest = JSON.parse(manifestBytes);
-    assert.equal(manifest.assets.length, 26, `${target} manifest asset count`);
+    assert.equal(manifest.assets.length, 27, `${target} manifest asset count`);
     for (const operation of requiredOperations) assert.ok(manifest.supported_operations.includes(operation), `${target} manifest ${operation}`);
     for (const asset of manifest.assets) {
       assert.equal(sha256(await readFile(path.join(packageRoot, asset.path))), asset.sha256, `${target} digest ${asset.path}`);
