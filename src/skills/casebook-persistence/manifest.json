@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.4.0-l04-w04-impact-projection"
+    "version": "0.4.0-l04-w05-steward-gate"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "eed3808a87fe90b843739a11aac257ff69e0e7c4d14fc7e700591fb64e19d575"
+    "sha256": "77785cbf977fbaea6f8b14c4887947c5f58fae3ccad57d7b884cc09da3d12aef"
   },
   "entrypoints": [
     {
@@ -95,7 +95,7 @@
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
-    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
+    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
@@ -220,7 +220,7 @@
       "id": "sqlite-observation",
       "path": "variants/sqlite/lib/substrate/observation.mjs",
       "kind": "module",
-      "sha256": "6f6152d91093eafb323c390ad71738f7390b4e7101802c1306aec3685f5f2c14"
+      "sha256": "877394fbdb9e4fa6363bb1d9424c84e0e5ce278bcc7f1cac97a5a51091cf883c"
     },
     {
       "id": "sqlite-impact-projection",
@@ -280,7 +280,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "488db9ae779bbd678f5093df03745237bb95c121cfb0edef35dd9afd72c43676"
+      "sha256": "53241b9eca405a2173f2d3fd54ccf0c6e5c5a266646b963a0cbd081be61ed4dc"
     }
   ]
 }

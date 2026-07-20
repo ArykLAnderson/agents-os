@@ -393,17 +393,23 @@ async function compareAndSetCheckpoint(request) {
   const cursor = parseEventCursor(prepared.state, request, request.next_checkpoint.event_cursor);
   const transition = Boolean(current && current.view_policy_revision_id !== request.context.view_policy_revision_id);
   const initial = !current;
-  if ((initial || transition) && (cursor.source !== "snapshot_bootstrap" || pending.length > 0
-    || cursor.snapshot_fence !== request.next_checkpoint.snapshot_fence)) {
+  const snapshotBootstrap = cursor.source === "snapshot_bootstrap";
+  const snapshotFenceMatches = cursor.snapshot_fence === request.next_checkpoint.snapshot_fence;
+  if ((initial || transition) && (!snapshotBootstrap || pending.length > 0 || !snapshotFenceMatches)) {
     return failure("checkpoint.snapshot_bootstrap_required", "Initial and policy-transition checkpoints require one completed owner snapshot.", {
       failureClass: "snapshot_bootstrap_required", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
       evidence: { snapshot_bootstrap_required: true },
     });
   }
-  if (!initial && !transition && (cursor.sequence < current.event_sequence || request.next_checkpoint.snapshot_fence !== current.snapshot_fence)) {
-    return failure("checkpoint.progress_invalid", "Checkpoint progress cannot move backward or change its snapshot fence without bootstrap.", { failureClass: "checkpoint_progress_invalid", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE, evidence: {} });
+  if (!initial && !transition && (cursor.sequence < current.event_sequence
+    || request.next_checkpoint.snapshot_fence < current.snapshot_fence)) {
+    return failure("checkpoint.progress_invalid", "Checkpoint progress cannot move backward.", { failureClass: "checkpoint_progress_invalid", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE, evidence: {} });
   }
-  if (transition && pending.length) throw new ObservationError("checkpoint.request_invalid", "A policy bootstrap cannot retain old-view pending identities.");
+  if (!initial && !transition && request.next_checkpoint.snapshot_fence !== current.snapshot_fence
+    && (!snapshotBootstrap || pending.length > 0 || !snapshotFenceMatches)) {
+    return failure("checkpoint.progress_invalid", "Checkpoint snapshot fence changes require completed snapshot reconciliation.", { failureClass: "checkpoint_progress_invalid", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE, evidence: {} });
+  }
+  if (snapshotBootstrap && pending.length) throw new ObservationError("checkpoint.request_invalid", "A completed snapshot reconciliation cannot retain pending identities.");
   if (pending.length) {
     const visible = await queryJson(prepared.binary, prepared.storePath, `
       SELECT e.event_id FROM owner_events e
@@ -429,7 +435,8 @@ async function compareAndSetCheckpoint(request) {
   const nextFence = oldFence + 1;
   const result = {
     status: "settled", checkpoint,
-    bootstrap: initial ? "initial_snapshot" : transition ? "policy_transition_snapshot" : "not_required",
+    bootstrap: initial ? "initial_snapshot" : transition ? "policy_transition_snapshot"
+      : snapshotBootstrap ? "snapshot_reconciliation" : "not_required",
     operation_fence: nextFence, idempotent_replay: false,
   };
   const resultDigest = mechanicalDigest(result);
