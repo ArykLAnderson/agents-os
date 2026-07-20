@@ -989,6 +989,7 @@ async function readOwnerCurrentCorpus(request) {
       SELECT o.owner_id,o.owner_kind,o.home_namespace_id,c.projection_json,
         r.revision_id,r.revision_number,r.normalized_json,r.representation_id,
         r.representation_version,r.committed_at,
+        (SELECT operation_fence FROM store_operation_receipts receipt WHERE receipt.operation_id=r.operation_id) revision_operation_fence,
         COALESCE((SELECT json_group_array(json_object(
           'family_id',selected.family_id,'version_id',selected.version_id,
           'content_json',selected.content_json,'content_digest',selected.content_digest))
@@ -1010,9 +1011,9 @@ async function readOwnerCurrentCorpus(request) {
   for(const row of ownerRows){
     const selected=JSON.parse(row.selected_json);
     if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","A current owner revision exceeds the bounded corpus read shape.",{failureClass:"representation_invalid",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});
-    items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
+    items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,operation_fence:row.revision_operation_fence,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
   }
-  return success("read_owner_current_corpus",{status:"found",items,operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
+  return success("read_owner_current_corpus",{status:"found",items,store:{id:state.metadata.store_id,schema:{id:state.metadata.schema_id,version:state.metadata.schema_version},protocol:{id:state.metadata.protocol_id,version:state.metadata.protocol_version}},operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
 }
 
 async function pageOwnerCurrent(request) {
@@ -1330,11 +1331,31 @@ async function readActiveViewScope(request) {
   });
 }
 
+async function readStoreOperationReceiptForFacade(request) {
+  const context = contextShape(request.context);
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const operationId = requireString(request.operation_id, "operation_id", 256);
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested receipt is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  const receipt = await readStoreOperationReceipt(binary, storePath, operationId);
+  return success("read_store_operation_receipt_for_facade", {
+    status: receipt ? "settled" : "absent_at_fence",
+    receipt,
+    operation_fence: state.operation_fence,
+    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
+  });
+}
+
 export async function invokeMechanicalOperation(request) {
   try {
     if (request.operation === "read_active_view_scope") return await readActiveViewScope(request);
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
+    if (request.operation === "read_store_operation_receipt_for_facade") return await readStoreOperationReceiptForFacade(request);
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
     if (request.operation === "read_owner_revision") return await readOwnerRevision(request);
     if (request.operation === "read_owner_current_corpus") return await readOwnerCurrentCorpus(request);

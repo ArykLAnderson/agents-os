@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "d7c72ecba08940c8f7c5b6d9805223b5378d83ca412e3cf290d3b6e8a40a00ef"
+    "sha256": "8f99b16789423d85cc4b6e453ef571544520e4e8c860f007b05cebe1f412882b"
   },
   "entrypoints": [
     {
@@ -70,6 +70,7 @@
     "case.tombstone.stage",
     "case.tombstone.commit",
     "case.purge.inspect",
+    "case.purge.plan",
     "case.export.fragment",
     "case.markdown.render",
     "case.markdown.stage_reconciliation",
@@ -137,7 +138,8 @@
     "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
     "legacy_reconciliation": "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
-    "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals"
+    "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
+    "purge_planning": "non-mutating synthetic-disposable Case payload plan binding exact store/schema/revision/fence, complete history scope, semantic-owner tombstone disposition, human confirmation, impact dependencies, verified snapshot and external-copy disclosure, exclusions, and retained non-payload audit evidence; execution remains unavailable"
   },
   "unsupported_until_later_work_items": [
     "case purge execution and publication",
@@ -147,7 +149,7 @@
     "general-purpose and non-disposable migration",
     "non-disposable snapshot",
     "non-disposable restore",
-    "purge"
+    "purge execution"
   ],
   "assets": [
     {
@@ -166,7 +168,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "7151b465ab31e22f568265dac04f1a493a002281e53761a8a13387fafb6bb8d0"
+      "sha256": "98994d16327d6632916920346a016c9380c721b1f03c15c98689b10bebe6352e"
     },
     {
       "id": "shared-configuration",
@@ -214,7 +216,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "b9a291349b6d3569bb41d64269e9ab2d92e1f44bdd491b5078b2868bdadd7f55"
+      "sha256": "7e992f8ffe4560faf34c34c3c9ab30134c721785b130fa49d4adfa96af7ae2d7"
     },
     {
       "id": "sqlite-diagnostics",
@@ -262,13 +264,13 @@
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "5a5b0ba204b6f3a776c49ba7bca60285d1c9aac427f585e1e66255a5483af4d8"
+      "sha256": "2573bbc474300beec5517524fdd50535df5e38a9563ff6a3dac36adb6d0cd1c6"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "05fbcf04ef862e2681f41daa0f270e45ea04dd9ca7e960ed093870f7d01f01cb"
+      "sha256": "d523427d8abfa3bd5cfd50639bf4cd315d6aa165eae4d75ff3688ab97dd56b6c"
     },
     {
       "id": "frame-facade",
@@ -316,7 +318,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "237e4c2678d9f755633d82d6db12b82f62656f6701f82f59eb8729195ec5e1f8"
+      "sha256": "9d87b3492b8889ca3f004821ca26993388bba8f438cc25da62bb51ef0d417b9d"
     }
   ]
 }
