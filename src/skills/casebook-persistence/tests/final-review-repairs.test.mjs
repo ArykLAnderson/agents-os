@@ -125,12 +125,13 @@ test("SQLite binds canonical source, mode, and store identity and rejects config
 
     const unbound = await initialize(root, sqliteBin, "unbound");
     await sqliteScalar(sqliteBin, unbound.configuration.sqlite.database_url,
-      "DROP TRIGGER store_authority_binding_immutable_delete; DELETE FROM store_authority_binding;");
+      "DROP TRIGGER store_authority_binding_immutable_update; DROP TRIGGER store_authority_binding_immutable_delete; DROP TABLE store_authority_binding;");
     const ordinaryUnbound = await invoke(sqliteEntrypoint, root, {
       ...common(unbound), operation: "common.list", owner_kinds: ["case", "frame"],
     });
     assert.equal(ordinaryUnbound.code, 2);
-    assert.equal(await sqliteScalar(sqliteBin, unbound.configuration.sqlite.database_url, "SELECT count(*) FROM store_authority_binding;"), "0");
+    assert.equal(await sqliteScalar(sqliteBin, unbound.configuration.sqlite.database_url,
+      "SELECT count(*) FROM sqlite_schema WHERE type='table' AND name='store_authority_binding';"), "0");
     const rebound = await invoke(sqliteEntrypoint, root, {
       protocol,
       operation: "get_store_operation_receipt",
