@@ -15,7 +15,22 @@ const CATEGORY_HEADING = Object.freeze({
   contested: "Contested",
   deferred: "Deferred",
   out_of_scope: "Out of Scope",
+  settled: "Settled",
 });
+
+const CASE_EXTENSION_FIELDS = ["provenance", "aliases", "facets", "entries", "sources", "relationships", "references"];
+const DISCOVERY_SIMPLE_FIELDS = new Set([
+  "id", "display_label", "display_order", "lifecycle", "category", "title", "body", "human_authority", "dependencies",
+]);
+
+function isCompleteCase(record) {
+  return CASE_EXTENSION_FIELDS.some((key) => record[key] != null);
+}
+
+function isSimpleDiscovery(item) {
+  return item.lifecycle === "active" && item.dependencies?.length === 0
+    && Object.keys(item).every((key) => DISCOVERY_SIMPLE_FIELDS.has(key));
+}
 
 function localLabel(index) {
   // Labels are revision-local display aids. Stable identity comes only from
@@ -24,7 +39,7 @@ function localLabel(index) {
 }
 
 function renderCaseMarkdown(record) {
-  return `${interchangeFrontmatter([
+  const frontmatter = interchangeFrontmatter([
     ["type", "case"],
     ["schema_version", 1],
     ["id", record.id],
@@ -32,7 +47,17 @@ function renderCaseMarkdown(record) {
     ["state", record.state],
     ["title", record.title],
     ["summary", record.summary],
-  ])}${interchangeJsonSection("Scope", record.scope)}## Knowledge\n\n## Sources\n`;
+  ]);
+  if (!isCompleteCase(record)) return `${frontmatter}${interchangeJsonSection("Scope", record.scope)}## Knowledge\n\n## Sources\n`;
+  const knowledge = {
+    ...(record.provenance == null ? {} : { provenance: record.provenance }),
+    aliases: record.aliases,
+    facets: record.facets,
+    entries: record.entries,
+    relationships: record.relationships,
+    references: record.references,
+  };
+  return `${frontmatter}${interchangeJsonSection("Scope", record.scope)}${interchangeJsonSection("Knowledge", knowledge)}${interchangeJsonSection("Sources", record.sources)}`;
 }
 
 function renderFrameMarkdown(record) {
@@ -50,7 +75,29 @@ function renderFrameMarkdown(record) {
   markdown += interchangeJsonSection("Excluded Scope", record.excluded_scope);
   markdown += interchangeJsonSection("Limitations", record.limitations);
   markdown += interchangeJsonSection("Completion Condition", record.completion_condition);
+  if (["case_links", "frame_links", "downstream_links", "artifact_links"].some((key) => record[key] != null)) {
+    markdown += interchangeJsonSection("Links", {
+      case_links: record.case_links ?? [],
+      frame_links: record.frame_links ?? [],
+      downstream_links: record.downstream_links ?? [],
+      artifact_links: record.artifact_links ?? [],
+    });
+  }
+  if (record.authorization_provenance != null) markdown += interchangeJsonSection("Authorization", record.authorization_provenance);
   markdown += "## Discovery\nSee the manifest-selected Discovery file.\n";
+  if (record.disposition_boundaries != null && record.case_dispositions != null) {
+    const content = {
+      disposition_boundaries: record.disposition_boundaries.map((item, index) => ({
+        source_label: `DB-${String(index + 1).padStart(3, "0")}`,
+        record: item,
+      })),
+      case_dispositions: record.case_dispositions.map((item, index) => ({
+        source_label: `CD-${String(index + 1).padStart(3, "0")}`,
+        record: item,
+      })),
+    };
+    markdown += `\n## Case Dispositions\n\`\`\`json\n${JSON.stringify(content)}\n\`\`\`\n`;
+  }
   return markdown;
 }
 
@@ -68,7 +115,20 @@ function renderDiscoveryMarkdown(record) {
     markdown += `## ${CATEGORY_HEADING[category]}\n\n`;
     for (const { item, index } of values) {
       markdown += `### ${localLabel(index)}: ${JSON.stringify(item.title)}\n`;
-      markdown += `- Human authority: ${item.human_authority}\n\n\`\`\`json\n${JSON.stringify(item.body)}\n\`\`\`\n\n`;
+      const payload = isSimpleDiscovery(item)
+        ? item.body
+        : {
+            schema: "casebook-discovery-full@1",
+            body: item.body,
+            lifecycle: item.lifecycle,
+            dependencies: item.dependencies,
+            ...(item.scope_namespace_ids == null ? {} : { scope_namespace_ids: item.scope_namespace_ids }),
+            ...(item.disposition == null ? {} : { disposition: item.disposition }),
+            ...(item.resolution == null ? {} : { resolution: item.resolution }),
+            ...(item.reopened_from_version == null ? {} : { reopened_from_version: item.reopened_from_version }),
+            ...(item.reopening_basis == null ? {} : { reopening_basis: item.reopening_basis }),
+          };
+      markdown += `- Human authority: ${item.human_authority}\n\n\`\`\`json\n${JSON.stringify(payload)}\n\`\`\`\n\n`;
     }
   }
   return markdown;

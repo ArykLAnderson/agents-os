@@ -2,7 +2,7 @@
   "variant_manifest_version": 1,
   "id": "casebook-persistence-markdown",
   "authority_mode": "markdown",
-  "implementation_status": "l01_synthetic_interchange_only",
+  "implementation_status": "l05_w04_complete_reduced_common_subset",
   "guarantees": "reduced-file-authoritative-common-subset",
   "entrypoint": {
     "interpreter": "node",
@@ -10,16 +10,20 @@
   },
   "supported_operations": [
     "case.create",
+    "case.commit_revision",
     "case.read",
     "frame.create",
+    "frame.commit_revision",
     "frame.read",
+    "frame.legacy.prepare_reconciliation",
     "frame.list",
     "common.resolve",
     "common.list",
     "common.search",
+    "interchange.export",
     "interchange.parse"
   ],
-  "identity_rule": "verified-frontmatter-and-authority-marker-digest-bound-manifest-only",
+  "identity_rule": "verified-frontmatter-and-exclusive-authority-marker-selected-file-or-generation",
   "selected_discovery_filenames": [
     "discovery.md",
     "discovery-map.md"
@@ -39,7 +43,6 @@
     "checkpoints",
     "snapshots",
     "global-search",
-    "atomic-markdown-replacement",
     "migration"
   ]
 }
