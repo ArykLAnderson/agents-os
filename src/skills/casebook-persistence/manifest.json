@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "77785cbf977fbaea6f8b14c4887947c5f58fae3ccad57d7b884cc09da3d12aef"
+    "sha256": "b7a1265da81c171cd95997aa4c69e310379939fdfcab4138b9d3f0bdf74813fa"
   },
   "entrypoints": [
     {
@@ -40,6 +40,8 @@
     "diagnose",
     "initialize_store",
     "migrate_store",
+    "snapshot_store",
+    "restore_store",
     "get_store_operation_receipt",
     "view_policy.create",
     "view_policy.revise",
@@ -87,12 +89,16 @@
     "store_receipt_visible_operation_kinds": [
       "initialize_store",
       "migration",
+      "snapshot",
+      "restore",
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
       "view_policy.retire"
     ],
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
+    "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
+    "restore_execution": "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
     "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
@@ -127,8 +133,8 @@
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "global-search",
     "general-purpose and non-disposable migration",
-    "backup",
-    "restore",
+    "non-disposable snapshot",
+    "non-disposable restore",
     "purge"
   ],
   "assets": [
@@ -148,7 +154,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "078d7f708f25ff99e1212dfa6048d22cda9759e2a4b1122c3ea812756509d0db"
+      "sha256": "0055538861adc104ed825d2651fe1a64957c21d7c81c44307f83d407a2f8b5a4"
     },
     {
       "id": "shared-configuration",
@@ -208,7 +214,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "a7f21bdc8e7c199f1eed53a64a5106823cbfd93e15b53c8f588ee550376f83c1"
+      "sha256": "4f75489c309b40461d5a57017e7556810b8e988d2fca312668d98541c4a94771"
     },
     {
       "id": "sqlite-identity-discovery",
@@ -256,7 +262,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "2b1e97d594520191e5a49184ab707077046478c37971d2e2e6ef7f39cadbe524"
+      "sha256": "8bb690e3c1ef36d025e26ad801fc6634fe0df3303b6c13896b43e0c32043d80c"
     },
     {
       "id": "sqlite-schema",
@@ -280,7 +286,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "53241b9eca405a2173f2d3fd54ccf0c6e5c5a266646b963a0cbd081be61ed4dc"
+      "sha256": "c1d09c3d4a4ef53ebddfd786697277df70db0448df80b6b4bee770b185dd9e01"
     }
   ]
 }

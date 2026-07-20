@@ -386,34 +386,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-export async function createVerifiedMigrationSnapshot(binary, storePath, snapshotPath, expected) {
-  const snapshotParent = await realpath(path.dirname(snapshotPath));
-  if (await lstat(snapshotPath).then(() => true).catch(() => false)) {
-    throw Object.assign(new Error("snapshot target already exists"), { code: "snapshot_target_exists" });
-  }
-  if (snapshotParent !== await realpath(path.dirname(snapshotPath))) {
-    throw Object.assign(new Error("snapshot parent changed during resolution"), { code: "snapshot_parent_changed" });
-  }
-  await sqlite(binary, storePath, `.bail on\nPRAGMA busy_timeout = 5000;\nVACUUM INTO ${sqlText(snapshotPath)};`, {
-    args: ["-batch", "-bail"],
-    timeout: 30_000,
-    maxBuffer: 4 * 1024 * 1024,
-  });
-  const inspected = await inspectStore(binary, snapshotPath);
-  if (inspected.status !== "available"
-    || inspected.metadata.store_id !== expected.store_id
-    || inspected.metadata.schema_id !== expected.schema.id
-    || inspected.metadata.schema_version !== expected.schema.version
-    || inspected.metadata.protocol_id !== expected.protocol.id
-    || inspected.metadata.protocol_version !== expected.protocol.version
-    || inspected.operation_fence !== expected.operation_fence) {
-    throw Object.assign(new Error("snapshot verification did not reproduce exact source conditions"), {
-      code: "snapshot_verification_failed",
-      evidence: { status: inspected.status, metadata: inspected.metadata ?? null, operation_fence: inspected.operation_fence ?? null },
-    });
-  }
-  const bytes = await readFile(snapshotPath);
-  const info = await stat(snapshotPath);
+function verifiedSnapshotResult(snapshotPath, bytes, info, inspected) {
   return {
     path: snapshotPath,
     sha256: sha256(bytes),
@@ -427,6 +400,47 @@ export async function createVerifiedMigrationSnapshot(binary, storePath, snapsho
       operation_fence: inspected.operation_fence,
     },
   };
+}
+
+export async function verifyExactStoreSnapshot(binary, snapshotPath, expected) {
+  const inspected = await inspectStore(binary, snapshotPath);
+  if (inspected.status !== "available"
+    || inspected.metadata.store_id !== expected.store_id
+    || inspected.metadata.schema_id !== expected.schema.id
+    || inspected.metadata.schema_version !== expected.schema.version
+    || inspected.metadata.protocol_id !== expected.protocol.id
+    || inspected.metadata.protocol_version !== expected.protocol.version
+    || inspected.operation_fence !== expected.operation_fence) {
+    throw Object.assign(new Error("snapshot verification did not reproduce exact source conditions"), {
+      code: "snapshot_verification_failed",
+      evidence: { status: inspected.status, metadata: inspected.metadata ?? null, operation_fence: inspected.operation_fence ?? null },
+    });
+  }
+  const [bytes, info] = await Promise.all([readFile(snapshotPath), stat(snapshotPath)]);
+  if (!info.isFile() || info.size < 1) {
+    throw Object.assign(new Error("snapshot target is not a non-empty regular file"), { code: "snapshot_verification_failed" });
+  }
+  return verifiedSnapshotResult(snapshotPath, bytes, info, inspected);
+}
+
+export async function createVerifiedStoreSnapshot(binary, storePath, snapshotPath, expected) {
+  const snapshotParent = await realpath(path.dirname(snapshotPath));
+  if (await lstat(snapshotPath).then(() => true).catch(() => false)) {
+    throw Object.assign(new Error("snapshot target already exists"), { code: "snapshot_target_exists" });
+  }
+  if (snapshotParent !== await realpath(path.dirname(snapshotPath))) {
+    throw Object.assign(new Error("snapshot parent changed during resolution"), { code: "snapshot_parent_changed" });
+  }
+  await sqlite(binary, storePath, `.bail on\nPRAGMA busy_timeout = 5000;\nVACUUM INTO ${sqlText(snapshotPath)};`, {
+    args: ["-batch", "-bail"],
+    timeout: 30_000,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+  return verifyExactStoreSnapshot(binary, snapshotPath, expected);
+}
+
+export async function createVerifiedMigrationSnapshot(binary, storePath, snapshotPath, expected) {
+  return createVerifiedStoreSnapshot(binary, storePath, snapshotPath, expected);
 }
 
 export async function applyMigrationV2(binary, storePath, application) {
