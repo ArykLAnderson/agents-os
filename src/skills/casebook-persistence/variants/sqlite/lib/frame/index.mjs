@@ -87,6 +87,7 @@ const LIST_REQUEST_FIELDS = new Set([
   "authority_scope_namespace_ids", "linked_case_id", "limit", "cursor", "configuration",
 ]);
 const PREPARE_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "base_revision", "documents", "machine_manifest", "configuration"]);
+const DISCOVERY_HYDRATE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "handoff_token", "query_digest", "candidate_ids", "configuration"]);
 const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded"]);
 const MAX_PAGE = 100;
 const L01_CATEGORY_HEADING = Object.freeze({
@@ -531,6 +532,24 @@ function allocate(prefix, request, semanticDigest, role) {
   return `${prefix}:${allocatedUuid(`${request.store_id}\u0000frame\u0000${request.operation_id}\u0000${semanticDigest}\u0000${role}`)}`;
 }
 
+function frameIdentityProjectionLinks(frame) {
+  const links = [];
+  const add = (reference, from = { kind: "frame", id: frame.id }) => {
+    if (!reference?.target_kind || !reference?.target_id) return;
+    links.push({
+      from,
+      to: { kind: reference.target_kind, id: reference.target_id },
+      predicate: reference.predicate,
+      direction: "outgoing",
+      ...(reference.observed_revision_id == null ? {} : { observed_revision_id: reference.observed_revision_id }),
+      ...(reference.pinned_revision_id == null ? {} : { pinned_revision_id: reference.pinned_revision_id }),
+    });
+  };
+  for (const key of ["case_links", "frame_links", "downstream_links"]) for (const reference of frame[key] ?? []) add(reference);
+  for (const item of frame.discovery ?? []) for (const reference of item.dependencies ?? []) add(reference, { kind: "discovery", id: item.id });
+  return links;
+}
+
 function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replayAllocated = new Set()) {
   const semanticDigest = semanticMutationDigest(request, frame);
   const selectVersion = (familyId, content, role) => {
@@ -625,6 +644,8 @@ function assembleFrameEnvelope(request, frame, priorSelected = new Map(), replay
       home_namespace_id: frame.home_namespace_id,
       authority_scope_namespace_ids: frame.authority_scope_namespace_ids,
       linked_case_ids: frame.case_links?.filter((link) => link.target_kind === "case").map((link) => link.target_id) ?? [],
+      identity_discoverable: frame.status === "active",
+      identity_links: frameIdentityProjectionLinks(frame),
       status: frame.status,
       ...(frame.title == null ? {} : { title: frame.title }),
       ...(frame.outcome == null ? {} : { outcome: frame.outcome }),
@@ -1845,6 +1866,36 @@ async function prepareLegacyReconciliation(request) {
   });
 }
 
+function handoffNotVisible() {
+  return failure("frame.not_found_or_not_visible", "The Frame is unknown or not visible under the exact discovery handoff.", {
+    failureClass: "frame.read_failure", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {},
+  });
+}
+
+async function hydrateDiscoveryCandidates(request) {
+  exactKeys(request, DISCOVERY_HYDRATE_FIELDS, "request");
+  if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
+  requiredId(request.store_id, "store_id", "store");
+  validateContext(request.context);
+  requiredString(request.handoff_token, "handoff_token", 64 * 1024);
+  if (!/^[0-9a-f]{64}$/.test(request.query_digest ?? "") || !Array.isArray(request.candidate_ids) || request.candidate_ids.length < 1 || request.candidate_ids.length > 100) return handoffNotVisible();
+  const validated = await invokeSubstrateOperation({ operation: "validate_identity_handoff", configuration: request.configuration, store_id: request.store_id, context: request.context, owner_kind: "frame", handoff_token: request.handoff_token, query_digest: request.query_digest, candidate_ids: request.candidate_ids });
+  if (!validated?.ok) return handoffNotVisible();
+  const items = [];
+  for (const candidate of validated.result.candidates) {
+    const mechanical = await invokeSubstrateOperation({ operation: "read_owner_revision", configuration: request.configuration, store_id: request.store_id, context: request.context, owner: { id: candidate.id, kind: "frame" }, revision_id: candidate.revision_id });
+    if (!mechanical?.ok) return handoffNotVisible();
+    try {
+      const hydrated = hydrateFrame(mechanical.result);
+      if (hydrated.frame.status !== "active") return handoffNotVisible();
+      const projection = await projectFrameForView(request, hydrated.frame);
+      if (projection.failure) return projection.failure;
+      items.push({ ...hydrated, frame: projection.frame });
+    } catch { return handoffNotVisible(); }
+  }
+  return success("frame.discovery.hydrate", { status: "found", items, query_digest: validated.result.query_digest, snapshot_query_fence: validated.result.snapshot_query_fence, audience_ceiling: validated.result.audience_ceiling, applied_bounds: validated.result.applied_bounds, applied_view: validated.result.applied_view });
+}
+
 export async function invokeFrameOperation(request) {
   try {
     if (request.operation === "frame.create") return await mutateFrame(request, true);
@@ -1853,6 +1904,7 @@ export async function invokeFrameOperation(request) {
     if (request.operation === "frame.resolve") return await resolveFrame(request);
     if (request.operation === "frame.read") return await readFrame(request);
     if (request.operation === "frame.discovery.read") return await readDiscovery(request);
+    if (request.operation === "frame.discovery.hydrate") return await hydrateDiscoveryCandidates(request);
     if (request.operation === "frame.disposition.read") return await readDisposition(request);
     if (request.operation === "frame.history") return await frameHistory(request);
     if (request.operation === "frame.list") return await listFrames(request);

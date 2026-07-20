@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l03-w03-legacy-preparation"
+    "version": "0.4.0-l04-w03-event-checkpoints"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b8c4e1d1accdae5eb494652f7068add5dca49e2cfad9a3cc3232a1173c191bc2"
+    "sha256": "85997466b37225165d04faf899afaeb2f3b287c05a89b8e40b4c5353dea1ab6e"
   },
   "entrypoints": [
     {
@@ -41,6 +41,19 @@
     "initialize_store",
     "migrate_store",
     "get_store_operation_receipt",
+    "view_policy.create",
+    "view_policy.revise",
+    "view_policy.activate",
+    "view_policy.retire",
+    "identity.discover",
+    "events.page",
+    "checkpoint.read",
+    "checkpoint.compare_and_set",
+    "reconciliation_snapshot.begin",
+    "reconciliation_snapshot.page",
+    "reconciliation_snapshot.finish",
+    "case.discovery.hydrate",
+    "frame.discovery.hydrate",
     "case.create",
     "case.commit_revision",
     "case.read",
@@ -72,9 +85,16 @@
   "implemented_slice_constraints": {
     "store_receipt_visible_operation_kinds": [
       "initialize_store",
-      "migration"
+      "migration",
+      "view_policy.create",
+      "view_policy.revise",
+      "view_policy.activate",
+      "view_policy.retire"
     ],
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
+    "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
+    "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
+    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -103,7 +123,7 @@
     "case purge execution and publication",
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
-    "events/checkpoints/snapshots/global-search",
+    "global-search",
     "general-purpose and non-disposable migration",
     "backup",
     "restore",
@@ -126,7 +146,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "523d6a10f09c8d1dab39d901e6852bafecdc55c924f632f0148b245bb361391c"
+      "sha256": "ac4b87241608da1fc9696d70f87ce997737346edbd2df809c9f32ee7a7439e8e"
     },
     {
       "id": "shared-configuration",
@@ -174,7 +194,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "992cdb1dd748a4726c89492526baa5dfd90f97a8cdaddf26795b47eada845898"
+      "sha256": "ef5a2e905462004d10f12adf938bd3b22f4ea50287158c2baeeb41eedb94bd3d"
     },
     {
       "id": "sqlite-diagnostics",
@@ -186,25 +206,37 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "a244f6ff5e83599dc460ce166b490500a9167bd2564b16b0225fd8937f54d707"
+      "sha256": "a7f21bdc8e7c199f1eed53a64a5106823cbfd93e15b53c8f588ee550376f83c1"
+    },
+    {
+      "id": "sqlite-identity-discovery",
+      "path": "variants/sqlite/lib/substrate/discovery.mjs",
+      "kind": "module",
+      "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+    },
+    {
+      "id": "sqlite-observation",
+      "path": "variants/sqlite/lib/substrate/observation.mjs",
+      "kind": "module",
+      "sha256": "6f6152d91093eafb323c390ad71738f7390b4e7101802c1306aec3685f5f2c14"
     },
     {
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "e360e215fbe9452d6363258be6e503ba1fb89d4073f5742a162dd9d6cba33f9d"
+      "sha256": "5a5b0ba204b6f3a776c49ba7bca60285d1c9aac427f585e1e66255a5483af4d8"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "663217266b71697c2425151d746af7a0a7842e9488f0354cb9b0335efdeb8a9a"
+      "sha256": "62a7ef6cf2e01a2a3739170049f6a0fbd2124b390bf77730afcc71dc416d1703"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "0346cea822fb57f3729a63c0ba89b238909c0c9aec84c0fe6a2badd931befcb7"
+      "sha256": "da831f31c1b98b870dbd68383050f378cdc1f01792c33478e0c6e44548519153"
     },
     {
       "id": "sqlite-common-subset",
@@ -216,13 +248,13 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "d05c7170d9d53a8fac8eaf3e3dcb5f20f9c17b038f07fe82c4ad6d142aaca4bb"
+      "sha256": "2b1e97d594520191e5a49184ab707077046478c37971d2e2e6ef7f39cadbe524"
     },
     {
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "5ca739b03f0a2de54bb1f038d812dcfc9244355eef48e93ef1e3f0422ee6c1a3"
+      "sha256": "954fb667ac53e17044d7bca93080402904b0bbc4b8084c9f7e5c5bb16eb3d3b2"
     },
     {
       "id": "sqlite-migration-v2",
@@ -240,7 +272,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "9249b34f8ee72ac3cccec0b80fda1b15c84da4adbac1e8f1324bee68762be50a"
+      "sha256": "f0e97e03a0f210f65ad45abf5e69ad234924ac53382af1b44de36bdbae4d5d78"
     }
   ]
 }
