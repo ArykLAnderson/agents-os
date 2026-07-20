@@ -11,7 +11,7 @@ Ask the human only for what the human must supply. Resolve available facts first
 
 Use a **delta-first decision card** whose length matches the difficulty and consequence of the question:
 
-- **Context:** give enough plain-language orientation to answer after an attention switch. Name the current area, the established facts that affect the decision, and what this answer controls.
+- **Context:** always include this section. Give enough plain-language, delta-first orientation to answer after an attention switch. Name the current area, the established facts that affect the decision, and what this answer controls. Unlike the optional sections below, Context is mandatory and must never be omitted.
 - **Meaning:** define only terms whose interpretation materially affects the answer. Omit this section when ordinary language is sufficient.
 - **Recommendation:** state the strongest supported choice directly. Surface the precise new or corrected meaning that sharpens the choice. For a pure knowledge question with no honest recommendation, omit this section.
 - **Why / consequences:** give the few decisive effects in brief bullets. Include material disagreement, risk, hidden cost, irreversibility, external effects, or what remains unauthorized. Omit consequences that do not distinguish the answer.
@@ -44,7 +44,7 @@ At a natural boundary, restate the exact accepted propositions when doing so let
 Before sending, verify:
 
 1. The question cannot be answered through available evidence or further model work.
-2. The context is sufficient after an attention switch but contains no broad recap.
+2. A `Context` section is present, sufficient after an attention switch, and contains no broad recap.
 3. Any recommendation is explicit and supported.
 4. Any material trade-offs and residual exclusions are visible.
 5. There is one clear answer target, or a permitted low-load group of at most three.
