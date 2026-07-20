@@ -246,7 +246,7 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
     assert.equal(rejected.exitCode, 2);
     assert.equal(rejected.json.failure.code, "not_yet_implemented");
     assert.deepEqual(rejected.json.failure.evidence.supported_operations, [
-      "diagnose", "initialize_store", "get_store_operation_receipt",
+      "diagnose", "initialize_store", "migrate_store", "get_store_operation_receipt",
       "case.create", "case.commit_revision", "case.read",
       "case.resolve", "case.search", "case.traverse",
       "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect",
