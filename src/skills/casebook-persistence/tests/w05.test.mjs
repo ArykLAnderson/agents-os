@@ -724,7 +724,8 @@ test("dual mode, hot-switch, ambiguous identity, dual Discovery files, and unsup
     const markdownExport = await invoke(markdownEntrypoint, root, markdownRequest("interchange.export", workspaceRoot, written.workspaceMarker, { owner_ids: [ids.frame] }));
     assert.equal(markdownExport.exitCode, 0, markdownExport.stderr);
     assert.equal(markdownExport.json.result.authority_selected, false);
-    for (const operation of [...unsupportedBreadth.map(([name]) => name), "interchange.parse"]) {
+    const sqliteUnsupportedBreadth = unsupportedBreadth.map(([name]) => name).filter((name) => name !== "checkpoint.read");
+    for (const operation of [...sqliteUnsupportedBreadth, "interchange.parse"]) {
       const rejected = await invoke(sqliteEntrypoint, root, {
         protocol,
         operation,

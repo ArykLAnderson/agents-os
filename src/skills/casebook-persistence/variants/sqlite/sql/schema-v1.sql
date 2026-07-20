@@ -215,6 +215,32 @@ CREATE TABLE owner_outbox (
   created_at TEXT NOT NULL
 ) STRICT;
 
+CREATE TABLE event_retention (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  retained_after_sequence INTEGER NOT NULL CHECK (retained_after_sequence >= 0)
+) STRICT;
+
+CREATE TABLE consumer_checkpoints (
+  view_id TEXT NOT NULL REFERENCES view_families(view_id),
+  consumer_id TEXT NOT NULL,
+  view_policy_revision_id TEXT NOT NULL REFERENCES view_policy_revisions(view_policy_revision_id),
+  checkpoint_revision INTEGER NOT NULL CHECK (checkpoint_revision > 0),
+  event_cursor TEXT NOT NULL,
+  event_sequence INTEGER NOT NULL CHECK (event_sequence >= 0),
+  snapshot_fence INTEGER NOT NULL CHECK (snapshot_fence >= 0),
+  pending_event_ids_json TEXT NOT NULL CHECK (json_valid(pending_event_ids_json)),
+  freshness TEXT NOT NULL CHECK (freshness IN ('complete', 'partial')),
+  predecessor_policy_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (view_id, consumer_id)
+) STRICT, WITHOUT ROWID;
+
+CREATE TRIGGER consumer_checkpoint_identity_immutable
+BEFORE UPDATE OF view_id, consumer_id ON consumer_checkpoints
+BEGIN SELECT RAISE(ABORT, 'consumer checkpoint identity is immutable'); END;
+CREATE TRIGGER consumer_checkpoints_immutable_delete BEFORE DELETE ON consumer_checkpoints
+BEGIN SELECT RAISE(ABORT, 'consumer checkpoints cannot be deleted implicitly'); END;
+
 CREATE TRIGGER owners_identity_immutable
 BEFORE UPDATE OF owner_id, owner_kind, home_namespace_id ON owners
 BEGIN

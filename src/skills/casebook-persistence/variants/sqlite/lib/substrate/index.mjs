@@ -7,6 +7,8 @@ import { sqlite } from "./diagnostics.mjs";
 export const APPLICATION_ID = 0x43425031; // "CBP1"
 const SQL_ASSET = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../sql/schema-v1.sql");
 const REQUIRED_TABLES = Object.freeze([
+  "consumer_checkpoints",
+  "event_retention",
   "namespaces",
   "owner_current",
   "owner_family_bindings",
@@ -170,6 +172,8 @@ export async function inspectStore(binary, storePath) {
         'migration_count', (SELECT count(*) FROM schema_migrations),
         'receipt_count', (SELECT count(*) FROM store_operation_receipts),
         'operation_fence', (SELECT operation_fence FROM store_fence WHERE singleton = 1),
+        'event_retention_count', (SELECT count(*) FROM event_retention WHERE singleton = 1),
+        'retained_after_sequence', (SELECT retained_after_sequence FROM event_retention WHERE singleton = 1),
         'initialization_receipt_present', (SELECT count(*) FROM store_operation_receipts r
           JOIN store_metadata m ON r.operation_id = m.initialization_operation_id
           WHERE r.operation_kind = 'initialize_store' AND r.store_id = m.store_id)
@@ -233,7 +237,10 @@ export async function inspectStore(binary, storePath) {
     && detail.receipt_count >= 1
     && detail.initialization_receipt_present === 1
     && Number.isInteger(detail.operation_fence)
-    && detail.operation_fence >= 1;
+    && detail.operation_fence >= 1
+    && detail.event_retention_count === 1
+    && Number.isInteger(detail.retained_after_sequence)
+    && detail.retained_after_sequence >= 0;
   if (!complete) {
     return unavailable("store_partial_initialization", {
       components: {
@@ -251,6 +258,7 @@ export async function inspectStore(binary, storePath) {
         receipts: detail.receipt_count,
         initialization_receipt: detail.initialization_receipt_present,
         operation_fence: detail.operation_fence ?? null,
+        event_retention: { count: detail.event_retention_count ?? 0, retained_after_sequence: detail.retained_after_sequence ?? null },
         namespace: detail.namespace ?? null,
         view: detail.view ?? null,
         migration: detail.migration ?? null,
@@ -347,6 +355,7 @@ export async function createInitializedStore(binary, storePath, initialization) 
       UPDATE view_policy_revisions SET lifecycle = 'active', activation_fence = 1
       WHERE view_policy_revision_id = ${sqlText(identities.viewPolicyRevisionId)} AND lifecycle = 'created';
       INSERT INTO store_fence VALUES (1, 1);
+      INSERT INTO event_retention VALUES (1, 0);
       INSERT INTO store_operation_receipts (
         operation_id, operation_kind, store_id, request_digest, outcome,
         result_json, result_digest, authority_claim_json, settled_at,
