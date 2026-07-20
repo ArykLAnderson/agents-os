@@ -94,6 +94,15 @@ test("Contract depth is proportional and sufficient for consumers and ownership"
   assert.match(contracts, /A genuinely inapplicable dimension may be recorded as justified `N\/A`; an unknown or deferred semantic is a Finding, not `N\/A`/);
 });
 
+test("final review requires independent bounded challenge without granting semantic authority", async () => {
+  const review = await read("references/review.md");
+
+  assert.match(review, /Before recommending Architect acceptance, independently challenge the coherent current candidate/);
+  assert.match(review, /Use fresh-context reviewers when available/);
+  assert.match(review, /Bound each mandate and its supplied evidence to the actual claims, risks, affected parties, evidence quality, and acceptance conditions being tested/);
+  assert.match(review, /Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint/);
+});
+
 test("shared codebase vocabulary is diagnostic rather than a scorecard", async () => {
   const vocabulary = await read("../codebase-design/SKILL.md");
 

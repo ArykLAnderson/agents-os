@@ -29,6 +29,8 @@ If no accepted authority requires the mechanism, do not make it governing. Revie
 
 ## Completion Review
 
+Before recommending Architect acceptance, independently challenge the coherent current candidate. Use fresh-context reviewers when available. Bound each mandate and its supplied evidence to the actual claims, risks, affected parties, evidence quality, and acceptance conditions being tested. Require concrete findings with severity, evidence, affected claims, and suggested corrections. Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint.
+
 A final review checks semantic readiness against the accepted completion contract, including:
 
 - one selected architecture rather than unresolved coequal targets;
