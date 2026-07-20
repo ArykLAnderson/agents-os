@@ -38,6 +38,10 @@ adapters/*/generated/skills/research/
 
 plugins/pi-keysmith/progress.md
 
+.pi-subagents/
+harness_config/pi/workflows/
+harness_config/pi/agent/AGENTS.md
+harness_config/pi/agent/models-store.json
 harness_config/pi/agent/auth.json
 harness_config/pi/agent/memory/
 harness_config/pi/agent/sessions/
