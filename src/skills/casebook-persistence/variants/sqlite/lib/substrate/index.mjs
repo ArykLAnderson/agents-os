@@ -354,14 +354,14 @@ export async function settleStoreOperationReceipt(binary, storePath, settlement)
     INSERT INTO store_operation_receipts (
       operation_id, operation_kind, store_id, request_digest, outcome,
       result_json, result_digest, authority_claim_json, settled_at,
-      failure_class, retry_disposition, operation_fence
+      failure_class, retry_disposition, operation_fence, view_policy_revision_id
     )
     SELECT
       ${sqlText(receipt.operation_id)}, ${sqlText(receipt.operation_kind)}, ${sqlText(receipt.store_id)},
       ${sqlText(receipt.request_digest)}, ${sqlText(receipt.outcome)}, ${sqlText(JSON.stringify(result))},
       ${sqlText(receipt.result_digest)}, ${sqlText(JSON.stringify(authorityClaim))}, ${sqlText(receipt.settled_at)},
       ${receipt.failure_class == null ? "NULL" : sqlText(receipt.failure_class)}, ${sqlText(receipt.retry_disposition)},
-      ${nextFence}
+      ${nextFence}, ${settlement.viewPolicyRevisionId == null ? "NULL" : sqlText(settlement.viewPolicyRevisionId)}
     FROM store_fence
     WHERE singleton = 1 AND operation_fence = ${expectedOperationFence};
     UPDATE store_fence
