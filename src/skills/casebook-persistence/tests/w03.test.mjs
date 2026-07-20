@@ -252,7 +252,7 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
       "impact.project", "integrity.observe", "projection.rebuild", "export.preflight", "export.finalize",
       "case.create", "case.commit_revision", "case.read",
       "case.resolve", "case.search", "case.traverse",
-      "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect",
+      "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.purge.plan", "case.purge.execute",
       "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation",
       "frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read",
       "frame.export.fragment", "frame.discovery.read", "frame.disposition.read", "frame.history", "frame.list",
