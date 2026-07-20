@@ -325,7 +325,7 @@ async function validateActiveView(binary, storePath, state, context, owner = nul
       AND vpr.audience_ceiling = 'private'
     LIMIT 1;
   `);
-  if (!rows.length || context.view_id !== state.view.view_id || context.view_policy_revision_id !== state.view.view_policy_revision_id) {
+  if (!rows.length) {
     return { failure: failure("view_invalid", "The exact active view-policy revision is invalid or unavailable.", {
       failureClass: "view_invalid",
       retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,

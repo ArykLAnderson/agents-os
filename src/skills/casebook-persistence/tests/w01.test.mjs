@@ -19,6 +19,10 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "diagnose",
     "initialize_store",
     "get_store_operation_receipt",
+    "view_policy.create",
+    "view_policy.revise",
+    "view_policy.activate",
+    "view_policy.retire",
     "case.create",
     "case.commit_revision",
     "case.read",
@@ -49,7 +53,14 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
   assert.deepEqual(check.manifest.implemented_slice_constraints, {
-    store_receipt_visible_operation_kinds: ["initialize_store"],
+    store_receipt_visible_operation_kinds: [
+      "initialize_store",
+      "view_policy.create",
+      "view_policy.revise",
+      "view_policy.activate",
+      "view_policy.retire",
+    ],
+    view_policy_lifecycle: "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",

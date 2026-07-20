@@ -134,11 +134,14 @@ export async function inspectStore(binary, storePath) {
             ON vpr.view_id = vf.view_id AND vpr.lifecycle = 'active'
           JOIN view_policy_namespace_grants grant
             ON grant.view_policy_revision_id = vpr.view_policy_revision_id
+              AND grant.namespace_id = vf.home_namespace_id
           JOIN namespaces granted ON granted.namespace_id = grant.namespace_id
-          ORDER BY vf.view_id, grant.namespace_id LIMIT 1),
+          ORDER BY vpr.activation_fence, vf.view_id LIMIT 1),
         'view_family_count', (SELECT count(*) FROM view_families),
         'policy_revision_count', (SELECT count(*) FROM view_policy_revisions),
         'active_view_count', (SELECT count(*) FROM view_policy_revisions WHERE lifecycle = 'active'),
+        'fenced_retired_policy_count', (SELECT count(*) FROM view_policy_revisions
+          WHERE lifecycle = 'retired' AND retirement_fence IS NOT NULL),
         'active_policy_grant_count', (SELECT count(*)
           FROM view_policy_revisions vpr
           JOIN view_policy_namespace_grants grant
@@ -208,15 +211,18 @@ export async function inspectStore(binary, storePath) {
     && detail.metadata.store_id?.startsWith("store:")
     && detail.namespace_count >= 1
     && detail.active_namespace_count >= 1
-    && detail.view_family_count === 1
-    && detail.policy_revision_count >= 1
-    && detail.active_view_count === 1
-    && detail.active_policy_grant_count >= 1
+    && detail.view_family_count >= 1
+    && detail.policy_revision_count >= detail.view_family_count
+    && detail.active_view_count >= 0
+    && detail.active_view_count <= detail.view_family_count
+    && (detail.active_view_count > 0 || detail.fenced_retired_policy_count > 0)
+    && detail.active_policy_grant_count >= detail.active_view_count
     && detail.active_policy_grant_count === detail.active_policy_total_grant_count
-    && detail.active_home_grant_count === 1
-    && detail.view?.granted_namespace_lifecycle === "active"
-    && detail.view?.audience_ceiling === "private"
-    && detail.view?.store_operation_receipts_visible === 1
+    && detail.active_home_grant_count === detail.active_view_count
+    && (detail.active_view_count === 0 || (
+      detail.view?.granted_namespace_lifecycle === "active"
+      && detail.view?.audience_ceiling === "private"
+    ))
     && detail.grant_count >= 1
     && detail.migration_count === 1
     && detail.migration?.migration_id === "0001-initialize-store"
@@ -236,6 +242,7 @@ export async function inspectStore(binary, storePath) {
         view_families: detail.view_family_count,
         policy_revisions: detail.policy_revision_count,
         active_views: detail.active_view_count,
+        fenced_retired_policies: detail.fenced_retired_policy_count,
         active_policy_grants: detail.active_policy_grant_count,
         active_policy_total_grants: detail.active_policy_total_grant_count,
         active_home_grants: detail.active_home_grant_count,
@@ -323,14 +330,22 @@ export async function createInitializedStore(binary, storePath, initialization) 
       INSERT INTO view_families VALUES (
         ${sqlText(identities.viewId)}, ${sqlText(identities.namespaceId)}, ${sqlText(initializedAt)}
       );
-      INSERT INTO view_policy_revisions VALUES (
+      INSERT INTO view_policy_revisions (
+        view_policy_revision_id, view_id, revision_number, audience_ceiling, lifecycle,
+        authority_claim_json, object_kinds_json, store_operation_receipts_visible,
+        predecessor_revision_id, activation_fence, created_at, limits_json,
+        superseded_fence, retirement_fence
+      ) VALUES (
         ${sqlText(identities.viewPolicyRevisionId)}, ${sqlText(identities.viewId)}, 1,
-        'private', 'active', ${sqlText(JSON.stringify(authorityClaim))}, '["case","frame"]',
-        1, NULL, 1, ${sqlText(initializedAt)}
+        'private', 'created', ${sqlText(JSON.stringify(authorityClaim))}, '["case","frame"]',
+        1, NULL, NULL, ${sqlText(initializedAt)},
+        '{"max_results":100,"max_traversal_depth":8}', NULL, NULL
       );
       INSERT INTO view_policy_namespace_grants VALUES (
         ${sqlText(identities.viewPolicyRevisionId)}, ${sqlText(identities.namespaceId)}
       );
+      UPDATE view_policy_revisions SET lifecycle = 'active', activation_fence = 1
+      WHERE view_policy_revision_id = ${sqlText(identities.viewPolicyRevisionId)} AND lifecycle = 'created';
       INSERT INTO store_fence VALUES (1, 1);
       INSERT INTO store_operation_receipts (
         operation_id, operation_kind, store_id, request_digest, outcome,

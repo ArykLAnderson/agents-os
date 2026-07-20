@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.2.0-l03-w03-legacy-preparation"
+    "version": "0.3.0-l04-w01-view-policy"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "02db991af9148e43630892a3decca2b54a0c03d1a1d1725b3b44b1dbb94e5f38"
+    "sha256": "e572e43891ff7beb6f3aa22d1ab009e6cdb39d0da2951822a5322d75468898ba"
   },
   "entrypoints": [
     {
@@ -39,6 +39,10 @@
     "diagnose",
     "initialize_store",
     "get_store_operation_receipt",
+    "view_policy.create",
+    "view_policy.revise",
+    "view_policy.activate",
+    "view_policy.retire",
     "case.create",
     "case.commit_revision",
     "case.read",
@@ -69,8 +73,13 @@
   ],
   "implemented_slice_constraints": {
     "store_receipt_visible_operation_kinds": [
-      "initialize_store"
+      "initialize_store",
+      "view_policy.create",
+      "view_policy.revise",
+      "view_policy.activate",
+      "view_policy.retire"
     ],
+    "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -182,13 +191,13 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "f942324ae7a943d73835fba6bac58410aeab51426bcc77a78b92da6a1986918d"
+      "sha256": "937317d1d4f72daaa086185c99a916dfbf39c49b88b675655073e3f45f9049e0"
     },
     {
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "e360e215fbe9452d6363258be6e503ba1fb89d4073f5742a162dd9d6cba33f9d"
+      "sha256": "649ae00f17ef9cf50f3d31614fa7b51ccf72d8b75c4664e61b3ecfe8f76e3faf"
     },
     {
       "id": "case-facade",
@@ -212,13 +221,13 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "201cc6caa867d8ead49272e4339f73cb860902921bff8348018c148b3c1034fa"
+      "sha256": "00c6751643f481580a83ae1d08374bdbe1576ce778fbb0684b7536f6ecb1b4ae"
     },
     {
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "5ca739b03f0a2de54bb1f038d812dcfc9244355eef48e93ef1e3f0422ee6c1a3"
+      "sha256": "80ebca79901cff9cdae059503ffe9a2b5784a5a03c1ffc20334142e275dd9199"
     },
     {
       "id": "sqlite-migrations",
@@ -230,7 +239,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "302d972490a720bcbd6c75b7403c8af74e81ac419f8a683c8aa5782986d97284"
+      "sha256": "2a7a8bf68818a13cbb821db47112368f7501a79dcf70d4a1f21e072c135807a0"
     }
   ]
 }
