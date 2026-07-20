@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "32a862625143e7462569712c7e03af97f84b2d80dbd625234ec48e508c872067"
+    "sha256": "b8c4e1d1accdae5eb494652f7068add5dca49e2cfad9a3cc3232a1173c191bc2"
   },
   "entrypoints": [
     {
@@ -186,7 +186,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "338e2cb81d1c56ef91e7f320da4af5790b00fd7df96337d52d7a7bc8e3938319"
+      "sha256": "a244f6ff5e83599dc460ce166b490500a9167bd2564b16b0225fd8937f54d707"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -216,7 +216,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "f89f5e9c0598f6bd1f8333bf8c1b3814eda1aef4da85d6522e70f8e62f41b56a"
+      "sha256": "d05c7170d9d53a8fac8eaf3e3dcb5f20f9c17b038f07fe82c4ad6d142aaca4bb"
     },
     {
       "id": "sqlite-schema",

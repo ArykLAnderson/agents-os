@@ -483,6 +483,9 @@ export async function restoreVerifiedMigrationSnapshot(binary, storePath, snapsh
     if (candidate.status !== "available") throw Object.assign(new Error("restore candidate is not healthy"), { code: "restore_candidate_unhealthy" });
     await rm(quarantinePath, { force: true });
     await rename(storePath, quarantinePath);
+    if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "migration_restore_fail_after_quarantine") {
+      throw Object.assign(new Error("controlled restore failure after quarantine"), { code: "restore_after_quarantine_fault" });
+    }
     await rename(restorePath, storePath);
     await rm(`${storePath}-wal`, { force: true });
     await rm(`${storePath}-shm`, { force: true });
