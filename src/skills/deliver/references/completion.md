@@ -11,6 +11,8 @@ For each Leg require:
 - verified cleanup or explicit unsettled failure;
 - current commit/PR/check/deployment/Runtime locators as applicable.
 
+When a Leg satisfies these checks, record its completion, recompute the frontier, and immediately begin the next eligible Leg under surviving authority. Leg completion is not Deliver completion and does not require a routine “continue?” prompt.
+
 For the Deliver session require:
 
 - the bound Route revision remains valid;
@@ -23,4 +25,4 @@ For the Deliver session require:
 
 Updating a configured tracker or Delivery Map is a projection/update through its owner, not authority transfer to Deliver. Do not mark external systems complete unless their own evidence supports it.
 
-Record `completed`, `route-invalidated`, `failed`, or `cancelled` truthfully. Human confirmation is required where the configured workflow or Destination acceptance requires it.
+Record `completed`, `route-invalidated`, `failed`, or `cancelled` truthfully. Human confirmation is required where the configured workflow or Destination acceptance requires it. Do not substitute human confirmation at every intermediate boundary when only final Destination acceptance or a named consequential transition requires it.

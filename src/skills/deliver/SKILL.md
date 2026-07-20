@@ -45,9 +45,22 @@ Derive the eligible Leg frontier from the accepted Route and current source fact
 
 This is an adaptive semantic loop, not a fixed task scheduler. Runtime owns tasks, concurrency, cancellation, journaling, recovery, budgets, and settlement.
 
+## Continuation Default
+
+A completed RED/GREEN/review/repair/commit, Work Item, wave, or Leg is a checkpoint, not a reason to stop. After integrating evidence and cleanup:
+
+1. update compact Deliver state;
+2. recompute the accepted Route frontier;
+3. immediately prepare and execute the next eligible bounded work;
+4. continue until the Deliver completes or a real Authority And Stops condition is reached.
+
+Do not ask the Architect to say “continue” merely because a Work Item or Leg ended, a commit was created, a progress update was requested, or the next accepted dependency became eligible. A progress update is informational and must not relinquish an already-authorized operation. If an interaction/runtime limit forces a return, persist the exact frontier and resume from it automatically on the next turn without re-requesting routine authorization.
+
+The Marshal may stop between boundaries only when all work is complete, no accepted work is eligible, required input/effect authority is genuinely missing, a material blocker or Route invalidation is present, or the Architect explicitly pauses/cancels. Stale or delayed worker/reviewer messages do not reopen completed work; reconcile them against current source truth and keep advancing.
+
 ## Authority And Stops
 
-Proceed autonomously only within the separately authorized implementation/effect boundary and accepted Route/Blueprint semantics.
+Proceed autonomously and continuously within the separately authorized implementation/effect boundary and accepted Route/Blueprint semantics. Phase, Work Item, commit, review, and Leg boundaries do not consume that authority unless its recorded survival boundary says otherwise.
 
 Confirm before:
 
