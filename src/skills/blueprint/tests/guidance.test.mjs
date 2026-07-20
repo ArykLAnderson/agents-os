@@ -94,13 +94,30 @@ test("Contract depth is proportional and sufficient for consumers and ownership"
   assert.match(contracts, /A genuinely inapplicable dimension may be recorded as justified `N\/A`; an unknown or deferred semantic is a Finding, not `N\/A`/);
 });
 
-test("final review requires independent bounded challenge without granting semantic authority", async () => {
-  const review = await read("references/review.md");
+test("Architect acceptance is gated on completed independent fresh-context review and persisted evidence", async () => {
+  const [skill, review, artifact] = await Promise.all([
+    read("SKILL.md"),
+    read("references/review.md"),
+    read("references/artifact.md"),
+  ]);
 
-  assert.match(review, /Before recommending Architect acceptance, independently challenge the coherent current candidate/);
-  assert.match(review, /Use fresh-context reviewers when available/);
-  assert.match(review, /Bound each mandate and its supplied evidence to the actual claims, risks, affected parties, evidence quality, and acceptance conditions being tested/);
+  assert.match(skill, /The Blueprint is eligible for acceptance only when/);
+  assert.match(skill, /an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition/);
+  assert.match(skill, /Architect acceptance is invalid and must not be given effect or used to set `accepted` unless/);
+  assert.match(skill, /persisted Blueprint state and acceptance provenance identify the independent review evidence/);
+
+  assert.match(review, /Architect acceptance is invalid and must be blocked unless/);
+  assert.match(review, /reviewer who did not author or coordinate the candidate/);
+  assert.match(review, /Persist the reviewer identity or role, independence and fresh-context basis, bounded mandate and supplied evidence, completed review output locator/);
+  assert.match(review, /every resulting Finding and disposition in the Blueprint state and acceptance provenance/);
   assert.match(review, /Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint/);
+  assert.doesNotMatch(review, /Before recommending Architect acceptance/);
+  assert.doesNotMatch(review, /fresh-context reviewers when available/);
+
+  assert.match(artifact, /independent completion-review evidence: reviewer identity or role, independence and fresh-context basis/);
+  assert.match(artifact, /Architect acceptance provenance:[^\n]+a binding to the independent completion-review evidence/);
+  assert.match(artifact, /Architect acceptance is invalid, the Blueprint must remain active, and `accepted` must not be set unless/);
+  assert.match(artifact, /persisted state and acceptance provenance contain the independent completion-review evidence/);
 });
 
 test("shared codebase vocabulary is diagnostic rather than a scorecard", async () => {

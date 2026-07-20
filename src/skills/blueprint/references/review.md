@@ -29,7 +29,9 @@ If no accepted authority requires the mechanism, do not make it governing. Revie
 
 ## Completion Review
 
-Before recommending Architect acceptance, independently challenge the coherent current candidate. Use fresh-context reviewers when available. Bound each mandate and its supplied evidence to the actual claims, risks, affected parties, evidence quality, and acceptance conditions being tested. Require concrete findings with severity, evidence, affected claims, and suggested corrections. Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint.
+Architect acceptance is invalid and must be blocked unless an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition. Use a reviewer who did not author or coordinate the candidate, and give that reviewer a bounded mandate and the evidence needed to test the actual claims, risks, affected parties, evidence quality, and acceptance conditions rather than inherited working context. Require concrete Findings with severity, evidence, affected claims, and suggested corrections.
+
+Persist the reviewer identity or role, independence and fresh-context basis, bounded mandate and supplied evidence, completed review output locator, and every resulting Finding and disposition in the Blueprint state and acceptance provenance. Resolve blocking Findings before acceptance; record the reason and acceptance effect for every other disposition. Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint.
 
 A final review checks semantic readiness against the accepted completion contract, including:
 
