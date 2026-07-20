@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "42152ac9334d7c95ad25a9f2135a8bfdb3fb62af89a232754a42533ab10bd360"
+    "sha256": "964fc1296e689e6bc1593adbe562d07516f555b1a17d796de38821a363148bd3"
   },
   "entrypoints": [
     {
@@ -100,6 +100,7 @@
     "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "logical_export_preflight": "deterministic current/historical Case+Frame fragment aggregation under one exact active-policy observation fence with required/optional admission, dependency classification, private temporary rendering, integrity manifest/bundle digests, and no finalization or publication authority",
+    "document_claim_trace": "Document-owned consequence classifications with mechanically verified claim text, trace, evidence-fragment membership, evidence and reader-locator digests; missing consequential evidence blocks preflight without semantic classification or Document mutation",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -241,7 +242,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "2820c5ec1c366987b4d5a3af1499d3263dbaa0cfbc49f14764fb98963337c55c"
+      "sha256": "e74d28ddb155e0e6e69f6e6df42eff19154238514d2c5e43197305b9c6100aa7"
     },
     {
       "id": "frame-facade",
@@ -259,7 +260,7 @@
       "id": "logical-export-preflight",
       "path": "variants/sqlite/lib/export/index.mjs",
       "kind": "module",
-      "sha256": "c2b61d34f0e25bd152fe98649b849eb90f93258fd13d4213c76e5d6fe2aa18ae"
+      "sha256": "5a7819af0b16b0a56e4d298c1afa407c0f571341fcb8f44a1f0358500734f754"
     },
     {
       "id": "exceptional-operations",
@@ -289,7 +290,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "32cea834f6c3b399eaa5bbd2b8acd182c94ef0dfeb4497aa316f393b5934fb70"
+      "sha256": "f73ef949bc76b328ef0648b85039604d63c1859e4ffb7c53fe0c9683bb21fa85"
     }
   ]
 }

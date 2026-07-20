@@ -25,6 +25,7 @@ const assetDefinitions = [
   ["case-facade", "variants/sqlite/lib/case/index.mjs", "module"],
   ["frame-facade", "variants/sqlite/lib/frame/index.mjs", "module"],
   ["sqlite-common-subset", "variants/sqlite/lib/common/index.mjs", "module"],
+  ["logical-export-preflight", "variants/sqlite/lib/export/index.mjs", "module"],
   ["exceptional-operations", "variants/sqlite/lib/operations/index.mjs", "module"],
   ["sqlite-schema", "variants/sqlite/sql/schema-v1.sql", "sql"],
   ["sqlite-migration-v2", "variants/sqlite/migrations/0002-migration-snapshot-evidence.sql", "sql"],

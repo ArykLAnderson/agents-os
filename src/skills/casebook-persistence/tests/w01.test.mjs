@@ -80,6 +80,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     consumer_observation: "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     current_first_impact: "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     logical_export_preflight: "deterministic current/historical Case+Frame fragment aggregation under one exact active-policy observation fence with required/optional admission, dependency classification, private temporary rendering, integrity manifest/bundle digests, and no finalization or publication authority",
+    document_claim_trace: "Document-owned consequence classifications with mechanically verified claim text, trace, evidence-fragment membership, evidence and reader-locator digests; missing consequential evidence blocks preflight without semantic classification or Document mutation",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
