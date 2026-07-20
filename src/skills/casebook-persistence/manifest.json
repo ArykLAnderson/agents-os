@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b7a1265da81c171cd95997aa4c69e310379939fdfcab4138b9d3f0bdf74813fa"
+    "sha256": "829a7c646058b4c3a1393b1ae546494d5176d8bcad02ec6620a4ce85c5b94d8f"
   },
   "entrypoints": [
     {
@@ -55,6 +55,8 @@
     "reconciliation_snapshot.page",
     "reconciliation_snapshot.finish",
     "impact.project",
+    "integrity.observe",
+    "projection.rebuild",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -91,6 +93,7 @@
       "migration",
       "snapshot",
       "restore",
+      "projection_rebuild",
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
@@ -103,6 +106,8 @@
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
     "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
+    "integrity_observation": "read-only typed classification of canonical mechanical, disposable projection, semantic evidence, and asset/protocol anomalies with visible components, safety, evidence digest, allowed operations, and owner reconciliation handoff",
+    "projection_rebuild": "human-authorized replacement of disposable lexical, reverse-reference, staleness, and attention projections from immutable canonical revisions at one exact fence, verified before atomic selection with durable replay",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -154,7 +159,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "0055538861adc104ed825d2651fe1a64957c21d7c81c44307f83d407a2f8b5a4"
+      "sha256": "2da27e21cc0c64f8a89a82502cf0797575bd4a55ca96871c64daaccd632b7352"
     },
     {
       "id": "shared-configuration",
@@ -190,7 +195,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "49db012edd5599fbe2d14a9eaca6431770303a1bd8260ea6086ee80cf7000ffc"
+      "sha256": "ab5b450ef3e319ff12b4a328477196e8cdb82a5a9e49b9bd41b9763fa401a859"
     },
     {
       "id": "markdown-interchange",
@@ -202,7 +207,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "ccd89f59c92498dc8f4f7e3dcb54fc30eeac8afbc851bdd4c6ec183ddf3cbda5"
+      "sha256": "711a21ee16c808cffe3ca499e5cfae29ac9b86b36d4181cf5d7b6c6a5a5179b5"
     },
     {
       "id": "sqlite-diagnostics",
@@ -235,6 +240,18 @@
       "sha256": "b11b1f43a354061bcb82407718313a12d7327a7b1c8217d9035e00e01b78a860"
     },
     {
+      "id": "sqlite-integrity-observation",
+      "path": "variants/sqlite/lib/substrate/integrity.mjs",
+      "kind": "module",
+      "sha256": "be54f975b296ac9a01c0175fd2371fa9a891cf797fec20a959a4a9eaa25020df"
+    },
+    {
+      "id": "sqlite-projection-rebuild",
+      "path": "variants/sqlite/lib/substrate/projection.mjs",
+      "kind": "module",
+      "sha256": "dd82500127ee9b80b325142a5d9a91c94fd9b3019f2d1ccc471cbc736f81ed5d"
+    },
+    {
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
@@ -244,7 +261,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "62a7ef6cf2e01a2a3739170049f6a0fbd2124b390bf77730afcc71dc416d1703"
+      "sha256": "f2e2f322b34583c3fe93db3b547648313b65c86a29546883a911c4401f7f8f28"
     },
     {
       "id": "frame-facade",
@@ -262,7 +279,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "8bb690e3c1ef36d025e26ad801fc6634fe0df3303b6c13896b43e0c32043d80c"
+      "sha256": "87cbfd0b53822608fbce30649281f86f124b9fbfa3e957bd1a09f6076fdc319c"
     },
     {
       "id": "sqlite-schema",
@@ -286,7 +303,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "c1d09c3d4a4ef53ebddfd786697277df70db0448df80b6b4bee770b185dd9e01"
+      "sha256": "583c532118fecac22e3fd56f6c9e65f10ba61c87b86105c0dc580032c75ca3c9"
     }
   ]
 }
