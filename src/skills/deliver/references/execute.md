@@ -15,3 +15,5 @@ A Hand:
 Do not claim success from code existence, self-attestation, mocked crossed seams, source-only tests when generated/runtime evidence is required, or a command that was not run and read.
 
 A failed Hand result remains source-system/Runtime evidence. The Marshal may assign a bounded local repair only when accepted behavior, Blueprint, Route, Leg, dependency, consumer, evidence, and cleanup assumptions remain unchanged.
+
+A Hand's bounded stop does not stop the Deliver. After each Hand settles, the Marshal integrates the result, obtains required Clerk checks, triages findings, and advances directly to repair or the next eligible Work Item. Do not turn normal Hand completion, review completion, a commit, or a Leg checkpoint into a user confirmation gate.
