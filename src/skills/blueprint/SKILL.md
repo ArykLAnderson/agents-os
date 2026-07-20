@@ -80,7 +80,7 @@ Local read-only inspection and disposable local prototypes may proceed under ord
 
 ## Completion
 
-Recommend acceptance only when:
+The Blueprint is eligible for acceptance only when:
 
 - the pinned behavioral boundary remains current and continuous Casework reconciliation has no material unsettled contradiction;
 - relevant terrain was inspected deeply enough that the design has no material unchecked architectural assumption;
@@ -92,10 +92,11 @@ Recommend acceptance only when:
 - every changed boundary passed materially distinct consumer walkthroughs;
 - behavior and quality coverage is complete or unresolved items are explicitly presented for disposition;
 - blocking Findings are resolved and limitations, justified deferrals, realization questions, and review dispositions remain visible;
+- an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition;
 - the current Blueprint and supporting Case revisions are faithfully bound to a verified RFC Document projection;
 - Route can design realization without inventing behavior, module, ownership, Contract, schema, or architecture acceptance decisions; and
-- persisted state records the current revision and all required acceptance evidence.
+- persisted state records the current revision, independent review evidence and Findings dispositions, and all other required acceptance evidence.
 
-The Architect explicitly accepts the current Blueprint revision, its consequential trade-offs, and the bound verified Document revision. Record that provenance before setting `accepted`. A Blueprint may instead end `rejected`, `abandoned`, or `superseded`.
+Architect acceptance is invalid and must not be given effect or used to set `accepted` unless that independent fresh-context challenge is complete, its Findings are dispositioned, and the persisted Blueprint state and acceptance provenance identify the independent review evidence. The Architect then explicitly accepts the current Blueprint revision, its consequential trade-offs, and the bound verified Document revision. Record all acceptance provenance before setting `accepted`. A Blueprint may instead end `rejected`, `abandoned`, or `superseded`.
 
 Acceptance authorizes Route design only. It does not authorize implementation, migration, publication, deployment, external mutation, or execution. Blueprint does not author Legs, Work Items, implementation plans, or execution state.

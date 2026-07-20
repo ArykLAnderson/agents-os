@@ -26,8 +26,9 @@ The state binds stable identities and exact examined revisions for its source Fr
 - unresolved behavioral questions and architecture Findings, separately from non-blocking realization questions;
 - links to supporting alternatives and dispositions in Casework;
 - behavior/design coverage, consumer sufficiency, review Findings and dispositions, evidence, limitations, and justified deferrals;
+- independent completion-review evidence: reviewer identity or role, independence and fresh-context basis, bounded mandate and supplied evidence, completed review output locator, and every resulting Finding and disposition;
 - the Document projection identity/revision, its pinned semantic-source binding, and representation verification state; and
-- Architect acceptance provenance: accepting human/role, explicit acceptance evidence or statement locator, accepted Blueprint revision, accepted Document revision, consequential trade-offs accepted, and acceptance time when available.
+- Architect acceptance provenance: accepting human/role, explicit acceptance evidence or statement locator, accepted Blueprint revision, accepted Document revision, consequential trade-offs accepted, a binding to the independent completion-review evidence, and acceptance time when available.
 
 An active state may mark a required item unresolved. Do not use omission or `N/A` to conceal it. Once accepted, the architecture section contains only the selected architecture; historical candidates survive through Casework links and provenance.
 
@@ -59,6 +60,6 @@ Use a **full** treatment where fan-out, trust or authority crossings, durable st
 
 ## Projection And Acceptance
 
-Before acceptance, compare the RFC's semantic claims with the pinned Blueprint and Casework revisions, repair projection drift in the owning artifact, regenerate affected representations, and record verification. A materially changed Blueprint invalidates the prior projection verification and Architect acceptance.
+Before acceptance, compare the RFC's semantic claims with the pinned Blueprint and Casework revisions, repair projection drift in the owning artifact, regenerate affected representations, and record verification. A materially changed Blueprint invalidates the prior independent completion review, projection verification, and Architect acceptance.
 
-The Architect explicitly accepts one Blueprint revision and its consequential trade-offs, with the verified Document revision bound as its RFC projection. Acceptance does not authorize implementation, migration, publication, deployment, or external mutation. It authorizes Route to design a realization for that accepted architecture, and nothing more.
+Architect acceptance is invalid, the Blueprint must remain active, and `accepted` must not be set unless an independent fresh-context challenge of the coherent current candidate has completed, every resulting Finding has a recorded disposition, blocking Findings are resolved, and the persisted state and acceptance provenance contain the independent completion-review evidence. Once that gate is satisfied, the Architect explicitly accepts one Blueprint revision and its consequential trade-offs, with the verified Document revision bound as its RFC projection. Acceptance does not authorize implementation, migration, publication, deployment, or external mutation. It authorizes Route to design a realization for that accepted architecture, and nothing more.
