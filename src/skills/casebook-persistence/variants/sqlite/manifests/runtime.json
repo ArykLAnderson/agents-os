@@ -2,7 +2,7 @@
   "runtime_manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.4.0-l04-w03-event-checkpoints"
+    "version": "0.4.0-l04-w05-steward-gate"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -39,6 +39,7 @@
     "reconciliation_snapshot.begin",
     "reconciliation_snapshot.page",
     "reconciliation_snapshot.finish",
+    "impact.project",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -80,7 +81,8 @@
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
-    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
+    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
+    "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
