@@ -220,11 +220,16 @@ test("tampered, unactivated, and misbound active-policy grants fail closed witho
     {
       label: "grant-on-unactivated-policy",
       sql: `
-        INSERT INTO view_policy_revisions
+        INSERT INTO view_policy_revisions (
+          view_policy_revision_id, view_id, revision_number, audience_ceiling, lifecycle,
+          authority_claim_json, object_kinds_json, store_operation_receipts_visible,
+          predecessor_revision_id, activation_fence, created_at
+        )
         SELECT 'view-policy:tampered-created', view_id, 2, audience_ceiling, 'created',
           authority_claim_json, object_kinds_json, store_operation_receipts_visible,
           view_policy_revision_id, NULL, created_at
         FROM view_policy_revisions WHERE lifecycle = 'active';
+        DROP TRIGGER view_policy_grants_immutable_update;
         UPDATE view_policy_namespace_grants
           SET view_policy_revision_id = 'view-policy:tampered-created';
       `,
@@ -233,6 +238,7 @@ test("tampered, unactivated, and misbound active-policy grants fail closed witho
       label: "misbound-grant",
       sql: `
         INSERT INTO namespaces VALUES ('namespace:tampered-other', 'other', 'active', 'synthetic');
+        DROP TRIGGER view_policy_grants_immutable_update;
         UPDATE view_policy_namespace_grants SET namespace_id = 'namespace:tampered-other';
       `,
     },

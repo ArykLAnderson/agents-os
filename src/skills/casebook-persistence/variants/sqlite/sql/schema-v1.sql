@@ -51,8 +51,26 @@ CREATE TABLE view_policy_revisions (
   predecessor_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),
   activation_fence INTEGER,
   created_at TEXT NOT NULL,
+  limits_json TEXT NOT NULL DEFAULT '{"max_results":100,"max_traversal_depth":8}' CHECK (json_valid(limits_json)),
+  superseded_fence INTEGER,
+  retirement_fence INTEGER,
   UNIQUE (view_id, revision_number)
 ) STRICT;
+
+CREATE TRIGGER view_policy_meaning_immutable
+BEFORE UPDATE OF view_policy_revision_id, view_id, revision_number, audience_ceiling,
+  authority_claim_json, object_kinds_json, store_operation_receipts_visible,
+  predecessor_revision_id, created_at, limits_json
+ON view_policy_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'view policy meaning is immutable');
+END;
+
+CREATE TRIGGER view_policy_revisions_immutable_delete
+BEFORE DELETE ON view_policy_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'view policy revisions are immutable');
+END;
 
 CREATE UNIQUE INDEX one_active_policy_per_view
 ON view_policy_revisions(view_id)
@@ -63,6 +81,28 @@ CREATE TABLE view_policy_namespace_grants (
   namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
   PRIMARY KEY (view_policy_revision_id, namespace_id)
 ) STRICT, WITHOUT ROWID;
+
+CREATE TRIGGER view_policy_grants_only_while_created
+BEFORE INSERT ON view_policy_namespace_grants
+WHEN NOT EXISTS (
+  SELECT 1 FROM view_policy_revisions
+  WHERE view_policy_revision_id = NEW.view_policy_revision_id AND lifecycle = 'created'
+)
+BEGIN
+  SELECT RAISE(ABORT, 'view policy grants are immutable after activation');
+END;
+
+CREATE TRIGGER view_policy_grants_immutable_update
+BEFORE UPDATE ON view_policy_namespace_grants
+BEGIN
+  SELECT RAISE(ABORT, 'view policy grants are immutable');
+END;
+
+CREATE TRIGGER view_policy_grants_immutable_delete
+BEFORE DELETE ON view_policy_namespace_grants
+BEGIN
+  SELECT RAISE(ABORT, 'view policy grants are immutable');
+END;
 
 CREATE TABLE store_fence (
   singleton INTEGER PRIMARY KEY CHECK (singleton = 1),

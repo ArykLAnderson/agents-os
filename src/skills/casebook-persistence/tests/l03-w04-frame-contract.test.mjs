@@ -336,6 +336,7 @@ function legacyRequest(state, frame, revision, { dispositionState = "present", b
 async function grantSecondNamespace(state) {
   await sqlite(state, `
     INSERT INTO namespaces VALUES ('${ids.namespaceB}', 'l03-w04-private', 'active', 'synthetic-test');
+    DROP TRIGGER view_policy_grants_only_while_created;
     INSERT INTO view_policy_namespace_grants
     VALUES ('${state.initialization.view.policy_revision_id}', '${ids.namespaceB}');
   `);
@@ -345,18 +346,21 @@ async function rotateToHomeOnlyPolicy(state) {
   const prior = state.initialization.view.policy_revision_id;
   await sqlite(state, `
     BEGIN IMMEDIATE;
-    UPDATE view_policy_revisions SET lifecycle='superseded'
-    WHERE view_policy_revision_id='${prior}';
     INSERT INTO view_policy_revisions
       (view_policy_revision_id, view_id, revision_number, audience_ceiling, lifecycle,
        authority_claim_json, object_kinds_json, store_operation_receipts_visible,
        predecessor_revision_id, activation_fence, created_at)
-    SELECT '${ids.homeOnlyPolicy}', view_id, revision_number + 1, audience_ceiling, 'active',
+    SELECT '${ids.homeOnlyPolicy}', view_id, revision_number + 1, audience_ceiling, 'created',
       authority_claim_json, object_kinds_json, store_operation_receipts_visible,
-      view_policy_revision_id, (SELECT operation_fence FROM store_fence WHERE singleton=1), 'synthetic-test'
+      view_policy_revision_id, NULL, 'synthetic-test'
     FROM view_policy_revisions WHERE view_policy_revision_id='${prior}';
     INSERT INTO view_policy_namespace_grants
     VALUES ('${ids.homeOnlyPolicy}', '${state.initialization.namespace.id}');
+    UPDATE view_policy_revisions SET lifecycle='superseded'
+    WHERE view_policy_revision_id='${prior}';
+    UPDATE view_policy_revisions SET lifecycle='active',
+      activation_fence=(SELECT operation_fence FROM store_fence WHERE singleton=1)
+    WHERE view_policy_revision_id='${ids.homeOnlyPolicy}';
     COMMIT;
   `);
   return ids.homeOnlyPolicy;
