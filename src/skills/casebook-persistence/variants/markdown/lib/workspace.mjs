@@ -1094,6 +1094,41 @@ function capabilities() {
   return { profile: "reduced_file_authoritative_common_subset", supported: [...MARKDOWN_COMMON_OPERATIONS], omitted: [...OMITTED_CAPABILITIES] };
 }
 
+function frameCompletionEvidence(frame) {
+  const boundaries = frame.disposition_boundaries ?? [];
+  const dispositions = frame.case_dispositions ?? [];
+  const pendingIds = dispositions.filter((item) => item.classification_state === "pending_classification").map((item) => item.id);
+  const awaitingIds = dispositions.filter((item) => item.realization_state === "awaiting_case").map((item) => item.id);
+  const settledIds = dispositions.filter((item) => item.realization_state === "settled").map((item) => item.id);
+  const completionBlocks = [
+    ...(pendingIds.length ? [{ kind: "pending_classification", case_disposition_ids: pendingIds }] : []),
+    ...(awaitingIds.length ? [{ kind: "awaiting_case", case_disposition_ids: awaitingIds }] : []),
+  ];
+  return {
+    frame: {
+      descriptive_status: frame.status,
+      closed: new Set(["completed", "abandoned", "superseded"]).has(frame.status),
+      active_discovery_items: frame.discovery.filter((item) => item.lifecycle === "active").length,
+      open_disposition_boundaries: boundaries.filter((item) => item.closure === "open").length,
+      pending_case_dispositions: pendingIds.length,
+      awaiting_case_realizations: awaitingIds.length,
+      completion_blocked: completionBlocks.length > 0,
+    },
+    case_reconciliation: {
+      status: awaitingIds.length ? (settledIds.length ? "partially_settled" : "awaiting_case") : (settledIds.length ? "settled" : "not_applicable"),
+      linked_cases: frame.case_links?.filter((link) => link.target_kind === "case").length ?? 0,
+      awaiting_case_realizations: awaitingIds.length,
+      settled_case_realizations: settledIds.length,
+    },
+    cross_owner_completion: {
+      state: completionBlocks.length ? "partial" : "settled",
+      independent_owner_transactions: true,
+    },
+    completion_blocks: completionBlocks,
+    overall_completion_asserted: false,
+  };
+}
+
 async function createFileAuthorityCase(authority, record) {
   const relativePath = caseRelativePath(record.id);
   const destination = await secureWriteParent(authority.root, relativePath, relativePath);
@@ -1498,6 +1533,7 @@ async function commitFileAuthorityFrame(request) {
     const removed = await cleanupFrameDebris(ownerState, current.manifest.generation_directory);
     return success("frame.commit_revision", {
       status: "settled", frame: record, previous_aggregate_digest: request.expected_digest, current_aggregate_digest: aggregateDigest,
+      completion_evidence: frameCompletionEvidence(record),
       persistence: {
         authority_mode: "markdown", aggregate_digest: aggregateDigest, owner_manifest: `${ownerState.relative}/${FRAME_SELECTOR}`,
         selected_generation: generationDirectory, selected_discovery_filename: current.selectedDiscoveryFilename,
@@ -1542,6 +1578,7 @@ async function commitFileAuthorityFrame(request) {
     const removed = await cleanupFrameDebris(ownerState, generationDirectory);
     return success("frame.commit_revision", {
       status: "settled", frame: record, previous_aggregate_digest: request.expected_digest, current_aggregate_digest: aggregateDigest,
+      completion_evidence: frameCompletionEvidence(record),
       persistence: {
         authority_mode: "markdown", aggregate_digest: aggregateDigest, owner_manifest: `${ownerState.relative}/${FRAME_SELECTOR}`,
         selected_generation: generationDirectory, selected_discovery_filename: current.selectedDiscoveryFilename,
@@ -1637,12 +1674,12 @@ async function createFrame(request) {
   if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
     const persisted = await createFileAuthorityFrame(authority, record);
     if (persisted.failure) return persisted.failure;
-    return success("frame.create", { status: "settled", frame: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files, selected_generation: persisted.generationDirectory, selection: "atomic_owner_directory_rename" }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
+    return success("frame.create", { status: "settled", frame: record, completion_evidence: frameCompletionEvidence(record), persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files, selected_generation: persisted.generationDirectory, selection: "atomic_owner_directory_rename" }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
   }
   const workspace = await loadWorkspace(request, { allowEmpty: true });
   const persisted = await persistCreate(workspace, "frame", record);
   if (persisted.failure) return persisted.failure;
-  return success("frame.create", { status: "settled", frame: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, capabilities: capabilities(), limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_revision_history_or_atomic_frame_replacement"] });
+  return success("frame.create", { status: "settled", frame: record, completion_evidence: frameCompletionEvidence(record), persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, capabilities: capabilities(), limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_revision_history_or_atomic_frame_replacement"] });
 }
 
 async function readOwner(request, kind) {
@@ -1674,6 +1711,7 @@ async function readOwner(request, kind) {
       });
       return success("frame.read", {
         status: "found", frame: workspace.record,
+        completion_evidence: frameCompletionEvidence(workspace.record),
         persistence: { authority_mode: "markdown", aggregate_digest: workspace.aggregateDigest, selected_generation: workspace.manifest.generation_directory, selected_discovery_filename: workspace.selectedDiscoveryFilename },
         capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"], applied_view: workspace.appliedView,
       });
@@ -1683,7 +1721,7 @@ async function readOwner(request, kind) {
   const records = await parseRecords(workspace);
   const found = records.find((item) => item.owner_kind === kind && item.id === id);
   if (!found) return failure(`${kind}.not_found_or_not_visible`, `The ${kind} is unknown or not visible under the exact selected Markdown workspace.`, { failureClass: `${kind}.read_failure`, evidence: {} });
-  return success(`${kind}.read`, { status: "found", [kind]: found.record, persistence: { authority_mode: "markdown", manifest_digest: sha256(workspace.manifestBytes) }, capabilities: capabilities(), applied_view: workspace.appliedView });
+  return success(`${kind}.read`, { status: "found", [kind]: found.record, ...(kind === "frame" ? { completion_evidence: frameCompletionEvidence(found.record) } : {}), persistence: { authority_mode: "markdown", manifest_digest: sha256(workspace.manifestBytes) }, capabilities: capabilities(), applied_view: workspace.appliedView });
 }
 
 async function fileAuthorityRecords(authority, kinds = ["case", "frame"]) {
