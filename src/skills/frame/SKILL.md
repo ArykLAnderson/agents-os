@@ -5,13 +5,15 @@ description: Frames a consequential, under-specified outcome into fit-for-purpos
 
 # Frame
 
-Guide one natural-language outcome from uncertainty to human acceptance. Own navigation, legwork, and momentum; preserve human ownership of intent, authority, consequential judgment, and external authorization.
+Guide one natural-language outcome from uncertainty to human acceptance. Own navigation, legwork, and momentum; preserve human ownership of intent, authority, consequential judgment, and external authorization. Frame owns semantics; the workspace-selected `casebook-persistence` variant owns storage mechanics.
 
 ## Start Or Resume
 
-Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Treat it as private and Git-ignored. Create or resume `frames/<frame-id>/frame.md` and `discovery.md` beneath that root using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
+Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Resolve it to an absolute locator and treat it as private and Git-ignored. Before every ordinary create, resume, discovery, lifecycle, or natural-boundary persistence operation, read and follow [references/persistence.md](references/persistence.md). Resolve exactly one explicit authority and invoke its typed Frame surface. Fail closed when authority or active-view identity is missing or ambiguous; never probe, fall back, dual-write, or directly edit Frame or Discovery files.
 
-Scale persisted state to the outcome. An explicit framing request always opens or resumes a Frame, even when the outcome needs only bounded discovery and a short artifact. Keep such Frames compact rather than routing around them.
+Discover an existing Frame through the selected connector, establish its stable identity, and resume only the complete aggregate returned by `frame.read`. Otherwise create one complete typed aggregate through `frame.create` using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
+
+Scale persisted state to the outcome. An explicit framing request always opens or resumes a Frame, even when the outcome needs only bounded discovery and a short artifact. Keep such Frames compact rather than routing around them. File-authoritative Markdown remains fully operational and independently readable, but its connector is the only ordinary writer.
 
 ## Clean-Context Legwork
 
@@ -38,12 +40,12 @@ Execute legwork inline only when it is a single-pass operation requiring no iter
 
    One boundary may produce multiple dispositions. Do not postpone stable subordinate meaning merely because the broader Frame remains active or contested; use `provisional` or `contested` Case entries when appropriate. Defer only when the candidate meaning itself is too unclear to state independently.
 
-   The boundary is not complete until every material operation result has been checked for reusable meaning, every selected Intake or Reconcile action is reflected in a valid Case, and every omitted material result has an explicit No Case reason. Cases condense reusable meaning and cite retained evidence; they do not absorb research reports, transcripts, or logs wholesale.
+   The boundary is not complete until every material operation result has been checked for reusable meaning, every selected Intake or Reconcile action is reflected in a valid Case, and every omitted material result has an explicit No Case reason. Follow the [persistence procedure](references/persistence.md): first commit complete Frame accounting, perform each Case mutation as a separate Case commit, then commit a fresh complete Frame aggregate to settle visible Case revision evidence. Use temporary `pending_classification`, Intake/Reconcile `awaiting_case` or `settled`, and classified `no_case` exactly as defined there. Cases condense reusable meaning and cite retained evidence; they do not absorb research reports, transcripts, or logs wholesale.
 5. Continue model-resolvable work across operation boundaries. A persistence checkpoint or operation summary is not a stopping point: surface the concise checkpoint, then immediately begin the next model-resolvable operation in the same turn. Return control only when human knowledge, authority, preference, or judgment is required, the user asked to pause, or further work is blocked. Ask focused questions only at that point.
 6. If the requested reader-facing artifact needs persistent revision, traceable claims, or release verification, continue through Document. A short artifact may be completed directly within the Frame when its accepted meaning and final location remain clear.
 7. Propose completion only when the natural-language outcome, requested artifact, and any requested publication state appear satisfied and verified; ask the user to confirm, revise, or continue.
 
-Before reporting completion, compare that claim with the persisted Frame and linked Document state. An outcome is not complete while either state describes material work as active, stale, blocked, pending review, unverified, or unaccepted.
+Before reporting completion, use the selected connector to read the persisted complete Frame and compare that claim with its completion evidence and linked Document state. An outcome is not complete while either state describes material work as active, stale, blocked, pending classification, awaiting Case realization, pending review, unverified, or unaccepted.
 
 The user may redirect scope, order, depth, operation, or stopping at any time. Complete bounded directed work, then resume guided navigation unless the user pauses or establishes a continuing constraint.
 
