@@ -167,7 +167,7 @@ For each accepted **implementation feature**, generate exactly one **keystone is
 - AC should be in domain language from CONTEXT.md — no implementation details.
 - AC should be satisfiable only by the combined work of all child issues — no single child issue makes all AC pass.
 - Labels: `keystone`, `slice:<feature-name>`, `spec-NNN`. Existing trackers may retain `slice:` as the label namespace, but it identifies the feature boundary, not an internal workstream. Do NOT add `afk` or `hitl` — the keystone is a coordination artifact, not a work item.
-- The keystone is never assigned to a ticket writer. Its future owning implementation coordinator is under redesign; `feature-integration` only integrates explicitly approved waves and runs focused integration checks.
+- The keystone is never assigned to a task writer. `software-implementation` owns authorized graph coordination, delegated wave integration, convergence, and proportional feature gates.
 
 **Keystone lifecycle:**
 - **Open** — created, no child tickets dispatched yet
@@ -177,7 +177,7 @@ For each accepted **implementation feature**, generate exactly one **keystone is
 - **PR Ready** — gates and current PR checks pass; non-keystone child tickets are closed and linked to the feature PR/report
 - **Done** — feature PR is merged and target ancestry/landing criteria are verified
 
-**Do NOT generate acceptance test files during decomposition.** The keystone AC is the planning contract. During final verification, an authorized owning coordinator assigns executable black-box acceptance-test work to a scoped writer when needed, then runs and records the feature gate. `feature-integration` does not own final acceptance or tracker lifecycle.
+**Do NOT generate acceptance test files during decomposition.** The keystone AC is the planning contract. During final verification, an authorized Software Implementation coordinator assigns executable black-box acceptance-test work to a scoped Coding Worker when needed, then delegates and records the declared feature gate.
 
 ### 9. Publish (on user approval)
 
@@ -210,7 +210,7 @@ For local tracking, write one file per ticket under the repository's existing is
 ## Execution Modes
 
 After issues are published:
-- **Single ticket**: `/ticket-executor <ticket>` remains available as one legacy atomic writer and is itself scheduled for substantial redesign.
-- **Full feature/keystone or bounded multi-ticket execution**: no installed coordinator currently owns this; the replacement Route implementation package is under redesign.
+- **Single bounded ticket:** form a complete Task Contract and invoke `coding-worker` in an explicit worktree.
+- **Full feature/keystone or bounded multi-ticket execution:** invoke `software-implementation` with the accepted graph, authority, integration base, execution-map locator, and proof profile.
 
-The orchestrator is a separate concern. This skill only handles decomposition and must not restore or emulate the archived Implement Feature coordinator.
+Coordination is a separate concern. This skill only handles decomposition and never grants implementation, external-effect, PR, or landing authority.
