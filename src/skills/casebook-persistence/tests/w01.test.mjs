@@ -51,6 +51,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "frame.get_operation_receipt",
     "frame.resolve",
     "frame.read",
+    "frame.export.fragment",
     "frame.discovery.read",
     "frame.disposition.read",
     "frame.history",
