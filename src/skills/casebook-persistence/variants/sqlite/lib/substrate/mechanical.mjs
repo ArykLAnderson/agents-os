@@ -989,6 +989,7 @@ async function readOwnerCurrentCorpus(request) {
       SELECT o.owner_id,o.owner_kind,o.home_namespace_id,c.projection_json,
         r.revision_id,r.revision_number,r.normalized_json,r.representation_id,
         r.representation_version,r.committed_at,
+        (SELECT operation_fence FROM store_operation_receipts receipt WHERE receipt.operation_id=r.operation_id) revision_operation_fence,
         COALESCE((SELECT json_group_array(json_object(
           'family_id',selected.family_id,'version_id',selected.version_id,
           'content_json',selected.content_json,'content_digest',selected.content_digest))
@@ -1010,9 +1011,9 @@ async function readOwnerCurrentCorpus(request) {
   for(const row of ownerRows){
     const selected=JSON.parse(row.selected_json);
     if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","A current owner revision exceeds the bounded corpus read shape.",{failureClass:"representation_invalid",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});
-    items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
+    items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,operation_fence:row.revision_operation_fence,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
   }
-  return success("read_owner_current_corpus",{status:"found",items,operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
+  return success("read_owner_current_corpus",{status:"found",items,store:{id:state.metadata.store_id,schema:{id:state.metadata.schema_id,version:state.metadata.schema_version},protocol:{id:state.metadata.protocol_id,version:state.metadata.protocol_version}},operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
 }
 
 async function pageOwnerCurrent(request) {
@@ -1330,11 +1331,185 @@ async function readActiveViewScope(request) {
   });
 }
 
+function canonicalCaseRevisionId(value) {
+  return value.startsWith("case-revision:") ? `owner-revision:${value.slice("case-revision:".length)}` : value;
+}
+
+function canonicalCaseVersionId(value) {
+  return value.startsWith("case-version:") ? `version:${value.slice("case-version:".length)}` : value;
+}
+
+function purgeProjectionTargets(payload, targetCaseId) {
+  return payload?.owner?.id === targetCaseId || payload?.source_owner?.id === targetCaseId;
+}
+
+async function purgeProjectionChanges(binary, storePath, targetCaseId) {
+  const present = await queryJson(binary, storePath, "SELECT count(*) AS count FROM sqlite_schema WHERE type='table' AND name IN ('disposable_projection_generations','disposable_projection_entries','disposable_projection_selection');");
+  if (present[0]?.count !== 3) return { statements: [], removed: 0 };
+  const rows = await queryJson(binary, storePath, `SELECT e.generation_id,e.projection_kind,e.entry_key,e.payload_json,e.payload_digest,g.source_fence,g.projection_kinds_json
+    FROM disposable_projection_entries e JOIN disposable_projection_generations g ON g.generation_id=e.generation_id
+    ORDER BY e.generation_id,e.projection_kind,e.entry_key;`);
+  const byGeneration = new Map();
+  for (const row of rows) {
+    const payload = JSON.parse(row.payload_json);
+    const group = byGeneration.get(row.generation_id) ?? { sourceFence: row.source_fence, kinds: JSON.parse(row.projection_kinds_json), retained: [], removed: [] };
+    const item = { kind: row.projection_kind, key: row.entry_key, payload, digest: row.payload_digest };
+    (purgeProjectionTargets(payload, targetCaseId) ? group.removed : group.retained).push(item);
+    byGeneration.set(row.generation_id, group);
+  }
+  const statements = [];
+  let removed = 0;
+  for (const [generationId, group] of byGeneration) {
+    if (!group.removed.length) continue;
+    removed += group.removed.length;
+    for (const item of group.removed) statements.push(`DELETE FROM disposable_projection_entries WHERE generation_id=${sqlText(generationId)} AND projection_kind=${sqlText(item.kind)} AND entry_key=${sqlText(item.key)};`);
+    const projectionDigest = mechanicalDigest({ domain: "casebook-disposable-projection-generation@1", generation_id: generationId, source_fence: group.sourceFence, projection_kinds: group.kinds, entries: group.retained });
+    statements.push(`UPDATE disposable_projection_generations SET projection_digest=${sqlText(projectionDigest)},entry_count=${group.retained.length} WHERE generation_id=${sqlText(generationId)};`);
+  }
+  if (removed) statements.push("UPDATE disposable_projection_selection SET selection_status='stale';");
+  return { statements, removed };
+}
+
+async function purgeCasePayload(request) {
+  const context = contextShape(request.context);
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const operationId = requireString(request.operation_id, "operation_id", 256);
+  const targetCaseId = requireUuidId(request.target_case_id, "target_case_id", "case");
+  const requestDigest = requireDigest(request.request_digest, "request_digest");
+  const planDigest = requireDigest(request.plan_digest, "plan_digest");
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  const notDeleted = (code, message, retryDisposition = RETRY_DISPOSITIONS.NEVER) => failure(code, message, {
+    failureClass: code, retryDisposition,
+    correctiveGuidance: "Inspect the durable receipt first; if absent, obtain a fresh exact W01 plan before retrying.",
+    evidence: { terminal_outcome: "not_deleted", canonical_payload_deleted: false, full_erasure_claimed: false, mutation_performed: false },
+  });
+  if (storeId !== state.metadata.store_id || request.expected?.store_id !== storeId) return notDeleted("case.purge_store_mismatch", "The purge request does not name the resolved immutable store.");
+  if (path.basename(storePath) !== request.store_name) return notDeleted("case.purge_store_mismatch", "The named disposable store does not match the configured SQLite store.");
+  const prior = await readStoreOperationReceipt(binary, storePath, operationId);
+  if (prior) {
+    if (prior.operation_kind !== "case_purge" || prior.request_digest !== requestDigest) return notDeleted("case.purge_idempotency_mismatch", "The operation ID is already settled for a different request.");
+    return success("case.purge.execute", { ...prior.result, idempotent_replay: true, receipt: publicReceipt(prior) });
+  }
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  if (state.operation_fence !== request.expected?.operation_fence
+    || state.metadata.schema_id !== request.expected?.schema?.id
+    || state.metadata.schema_version !== request.expected?.schema?.version) {
+    return notDeleted("case.purge_plan_stale", "The exact store, schema, or operation fence has advanced.", RETRY_DISPOSITIONS.AFTER_RECONCILE);
+  }
+  const revisionIds = request.payload_scope.revision_ids.map((item) => canonicalCaseRevisionId(item.id));
+  const stableIds = request.payload_scope.stable_identity_ids;
+  const versionIds = request.payload_scope.version_ids.map(canonicalCaseVersionId);
+  const owner = await ownerState(binary, storePath, targetCaseId);
+  if (!owner || owner.owner_kind !== "case" || owner.revision_id !== canonicalCaseRevisionId(request.expected.case_revision.id) || owner.revision_number !== request.expected.case_revision.number) {
+    return notDeleted("case.purge_plan_stale", "The exact current Case revision is absent or changed.", RETRY_DISPOSITIONS.AFTER_RECONCILE);
+  }
+  const projection = await purgeProjectionChanges(binary, storePath, targetCaseId);
+  const settledAt = new Date().toISOString();
+  const nextFence = state.operation_fence + 1;
+  const coreResult = {
+    status: "settled", operation_id: operationId, case_id: targetCaseId, plan_digest: planDigest,
+    terminal: { outcome: "deleted", code: "case_payload_purge_completed", canonical_state_effect: "payload-erasure", retry_disposition: RETRY_DISPOSITIONS.NEVER },
+    canonical_payload_deleted: true,
+    full_erasure_claimed: false,
+    deleted_scope: { payload_classes: request.payload_scope.payload_classes, revision_ids: request.payload_scope.revision_ids, stable_identity_ids: stableIds, version_ids: request.payload_scope.version_ids, disposable_projection_entries: projection.removed },
+    retained_copy_disclosure: request.retained_copy_disclosure,
+    retained_non_payload_evidence: { owner_identity: { id: targetCaseId, kind: "case", home_namespace_id: owner.home_namespace_id }, revision_ids: request.payload_scope.revision_ids, stable_identity_ids: stableIds, audit_receipt: { operation_id: operationId, operation_kind: "case_purge", operation_fence: nextFence } },
+    postconditions: { canonical_payload_absent: true, non_payload_identity_retained: true, revision_history_retained: true, audit_receipt_durable: true, snapshots_untouched: true, external_authorities_untouched: true, integrity: "verified" },
+    excluded_effects: { snapshots: "untouched", external_authorities: "untouched", independent_files: "untouched", independent_resources: "untouched", remote_publications: "untouched", retained_snapshots: "untouched" },
+    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
+  };
+  const resultDigest = mechanicalDigest(coreResult);
+  let controlledFaultAfterDelete = "";
+  let controlledFaultAfterReceipt = "";
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_after_payload_delete_before_receipt") controlledFaultAfterDelete = "SELECT * FROM casebook_controlled_fault_after_purge_delete;";
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_kill_executor_after_payload_delete_before_receipt") controlledFaultAfterDelete = ".shell kill -9 $PPID";
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_after_receipt_before_commit") controlledFaultAfterReceipt = "SELECT * FROM casebook_controlled_fault_after_purge_receipt;";
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_kill_executor_after_receipt_before_commit") controlledFaultAfterReceipt = ".shell kill -9 $PPID";
+  const command = `.bail on
+    PRAGMA busy_timeout=5000;
+    PRAGMA foreign_keys=ON;
+    PRAGMA secure_delete=ON;
+    BEGIN IMMEDIATE;
+    CREATE TEMP TABLE purge_guard(valid INTEGER NOT NULL CHECK(valid=1));
+    INSERT INTO purge_guard VALUES(CASE WHEN (SELECT operation_fence FROM store_fence WHERE singleton=1)=${state.operation_fence} THEN 1 ELSE 0 END);
+    INSERT INTO purge_guard VALUES(CASE WHEN EXISTS(SELECT 1 FROM owner_current WHERE owner_id=${sqlText(targetCaseId)} AND revision_id=${sqlText(owner.revision_id)} AND revision_number=${owner.revision_number} AND json_extract(projection_json,'$.state')='tombstoned') THEN 1 ELSE 0 END);
+    INSERT INTO purge_guard VALUES(CASE WHEN (SELECT count(*) FROM owner_revisions WHERE owner_id=${sqlText(targetCaseId)} AND revision_id IN (${sqlList(revisionIds)}))=${revisionIds.length} AND (SELECT count(*) FROM owner_revisions WHERE owner_id=${sqlText(targetCaseId)})=${revisionIds.length} THEN 1 ELSE 0 END);
+    INSERT INTO purge_guard VALUES(CASE WHEN (SELECT count(*) FROM owner_family_bindings WHERE owner_id=${sqlText(targetCaseId)} AND family_id IN (${sqlList(stableIds)}))=${stableIds.length} AND (SELECT count(*) FROM owner_family_bindings WHERE owner_id=${sqlText(targetCaseId)})=${stableIds.length} THEN 1 ELSE 0 END);
+    INSERT INTO purge_guard VALUES(CASE WHEN (SELECT count(*) FROM owner_versions WHERE owner_id=${sqlText(targetCaseId)} AND version_id IN (${sqlList(versionIds)}))=${versionIds.length} AND (SELECT count(*) FROM owner_versions WHERE owner_id=${sqlText(targetCaseId)})=${versionIds.length} THEN 1 ELSE 0 END);
+    DROP TRIGGER owner_revision_selections_immutable_delete;
+    DROP TRIGGER owner_versions_immutable_delete;
+    DROP TRIGGER owner_outbox_immutable_delete;
+    DELETE FROM owner_revision_selections WHERE revision_id IN (${sqlList(revisionIds)});
+    DELETE FROM owner_versions WHERE owner_id=${sqlText(targetCaseId)} AND version_id IN (${sqlList(versionIds)});
+    DELETE FROM owner_current WHERE owner_id=${sqlText(targetCaseId)};
+    DELETE FROM owner_outbox WHERE owner_id=${sqlText(targetCaseId)};
+    ${projection.statements.join("\n")}
+    ${controlledFaultAfterDelete}
+    CREATE TRIGGER owner_revision_selections_immutable_delete BEFORE DELETE ON owner_revision_selections BEGIN SELECT RAISE(ABORT, 'owner revision selections are immutable'); END;
+    CREATE TRIGGER owner_versions_immutable_delete BEFORE DELETE ON owner_versions BEGIN SELECT RAISE(ABORT, 'owner versions are immutable'); END;
+    CREATE TRIGGER owner_outbox_immutable_delete BEFORE DELETE ON owner_outbox BEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END;
+    UPDATE store_fence SET operation_fence=${nextFence} WHERE singleton=1 AND operation_fence=${state.operation_fence};
+    INSERT INTO store_operation_receipts(operation_id,operation_kind,store_id,request_digest,outcome,result_json,result_digest,authority_claim_json,settled_at,failure_class,retry_disposition,operation_fence,owner_id,owner_kind,owner_home_namespace_id,view_policy_revision_id,expected_revision,observed_revision,committed_revision,event_id)
+    VALUES(${sqlText(operationId)},'case_purge',${sqlText(storeId)},${sqlText(requestDigest)},'deleted',${sqlText(JSON.stringify(coreResult))},${sqlText(resultDigest)},${sqlText(JSON.stringify(request.authority_claim))},${sqlText(settledAt)},NULL,'never',${nextFence},${sqlText(targetCaseId)},'case',${sqlText(owner.home_namespace_id)},${sqlText(context.view_policy_revision_id)},${owner.revision_number},${owner.revision_number},NULL,NULL);
+    ${controlledFaultAfterReceipt}
+    DELETE FROM purge_guard;
+    INSERT INTO purge_guard VALUES(CASE WHEN
+      NOT EXISTS(SELECT 1 FROM owner_current WHERE owner_id=${sqlText(targetCaseId)})
+      AND NOT EXISTS(SELECT 1 FROM owner_versions WHERE owner_id=${sqlText(targetCaseId)})
+      AND NOT EXISTS(SELECT 1 FROM owner_revision_selections WHERE revision_id IN (${sqlList(revisionIds)}))
+      AND NOT EXISTS(SELECT 1 FROM owner_outbox WHERE owner_id=${sqlText(targetCaseId)})
+      AND (SELECT count(*) FROM owners WHERE owner_id=${sqlText(targetCaseId)} AND owner_kind='case')=1
+      AND (SELECT count(*) FROM owner_revisions WHERE owner_id=${sqlText(targetCaseId)})=${revisionIds.length}
+      AND (SELECT count(*) FROM owner_family_bindings WHERE owner_id=${sqlText(targetCaseId)})=${stableIds.length}
+      AND (SELECT count(*) FROM store_operation_receipts WHERE operation_id=${sqlText(operationId)} AND operation_kind='case_purge' AND outcome='deleted')=1
+      AND (SELECT count(*) FROM pragma_foreign_key_check)=0
+      AND (SELECT count(*) FROM pragma_quick_check WHERE quick_check<>'ok')=0
+      THEN 1 ELSE 0 END);
+    DROP TABLE purge_guard;
+    COMMIT;`;
+  try {
+    await sqlite(binary, storePath, command, { args: ["-batch", "-bail"], timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
+  } catch {
+    const raced = await readStoreOperationReceipt(binary, storePath, operationId).catch(() => null);
+    if (raced) return raced.operation_kind === "case_purge" && raced.request_digest === requestDigest
+      ? success("case.purge.execute", { ...raced.result, idempotent_replay: true, receipt: publicReceipt(raced) })
+      : notDeleted("case.purge_idempotency_mismatch", "The operation ID raced with a different request.");
+    return notDeleted("case.purge_execution_failed", "The atomic purge transaction did not commit any deletion.", RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR);
+  }
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_kill_executor_after_commit_before_response") process.kill(process.pid, "SIGKILL");
+  const receipt = await readStoreOperationReceipt(binary, storePath, operationId);
+  return success("case.purge.execute", { ...coreResult, idempotent_replay: false, receipt: publicReceipt(receipt) });
+}
+
+async function readStoreOperationReceiptForFacade(request) {
+  const context = contextShape(request.context);
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const operationId = requireString(request.operation_id, "operation_id", 256);
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested receipt is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const view = await validateActiveView(binary, storePath, state, context);
+  if (view.failure) return view.failure;
+  const receipt = await readStoreOperationReceipt(binary, storePath, operationId);
+  return success("read_store_operation_receipt_for_facade", {
+    status: receipt ? "settled" : "absent_at_fence",
+    receipt,
+    operation_fence: state.operation_fence,
+    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
+  });
+}
+
 export async function invokeMechanicalOperation(request) {
   try {
     if (request.operation === "read_active_view_scope") return await readActiveViewScope(request);
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
+    if (request.operation === "read_store_operation_receipt_for_facade") return await readStoreOperationReceiptForFacade(request);
+    if (request.operation === "purge_case_payload") return await purgeCasePayload(request);
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
     if (request.operation === "read_owner_revision") return await readOwnerRevision(request);
     if (request.operation === "read_owner_current_corpus") return await readOwnerCurrentCorpus(request);
