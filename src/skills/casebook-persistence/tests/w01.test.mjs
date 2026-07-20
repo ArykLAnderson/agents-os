@@ -18,6 +18,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
+    "migrate_store",
     "get_store_operation_receipt",
     "case.create",
     "case.commit_revision",
@@ -49,7 +50,8 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
   assert.deepEqual(check.manifest.implemented_slice_constraints, {
-    store_receipt_visible_operation_kinds: ["initialize_store"],
+    store_receipt_visible_operation_kinds: ["initialize_store", "migration"],
+    migration_execution: "L07-W01 envelope and terminal settlement only; snapshot-first schema execution remains unavailable until L07-W02",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
