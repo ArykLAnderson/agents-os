@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, realpath, rm } from "node:fs/promises";
+import { lstat, readFile, realpath, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { validateAuthorityConfiguration, ConfigurationError } from "../../../../shared/config.mjs";
 import { loadAndValidateManifest } from "../../../../shared/manifest.mjs";
@@ -461,7 +461,49 @@ async function settleMigrationResult(sqliteBinary, storePath, state, operationId
 }
 
 function controlledMigrationBoundary(name) {
-  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === name) process.kill(process.pid, "SIGKILL");
+  const fault = process.env.CASEBOOK_PERSISTENCE_TEST_FAULT;
+  if (fault === name) process.kill(process.pid, "SIGKILL");
+  if (name === "migration_after_commit_before_health_verification"
+    && ["migration_fail_after_commit_before_health_verification", "migration_restore_fail_after_quarantine"].includes(fault)) {
+    throw Object.assign(new Error("controlled post-commit health-selection failure"), { code: "migration_health_selection_fault" });
+  }
+}
+
+async function cleanupSettledMigrationSnapshot(existing, envelope) {
+  const recorded = existing.result?.snapshot;
+  if (existing.outcome !== "migrated"
+    || envelope.snapshot.on_success !== "delete"
+    || recorded?.path !== envelope.snapshot.path) return;
+  try {
+    const [bytes, info] = await Promise.all([readFile(recorded.path), stat(recorded.path)]);
+    if (info.isFile()
+      && info.size === recorded.size_bytes
+      && createHash("sha256").update(bytes).digest("hex") === recorded.sha256) {
+      await rm(recorded.path);
+    }
+  } catch {
+    // Receipt recovery remains authoritative even when deferred cleanup cannot
+    // prove the retained file still matches the recorded successful snapshot.
+  }
+}
+
+function retainedMigrationEvidence(snapshot, authorityClaim, quarantinePath = null) {
+  const common = {
+    owner: authorityClaim.acting_role,
+    authoritative: false,
+    retention: "until_operator_reconciliation",
+    cleanup: "delete_after_receipt_and_health_reconciliation",
+  };
+  return [
+    {
+      kind: "pre_migration_snapshot",
+      path: snapshot.path,
+      sha256: snapshot.sha256,
+      size_bytes: snapshot.size_bytes,
+      ...common,
+    },
+    ...(quarantinePath ? [{ kind: "quarantined_migrated_store", path: quarantinePath, ...common }] : []),
+  ];
 }
 
 async function migrateStore(request) {
@@ -511,6 +553,7 @@ async function migrateStore(request) {
         evidence: { operation_id: operationId, settled_kind: existing.operation_kind },
       });
     }
+    await cleanupSettledMigrationSnapshot(existing, envelope);
     return success("migrate_store", existing.result);
   }
 
@@ -684,6 +727,8 @@ async function migrateStore(request) {
         snapshot: { path: snapshot.path, sha256: snapshot.sha256, size_bytes: snapshot.size_bytes },
         quarantine_path: recovery.quarantine_path,
         error_code: executionError?.code ?? "migration_failed",
+        recovery_error_code: recovery.error_code ?? "restore_failed",
+        retained_evidence: retainedMigrationEvidence(snapshot, authorityClaim, recovery.quarantine_path),
       },
     });
   }
@@ -708,6 +753,8 @@ async function migrateStore(request) {
         snapshot_retained: true,
         quarantine_path: null,
         execution_error_code: executionError?.code ?? "migration_failed",
+        evidence_owner: authorityClaim.acting_role,
+        retained_evidence: retainedMigrationEvidence(snapshot, authorityClaim),
       },
     },
   );
