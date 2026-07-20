@@ -19,12 +19,15 @@
     "pi": {
       "generateAgents": true,
       "skills": {
-        "path": "~/.pi/agent/skills/agents-os",
-        "mode": "namespace"
+        "path": "~/.agents-os/adapters/pi/generated/skills",
+        "mode": "configured"
       },
       "agents": {
         "path": "~/.pi/agent/agents/agents-os",
-        "files": "all"
+        "mode": "copy",
+        "files": [
+          "focused-validator.md"
+        ]
       },
       "dependencies": [
         "~/.pi/agent/npm/node_modules/pi-subagents/package.json"

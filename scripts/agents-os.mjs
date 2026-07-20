@@ -246,6 +246,28 @@ async function installEntryDirectory(target, kind, installPath, names) {
   return { installed: names.length, changed, removed };
 }
 
+async function installCopiedFiles(target, kind, installPath, names) {
+  const destination = expandHome(installPath);
+  await mkdir(destination, { recursive: true });
+  let changed = 0;
+  for (const name of names) {
+    const sourcePath = path.join(generatedKindRoot(target, kind), name);
+    const destinationPath = path.join(destination, name);
+    const current = await pathState(destinationPath);
+    if (current?.isSymbolicLink()) {
+      const currentTarget = resolveLinkTarget(destinationPath, await readlink(destinationPath));
+      if (!isOwnedGeneratedTarget(currentTarget, target, kind)) throw new Error(`Refusing to replace unmanaged symlink: ${destinationPath}`);
+      await rm(destinationPath, { force: true });
+    }
+    const rendered = await readFile(sourcePath);
+    if (!(await exists(destinationPath)) || !Buffer.from(await readFile(destinationPath)).equals(rendered)) {
+      await writeFile(destinationPath, rendered);
+      changed += 1;
+    }
+  }
+  return { installed: names.length, changed, removed: 0 };
+}
+
 async function installTarget(target) {
   const surface = config.adapterSurfaces[target];
   if (!surface) throw new Error(`Missing adapter surface configuration: ${target}`);
@@ -255,6 +277,10 @@ async function installTarget(target) {
     const destination = expandHome(surface.skills.path);
     const changed = await ensureOwnedLink(destination, generatedKindRoot(target, "skills"), target, "skills");
     skills = { installed: skillNames.length, changed: Number(changed), removed: 0 };
+  } else if (surface.skills.mode === "configured") {
+    const destination = expandHome(surface.skills.path);
+    if (destination !== generatedKindRoot(target, "skills")) throw new Error(`${target}: configured skill path must equal its generated skill root`);
+    skills = { installed: skillNames.length, changed: 0, removed: 0 };
   } else {
     skills = await installEntryDirectory(target, "skills", surface.skills.path, skillNames);
   }
@@ -266,7 +292,9 @@ async function installTarget(target) {
       .map((entry) => entry.name)
       .sort();
     const names = surface.agents.files === "all" ? generatedAgentNames : surface.agents.files;
-    agents = await installEntryDirectory(target, "agents", surface.agents.path, names);
+    agents = surface.agents.mode === "copy"
+      ? await installCopiedFiles(target, "agents", surface.agents.path, names)
+      : await installEntryDirectory(target, "agents", surface.agents.path, names);
   }
   return { skills, agents };
 }
@@ -344,6 +372,8 @@ async function doctorInstalledSurface(target, problems) {
   const skillNames = await topLevelDirectories(skillRoot);
   if (surface.skills.mode === "namespace") {
     await checkExactLink(problems, expandHome(surface.skills.path), skillRoot, `${target} skills`);
+  } else if (surface.skills.mode === "configured") {
+    if (expandHome(surface.skills.path) !== skillRoot) problems.push(`${target}: configured skill path does not equal generated skill root`);
   } else {
     for (const name of skillNames) {
       await checkExactLink(problems, path.join(expandHome(surface.skills.path), name), path.join(skillRoot, name), `${target} skill ${name}`);
@@ -363,7 +393,14 @@ async function doctorInstalledSurface(target, problems) {
       .sort();
     const names = surface.agents.files === "all" ? generatedNames : surface.agents.files;
     for (const name of names) {
-      await checkExactLink(problems, path.join(expandHome(surface.agents.path), name), path.join(generatedKindRoot(target, "agents"), name), `${target} agent ${name}`);
+      const installed = path.join(expandHome(surface.agents.path), name);
+      const generated = path.join(generatedKindRoot(target, "agents"), name);
+      if (surface.agents.mode === "copy") {
+        if (!(await exists(installed))) problems.push(`${target} agent ${name}: missing installed copy at ${installed}`);
+        else if (!Buffer.from(await readFile(installed)).equals(await readFile(generated))) problems.push(`${target} agent ${name}: installed copy differs from generated source`);
+      } else {
+        await checkExactLink(problems, installed, generated, `${target} agent ${name}`);
+      }
     }
   }
   for (const dependency of surface.dependencies) {
