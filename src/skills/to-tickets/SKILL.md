@@ -36,7 +36,7 @@ A broad spec may contain more than one feature, but parallel subsystems or works
 - Completion produces a coherent outcome recognizable in domain/product language.
 - The outcome can be accepted and shipped independently of other proposed features.
 - Its acceptance criteria require the integrated contribution of multiple child tickets.
-- Running `implement-feature` for it should naturally produce one integration effort and one feature PR.
+- A future end-to-end implementation coordinator should naturally produce one integration effort and one feature PR. No such coordinator is currently installed.
 - If two proposed keystones must both finish before either creates a meaningful outcome, merge them into one keystone and represent their work as parallel tracks.
 
 Most bounded specs should produce one keystone; broad specs commonly produce two or three. More than three is a warning to justify every boundary explicitly. Never create a keystone merely because work can run in parallel, belongs to a subsystem, or has its own dependency chain.
@@ -167,17 +167,17 @@ For each accepted **implementation feature**, generate exactly one **keystone is
 - AC should be in domain language from CONTEXT.md — no implementation details.
 - AC should be satisfiable only by the combined work of all child issues — no single child issue makes all AC pass.
 - Labels: `keystone`, `slice:<feature-name>`, `spec-NNN`. Existing trackers may retain `slice:` as the label namespace, but it identifies the feature boundary, not an internal workstream. Do NOT add `afk` or `hitl` — the keystone is a coordination artifact, not a work item.
-- The keystone is never assigned to a ticket writer. It is owned by the `implement-feature` coordinator; `feature-integration` only integrates completed waves and runs focused integration checks.
+- The keystone is never assigned to a ticket writer. Its future owning implementation coordinator is under redesign; `feature-integration` only integrates explicitly approved waves and runs focused integration checks.
 
 **Keystone lifecycle:**
 - **Open** — created, no child tickets dispatched yet
 - **In Progress** — at least one child ticket is being implemented, reviewed, or integrated
 - **Needs Attention / Blocked** — an investigated decision or external/manual dependency blocks the affected graph
-- **Verifying** — all required child tickets are integrated; `implement-feature` is running feature-level acceptance, manual E2E, deep review, drift, and reporting gates
+- **Verifying** — all required child tickets are integrated; an authorized owning coordinator is running feature-level acceptance, manual E2E, review, drift, and reporting gates
 - **PR Ready** — gates and current PR checks pass; non-keystone child tickets are closed and linked to the feature PR/report
 - **Done** — feature PR is merged and target ancestry/landing criteria are verified
 
-**Do NOT generate acceptance test files during decomposition.** The keystone AC is the planning contract. During final verification, `implement-feature` assigns executable black-box acceptance-test work to a scoped writer when needed, then runs and records the feature gate. `feature-integration` does not own final acceptance or tracker lifecycle.
+**Do NOT generate acceptance test files during decomposition.** The keystone AC is the planning contract. During final verification, an authorized owning coordinator assigns executable black-box acceptance-test work to a scoped writer when needed, then runs and records the feature gate. `feature-integration` does not own final acceptance or tracker lifecycle.
 
 ### 9. Publish (on user approval)
 
@@ -209,9 +209,8 @@ For local tracking, write one file per ticket under the repository's existing is
 
 ## Execution Modes
 
-After issues are published, they can be executed via:
-- **Single ticket**: `/ticket-executor <ticket>` — one atomic writer
-- **Full feature/keystone**: `/implement-feature <ticket-graph-or-keystone>` — bounded ticket waves, integration, verification, reporting, and one final PR
-- **First N**: `implement-feature` may be invoked with an explicit bounded scope when the accepted graph allows a partial run
+After issues are published:
+- **Single ticket**: `/ticket-executor <ticket>` remains available as one legacy atomic writer and is itself scheduled for substantial redesign.
+- **Full feature/keystone or bounded multi-ticket execution**: no installed coordinator currently owns this; the replacement Route implementation package is under redesign.
 
-The orchestrator is a separate concern. This skill only handles decomposition. `implement-feature` coordinates execution and invokes `feature-integration` for completed waves, including dedicated refactor cycles when ticket branches cannot be reconciled at the correct seam.
+The orchestrator is a separate concern. This skill only handles decomposition and must not restore or emulate the archived Implement Feature coordinator.

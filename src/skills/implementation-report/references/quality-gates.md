@@ -86,7 +86,7 @@ Do not claim the report is complete until these gates are checked.
 
 ## Publication
 
-- [ ] Publication was explicitly authorized or delegated by an authorized `implement-feature` run.
+- [ ] Publication was explicitly authorized or delegated by an authorized implementation workflow.
 - [ ] Only report-related files are staged.
 - [ ] Final validation ran after staging.
 - [ ] Commit/PR follows repository conventions.

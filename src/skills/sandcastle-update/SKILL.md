@@ -88,5 +88,5 @@ Summarize what was adopted, adapted, and rejected. If any adapted changes need t
 
 - **Don't blindly merge upstream.** Every change must be evaluated against our customizations.
 - **Don't lose local customizations.** If upstream changes a file we've heavily modified, the default is reject unless there's a clear improvement.
-- **Don't adopt upstream patterns that conflict with our skill system.** Our pipeline uses `ticket-executor`, `implement-feature`, `slice-build`, `/diagnosing-bugs`, and `/verification` — upstream may have its own patterns.
+- **Don't adopt upstream patterns that conflict with our skill system.** The former Deliver and Implement Feature coordinators are archived, and the replacement implementation package is under redesign; upstream may have its own incompatible patterns.
 - **Don't update without presenting the diff first.** Always show the user what's changing.

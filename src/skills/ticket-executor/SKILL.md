@@ -1,6 +1,6 @@
 ---
 name: ticket-executor
-description: Implement exactly one already-triaged local or tracker-backed ticket as a scoped, tested change. Use only when the user explicitly asks to implement one ticket, or when `implement-feature` delegates one atomic ticket inside an isolated worktree. Do not use for keystones, milestones, PRDs, ticket graphs, markdown tasklists, multi-ticket requests, or whole features; use `implement-feature` instead.
+description: Implement exactly one already-triaged local or tracker-backed ticket as a scoped, tested change. Use only when the user explicitly asks to implement one ticket, or when an authorized coordinator delegates one atomic ticket inside an isolated worktree. Do not use for keystones, milestones, PRDs, ticket graphs, markdown tasklists, multi-ticket requests, or whole features; the replacement coordinator is under redesign.
 user-invocable: true
 argument-hint: "<ticket-file-path | ticket-number | ticket-URL>"
 ---
@@ -11,14 +11,14 @@ Consume the established domain glossary and ADRs. Invoke `domain-modeling` only 
 
 Implement one well-specified ticket and return tested, inspectable evidence. Review findings are proposals: do not adjudicate architecture or widen scope. On a substantive blocking finding, return a checkpoint packet with stable ID/evidence, protected criterion/spec/ADR, owning module/ticket/seam, observable-intent impact, boundary signals, proposed disposition/rationale, and bounded verification plan; wait for the coordinator's disposition before fixing.
 
-This is an **atomic writer**, not a feature orchestrator. When called by `implement-feature`, it does not own independent review, integration, PR creation, tracker closure, or feature state.
+This is an **atomic writer**, not a feature orchestrator. When called by an authorized coordinator, it does not own independent review, integration, PR creation, tracker closure, or feature state.
 
 ## Routing Boundary
 
 Use this skill only when:
 
 - the user explicitly requests one ticket, or
-- `implement-feature` or another orchestrator assigns one ticket as an isolated work unit.
+- an authorized orchestrator assigns one ticket as an isolated work unit.
 
 Do **not** use this skill when the request includes:
 
@@ -29,7 +29,7 @@ Do **not** use this skill when the request includes:
 - broad implementation of a plan
 - ambiguous scope that may contain multiple vertical slices
 
-Route accepted ticket graphs, keystones, and whole-feature requests to `implement-feature`.
+Do not accept ticket graphs, keystones, or whole-feature requests. No installed end-to-end coordinator currently owns them; the replacement implementation package is under redesign.
 
 ## Input
 
@@ -122,7 +122,7 @@ Run the complete ticket acceptance set before reporting completion. Do not claim
 
 ### 7. Commit when the execution contract authorizes it
 
-When `implement-feature` delegates the ticket, commit accepted ticket changes on the assigned ticket branch and leave the worktree clean. Do not push, open a ticket PR, merge, close the ticket, or update the keystone; the coordinator owns those actions.
+When an authorized coordinator delegates the ticket, commit accepted ticket changes on the assigned ticket branch and leave the worktree clean. Do not push, open a ticket PR, merge, close the ticket, or update the keystone; the coordinator owns those actions.
 
 For standalone use, do not commit unless the user or repository workflow grants that authority.
 
@@ -147,7 +147,7 @@ When an orchestrator requests a machine-readable result, emit it exactly.
 
 ## Review Ownership
 
-When orchestrated, `implement-feature` owns independent review. It launches read-only reviewers, evaluates findings, and returns accepted fixes to this same writer. Do not spawn a competing implementation writer or declare the ticket integrated.
+When orchestrated, the owning authorized coordinator owns independent review. It launches read-only reviewers, evaluates findings, and returns accepted fixes to this same writer. Do not spawn a competing implementation writer or declare the ticket integrated.
 
 When used standalone, perform a focused self-review or use project review conventions without creating a large generic reviewer battery.
 

@@ -1,6 +1,6 @@
 ---
 name: implementation-report
-description: Create an evidence-backed, visually polished HTML report after implementation is complete. Use when the user asks for a developer report, implementation walkthrough, post-build report, founder-facing technical explanation, architecture report, durable proof of completed work, or when `implement-feature` requires its archival report bundle. Produces a reader-first narrative with screenshots, native Pi-generated architecture diagrams, verification evidence, scope/drift boundaries, risks, and next decisions.
+description: Create an evidence-backed, visually polished HTML report after implementation is complete. Use when the user asks for a developer report, implementation walkthrough, post-build report, founder-facing technical explanation, architecture report, or durable proof of completed work. Produces a reader-first narrative with screenshots, native Pi-generated architecture diagrams, verification evidence, scope/drift boundaries, risks, and next decisions.
 user-invocable: true
 argument-hint: "[ticket | feature | PR | commit | worktree] [--mode standard|showcase] [--audience founder|product|engineering|mixed] [--publish] [--archive-feature <id>]"
 ---
@@ -9,14 +9,14 @@ argument-hint: "[ticket | feature | PR | commit | worktree] [--mode standard|sho
 
 Turn completed work into a durable, self-contained HTML report that explains what changed, how it works, what proves it, and what remains incomplete.
 
-This skill runs **after implementation**. It is not a substitute for `ticket-executor`, `implement-feature`, `slice-build`, `/doc-sync`, release notes, an RFC, or raw test logs.
+This skill runs **after implementation**. It is not a substitute for an implementation workflow, `/doc-sync`, release notes, an RFC, or raw test logs.
 
 ## Defaults
 
 - **Mode:** `standard`
 - **Audience:** `mixed`, with user value before implementation detail
 - **Output:** self-contained HTML plus local assets and sanitized evidence
-- **Publishing:** never commit, push, open a PR, or upload unless the user explicitly asks, passes `--publish`, or `implement-feature` invokes archival finalization with that authority
+- **Publishing:** never commit, push, open a PR, or upload unless the user explicitly asks, passes `--publish`, or an authorized implementation workflow delegates archival finalization with that authority
 - **Evidence:** reuse trustworthy existing evidence before running new work
 - **Diagrams:** use Pi’s native `imagegen` tool from the installed image-generation plugin; never wrap Codex CLI or another model CLI to generate images
 
@@ -48,7 +48,7 @@ Use for milestones, vertical slices, founder reviews, or when requested explicit
 
 ### Feature archive
 
-Use when invoked by `implement-feature` or `--archive-feature`.
+Use when invoked by an authorized implementation workflow or `--archive-feature`.
 
 - Use Showcase editorial/evidence quality.
 - Write the bundle to the canonical docs repository under its archived implementation-report convention.
@@ -231,14 +231,14 @@ Read [references/quality-gates.md](references/quality-gates.md) for the final ch
 
 ### 8. Publish only when authorized
 
-If `--publish` was passed, the user explicitly requested publication, or `implement-feature` invoked authorized archival finalization:
+If `--publish` was passed, the user explicitly requested publication, or an authorized implementation workflow invoked archival finalization:
 
 1. Confirm the work is in an allowed documentation worktree/branch.
 2. Stage only report-related files.
 3. Run final validation from the staged content.
 4. Commit using the repository’s conventions.
 5. Push and open/update a docs PR with report scope, code integration SHA, evidence, drift summary, validation, and known gaps.
-6. When archiving a feature, return the docs PR URL and archive manifest to `implement-feature` so it can link them from the code PR.
+6. When archiving a feature, return the docs PR URL and archive manifest to the owning authorized implementation context so it can link them from the code PR.
 
 Otherwise, leave the report uncommitted and provide its local path.
 

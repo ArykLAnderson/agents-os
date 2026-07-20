@@ -21,7 +21,7 @@ Challenge:
 - whether edges name real prerequisites;
 - whether transition coverage includes data, compatibility, operations, cleanup, and external seams;
 - whether early Legs retire the most consequential uncertainty;
-- whether Deliver would need to invent architecture, strategy, or acceptance evidence;
+- whether the selected implementation capability would need to invent architecture, strategy, or acceptance evidence;
 - whether deferred and temporary work has honest dispositions.
 
 Retain review findings and their destinations. Do not rewrite the Route after every review comment; reconcile a coherent accepted correction batch at a natural boundary.
