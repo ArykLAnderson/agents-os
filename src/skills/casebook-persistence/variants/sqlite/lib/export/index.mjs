@@ -856,7 +856,7 @@ async function settleFinalization(prepared, request, requestDigest, core) {
 }
 
 function uncertainFinalizationFailure(request, code = "export.final_verification_failed") {
-  return failure(code, "A marker-bearing final destination may exist but exact post-effect verification failed.", {
+  return failure(code, "A final destination exists but exact provenance and post-effect verification are uncertain.", {
     failureClass: "final_output_uncertain",
     retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
     correctiveGuidance: "Do not publish, delete, or overwrite either path. Look up the exact receipt and perform operator recovery.",
@@ -914,11 +914,7 @@ async function finalizeExport(request) {
   let recovered = false;
   if (finalExists) {
     const finalVerification = await verifyBundle(request.destination.final_path, request, { marker });
-    if (!finalVerification.ok) {
-      return await pathExists(path.join(request.destination.final_path, FINALIZATION_MARKER))
-        ? uncertainFinalizationFailure(request)
-        : blockedFinalization(prepared, request, requestDigest, "final_destination_conflict");
-    }
+    if (!finalVerification.ok) return uncertainFinalizationFailure(request);
     recovered = true;
     if (temporaryExists) {
       const temporaryVerification = await verifyBundle(request.destination.temporary_path, request, { requirePrivate: true });
@@ -962,7 +958,7 @@ async function finalizeExport(request) {
     } catch {
       const raced = await verifyBundle(request.destination.final_path, request, { marker });
       if (!raced.ok) {
-        return await pathExists(path.join(request.destination.final_path, FINALIZATION_MARKER))
+        return await pathExists(request.destination.final_path)
           ? uncertainFinalizationFailure(request)
           : blockedFinalization(prepared, request, requestDigest, "atomic_finalization_failed", { cleanup: false });
       }

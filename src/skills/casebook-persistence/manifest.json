@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "b78786fbcbbec30841754e9001f4282dccb0513878e2ccadee9312368286fc85"
+    "sha256": "50069e4d0e105cd03ae1176fbbc2695a2fca5e3d50ceda436810f5b6eb554faa"
   },
   "entrypoints": [
     {
@@ -296,7 +296,7 @@
       "id": "logical-export-preflight",
       "path": "variants/sqlite/lib/export/index.mjs",
       "kind": "module",
-      "sha256": "ace3367e8d1db5874fd591991766ef1f58028c90a15fb604368cea1f48615dbc"
+      "sha256": "32339fb15b8750fec410b2e7728160244e12aec6ee48cc0006e775558486f7fe"
     },
     {
       "id": "exceptional-operations",
