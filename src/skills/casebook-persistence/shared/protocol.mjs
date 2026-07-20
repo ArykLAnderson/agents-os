@@ -16,6 +16,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "reconciliation_snapshot.begin",
   "reconciliation_snapshot.page",
   "reconciliation_snapshot.finish",
+  "impact.project",
   "case.create",
   "case.commit_revision",
   "case.read",
