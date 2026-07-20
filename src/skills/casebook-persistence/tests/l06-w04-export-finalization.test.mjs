@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -200,6 +200,31 @@ test("an interruption after atomic rename recovers from the operation-bound fina
     const replay = await invoke(state.root, request);
     assert.equal(replay.code, 0, replay.stderr || JSON.stringify(replay.json));
     assert.equal(replay.json.result.idempotent_replay, true);
+  } finally {
+    await rm(state.root, { recursive: true, force: true });
+  }
+});
+
+test("an existing invalid unmarked final directory remains recovery-required without settling a no-effect receipt", async () => {
+  const state = await setup("invalid-unmarked-final");
+  try {
+    const operationId = "operation:l06-w04:invalid-unmarked-final:finalize";
+    await mkdir(state.destination.final_path);
+    await writeFile(path.join(state.destination.final_path, "manifest.json"), "{}\n");
+
+    const result = await invoke(state.root, finalizeRequest(state, operationId));
+    assert.equal(result.code, 2);
+    assert.equal(result.json.failure.code, "export.final_verification_failed");
+    assert.equal(result.json.failure.retry_disposition, "after_operator_repair");
+    assert.equal(result.json.failure.evidence.recovery_required, true);
+    assert.equal(result.json.failure.evidence.temporary_output_path, state.destination.temporary_path);
+    assert.equal(result.json.failure.evidence.final_output_path, state.destination.final_path);
+    assert.equal(await exists(state.destination.temporary_path), true);
+    assert.equal(await exists(state.destination.final_path), true);
+    assert.equal(await exists(path.join(state.destination.final_path, ".casebook-finalization.json")), false);
+
+    const absent = await invoke(state.root, receiptLookup(state, operationId));
+    assert.equal(absent.json.result.status, "absent_at_fence");
   } finally {
     await rm(state.root, { recursive: true, force: true });
   }
