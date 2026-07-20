@@ -57,6 +57,7 @@
     "case.tombstone.stage",
     "case.tombstone.commit",
     "case.purge.inspect",
+    "case.purge.plan",
     "case.export.fragment",
     "case.markdown.render",
     "case.markdown.stage_reconciliation",
@@ -105,6 +106,7 @@
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
     "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
+    "purge_planning": "non-mutating synthetic-disposable Case payload plan binding exact store/schema/revision/fence, complete history scope, semantic-owner tombstone disposition, human confirmation, impact dependencies, verified snapshot and external-copy disclosure, exclusions, and retained non-payload audit evidence; execution remains unavailable",
     "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     "frame_statuses": [
       "active",
