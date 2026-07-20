@@ -72,5 +72,5 @@ Each invocation spawns fresh-context reviewers — they don't carry context from
 
 - Always include architecture-reviewer. The others are conditional.
 - Reviewers are read-only — they report findings, they don't modify the RFC.
-- Keep the review focused on the design, not implementation details. Implementation belongs in a separately authorized implementation workflow after planning/decomposition; the end-to-end coordinator is currently under redesign.
+- Keep the review focused on the design, not implementation details. Implementation belongs in separately authorized `coding-worker` or `software-implementation` execution after planning/decomposition.
 - If the RFC is thin or vague, the primary finding should be "this RFC needs more detail in [sections]" rather than guessing what was intended.

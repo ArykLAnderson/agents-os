@@ -1,88 +1,52 @@
 ---
 name: tdd
-description: Red-green-refactor TDD methodology adapted for AI agents. Loaded when implementing features against specs or writing tested code. Provides the disciplined implementation workflow.
+description: Interface-first red-green-refactor discipline for coherent behavioral batches. Loaded when implementing tested behavior against a public module or product interface.
 user-invocable: false
 ---
 
-# TDD: Test-Driven Development for AI Agents
+# TDD: Interface-First Behavioral Batches
 
-Use `codebase-design` to choose the highest seam that expresses the behavior. If repeated red-green cycles require shallow special cases or contract violations, invoke `zoom-out` before continuing.
+Use `codebase-design` to choose the deepest public interface that expresses the required behavior. TDD owns implementation feedback discipline, not worker coordination, reviewer topology, worktree allocation, or release gates.
 
-This skill encodes the red-green-refactor discipline adapted for AI-assisted development. Traditional micro-step TDD (one tiny test at a time) is inefficient for AI agents — the principles stay, but the step size adapts.
+## Choose One Coherent Batch
 
-## The Cycle
+A batch covers related observable outcomes through one public interface and for one immediate consumer. It may contain several assertions or scenarios when they describe the same behavior. Prefer the highest seam that remains fast and deterministic enough to give useful feedback.
 
-### RED — Write a failing test
-- Pick the next unimplemented spec test (look for `// TODO: implement` markers)
-- Write the test assertion that expresses the expected behavior
-- Run the test. **It must fail.** If it passes without new code, the test is trivial or wrong.
+Good tests survive a sound internal redesign. Avoid assertions about private functions, call order, internal object shape, incidental files, or implementation sequence. Use a narrow unit test only when it durably isolates valuable algorithmic behavior.
 
-### GREEN — Make it pass
-- Write the **minimum production code** to make the failing test pass
-- Do not add features, handle edge cases, or refactor yet
-- Run the test. **It must pass.**
-- Run **all tests** to check for regressions
+## RED — Establish Meaningful Missing Behavior
 
-### REFACTOR — Clean up
-- Improve code structure while keeping all tests green
-- Look for: duplication, unclear names, functions doing too much, unnecessary complexity
-- Run all tests after refactoring to confirm nothing broke
+1. Write the coherent behavioral batch before its production implementation.
+2. Run the smallest command that executes it.
+3. Confirm it fails for the expected missing behavior, not because of syntax, fixture, environment, or unrelated failures.
+4. Record concise red evidence: command, failing scenario/assertion, and why the failure demonstrates the absent behavior.
 
-### Repeat
-- Move to the next spec test and start the cycle again
+A test that already passes is not red evidence. Correct the test or explain why a meaningful red state cannot be produced (for example, characterization of existing behavior) rather than manufacturing a failure. Do not weaken an established interface merely to force red.
 
-## Vertical, Not Horizontal
+## GREEN — Satisfy The Public Behavior
 
-Work through acceptance criteria as **vertical slices**: one criterion at a time, RED-GREEN-REFACTOR, then the next. Never write all tests first and then all implementation — that's horizontal slicing and it breaks the feedback loop.
+Implement the smallest coherent production change that makes the whole batch pass at the selected interface. “Smallest” limits behavior and scope; it does not require a shallow patch or forbid necessary bounded refactoring.
 
-**Correct:** Test A fails → implement A → passes → refactor → Test B fails → implement B → passes → refactor
-**Wrong:** Test A + B + C + D → implement A + B + C + D → hope they all pass
+Rerun the focused batch and inspect its output. Then run ordinary affected-project checks required by the Task Contract and repository instructions. Do not claim green from an unexecuted or unread command.
 
-If you catch yourself writing more than one failing test before making any pass, stop. You've gone horizontal.
+## REFACTOR — Deepen Without Changing The Contract
 
-## Adapted Step Size for AI
+Improve naming, locality, encapsulation, duplication, and module depth while the behavioral batch stays green. If repeated cycles require shallow special cases, leaky seams, or accepted-contract violations, use `zoom-out` and return the resulting bounded design issue to the owning workflow.
 
-Uncle Bob notes: "TDD is very inefficient for AIs. Testing is essential for them but not in the micro steps that the three laws of TDD recommend."
+Rerun the focused batch after refactoring. Run broader checks in proportion to the affected surface; TDD does not mandate an unrelated full-repository suite.
 
-For AI agents, the adaptation is:
-- **Group related assertions** — implement 2-3 closely related spec tests in one RED-GREEN cycle if they test the same logical unit
-- **Write more complete implementations** in the GREEN step — AI can hold more context than a human doing micro-steps
-- **But never skip RED** — always confirm the test fails before writing production code. This is non-negotiable.
-- **Never write production code and test code simultaneously** — the test must exist and fail first
+## Continue By Interface Batch
 
-## Working with Specs
+Move to the next coherent behavior batch only after the current batch is green and internally coherent. Do not split one behavior across ceremonial micro-tests, and do not write an entire feature's unrelated tests before implementation. Multiple related scenarios in one batch are expected when they share an interface and consumer.
 
-When implementing against a spec file:
-1. Read all the spec tests to understand the full picture
-2. Identify a good implementation order (dependencies first, happy path before edge cases)
-3. Work through specs one-by-one (or in small related groups) using the RED-GREEN-REFACTOR cycle
-4. After all specs pass, run the full test suite
+## Handoff Evidence
 
-## When to Load This Skill
+Report:
 
-This skill is relevant when:
-- `ticket-executor` is implementing a ticket that references spec files
-- The user asks to implement a feature with tests
-- A spec file with `// TODO: implement` markers exists
-- The user explicitly asks for TDD discipline
+- public interface and consumer exercised;
+- behavioral tests added or changed;
+- red command and expected failure evidence, or the exact reason meaningful red was not possible;
+- green/refactor commands and results; and
+- remaining behavior or limitations.
 
-## Coordinator Pattern (Multi-Agent)
-
-When implementation spans multiple modules or is non-trivial, use a coordinator pattern:
-
-1. **Test agent** writes failing tests (behavioral contracts, API shape, clamped expectations — not exact numeric values)
-2. **Reviewer** validates test quality
-3. **Implement agent** (fresh context) writes code to pass the tests
-4. **Reviewer** validates implementation
-5. Loop review → fix until the reviewer is satisfied
-
-Independent workstreams can run in parallel. Use background agents for test writing and implementation, foreground for reviews that need coordinator judgment.
-
-This pattern is the multi-agent version of RED-GREEN-REFACTOR — the test writer and implementer are different agents, which prevents the implementer from writing tests that just rubber-stamp their own code.
-
-## Completion
-
-When all spec tests pass:
-1. Run the full test suite for the affected package
-2. Check for remaining `// TODO: implement` markers
-3. Report: what was implemented, what tests pass, any issues encountered
+Role separation and independent validation are defined by the invoking Coding Worker or Software Implementation workflow, not by this skill.
