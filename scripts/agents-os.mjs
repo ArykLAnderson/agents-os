@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -102,6 +103,39 @@ function skillName(rel) {
   return rel.split(path.sep)[0];
 }
 
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function aggregateContentDigest(assets) {
+  const canonical = [...assets]
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map(({ path: assetPath, sha256: digest }) => `${assetPath}\0${digest}\n`)
+    .join("");
+  return sha256(Buffer.from(canonical));
+}
+
+async function refreshGeneratedPackageManifests(skillsRoot) {
+  for (const entry of await readdir(skillsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const packageRoot = path.join(skillsRoot, entry.name);
+    const manifestPath = path.join(packageRoot, "manifest.json");
+    if (!(await exists(manifestPath))) continue;
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    if (!Array.isArray(manifest.assets) || typeof manifest.content_digest?.sha256 !== "string") continue;
+    const transformedAssets = manifest.assets.filter((asset) => path.basename(asset.path) === "SKILL.md");
+    if (!transformedAssets.length) continue;
+    for (const asset of transformedAssets) {
+      const assetPath = path.resolve(packageRoot, asset.path);
+      const relative = path.relative(packageRoot, assetPath);
+      if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error(`Invalid generated package asset path: ${asset.path}`);
+      asset.sha256 = sha256(await readFile(assetPath));
+    }
+    manifest.content_digest.sha256 = aggregateContentDigest(manifest.assets);
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+}
+
 async function renderTarget(target, destination, clean = true) {
   const layout = layouts[target];
   const excluded = excludedSkills(target);
@@ -132,6 +166,7 @@ async function renderTarget(target, destination, clean = true) {
     if (path.basename(file) === "SKILL.md") await writeFile(out, addHeader(await readFile(file, "utf8")));
     else await writeFile(out, await readFile(file));
   }
+  await refreshGeneratedPackageManifests(path.join(destination, layout.skills));
 }
 
 async function sync() {
