@@ -72,6 +72,28 @@ test("persisted state and abstract RFC structure retain required bindings and de
   assert.match(artifact, /`N\/A` is valid only when the item is genuinely inapplicable and includes a short reason/);
 });
 
+test("terrain stops when the accepted architecture view is sufficient for candidate design", async () => {
+  const terrain = await read("references/terrain.md");
+
+  assert.match(terrain, /Inspect only enough terrain to remove material unchecked assumptions/);
+  assert.match(terrain, /Stop terrain work when candidate designs no longer depend on important unchecked architectural assumptions/);
+  assert.match(terrain, /Do not turn the survey into whole-codebase documentation or select a future module inside the terrain record/);
+  assert.match(terrain, /the current responsibility and interaction model/);
+  assert.match(terrain, /current Contract, state, schema, and ownership canon/);
+  assert.match(terrain, /explicit unknowns classified as behavioral, architectural, realization, evidence, or external-authorization questions/);
+});
+
+test("Contract depth is proportional and sufficient for consumers and ownership", async () => {
+  const contracts = await read("references/contracts.md");
+
+  assert.match(contracts, /depth required by actual use and material risk—not to checklist completeness/);
+  assert.match(contracts, /Specify what materially affects consumers/);
+  assert.match(contracts, /A Contract is consumer-sufficient when each materially different consumer can achieve accepted behavior, handle relevant failure\/recovery, and observe required outcomes using only the Contract and declared context/);
+  assert.match(contracts, /Name one canonical owner and definition for every material Contract, state machine, and schema/);
+  assert.match(contracts, /Stop when consumer and ownership sufficiency are established for material paths; do not prescribe private algorithms or Route sequencing/);
+  assert.match(contracts, /A genuinely inapplicable dimension may be recorded as justified `N\/A`; an unknown or deferred semantic is a Finding, not `N\/A`/);
+});
+
 test("shared codebase vocabulary is diagnostic rather than a scorecard", async () => {
   const vocabulary = await read("../codebase-design/SKILL.md");
 
