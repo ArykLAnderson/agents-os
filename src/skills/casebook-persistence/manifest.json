@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "292895df028d2c6eb8e553851cf282be09620f6c99beccda4b0514f28d4f5a21"
+    "sha256": "02db991af9148e43630892a3decca2b54a0c03d1a1d1725b3b44b1dbb94e5f38"
   },
   "entrypoints": [
     {
@@ -158,7 +158,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "5033fafb20bf3f69bc14d525411a6037bc5b5751a24ffd85406a30d4d2c0fbaa"
+      "sha256": "49db012edd5599fbe2d14a9eaca6431770303a1bd8260ea6086ee80cf7000ffc"
     },
     {
       "id": "markdown-interchange",

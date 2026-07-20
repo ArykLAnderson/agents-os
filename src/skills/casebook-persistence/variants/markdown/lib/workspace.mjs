@@ -1,5 +1,5 @@
 import { constants as fsConstants } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   access,
   link,
@@ -69,6 +69,7 @@ const CATEGORY = Object.freeze({
 });
 const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
 const DIGEST = /^[0-9a-f]{64}$/;
+const CURRENT_CASE_VERSION_EVIDENCE_NAMESPACE = Buffer.from("46532d2ab6af44c296d514c9ed9f64eb", "hex");
 const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope", "provenance", "aliases", "facets", "entries", "sources", "relationships", "references"]);
 const CASE_COMPLETE_FIELDS = ["aliases", "facets", "entries", "sources", "relationships", "references"];
 const FRAME_LINK_FIELDS = ["case_links", "frame_links", "downstream_links", "artifact_links"];
@@ -702,6 +703,21 @@ function caseRelativePath(caseId) {
   return `cases/${caseId.slice(caseId.indexOf(":") + 1)}.md`;
 }
 
+function currentCaseVersionEvidence(caseId, contentDigest) {
+  const hash = createHash("sha1")
+    .update(CURRENT_CASE_VERSION_EVIDENCE_NAMESPACE)
+    .update(`${caseId}\0${contentDigest}`, "utf8")
+    .digest();
+  hash[6] = (hash[6] & 0x0f) | 0x50;
+  hash[8] = (hash[8] & 0x3f) | 0x80;
+  const value = hash.subarray(0, 16).toString("hex");
+  return {
+    id: `case-revision:${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`,
+    content_digest: contentDigest,
+    semantics: "current_selected_content_only",
+  };
+}
+
 async function readRegularNoFollow(root, relativePath, label) {
   if (typeof relativePath !== "string" || relativePath.length === 0 || path.isAbsolute(relativePath)) {
     throw new MarkdownError("markdown.path_invalid", label, "relative_path_required", "A relative workspace file path is required.");
@@ -840,6 +856,27 @@ function normalizeCaseDisposition(value, index) {
     result.affected_case_entry_display_ids = value.affected_case_entry_display_ids.map((item, itemIndex) => requiredString(item, `${pathName}.affected_case_entry_display_ids[${itemIndex}]`, 4_096));
   }
   return result;
+}
+
+async function validateCurrentCaseVersionEvidence(authority, frame) {
+  for (const [index, disposition] of (frame.case_dispositions ?? []).entries()) {
+    if (disposition.realization_state !== "settled") continue;
+    const pathName = `frame.case_dispositions[${index}]`;
+    let selected;
+    try {
+      const relativePath = caseRelativePath(disposition.case_id);
+      selected = await readRegularNoFollow(authority.root, relativePath, relativePath);
+      parseCase(selected.bytes, { id: disposition.case_id, path: relativePath });
+    } catch (error) {
+      if (!(error instanceof MarkdownError)) throw error;
+      throw new MarkdownError("frame.invalid_representation", pathName, "case_realization_evidence_not_current", "Settled Case realization evidence must identify the exact currently selected Case content under this authority.");
+    }
+    const currentEvidenceId = currentCaseVersionEvidence(disposition.case_id, selected.digest).id;
+    const claimedEvidenceIds = [disposition.observed_case_revision_id, disposition.pinned_case_revision_id].filter(Boolean);
+    if (claimedEvidenceIds.some((id) => id !== currentEvidenceId)) {
+      throw new MarkdownError("frame.invalid_representation", pathName, "case_realization_evidence_not_current", "Settled Case realization evidence must identify the exact currently selected Case content under this authority.");
+    }
+  }
 }
 
 function validateDispositionSelection(boundaries, dispositions, frameStatus) {
@@ -1160,7 +1197,7 @@ async function createCase(request) {
   if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
     const persisted = await createFileAuthorityCase(authority, record);
     if (persisted.failure) return persisted.failure;
-    return success("case.create", { status: "settled", case: record, persistence: { authority_mode: "markdown", content_digest: persisted.digest, selected_files: persisted.files, selection: persisted.selection }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
+    return success("case.create", { status: "settled", case: record, current_committed_version_evidence: currentCaseVersionEvidence(record.id, persisted.digest), persistence: { authority_mode: "markdown", content_digest: persisted.digest, selected_files: persisted.files, selection: persisted.selection }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
   }
   const workspace = await loadWorkspace(request, { allowEmpty: true });
   const persisted = await persistCreate(workspace, "case", record);
@@ -1266,6 +1303,7 @@ async function commitFileAuthorityCase(request) {
       case: record,
       previous_digest: request.expected_digest,
       current_digest: rendered.sha256,
+      current_committed_version_evidence: currentCaseVersionEvidence(record.id, rendered.sha256),
       persistence: {
         authority_mode: "markdown",
         selected_file: workspace.relativePath,
@@ -1510,6 +1548,7 @@ async function commitFileAuthorityFrame(request) {
   if (record.id !== frameId) throw new MarkdownError("frame.identity_conflict", "frame.id", "frame_identity_mismatch", "The complete Frame identity differs from frame_id.");
   const authority = await loadAuthorityWorkspace(request);
   if (authority.marker.profile !== FILE_AUTHORITY_PROFILE || authority.marker.interchange_manifest_sha256 != null) throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "file_authority_profile_required", "Coherent Frame generation requires the selected file-authoritative Markdown profile.");
+  await validateCurrentCaseVersionEvidence(authority, record);
   const ownerState = await loadFrameOwner(authority, frameId); ownerState.frameId = frameId;
   let current = await loadSelectedFrame(ownerState);
   await cleanupFrameDebris(ownerState, current.kind === "generation" ? current.manifest.generation_directory : null);
@@ -1540,7 +1579,7 @@ async function commitFileAuthorityFrame(request) {
         selection: "already_selected_complete_generation", stage_flush: "not_required", directory_flush: "not_required",
         interruption_debris: { owner: "casebook-persistence", stage_prefix: `${FRAME_STAGE_PREFIX}${frameId.slice(frameId.indexOf(":") + 1)}-`, generation_prefix: FRAME_GENERATION_PREFIX, cleaned: removed },
       },
-      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_revision_visibility_not_verified_in_file_mode"],
+      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_operation_identity_not_verified_in_file_mode"],
       applied_view: authority.appliedView,
     });
   }
@@ -1585,7 +1624,7 @@ async function commitFileAuthorityFrame(request) {
         selection: "same_directory_atomic_manifest_rename", stage_flush: "fsync", directory_flush: "fsync_as_available",
         interruption_debris: { owner: "casebook-persistence", stage_prefix: `${FRAME_STAGE_PREFIX}${key}-`, generation_prefix: FRAME_GENERATION_PREFIX, cleaned: removed },
       },
-      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_revision_visibility_not_verified_in_file_mode"],
+      limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer", "no_auto_merge", "case_operation_identity_not_verified_in_file_mode"],
       applied_view: authority.appliedView,
     });
   } finally {
@@ -1672,6 +1711,7 @@ async function createFrame(request) {
   const record = normalizeFrame(request.frame);
   const authority = await loadAuthorityWorkspace(request);
   if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
+    await validateCurrentCaseVersionEvidence(authority, record);
     const persisted = await createFileAuthorityFrame(authority, record);
     if (persisted.failure) return persisted.failure;
     return success("frame.create", { status: "settled", frame: record, completion_evidence: frameCompletionEvidence(record), persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files, selected_generation: persisted.generationDirectory, selection: "atomic_owner_directory_rename" }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
@@ -1693,6 +1733,7 @@ async function readOwner(request, kind) {
       return success("case.read", {
         status: "found",
         case: workspace.record,
+        current_committed_version_evidence: currentCaseVersionEvidence(workspace.record.id, workspace.digest),
         persistence: { authority_mode: "markdown", selected_file: workspace.relativePath, content_digest: workspace.digest },
         capabilities: capabilities(),
         limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"],
