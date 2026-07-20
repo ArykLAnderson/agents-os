@@ -74,7 +74,10 @@ const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summa
 const CASE_COMPLETE_FIELDS = ["aliases", "facets", "entries", "sources", "relationships", "references"];
 const FRAME_LINK_FIELDS = ["case_links", "frame_links", "downstream_links", "artifact_links"];
 const OMITTED_CAPABILITIES = Object.freeze(["revisions", "events", "durable_receipts", "checkpoints", "snapshots", "namespace_global_queries"]);
-const MARKDOWN_COMMON_OPERATIONS = Object.freeze(["case.create", "case.read", "frame.create", "frame.read", "common.resolve", "common.list", "common.search", "interchange.export", "interchange.parse"]);
+const MARKDOWN_COMMON_OPERATIONS = Object.freeze([
+  "diagnose", "case.create", "case.commit_revision", "case.read", "frame.create", "frame.commit_revision", "frame.read",
+  "frame.legacy.prepare_reconciliation", "frame.list", "common.resolve", "common.list", "common.search", "interchange.export", "interchange.parse",
+]);
 
 export class MarkdownError extends Error {
   constructor(code, pathName, rule, message, evidence = {}) {
@@ -1882,6 +1885,33 @@ async function exportInterchange(request) {
   });
 }
 
+async function diagnoseMarkdown(request) {
+  validateBase(request, []);
+  const authority = await loadAuthorityWorkspace(request);
+  const markerBytes = await boundedMetadataRead(authority.root, WORKSPACE_MARKER, WORKSPACE_MARKER);
+  return success("diagnose", {
+    status: "passed",
+    selected_variant: "markdown",
+    configuration: {
+      source: authority.configuration.source,
+      authority_mode: authority.configuration.authority_mode,
+      resolved_workspace_root: authority.root,
+    },
+    workspace: {
+      workspace_id: authority.marker.workspace_id,
+      authority_mode: authority.marker.authority_mode,
+      profile: authority.marker.profile,
+      marker: WORKSPACE_MARKER,
+      marker_sha256: sha256(markerBytes),
+      selected_view: authority.appliedView,
+      audience_ceiling: authority.marker.view.audience_ceiling,
+    },
+    bounded_runtime_probe: { status: "passed", workspace_accessed: true, content_records_parsed: false, mutation_performed: false },
+    capabilities: capabilities(),
+    limitations: [...OMITTED_CAPABILITIES, "one_trusted_logical_writer"],
+  });
+}
+
 async function parseInterchange(request) {
   validateBase(request, []);
   const authority = await loadAuthorityWorkspace(request);
@@ -1963,6 +1993,7 @@ function unsupportedMarkdownCapability(operation, capability) {
 
 export async function invokeMarkdownOperation(request) {
   try {
+    if (request.operation === "diagnose") return await diagnoseMarkdown(request);
     if (request.operation === "case.create") return await createCase(request);
     if (request.operation === "case.commit_revision") return await commitFileAuthorityCase(request);
     if (request.operation === "case.read") return await readOwner(request, "case");

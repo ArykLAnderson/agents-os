@@ -133,7 +133,7 @@ function validateAuthorityClaim(value, { requireHumanConfirmation = false } = {}
   return claim;
 }
 
-function initializationRequestDigest(storeId, operationId, authorityClaim) {
+function initializationRequestDigest(storeId, operationId, authorityClaim, authorityBinding) {
   return digest({
     operation: "initialize_store",
     operation_id: operationId,
@@ -143,6 +143,7 @@ function initializationRequestDigest(storeId, operationId, authorityClaim) {
     initial_namespace: { key: "personal", lifecycle: "active" },
     initial_view: { audience_ceiling: "private", lifecycle: "active", namespace_grant: "personal" },
     authority_claim: authorityClaim,
+    authority_binding: authorityBinding,
   });
 }
 
@@ -843,7 +844,9 @@ async function initializeStore(request) {
     // any attempt to reinterpret or repeat initialization.
     const requestReceipt = await readStoreOperationReceipt(sqliteBinary, storePath, operationId);
     if (requestReceipt) {
-      const expectedDigest = initializationRequestDigest(state.metadata.store_id, operationId, authorityClaim);
+      const expectedDigest = initializationRequestDigest(state.metadata.store_id, operationId, authorityClaim, {
+        source: configuration.source, authority_mode: "sqlite", store_id: state.metadata.store_id,
+      });
       if (requestReceipt.operation_kind !== "initialize_store" || requestReceipt.request_digest !== expectedDigest) {
         return failure("idempotency_mismatch", "operation_id is already settled for a different canonical request.", {
           failureClass: "idempotency_mismatch",
@@ -875,7 +878,8 @@ async function initializeStore(request) {
     viewId: `view:${randomUUID()}`,
     viewPolicyRevisionId: `view-policy:${randomUUID()}`,
   };
-  const requestDigest = initializationRequestDigest(identities.storeId, operationId, authorityClaim);
+  const authorityBinding = { source: configuration.source, authority_mode: "sqlite", store_id: identities.storeId };
+  const requestDigest = initializationRequestDigest(identities.storeId, operationId, authorityClaim, authorityBinding);
   const migration = {
     id: "0001-initialize-store",
     schema_asset_sha256: assetDigest(manifestCheck.manifest, "sqlite-schema"),
@@ -904,6 +908,7 @@ async function initializeStore(request) {
       content_digest: manifestCheck.manifest.content_digest.sha256,
     },
     initialized_at: initializedAt,
+    authority_binding: authorityBinding,
   };
   const resultDigest = digest(initialization);
   const result = {
@@ -928,6 +933,7 @@ async function initializeStore(request) {
       identities,
       initializedAt,
       authorityClaim,
+      authorityBinding,
       protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
       migration,
       receipt: {

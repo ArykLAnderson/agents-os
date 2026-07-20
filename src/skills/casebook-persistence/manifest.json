@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.4.0-l04-w05-steward-gate"
+    "version": "0.11.0-candidate-6-final-review"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "54b2fdccc99fc0c8ed642b5ff11b88ddae10d8048c0b66af1f1bf80c0fbfabf8"
+    "sha256": "bed6db82e1cbe15f17381df30132eeb0b390715982e87a50dcafec603415dcd7"
   },
   "entrypoints": [
     {
@@ -158,25 +158,31 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "8e1ed47d067e40cb951df941a8605a8097e30b5a5c1ac5e4771eb650cfb718fc"
+      "sha256": "2cbf29e7db18d9e5c7bd3ba8c9cd31d58cefdb08ed492a69f27bf18a258cc5f2"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "aef7a1ba2f17c12779089888fe87d5ae52fb172b2d8e6855019dde720dade583"
+      "sha256": "fd88802a660fe0f398258fa5f48f6303d1afdcf000cec7604027b254f7ef8350"
     },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "3987e6df3ebd90982f3dfd91e6bb08370ed37ecbd8ce6b08da8a7b3dc3b893c4"
+      "sha256": "96ee9047d34c1a02e929cea2abc9728b49de02a6c86d2c26943054d48fbb5efa"
     },
     {
       "id": "shared-configuration",
       "path": "shared/config.mjs",
       "kind": "module",
-      "sha256": "30869f26e0cd13fd5bffcf16dce226bd0927f1e2aa3af4573661bb5a6fc183ac"
+      "sha256": "ea9300d1b511fe57ab1215872d1ef967521e817b86c009be94c7f6502315f143"
+    },
+    {
+      "id": "shared-locator-safety",
+      "path": "shared/locator.mjs",
+      "kind": "module",
+      "sha256": "8c49ae3014311c387beffa2ab57ec0095a0ab9b3e5be47c8e70c6f8a5ad5573a"
     },
     {
       "id": "shared-manifest",
@@ -194,7 +200,7 @@
       "id": "markdown-variant",
       "path": "variants/markdown/variant.json",
       "kind": "variant_manifest",
-      "sha256": "722dbf0683f7548b12818d0cd5ba77e6a8baddd4a970c0de5aeb240d5d9068a1"
+      "sha256": "800096fdc9ed3badea80be499eea264be3990ad12b82f25cbb695c0c5be08658"
     },
     {
       "id": "markdown-entrypoint",
@@ -206,7 +212,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "ab5b450ef3e319ff12b4a328477196e8cdb82a5a9e49b9bd41b9763fa401a859"
+      "sha256": "f9bfe9b7840cd4c90253c4f58560f5c1eb067ee3502f2c1f51b84b49c82753c8"
     },
     {
       "id": "markdown-interchange",
@@ -218,7 +224,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "773c9ab5adc94d3f5fe8f4b3131b039b161f15c187d88e108bcc702b3e9ebe0b"
+      "sha256": "6625a79ca50c66b77f9b3851e7c78305df46c5903080bb27e112c0dfe5c08e9a"
     },
     {
       "id": "sqlite-diagnostics",
@@ -230,7 +236,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "bfb507b50a5c5434d285fd29a82bb0bc41d76946ab0db362f76a6a2b60905765"
+      "sha256": "0813bd07a55f9c16e10ae4c89cf3dd4ee3497ab7ee8abcf8aa04a9685c15abd9"
     },
     {
       "id": "sqlite-identity-discovery",
@@ -272,13 +278,13 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "77eb83225727168457b13273a3009959b9cbac2874b1fe45ad0b19d74967ca7e"
+      "sha256": "abd2b14eb2065b77b64d0415391422938e3763a76955d15afa3ff3f9b4319e89"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "ec171c38fb4032b1cde173481fe55a4fc1217004167b001c3ed1e91efa42d3e0"
+      "sha256": "41fafe11fa282a8ca4d82179a9b63df024e56f78152d30ee3c8c2a7f46b7fce2"
     },
     {
       "id": "sqlite-common-subset",
@@ -290,19 +296,19 @@
       "id": "logical-export-preflight",
       "path": "variants/sqlite/lib/export/index.mjs",
       "kind": "module",
-      "sha256": "1cce8722b96ecb6874d99f4738c1abc081c8f5005695c341bfbccbfd059a0058"
+      "sha256": "ace3367e8d1db5874fd591991766ef1f58028c90a15fb604368cea1f48615dbc"
     },
     {
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "ad375a12809b0ffd562761ef0c5b3d2efbedf9b03403e924d0389cd6a787ca05"
+      "sha256": "59d5a12f4a956ad40ba33ef1f71e749d5bf6da5a6f3e63138482fb540fb5b3ff"
     },
     {
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "954fb667ac53e17044d7bca93080402904b0bbc4b8084c9f7e5c5bb16eb3d3b2"
+      "sha256": "ff967013cb01d4df5f29a34ee32da2561cebeedb4cf7a2029fe81773b16c3343"
     },
     {
       "id": "sqlite-migration-v2",
@@ -320,7 +326,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "d309ff36aa6656a9c9654fb8bf0788a872ac5bc73d4a96ed7a368b46fd2e11fd"
+      "sha256": "091d5b4f2717a3ca201ccb1ccf269ac33568f5510cf2dbeb19628c3aa66198f6"
     }
   ]
 }

@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { SUPPORTED_OPERATIONS } from "../shared/protocol.mjs";
 import {
   canonicalCommitRequestDigest,
   mechanicalDigest,
@@ -245,21 +246,7 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
     });
     assert.equal(rejected.exitCode, 2);
     assert.equal(rejected.json.failure.code, "not_yet_implemented");
-    assert.deepEqual(rejected.json.failure.evidence.supported_operations, [
-      "diagnose", "initialize_store", "migrate_store", "snapshot_store", "restore_store", "get_store_operation_receipt",
-      "events.page", "checkpoint.read", "checkpoint.compare_and_set",
-      "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish",
-      "impact.project", "integrity.observe", "projection.rebuild", "export.preflight", "export.finalize",
-      "case.create", "case.commit_revision", "case.read",
-      "case.resolve", "case.search", "case.traverse",
-      "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.purge.plan", "case.purge.execute",
-      "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation",
-      "frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read",
-      "frame.export.fragment", "frame.discovery.read", "frame.disposition.read", "frame.history", "frame.list",
-      "frame.legacy.prepare_reconciliation",
-      "common.resolve", "common.list", "common.search",
-      "interchange.export (sqlite)", "interchange.parse (markdown)",
-    ]);
+    assert.deepEqual(rejected.json.failure.evidence.supported_operations, SUPPORTED_OPERATIONS);
     assert.equal(await stat(storePath).then(() => true).catch(() => false), false);
   } finally {
     await removeAndVerify(root);

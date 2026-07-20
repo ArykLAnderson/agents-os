@@ -2,13 +2,14 @@
   "variant_manifest_version": 1,
   "id": "casebook-persistence-markdown",
   "authority_mode": "markdown",
-  "implementation_status": "l05_w04_complete_reduced_common_subset",
+  "implementation_status": "candidate_6_complete_file_authoritative_subset",
   "guarantees": "reduced-file-authoritative-common-subset",
   "entrypoint": {
     "interpreter": "node",
     "path": "bin/casebook-persistence.mjs"
   },
   "supported_operations": [
+    "diagnose",
     "case.create",
     "case.commit_revision",
     "case.read",

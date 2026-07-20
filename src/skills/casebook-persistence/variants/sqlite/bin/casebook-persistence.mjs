@@ -8,8 +8,10 @@ import { invokeObservationOperation } from "../lib/substrate/observation.mjs";
 import { invokeImpactOperation } from "../lib/substrate/impact.mjs";
 import { invokeIntegrityOperation } from "../lib/substrate/integrity.mjs";
 import { invokeProjectionOperation } from "../lib/substrate/projection.mjs";
-import { diagnose } from "../lib/substrate/diagnostics.mjs";
-import { failure, PROTOCOL_ID, PROTOCOL_VERSION } from "../../../shared/protocol.mjs";
+import { diagnose, selectSqliteBinary } from "../lib/substrate/diagnostics.mjs";
+import { bindStoreAuthorityIfAuthorized, inspectStore } from "../lib/substrate/index.mjs";
+import { ConfigurationError, validateAuthorityConfiguration } from "../../../shared/config.mjs";
+import { failure, PROTOCOL_ID, PROTOCOL_VERSION, RETRY_DISPOSITIONS } from "../../../shared/protocol.mjs";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
 
@@ -24,7 +26,48 @@ async function readRequest() {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+let authorityStoreAccessed = false;
+
+async function authorityAdmission(request) {
+  let configuration;
+  try {
+    configuration = validateAuthorityConfiguration(request.configuration);
+  } catch (error) {
+    if (error instanceof ConfigurationError) return failure(error.code, error.message, { evidence: error.evidence });
+    throw error;
+  }
+  if (configuration.authority_mode !== "sqlite") return null;
+  let binary;
+  try {
+    binary = (await selectSqliteBinary(configuration.sqlite.sqlite_bin)).path;
+  } catch (error) {
+    if (error instanceof ConfigurationError) return failure(error.code, error.message, { evidence: error.evidence });
+    throw error;
+  }
+  let state = await inspectStore(binary, configuration.sqlite.store_path);
+  if (state.status !== "available" && state.code === "store_partial_initialization") {
+    const bound = await bindStoreAuthorityIfAuthorized(binary, configuration.sqlite.store_path, configuration, request);
+    if (bound) state = await inspectStore(binary, configuration.sqlite.store_path);
+  }
+  if (state.status !== "available") return null;
+  authorityStoreAccessed = true;
+  const binding = state.authority_binding;
+  const storeIdentityMatches = request.store_id == null || request.store_id === state.metadata.store_id;
+  if (binding?.authority_mode === "sqlite"
+    && binding.store_id === state.metadata.store_id
+    && binding.source_kind === configuration.source.kind
+    && binding.source_locator === configuration.source.locator
+    && storeIdentityMatches) return null;
+  return failure("authority_binding_mismatch", "The configured workspace authority does not match this store's immutable binding.", {
+    failureClass: "authority_binding_mismatch",
+    retryDisposition: RETRY_DISPOSITIONS.NEVER,
+    correctiveGuidance: "Do not substitute a locator, authority mode, or store identity. Authority switching requires a separately authorized migration.",
+    evidence: {},
+  });
+}
+
 let result;
+let admission;
 try {
   const request = await readRequest();
   if (request?.protocol?.id !== PROTOCOL_ID || request?.protocol?.version !== PROTOCOL_VERSION) {
@@ -32,8 +75,13 @@ try {
       failureClass: "asset_incompatible",
       evidence: { expected: { id: PROTOCOL_ID, version: PROTOCOL_VERSION }, received: request?.protocol ?? null },
     });
+  } else if ((admission = await authorityAdmission(request)) != null) {
+    result = admission;
   } else if (request.operation === "diagnose") {
     result = await diagnose(request);
+    if (result.ok && result.result?.bounded_runtime_probe) {
+      result.result.bounded_runtime_probe.configured_store_accessed = authorityStoreAccessed;
+    }
   } else if (request.operation === "identity.discover") {
     result = await invokeIdentityOperation(request);
   } else if (["events.page", "checkpoint.read", "checkpoint.compare_and_set", "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish"].includes(request.operation)) {

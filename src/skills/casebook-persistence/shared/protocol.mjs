@@ -12,6 +12,11 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "snapshot_store",
   "restore_store",
   "get_store_operation_receipt",
+  "view_policy.create",
+  "view_policy.revise",
+  "view_policy.activate",
+  "view_policy.retire",
+  "identity.discover",
   "events.page",
   "checkpoint.read",
   "checkpoint.compare_and_set",
@@ -23,6 +28,8 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "projection.rebuild",
   "export.preflight",
   "export.finalize",
+  "case.discovery.hydrate",
+  "frame.discovery.hydrate",
   "case.create",
   "case.commit_revision",
   "case.read",
@@ -51,8 +58,8 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "common.resolve",
   "common.list",
   "common.search",
-  "interchange.export (sqlite)",
-  "interchange.parse (markdown)",
+  "interchange.export",
+  "interchange.parse",
 ]);
 
 export const RETRY_DISPOSITIONS = Object.freeze({

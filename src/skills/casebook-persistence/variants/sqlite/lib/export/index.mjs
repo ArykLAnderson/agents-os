@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateAuthorityConfiguration } from "../../../../shared/config.mjs";
+import { locatorSafeForAudience, portablePublicLocatorAssessment } from "../../../../shared/locator.mjs";
 import { failure, RETRY_DISPOSITIONS, success, unsupported } from "../../../../shared/protocol.mjs";
 import { invokeCaseOperation } from "../case/index.mjs";
 import { invokeFrameOperation } from "../frame/index.mjs";
@@ -260,23 +261,8 @@ async function renderOwnerFragment(request, selection, snapshotOwner) {
 }
 
 function readerLocatorSafe(locator, audience) {
-  if (audienceRank(locator.audience) < audienceRank(audience)) return false;
-  let parsed;
-  try {
-    parsed = new URL(locator.uri);
-  } catch {
-    return false;
-  }
-  if (["file:", "data:", "javascript:", "blob:", "about:"].includes(parsed.protocol) || parsed.username || parsed.password) return false;
-  if (["http:", "https:"].includes(parsed.protocol)) {
-    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
-      || host === "::1" || host === "0.0.0.0" || host.startsWith("127.") || host.startsWith("10.")
-      || host.startsWith("192.168.") || host.startsWith("169.254.")) return false;
-    const match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host);
-    if (match && Number(match[1]) === 172 && Number(match[2]) >= 16 && Number(match[2]) <= 31) return false;
-  }
-  return true;
+  return locatorSafeForAudience(locator, audience,
+    (locatorAudience, targetAudience) => audienceRank(locatorAudience) >= audienceRank(targetAudience));
 }
 
 function audienceRank(value) {
@@ -476,6 +462,18 @@ async function buildPreflight(request) {
 
   const documentTraceValidation = verifyDocumentTrace(request, validated.documentTrace, rendered);
   blockers.push(...documentTraceValidation.blockers);
+  if (["portable", "public"].includes(request.audience)) {
+    for (const { selection, outcome } of rendered) {
+      for (const [index, locator] of (outcome.fragment?.locators ?? []).entries()) {
+        if (!portablePublicLocatorAssessment(locator.uri).safe) blockers.push({
+          owner: { kind: selection.kind, id: selection.id },
+          code: "retained_unsafe_locator",
+          reason: "A portable/public fragment retained a locator that is not public-network safe.",
+          source: `locators/${index}`,
+        });
+      }
+    }
+  }
 
   const dependencies = rendered.flatMap(({ outcome }) => semanticDependencies(outcome.fragment))
     .map((dependency) => dependencyState(request, dependency, snapshot))
@@ -857,6 +855,21 @@ async function settleFinalization(prepared, request, requestDigest, core) {
   });
 }
 
+function uncertainFinalizationFailure(request, code = "export.final_verification_failed") {
+  return failure(code, "A marker-bearing final destination may exist but exact post-effect verification failed.", {
+    failureClass: "final_output_uncertain",
+    retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+    correctiveGuidance: "Do not publish, delete, or overwrite either path. Look up the exact receipt and perform operator recovery.",
+    evidence: {
+      operation_id: request.operation_id,
+      temporary_output_path: request.destination.temporary_path,
+      final_output_path: request.destination.final_path,
+      finalization_marker_path: path.join(request.destination.final_path, FINALIZATION_MARKER),
+      recovery_required: true,
+    },
+  });
+}
+
 async function blockedFinalization(prepared, request, requestDigest, code, { cleanup = true } = {}) {
   const cleaned = cleanup ? await removeTemporary(request.destination.temporary_path) : !await pathExists(request.destination.temporary_path);
   const core = resultCore(request, requestDigest, {
@@ -901,7 +914,11 @@ async function finalizeExport(request) {
   let recovered = false;
   if (finalExists) {
     const finalVerification = await verifyBundle(request.destination.final_path, request, { marker });
-    if (!finalVerification.ok) return blockedFinalization(prepared, request, requestDigest, "final_destination_conflict");
+    if (!finalVerification.ok) {
+      return await pathExists(path.join(request.destination.final_path, FINALIZATION_MARKER))
+        ? uncertainFinalizationFailure(request)
+        : blockedFinalization(prepared, request, requestDigest, "final_destination_conflict");
+    }
     recovered = true;
     if (temporaryExists) {
       const temporaryVerification = await verifyBundle(request.destination.temporary_path, request, { requirePrivate: true });
@@ -944,21 +961,21 @@ async function finalizeExport(request) {
       await rename(request.destination.temporary_path, request.destination.final_path);
     } catch {
       const raced = await verifyBundle(request.destination.final_path, request, { marker });
-      if (!raced.ok) return blockedFinalization(prepared, request, requestDigest, "atomic_finalization_failed", { cleanup: false });
+      if (!raced.ok) {
+        return await pathExists(path.join(request.destination.final_path, FINALIZATION_MARKER))
+          ? uncertainFinalizationFailure(request)
+          : blockedFinalization(prepared, request, requestDigest, "atomic_finalization_failed", { cleanup: false });
+      }
       recovered = true;
+    }
+    if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "export_corrupt_after_rename") {
+      await writeFile(path.join(request.destination.final_path, "manifest.json"), "{}\n");
     }
     controlledFinalizationBoundary("export_after_rename_before_receipt");
   }
 
   const finalVerification = await verifyBundle(request.destination.final_path, request, { marker });
-  if (!finalVerification.ok) {
-    return failure("export.final_verification_failed", "Atomic final output exists but failed exact post-effect verification.", {
-      failureClass: "final_output_uncertain",
-      retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
-      correctiveGuidance: "Do not publish or delete the output. Look up the receipt and inspect the exact final destination.",
-      evidence: { operation_id: request.operation_id, final_output_path: request.destination.final_path },
-    });
-  }
+  if (!finalVerification.ok) return uncertainFinalizationFailure(request);
   const temporaryCleaned = !await pathExists(request.destination.temporary_path);
   const core = resultCore(request, requestDigest, {
     outcome: "finalized",

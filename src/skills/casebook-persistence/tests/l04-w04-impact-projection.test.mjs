@@ -100,6 +100,7 @@ async function createFrame(state, frameId, discoveryId, options = {}) {
           ...(options.selfCycle ? [{ target_kind: "frame", target_id: frameId, predicate: "depends-on", provenance: "synthetic self-cycle" }] : []),
         ],
       }],
+      disposition_boundaries: [], case_dispositions: [],
     },
   });
   assert.equal(result.code, 0, result.stderr || JSON.stringify(result.json));

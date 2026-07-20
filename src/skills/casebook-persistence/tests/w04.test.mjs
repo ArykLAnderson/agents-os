@@ -171,6 +171,8 @@ function frameCreate(storePath, sqliteBinary, initialized, options = {}) {
         dependencies: [],
         ...(options.discoveryOverrides ?? {}),
       }],
+      disposition_boundaries: [],
+      case_dispositions: [],
       ...(options.frameOverrides ?? {}),
     },
     configuration: configuration(storePath, sqliteBinary),
@@ -871,7 +873,7 @@ test("complete Frame revisions settle, replay, reopen, and reject omissions befo
     assert.doesNotMatch(JSON.stringify(hiddenTypedReceipt.json), new RegExp(ids.activeFrame));
     const unavailableRequest = frameReceipt(storePath, sqliteBinary, initialized, staleRequest.operation_id);
     unavailableRequest.configuration.sqlite.sqlite_bin = path.join(root, "missing-sqlite");
-    assert.deepEqual((await invoke(sourceEntrypoint, root, unavailableRequest)).json.result, { status: "store_unavailable" });
+    assert.equal((await invoke(sourceEntrypoint, root, unavailableRequest)).json.failure.code, "sqlite_binary_unavailable");
     const changedStaleReuse = structuredClone(staleRequest);
     changedStaleReuse.frame.discovery[0].resolution = "changed rejected reuse";
     assert.equal((await invoke(sourceEntrypoint, root, changedStaleReuse)).json.failure.code, "frame.idempotency_mismatch");
@@ -981,7 +983,7 @@ async function runGeneratedTypedProof(generated, report, root) {
   assert.doesNotMatch(JSON.stringify(hiddenReceipt.json), new RegExp(ids.activeFrame));
   const unavailableReceiptRequest = frameReceipt(storePath, report.sqlite_binary, initialized, commitFrameRequest.operation_id);
   unavailableReceiptRequest.configuration.sqlite.sqlite_bin = path.join(root, `missing-sqlite-${generated.target}`);
-  assert.deepEqual((await invoke(connector, cwd, unavailableReceiptRequest)).json.result, { status: "store_unavailable" });
+  assert.equal((await invoke(connector, cwd, unavailableReceiptRequest)).json.failure.code, "sqlite_binary_unavailable");
 
   const secondFrame = await invoke(connector, cwd, frameCreate(storePath, report.sqlite_binary, initialized, {
     frameId: ids.secondActiveFrame,

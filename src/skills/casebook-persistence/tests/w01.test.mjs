@@ -14,7 +14,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 28);
+  assert.equal(check.manifest.assets.length, 29);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
@@ -116,8 +116,10 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     legacy_reconciliation: "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
   });
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
+  const markdown = JSON.parse(await readFile(path.join(packageRoot, "variants/markdown/variant.json"), "utf8"));
   assert.deepEqual(runtime.implemented_slice_constraints, check.manifest.implemented_slice_constraints);
-  assert.deepEqual(runtime.supported_operations, check.manifest.supported_operations.filter((operation) => operation !== "interchange.parse"));
+  assert.equal(runtime.package.version, check.manifest.package.version);
+  assert.deepEqual([...new Set([...runtime.supported_operations, ...markdown.supported_operations])].sort(), [...check.manifest.supported_operations].sort());
   assert.equal(check.manifest.assets.some((asset) => asset.path.includes("internal-mechanical-driver")), false);
 });
 

@@ -81,7 +81,7 @@ async function createFrame(state) {
   const result = await invoke(state.entrypoint, state.root, {
     ...common(state), operation: "frame.create", operation_id: "operation:l04-w03:frame:create", expected_revision: 0,
     commit_basis: "synthetic event evidence", provenance: { acting_role: "frame", authority_basis: "disposable scope" },
-    frame: { id: ids.frame, home_namespace_id: state.initialization.namespace.id, authority_scope_namespace_ids: [state.initialization.namespace.id], status: "active", title: "Event Frame", outcome: "Snapshot frame.", case_links: [], discovery: [{ id: ids.discovery, display_order: 0, lifecycle: "active", category: "frontier", title: "Event observation", body: "Disposable.", human_authority: "not_required", dependencies: [] }] },
+    frame: { id: ids.frame, home_namespace_id: state.initialization.namespace.id, authority_scope_namespace_ids: [state.initialization.namespace.id], status: "active", title: "Event Frame", outcome: "Snapshot frame.", case_links: [], discovery: [{ id: ids.discovery, display_order: 0, lifecycle: "active", category: "frontier", title: "Event observation", body: "Disposable.", human_authority: "not_required", dependencies: [] }], disposition_boundaries: [], case_dispositions: [] },
   });
   assert.equal(result.code, 0, result.stderr || JSON.stringify(result.json));
   return result;
