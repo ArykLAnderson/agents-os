@@ -10,6 +10,7 @@ const src = path.join(root, "src");
 const config = JSON.parse(await readFile(path.join(root, "config/targets.json"), "utf8"));
 const models = JSON.parse(await readFile(path.join(root, "config/models.json"), "utf8"));
 const header = config.generatedHeader;
+const home = process.env.HOME;
 const layouts = {
   pi: { agents: "agents", commands: "commands", skills: "skills" },
   codex: { agents: "agents", commands: "commands", skills: "skills" },
@@ -136,6 +137,11 @@ async function refreshGeneratedPackageManifests(skillsRoot) {
   }
 }
 
+function expandHome(file) {
+  if (!file.startsWith("~/")) return file;
+  if (!home) throw new Error("HOME is required to install global instructions");
+  return path.join(home, file.slice(2));
+}
 async function renderTarget(target, destination, clean = true) {
   const layout = layouts[target];
   const excluded = excludedSkills(target);
@@ -167,6 +173,18 @@ async function renderTarget(target, destination, clean = true) {
     else await writeFile(out, await readFile(file));
   }
   await refreshGeneratedPackageManifests(path.join(destination, layout.skills));
+
+  const instructionsSource = path.join(src, "AGENTS.md");
+  if (await exists(instructionsSource)) {
+    const rendered = `${header}\n\n${await readFile(instructionsSource, "utf8")}`;
+    await writeFile(path.join(destination, "AGENTS.md"), rendered);
+    const installPath = config.globalInstructions?.[target];
+    if (installPath) {
+      const expanded = expandHome(installPath);
+      await mkdir(path.dirname(expanded), { recursive: true });
+      await writeFile(expanded, rendered);
+    }
+  }
 }
 
 async function sync() {
@@ -182,6 +200,18 @@ async function doctor() {
     const layout = layouts[target];
     const base = path.join(root, "adapters", target, "generated");
     const excluded = excludedSkills(target);
+    const instructionsSource = path.join(src, "AGENTS.md");
+    if (await exists(instructionsSource)) {
+      const generated = path.join(base, "AGENTS.md");
+      if (!(await exists(generated))) problems.push(`${target}: missing AGENTS.md`);
+      else if (!(await readFile(generated, "utf8")).includes(header)) problems.push(`${target}: missing generated header in AGENTS.md`);
+      const installPath = config.globalInstructions?.[target];
+      if (installPath) {
+        const installed = expandHome(installPath);
+        if (!(await exists(installed))) problems.push(`${target}: missing installed global instructions at ${installPath}`);
+        else if ((await readFile(installed, "utf8")) !== (await readFile(generated, "utf8"))) problems.push(`${target}: installed global instructions differ from generated AGENTS.md`);
+      }
+    }
     for (const kind of ["agents", "commands", "skills"]) {
       const dir = path.join(base, layout[kind]);
       if (!(await exists(dir))) problems.push(`${target}: missing ${layout[kind]}/`);
