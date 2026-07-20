@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "07c0b10dc49f40ecce181b445abef3caed9c7adf343b2db743b83e86554569e2"
+    "sha256": "54b2fdccc99fc0c8ed642b5ff11b88ddae10d8048c0b66af1f1bf80c0fbfabf8"
   },
   "entrypoints": [
     {
@@ -266,13 +266,13 @@
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "beda91f11ad29786b3cfa593c44136873d5765b426dffe1131aa22f2871aaa80"
+      "sha256": "a002a0bf4c92835444f5f40b035de662e5ee5bc200399b8d0c24e34855428fac"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "4c40d0328579e79cc36d06dc18aecb045d2fe343b378659f2c4e5f8baeb96769"
+      "sha256": "77eb83225727168457b13273a3009959b9cbac2874b1fe45ad0b19d74967ca7e"
     },
     {
       "id": "frame-facade",
@@ -296,7 +296,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "6b45400ec9d0ed3743efcefdbc09e2eb03f313ada440a9cdee12eb2d295e14f2"
+      "sha256": "ad375a12809b0ffd562761ef0c5b3d2efbedf9b03403e924d0389cd6a787ca05"
     },
     {
       "id": "sqlite-schema",
