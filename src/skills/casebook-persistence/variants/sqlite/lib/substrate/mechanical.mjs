@@ -1383,7 +1383,7 @@ async function purgeCasePayload(request) {
   const notDeleted = (code, message, retryDisposition = RETRY_DISPOSITIONS.NEVER) => failure(code, message, {
     failureClass: code, retryDisposition,
     correctiveGuidance: "Inspect the durable receipt first; if absent, obtain a fresh exact W01 plan before retrying.",
-    evidence: { terminal_outcome: "not_deleted", canonical_payload_deleted: false, mutation_performed: false },
+    evidence: { terminal_outcome: "not_deleted", canonical_payload_deleted: false, full_erasure_claimed: false, mutation_performed: false },
   });
   if (storeId !== state.metadata.store_id || request.expected?.store_id !== storeId) return notDeleted("case.purge_store_mismatch", "The purge request does not name the resolved immutable store.");
   if (path.basename(storePath) !== request.store_name) return notDeleted("case.purge_store_mismatch", "The named disposable store does not match the configured SQLite store.");
@@ -1413,7 +1413,9 @@ async function purgeCasePayload(request) {
     status: "settled", operation_id: operationId, case_id: targetCaseId, plan_digest: planDigest,
     terminal: { outcome: "deleted", code: "case_payload_purge_completed", canonical_state_effect: "payload-erasure", retry_disposition: RETRY_DISPOSITIONS.NEVER },
     canonical_payload_deleted: true,
+    full_erasure_claimed: false,
     deleted_scope: { payload_classes: request.payload_scope.payload_classes, revision_ids: request.payload_scope.revision_ids, stable_identity_ids: stableIds, version_ids: request.payload_scope.version_ids, disposable_projection_entries: projection.removed },
+    retained_copy_disclosure: request.retained_copy_disclosure,
     retained_non_payload_evidence: { owner_identity: { id: targetCaseId, kind: "case", home_namespace_id: owner.home_namespace_id }, revision_ids: request.payload_scope.revision_ids, stable_identity_ids: stableIds, audit_receipt: { operation_id: operationId, operation_kind: "case_purge", operation_fence: nextFence } },
     postconditions: { canonical_payload_absent: true, non_payload_identity_retained: true, revision_history_retained: true, audit_receipt_durable: true, snapshots_untouched: true, external_authorities_untouched: true, integrity: "verified" },
     excluded_effects: { snapshots: "untouched", external_authorities: "untouched", independent_files: "untouched", independent_resources: "untouched", remote_publications: "untouched", retained_snapshots: "untouched" },
@@ -1477,6 +1479,7 @@ async function purgeCasePayload(request) {
       : notDeleted("case.purge_idempotency_mismatch", "The operation ID raced with a different request.");
     return notDeleted("case.purge_execution_failed", "The atomic purge transaction did not commit any deletion.", RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR);
   }
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "purge_kill_executor_after_commit_before_response") process.kill(process.pid, "SIGKILL");
   const receipt = await readStoreOperationReceipt(binary, storePath, operationId);
   return success("case.purge.execute", { ...coreResult, idempotent_replay: false, receipt: publicReceipt(receipt) });
 }
