@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "02db991af9148e43630892a3decca2b54a0c03d1a1d1725b3b44b1dbb94e5f38"
+    "sha256": "d6ebbbbef36bae83b5bcfb7e1f344468a6e06938af13719c88117604c5c0425d"
   },
   "entrypoints": [
     {
@@ -38,6 +38,7 @@
   "supported_operations": [
     "diagnose",
     "initialize_store",
+    "migrate_store",
     "get_store_operation_receipt",
     "case.create",
     "case.commit_revision",
@@ -69,8 +70,10 @@
   ],
   "implemented_slice_constraints": {
     "store_receipt_visible_operation_kinds": [
-      "initialize_store"
+      "initialize_store",
+      "migration"
     ],
+    "migration_execution": "L07-W01 envelope and terminal settlement only; snapshot-first schema execution remains unavailable until L07-W02",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -100,7 +103,7 @@
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "events/checkpoints/snapshots/global-search",
-    "migration",
+    "snapshot-first migration execution",
     "backup",
     "restore",
     "purge"
@@ -122,7 +125,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "99b48a8f230bb552f566dc235fd65d5474629ba9064465c34aecbdad75e36ce6"
+      "sha256": "523d6a10f09c8d1dab39d901e6852bafecdc55c924f632f0148b245bb361391c"
     },
     {
       "id": "shared-configuration",
@@ -182,7 +185,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "f942324ae7a943d73835fba6bac58410aeab51426bcc77a78b92da6a1986918d"
+      "sha256": "fc39dfdbe125b00f561d0f1488c57e250c78fc0a2bef768360d79cc04d05f2b2"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -212,7 +215,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "201cc6caa867d8ead49272e4339f73cb860902921bff8348018c148b3c1034fa"
+      "sha256": "e35d6df08d4608f7f8723aab000c188d21d83f963504951f0953e990addab0e4"
     },
     {
       "id": "sqlite-schema",
@@ -230,7 +233,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "302d972490a720bcbd6c75b7403c8af74e81ac419f8a683c8aa5782986d97284"
+      "sha256": "cfe32c324ae04e6c7c29d791065bef4bd211aedf06aa4126cb00bfb15b02ddca"
     }
   ]
 }

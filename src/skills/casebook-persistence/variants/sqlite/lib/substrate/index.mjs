@@ -30,7 +30,7 @@ function sqlText(value) {
 }
 
 async function queryJson(binary, database, sqlTextValue, { readonly = true } = {}) {
-  const args = ["-batch", "-bail", "-json"];
+  const args = ["-batch", "-bail", "-json", "-cmd", ".timeout 5000"];
   // query_only is WAL-aware and permits SQLite to maintain WAL shared-memory
   // bookkeeping while rejecting every SQL write through this connection.
   const query = readonly ? `PRAGMA query_only = ON;\n${sqlTextValue}` : sqlTextValue;
@@ -295,6 +295,44 @@ export async function readStoreOperationReceipt(binary, storePath, operationId) 
     committed_revision: row.committed_revision ?? null,
     event_id: row.event_id ?? null,
   };
+}
+
+export async function settleStoreOperationReceipt(binary, storePath, settlement) {
+  const { receipt, authorityClaim, result, expectedOperationFence } = settlement;
+  const nextFence = expectedOperationFence + 1;
+  const command = `.bail on
+    PRAGMA busy_timeout = 5000;
+    PRAGMA foreign_keys = ON;
+    BEGIN IMMEDIATE;
+    INSERT INTO store_operation_receipts (
+      operation_id, operation_kind, store_id, request_digest, outcome,
+      result_json, result_digest, authority_claim_json, settled_at,
+      failure_class, retry_disposition, operation_fence
+    )
+    SELECT
+      ${sqlText(receipt.operation_id)}, ${sqlText(receipt.operation_kind)}, ${sqlText(receipt.store_id)},
+      ${sqlText(receipt.request_digest)}, ${sqlText(receipt.outcome)}, ${sqlText(JSON.stringify(result))},
+      ${sqlText(receipt.result_digest)}, ${sqlText(JSON.stringify(authorityClaim))}, ${sqlText(receipt.settled_at)},
+      ${receipt.failure_class == null ? "NULL" : sqlText(receipt.failure_class)}, ${sqlText(receipt.retry_disposition)},
+      ${nextFence}
+    FROM store_fence
+    WHERE singleton = 1 AND operation_fence = ${expectedOperationFence};
+    UPDATE store_fence
+      SET operation_fence = ${nextFence}
+      WHERE singleton = 1
+        AND operation_fence = ${expectedOperationFence}
+        AND EXISTS (
+          SELECT 1 FROM store_operation_receipts
+          WHERE operation_id = ${sqlText(receipt.operation_id)} AND operation_fence = ${nextFence}
+        );
+    COMMIT;
+  `;
+  await sqlite(binary, storePath, command, {
+    args: ["-batch", "-bail"],
+    timeout: 20_000,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+  return readStoreOperationReceipt(binary, storePath, receipt.operation_id);
 }
 
 // Private façade-to-substrate dispatch. Dynamic loading avoids making the

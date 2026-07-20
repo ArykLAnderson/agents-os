@@ -21,6 +21,7 @@ import {
   createInitializedStore,
   inspectStore,
   readStoreOperationReceipt,
+  settleStoreOperationReceipt,
 } from "../substrate/index.mjs";
 
 function canonicalValue(value) {
@@ -50,14 +51,20 @@ function validateOperationId(value) {
   return value;
 }
 
-function validateAuthorityClaim(value) {
+function validateAuthorityClaim(value, { requireHumanConfirmation = false } = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)
     || value.human_authorized !== true
     || !nonEmpty(value.acting_role)
     || !nonEmpty(value.authority_basis)) {
     throw new ConfigurationError(
       "human_authority_claim_required",
-      "initialize_store and store-operation receipt lookup require an explicit human authority claim.",
+      "Exceptional store operations and receipt lookup require an explicit human authority claim.",
+    );
+  }
+  if (requireHumanConfirmation && !nonEmpty(value.human_confirmation_reference)) {
+    throw new ConfigurationError(
+      "human_confirmation_reference_required",
+      "Migration requires an explicit human confirmation reference.",
     );
   }
   const claim = {
@@ -65,7 +72,7 @@ function validateAuthorityClaim(value) {
     acting_role: value.acting_role.trim(),
     authority_basis: value.authority_basis.trim(),
   };
-  for (const key of ["causation", "correlation", "session"]) {
+  for (const key of ["human_confirmation_reference", "causation", "correlation", "session"]) {
     if (value[key] != null) {
       if (!nonEmpty(value[key])) throw new ConfigurationError("authority_claim_invalid", `${key} must be a non-empty string when present.`);
       claim[key] = value[key].trim();
@@ -83,6 +90,95 @@ function initializationRequestDigest(storeId, operationId, authorityClaim) {
     protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
     initial_namespace: { key: "personal", lifecycle: "active" },
     initial_view: { audience_ceiling: "private", lifecycle: "active", namespace_grant: "personal" },
+    authority_claim: authorityClaim,
+  });
+}
+
+function exactObject(value, keys, code, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).sort().join("\0") !== [...keys].sort().join("\0")) {
+    throw new ConfigurationError(code, `${field} must contain exactly ${keys.join(", ")}.`);
+  }
+  return value;
+}
+
+function validateSchemaCondition(value, field) {
+  exactObject(value, ["id", "version"], "schema_condition_invalid", field);
+  if (!nonEmpty(value.id) || !Number.isInteger(value.version) || value.version < 1) {
+    throw new ConfigurationError("schema_condition_invalid", `${field} must name a non-empty schema id and positive integer version.`);
+  }
+  return { id: value.id.trim(), version: value.version };
+}
+
+function validateMigrationEnvelope(request) {
+  if (request.operation_kind !== "migration") {
+    throw new ConfigurationError("operation_kind_invalid", "migrate_store requires operation_kind migration.");
+  }
+  if (!nonEmpty(request.purpose)) {
+    throw new ConfigurationError("operation_purpose_required", "migrate_store requires a non-empty purpose.");
+  }
+  if (!nonEmpty(request.store_id)) {
+    throw new ConfigurationError("store_id_invalid", "migrate_store requires the exact affected store_id.");
+  }
+  exactObject(request.expected, ["store_id", "schema", "operation_fence"], "migration_preconditions_invalid", "expected");
+  if (!nonEmpty(request.expected.store_id)
+    || !Number.isInteger(request.expected.operation_fence)
+    || request.expected.operation_fence < 1) {
+    throw new ConfigurationError("migration_preconditions_invalid", "expected store_id and positive operation_fence are required.");
+  }
+  exactObject(request.target, ["schema"], "migration_target_invalid", "target");
+  const expectedSchema = validateSchemaCondition(request.expected.schema, "expected.schema");
+  const targetSchema = validateSchemaCondition(request.target.schema, "target.schema");
+  exactObject(
+    request.migration,
+    ["id", "from_version", "to_version", "schema_asset_sha256", "manifest_sha256"],
+    "migration_identity_invalid",
+    "migration",
+  );
+  const migration = {
+    id: request.migration.id,
+    from_version: request.migration.from_version,
+    to_version: request.migration.to_version,
+    schema_asset_sha256: request.migration.schema_asset_sha256,
+    manifest_sha256: request.migration.manifest_sha256,
+  };
+  if (!nonEmpty(migration.id)
+    || !Number.isInteger(migration.from_version)
+    || !Number.isInteger(migration.to_version)
+    || !/^[0-9a-f]{64}$/.test(migration.schema_asset_sha256)
+    || !/^[0-9a-f]{64}$/.test(migration.manifest_sha256)) {
+    throw new ConfigurationError("migration_identity_invalid", "migration must name exact versions and lowercase SHA-256 asset digests.");
+  }
+  if (request.canonical_state_effect !== "schema-change") {
+    throw new ConfigurationError("canonical_state_effect_invalid", "migrate_store must explicitly declare schema-change.");
+  }
+  if (!Array.isArray(request.requested_postcondition_evidence)
+    || request.requested_postcondition_evidence.length === 0
+    || request.requested_postcondition_evidence.some((item) => !nonEmpty(item))) {
+    throw new ConfigurationError("postcondition_evidence_invalid", "migrate_store requires named postcondition evidence.");
+  }
+  return {
+    operation_kind: "migration",
+    purpose: request.purpose.trim(),
+    store_id: request.store_id.trim(),
+    expected: {
+      store_id: request.expected.store_id.trim(),
+      schema: expectedSchema,
+      operation_fence: request.expected.operation_fence,
+    },
+    target: { schema: targetSchema },
+    migration,
+    canonical_state_effect: "schema-change",
+    requested_postcondition_evidence: [...request.requested_postcondition_evidence],
+  };
+}
+
+function migrationRequestDigest(operationId, envelope, authorityClaim) {
+  return digest({
+    protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
+    operation: "migrate_store",
+    operation_id: operationId,
+    ...envelope,
     authority_claim: authorityClaim,
   });
 }
@@ -268,6 +364,164 @@ async function initializeStore(request) {
   return success("initialize_store", result);
 }
 
+function migrationPreconditionFailure(code, message, evidence) {
+  return failure(code, message, {
+    failureClass: "migration_precondition_failed",
+    retryDisposition: RETRY_DISPOSITIONS.NEVER,
+    correctiveGuidance: "Do not retry this operation ID. Reconcile the named store and exact schema conditions first.",
+    evidence,
+  });
+}
+
+async function migrateStore(request) {
+  const operationId = validateOperationId(request.operation_id);
+  const authorityClaim = validateAuthorityClaim(request.authority_claim, { requireHumanConfirmation: true });
+  const envelope = validateMigrationEnvelope(request);
+  if (envelope.store_id !== envelope.expected.store_id) {
+    return migrationPreconditionFailure(
+      "expected_store_mismatch",
+      "The affected store and expected store identities do not match.",
+      { affected_store_id: envelope.store_id, expected_store_id: envelope.expected.store_id },
+    );
+  }
+
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { configuration, sqliteBinary } = prepared;
+  const storePath = configuration.sqlite.store_path;
+  const state = await inspectStore(sqliteBinary, storePath);
+  if (state.status !== "available") return storeStateFailure(state);
+
+  // Establish immutable resolved-store scope before either replay or any new
+  // exceptional receipt is admitted. A request naming another store never
+  // writes an audit row into the configured store.
+  if (envelope.store_id !== state.metadata.store_id) {
+    return migrationPreconditionFailure(
+      "expected_store_mismatch",
+      "The configured store does not have the exact authorized store identity.",
+      { expected_store_id: envelope.store_id, observed_store_id: state.metadata.store_id },
+    );
+  }
+
+  const requestDigest = migrationRequestDigest(operationId, envelope, authorityClaim);
+  const existing = await readStoreOperationReceipt(sqliteBinary, storePath, operationId);
+  if (existing) {
+    if (existing.operation_kind !== "migration" || existing.request_digest !== requestDigest) {
+      return failure("idempotency_mismatch", "operation_id is already settled for a different canonical request.", {
+        failureClass: "idempotency_mismatch",
+        retryDisposition: RETRY_DISPOSITIONS.NEVER,
+        correctiveGuidance: "Do not retry with this operation_id. Reconcile against the settled store-scoped receipt.",
+        evidence: { operation_id: operationId, settled_kind: existing.operation_kind },
+      });
+    }
+    return success("migrate_store", existing.result);
+  }
+
+  const observed = {
+    store_id: state.metadata.store_id,
+    schema: { id: state.metadata.schema_id, version: state.metadata.schema_version },
+    operation_fence: state.operation_fence,
+  };
+  const schemaMatches = envelope.expected.schema.id === observed.schema.id
+    && envelope.expected.schema.version === observed.schema.version;
+  const fenceMatches = envelope.expected.operation_fence === observed.operation_fence;
+  const migrationMatches = envelope.migration.from_version === envelope.expected.schema.version
+    && envelope.migration.to_version === envelope.target.schema.version
+    && envelope.target.schema.id === envelope.expected.schema.id
+    && envelope.target.schema.version > envelope.expected.schema.version;
+
+  let terminal;
+  if (!schemaMatches) {
+    terminal = {
+      outcome: "rejected",
+      code: "expected_schema_mismatch",
+      failure_class: "migration_precondition_failed",
+      retry_disposition: RETRY_DISPOSITIONS.NEVER,
+      canonical_state_effect: "none",
+    };
+  } else if (!fenceMatches) {
+    terminal = {
+      outcome: "conflict",
+      code: "expected_store_fence_mismatch",
+      failure_class: "migration_precondition_failed",
+      retry_disposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      canonical_state_effect: "none",
+    };
+  } else if (!migrationMatches) {
+    terminal = {
+      outcome: "rejected",
+      code: "migration_chain_invalid",
+      failure_class: "migration_precondition_failed",
+      retry_disposition: RETRY_DISPOSITIONS.NEVER,
+      canonical_state_effect: "none",
+    };
+  } else {
+    // L07-W01 terminates at the authorized envelope. L07-W02 will replace
+    // this explicit boundary with snapshot-first transactional execution.
+    terminal = {
+      outcome: "blocked",
+      code: "migration_execution_not_available",
+      failure_class: "operation_unsupported",
+      retry_disposition: RETRY_DISPOSITIONS.NEVER,
+      canonical_state_effect: "none",
+    };
+  }
+
+  const settledAt = new Date().toISOString();
+  const preconditions = {
+    expected: envelope.expected,
+    observed,
+    target: envelope.target,
+    migration: envelope.migration,
+  };
+  const resultDigest = digest({ terminal, preconditions });
+  const receipt = {
+    operation_id: operationId,
+    operation_kind: "migration",
+    store_id: state.metadata.store_id,
+    request_digest: requestDigest,
+    outcome: terminal.outcome,
+    result_digest: resultDigest,
+    settled_at: settledAt,
+    failure_class: terminal.failure_class,
+    retry_disposition: terminal.retry_disposition,
+    operation_fence: state.operation_fence + 1,
+  };
+  const result = { status: "settled", terminal, preconditions, receipt };
+  let settled;
+  try {
+    settled = await settleStoreOperationReceipt(sqliteBinary, storePath, {
+      receipt,
+      authorityClaim,
+      result,
+      expectedOperationFence: state.operation_fence,
+    });
+  } catch (error) {
+    // A concurrent caller may have inserted the same immutable operation ID
+    // after our receipt-first read. Resolve that race from durable store state;
+    // unrelated write failures remain classified by the outer boundary.
+    settled = await readStoreOperationReceipt(sqliteBinary, storePath, operationId);
+    if (!settled) throw error;
+  }
+  if (!settled) {
+    return failure("store_operation_conflict", "The store operation fence changed before settlement.", {
+      failureClass: "migration_precondition_failed",
+      retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      correctiveGuidance: "Lookup this operation receipt, then reconcile the current store fence before using a new operation ID.",
+      evidence: { expected_operation_fence: state.operation_fence },
+    });
+  }
+  if (settled.operation_kind !== "migration" || settled.request_digest !== requestDigest) {
+    return failure("idempotency_mismatch", "operation_id settled concurrently for a different canonical request.", {
+      failureClass: "idempotency_mismatch",
+      retryDisposition: RETRY_DISPOSITIONS.NEVER,
+      correctiveGuidance: "Do not retry with this operation_id. Reconcile against the settled store-scoped receipt.",
+      evidence: { operation_id: operationId, settled_kind: settled.operation_kind },
+    });
+  }
+  return success("migrate_store", settled.result);
+}
+
 function validateLookupContext(context) {
   if (!context || typeof context !== "object"
     || !nonEmpty(context.view_id)
@@ -327,7 +581,7 @@ async function getStoreOperationReceipt(request) {
   // accepted exceptional operation kinds. Owner commit receipts are private
   // mechanical material and must be recovered only through a future typed
   // owner façade operation, not leaked through store-operation lookup.
-  if (receipt.operation_kind !== "initialize_store") {
+  if (!["initialize_store", "migration"].includes(receipt.operation_kind)) {
     return success("get_store_operation_receipt", { status: "not_visible" });
   }
   return success("get_store_operation_receipt", {
@@ -340,11 +594,16 @@ async function getStoreOperationReceipt(request) {
 export async function invokeExceptionalOperation(request) {
   try {
     if (request.operation === "initialize_store") return await initializeStore(request);
+    if (request.operation === "migrate_store") return await migrateStore(request);
     if (request.operation === "get_store_operation_receipt") return await getStoreOperationReceipt(request);
     return unsupported(request.operation);
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      const authorityError = error.code === "human_authority_claim_required" || error.code === "authority_claim_invalid";
+      const authorityError = [
+        "human_authority_claim_required",
+        "human_confirmation_reference_required",
+        "authority_claim_invalid",
+      ].includes(error.code);
       return failure(error.code, error.message, {
         failureClass: authorityError ? "authority_required" : "configuration_or_store_unavailable",
         evidence: error.evidence,
