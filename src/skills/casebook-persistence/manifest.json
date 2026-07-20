@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "829a7c646058b4c3a1393b1ae546494d5176d8bcad02ec6620a4ce85c5b94d8f"
+    "sha256": "d7c72ecba08940c8f7c5b6d9805223b5378d83ca412e3cf290d3b6e8a40a00ef"
   },
   "entrypoints": [
     {
@@ -57,6 +57,8 @@
     "impact.project",
     "integrity.observe",
     "projection.rebuild",
+    "export.preflight",
+    "export.finalize",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -76,6 +78,7 @@
     "frame.get_operation_receipt",
     "frame.resolve",
     "frame.read",
+    "frame.export.fragment",
     "frame.discovery.read",
     "frame.disposition.read",
     "frame.history",
@@ -97,7 +100,8 @@
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
-      "view_policy.retire"
+      "view_policy.retire",
+      "export.finalize"
     ],
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
@@ -108,6 +112,9 @@
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "integrity_observation": "read-only typed classification of canonical mechanical, disposable projection, semantic evidence, and asset/protocol anomalies with visible components, safety, evidence digest, allowed operations, and owner reconciliation handoff",
     "projection_rebuild": "human-authorized replacement of disposable lexical, reverse-reference, staleness, and attention projections from immutable canonical revisions at one exact fence, verified before atomic selection with durable replay",
+    "logical_export_preflight": "deterministic current/historical Case+Frame fragment aggregation under one exact active-policy observation fence with required/optional admission, dependency classification, private temporary rendering, integrity manifest/bundle digests, and no finalization or publication authority",
+    "document_claim_trace": "Document-owned consequence classifications with mechanically verified claim text, trace, evidence-fragment membership, evidence and reader-locator digests; missing consequential evidence blocks preflight without semantic classification or Document mutation",
+    "export_finalization": "separately human-authorized exact binding of operation, active policy, observation fence, manifest, bundle, and destination digests; atomic directory rename when supported, explicit pre-effect non-atomic refusal, operation-bound marker, durable receipt-first recovery, and no publication or canonical-owner authority",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -159,7 +166,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "2da27e21cc0c64f8a89a82502cf0797575bd4a55ca96871c64daaccd632b7352"
+      "sha256": "7151b465ab31e22f568265dac04f1a493a002281e53761a8a13387fafb6bb8d0"
     },
     {
       "id": "shared-configuration",
@@ -207,7 +214,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "711a21ee16c808cffe3ca499e5cfae29ac9b86b36d4181cf5d7b6c6a5a5179b5"
+      "sha256": "b9a291349b6d3569bb41d64269e9ab2d92e1f44bdd491b5078b2868bdadd7f55"
     },
     {
       "id": "sqlite-diagnostics",
@@ -219,7 +226,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "4f75489c309b40461d5a57017e7556810b8e988d2fca312668d98541c4a94771"
+      "sha256": "bfb507b50a5c5434d285fd29a82bb0bc41d76946ab0db362f76a6a2b60905765"
     },
     {
       "id": "sqlite-identity-discovery",
@@ -261,13 +268,13 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "f2e2f322b34583c3fe93db3b547648313b65c86a29546883a911c4401f7f8f28"
+      "sha256": "05fbcf04ef862e2681f41daa0f270e45ea04dd9ca7e960ed093870f7d01f01cb"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "da831f31c1b98b870dbd68383050f378cdc1f01792c33478e0c6e44548519153"
+      "sha256": "ec171c38fb4032b1cde173481fe55a4fc1217004167b001c3ed1e91efa42d3e0"
     },
     {
       "id": "sqlite-common-subset",
@@ -276,10 +283,16 @@
       "sha256": "168a37af89817efc622d9584f52396bf16ba13028daa6e4853b95af1529a9d1d"
     },
     {
+      "id": "logical-export-preflight",
+      "path": "variants/sqlite/lib/export/index.mjs",
+      "kind": "module",
+      "sha256": "1cce8722b96ecb6874d99f4738c1abc081c8f5005695c341bfbccbfd059a0058"
+    },
+    {
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "87cbfd0b53822608fbce30649281f86f124b9fbfa3e957bd1a09f6076fdc319c"
+      "sha256": "6b45400ec9d0ed3743efcefdbc09e2eb03f313ada440a9cdee12eb2d295e14f2"
     },
     {
       "id": "sqlite-schema",
@@ -303,7 +316,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "583c532118fecac22e3fd56f6c9e65f10ba61c87b86105c0dc580032c75ca3c9"
+      "sha256": "237e4c2678d9f755633d82d6db12b82f62656f6701f82f59eb8729195ec5e1f8"
     }
   ]
 }

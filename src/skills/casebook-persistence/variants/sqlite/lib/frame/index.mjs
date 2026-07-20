@@ -87,6 +87,7 @@ const LIST_REQUEST_FIELDS = new Set([
   "authority_scope_namespace_ids", "linked_case_id", "limit", "cursor", "configuration",
 ]);
 const PREPARE_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "base_revision", "documents", "machine_manifest", "configuration"]);
+const EXPORT_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "revision_id", "revision_number", "audience", "configuration"]);
 const DISCOVERY_HYDRATE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "handoff_token", "query_digest", "candidate_ids", "configuration"]);
 const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded"]);
 const MAX_PAGE = 100;
@@ -1226,6 +1227,181 @@ async function readFrame(request) {
   }
 }
 
+const EXPORT_AUDIENCE_RANK = Object.freeze({ private: 0, internal: 1, restricted: 2, portable: 3, public: 4 });
+const FRAME_LOCATOR_AUDIENCE_RANK = Object.freeze({ private: 0, project: 1, public: 4 });
+function exportCodepointCompare(left, right) {
+  const a = Array.from(String(left ?? ""), (value) => value.codePointAt(0));
+  const b = Array.from(String(right ?? ""), (value) => value.codePointAt(0));
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+  }
+  return a.length - b.length;
+}
+
+function exportAudience(value) {
+  if (!Object.hasOwn(EXPORT_AUDIENCE_RANK, value)) {
+    throw new FrameRequestError("audience", "audience_invalid", "A supported export audience is required.");
+  }
+  return value;
+}
+
+function frameLocatorSafe(locator, audience) {
+  return FRAME_LOCATOR_AUDIENCE_RANK[locator.audience] >= EXPORT_AUDIENCE_RANK[audience]
+    && (!["portable", "public"].includes(audience) || !locator.uri.startsWith("file:"));
+}
+
+function frameStableIdentities(frame, revision) {
+  const identities = [{ kind: "frame", stable_id: frame.id, version_id: revision.version_ids.frame }];
+  for (const item of revision.version_ids.discovery_items) {
+    identities.push({ kind: "discovery", stable_id: item.discovery_item_id, version_id: item.version_id });
+  }
+  for (const item of revision.version_ids.disposition_boundaries ?? []) {
+    identities.push({ kind: "disposition_boundary", stable_id: item.disposition_boundary_id, version_id: item.version_id });
+  }
+  for (const item of revision.version_ids.case_dispositions ?? []) {
+    identities.push({ kind: "case_disposition", stable_id: item.case_disposition_id, version_id: item.version_id });
+  }
+  return identities.sort((left, right) => exportCodepointCompare(left.stable_id, right.stable_id));
+}
+
+function projectFrameExport(frame, audience) {
+  const projected = structuredClone(frame);
+  const redactions = [];
+  const locators = [];
+  const evidenceLocators = [];
+  const redact = (kind, stableId, path, reason, consequential) => {
+    redactions.push({ kind, stable_id: stableId, path, reason, consequential });
+  };
+  const retainLocator = (locator, descriptor, consequential) => {
+    if (!frameLocatorSafe(locator, audience)) {
+      redact(descriptor.kind, descriptor.stable_id, descriptor.path,
+        locator.uri.startsWith("file:") && ["portable", "public"].includes(audience)
+          ? "machine_local_locator_prohibited"
+          : "audience_incompatible", consequential);
+      return false;
+    }
+    const safe = { ...descriptor, ...locator };
+    delete safe.kind;
+    delete safe.stable_id;
+    delete safe.path;
+    locators.push(safe);
+    if (descriptor.locator_role === "disposition_evidence") evidenceLocators.push(safe);
+    return true;
+  };
+
+  projected.artifact_links = (projected.artifact_links ?? []).filter((artifact, index) => retainLocator(
+    artifact.locator,
+    {
+      kind: "artifact_locator",
+      stable_id: artifact.artifact_id,
+      path: `artifact_links/${index}/locator`,
+      locator_role: "artifact",
+      artifact_id: artifact.artifact_id,
+    },
+    false,
+  ));
+
+  for (const [familyName, familyKind] of [["disposition_boundaries", "disposition_boundary"], ["case_dispositions", "case_disposition"]]) {
+    for (const [index, item] of (projected[familyName] ?? []).entries()) {
+      item.evidence_locators = (item.evidence_locators ?? []).filter((locator, locatorIndex) => retainLocator(
+        locator,
+        {
+          kind: "evidence_locator",
+          stable_id: item.id,
+          path: `${familyName}/${index}/evidence_locators/${locatorIndex}`,
+          locator_role: "disposition_evidence",
+          owner_kind: familyKind,
+          owner_id: item.id,
+        },
+        true,
+      ));
+    }
+  }
+
+  if (projected.hidden_authority_scope_count) {
+    redact("authority_scope", projected.id, "authority_scope_namespace_ids", "not_visible_under_exact_policy", false);
+  }
+  if (projected.hidden_reference_count) {
+    redact("reference", projected.id, "references", "not_visible_under_exact_policy", true);
+  }
+  locators.sort((left, right) => exportCodepointCompare(left.locator_role, right.locator_role)
+    || exportCodepointCompare(left.owner_id ?? left.artifact_id, right.owner_id ?? right.artifact_id)
+    || exportCodepointCompare(left.uri, right.uri));
+  evidenceLocators.sort((left, right) => exportCodepointCompare(left.owner_id, right.owner_id) || exportCodepointCompare(left.uri, right.uri));
+  const status = redactions.some((item) => item.consequential)
+    ? "blocked"
+    : redactions.length ? "partial_nonconsequential" : "ready";
+  return { projected, redactions, locators, evidenceLocators, status };
+}
+
+async function produceFrameFragment(request) {
+  exactKeys(request, EXPORT_REQUEST_FIELDS, "request");
+  if (request.request_version !== 1) throw new FrameRequestError("request_version", "version_incompatible", "request_version must be 1.");
+  requiredId(request.frame_id, "frame_id", "frame");
+  requiredId(request.store_id, "store_id", "store");
+  validateContext(request.context);
+  exportAudience(request.audience);
+  if (request.revision_id != null && request.revision_number != null) {
+    throw new FrameRequestError("revision_id", "revision_selector_ambiguous", "Select a revision by ID or number, not both.");
+  }
+  if (request.revision_id != null) requiredId(request.revision_id, "revision_id", "frame-revision");
+  if (request.revision_number != null && (!Number.isInteger(request.revision_number) || request.revision_number < 1)) {
+    throw new FrameRequestError("revision_number", "positive_revision_required", "revision_number must be positive.");
+  }
+  const readRequest = {
+    protocol: request.protocol,
+    operation: "frame.read",
+    request_version: 1,
+    store_id: request.store_id,
+    context: request.context,
+    frame_id: request.frame_id,
+    include: { discovery: "all_selected", case_dispositions: "all_selected" },
+    configuration: request.configuration,
+  };
+  const selected = await readFrame({
+    ...readRequest,
+    ...(request.revision_id == null ? {} : { revision_id: request.revision_id }),
+    ...(request.revision_number == null ? {} : { revision_number: request.revision_number }),
+  });
+  if (!selected.ok) return selected;
+  const current = await readFrame(readRequest);
+  if (!current.ok) return current;
+  const projection = projectFrameExport(selected.result.frame, request.audience);
+  const selectedRevision = selected.result.revision;
+  const currentRevision = current.result.revision;
+  const driftStatus = selectedRevision.id === currentRevision.id ? "current" : "historical";
+  const identities = frameStableIdentities(projection.projected, selectedRevision);
+  const core = {
+    fragment_schema: "frame-owner-export-fragment@1",
+    renderer: { id: "frame-owner-fragment", version: 1 },
+    owner: { kind: "frame", id: request.frame_id },
+    owner_status: projection.projected.status,
+    selected_revision: selectedRevision,
+    observed_current_revision: currentRevision,
+    drift: {
+      status: driftStatus,
+      selected_revision_id: selectedRevision.id,
+      observed_current_revision_id: currentRevision.id,
+    },
+    applied_policy: { ...selected.result.applied_view, audience: request.audience },
+    stable_identities: identities,
+    stable_ids: identities.map((item) => item.stable_id),
+    locators: projection.locators,
+    redactions: projection.redactions,
+    omissions: projection.redactions.map(({ kind, stable_id, path, reason, consequential }) => ({ kind, stable_id, path, reason, consequential })),
+    trace_gaps: projection.redactions.map(({ stable_id, path, reason }) => ({ stable_id, path, reason })),
+    evidence: { locators: projection.evidenceLocators },
+    status: projection.status,
+    completion_evidence: selected.result.completion_evidence,
+    frame: projection.projected,
+    authority: { publication: "not_granted", canonical_mutation: "not_granted" },
+    mutation_performed: false,
+    publication_performed: false,
+  };
+  const fragment = { ...core, digest: mechanicalDigest(core) };
+  return success("frame.export.fragment", { status: projection.status, fragment });
+}
+
 function pageLimit(value) {
   if (value == null) return 50;
   if (!Number.isInteger(value) || value < 1 || value > MAX_PAGE) throw new FrameRequestError("limit", "page_limit_invalid", `limit must be 1 to ${MAX_PAGE}.`);
@@ -1903,6 +2079,7 @@ export async function invokeFrameOperation(request) {
     if (request.operation === "frame.get_operation_receipt") return await getFrameOperationReceipt(request);
     if (request.operation === "frame.resolve") return await resolveFrame(request);
     if (request.operation === "frame.read") return await readFrame(request);
+    if (request.operation === "frame.export.fragment") return await produceFrameFragment(request);
     if (request.operation === "frame.discovery.read") return await readDiscovery(request);
     if (request.operation === "frame.discovery.hydrate") return await hydrateDiscoveryCandidates(request);
     if (request.operation === "frame.disposition.read") return await readDisposition(request);
