@@ -13,6 +13,14 @@ When a Frame or another coordinating workflow needs a prototype, keep the coordi
 
 An agent explicitly delegated the prototype is already the worker and does not delegate it again. Execute in the coordinating thread only when the discriminator is a single-pass operation requiring no iterative build or debugging and no substantial logs or scratch artifacts, or when the user explicitly requests inline execution. If fresh-context workers are unavailable, return the bounded prototype plan and the delegation limitation to the coordinator rather than silently running iterative work inline.
 
+## Authorization Boundary
+
+Proceed without asking when the prototype is isolated, local, incurs no incremental charge, and all mutable runtime and data targets are prototype-owned. Standing local authority includes creating, starting, stopping, rebooting, fault-injecting, and deleting disposable VMs or containers; loopback listeners; synthetic data; temporary prototype-owned processes; and cleanup of prototype-owned files and runtime. It also includes ordinary public downloads and dependency resolution when dependencies are installed in a prototype-owned, unprivileged environment.
+
+Ask only when the prototype would incur charges through external infrastructure or API usage without an existing bounded authorization; access production or shared credentials or resources; modify or delete pre-existing user data or unrelated processes; install or reconfigure privileged system-wide infrastructure; make consequential external writes; or risk destructive effects escaping the disposable boundary. Deleting prototype-owned resources is authorized cleanup, not a new destructive action.
+
+When permission is required, present one grouped authorization batch covering objective, environment, credentials, data, effects, persistence, blast radius, and expected cost. Do not interrupt merely because an isolated local prototype creates or deletes disposable VMs or containers, reboots or fault-injects them, or terminates prototype-owned processes.
+
 ## 1. Bound The Question
 
 State one answerable question before building. If the request contains several independent uncertainties, ask the user to choose one or split the work into separate prototypes.
@@ -46,7 +54,7 @@ Proceed when the chosen form lets the identified evaluator observe the discrimin
 
 ## 3. Build For Disposal
 
-Colocate the prototype with the code or system it informs and mark it clearly as a prototype. Keep it uncommitted by default.
+Place the prototype in a clearly marked, prototype-owned location adjacent to the code it informs when that location is local and unshared; otherwise use a separate isolated workspace. Keep it uncommitted by default. Colocation never authorizes mutation of the codebase, production system, shared environment, or other pre-existing resources it informs.
 
 Implement only enough fidelity, instrumentation, and error handling to make the observation trustworthy. There is no test-suite, production architecture, persistence, or polish obligation unless one is itself necessary to answer the question.
 
@@ -80,11 +88,11 @@ Report:
 <what the prototype did not establish>
 
 ### Disposition
-- <artifact or output>: <delete pending approval | deleted with approval | retain as evidence | explicitly approved for promotion>
+- <artifact or output>: <deleted as authorized cleanup | retained as evidence | cleanup blocked because it exceeds the prototype-owned boundary | explicitly approved for promotion>
 ```
 
 ## 5. Dispose Or Promote
 
-After capturing the result, recommend deletion by default and ask before deleting unless cleanup was already authorized. Inventory every created artifact, including scratch state and instrumentation output, and record its disposition and authorization status. If the user deliberately chooses promotion, carry the learned design into the normal engineering workflow and add appropriate architecture, tests, failure handling, security, and maintainability. Prototype code is not production-ready merely because its verdict was `supported`.
+After capturing the result, delete prototype-owned disposable resources by default under the standing authorization boundary unless the user requested retention. Ask before deletion only when ownership is uncertain or deletion could affect pre-existing, shared, production, or otherwise out-of-boundary resources. Inventory every created artifact, including scratch state and instrumentation output, and record its disposition and any residual state. If the user deliberately chooses promotion, carry the learned design into the normal engineering workflow and add appropriate architecture, tests, failure handling, security, and maintainability. Prototype code is not production-ready merely because its verdict was `supported`.
 
 An `inconclusive` result may justify a new, separately bounded prototype. It does not justify leaving the current artifact indefinitely.
