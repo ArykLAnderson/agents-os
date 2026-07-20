@@ -20,6 +20,7 @@ const assetDefinitions = [
   ["sqlite-substrate", "variants/sqlite/lib/substrate/index.mjs", "module"],
   ["sqlite-identity-discovery", "variants/sqlite/lib/substrate/discovery.mjs", "module"],
   ["sqlite-observation", "variants/sqlite/lib/substrate/observation.mjs", "module"],
+  ["sqlite-impact-projection", "variants/sqlite/lib/substrate/impact.mjs", "module"],
   ["sqlite-mechanical-envelope", "variants/sqlite/lib/substrate/mechanical.mjs", "module"],
   ["case-facade", "variants/sqlite/lib/case/index.mjs", "module"],
   ["frame-facade", "variants/sqlite/lib/frame/index.mjs", "module"],

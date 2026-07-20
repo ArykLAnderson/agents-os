@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.4.0-l04-w03-event-checkpoints"
+    "version": "0.4.0-l04-w04-impact-projection"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "85997466b37225165d04faf899afaeb2f3b287c05a89b8e40b4c5353dea1ab6e"
+    "sha256": "eed3808a87fe90b843739a11aac257ff69e0e7c4d14fc7e700591fb64e19d575"
   },
   "entrypoints": [
     {
@@ -52,6 +52,7 @@
     "reconciliation_snapshot.begin",
     "reconciliation_snapshot.page",
     "reconciliation_snapshot.finish",
+    "impact.project",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -95,6 +96,7 @@
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
     "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
+    "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -146,7 +148,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "ac4b87241608da1fc9696d70f87ce997737346edbd2df809c9f32ee7a7439e8e"
+      "sha256": "078d7f708f25ff99e1212dfa6048d22cda9759e2a4b1122c3ea812756509d0db"
     },
     {
       "id": "shared-configuration",
@@ -194,7 +196,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "ef5a2e905462004d10f12adf938bd3b22f4ea50287158c2baeeb41eedb94bd3d"
+      "sha256": "ccd89f59c92498dc8f4f7e3dcb54fc30eeac8afbc851bdd4c6ec183ddf3cbda5"
     },
     {
       "id": "sqlite-diagnostics",
@@ -219,6 +221,12 @@
       "path": "variants/sqlite/lib/substrate/observation.mjs",
       "kind": "module",
       "sha256": "6f6152d91093eafb323c390ad71738f7390b4e7101802c1306aec3685f5f2c14"
+    },
+    {
+      "id": "sqlite-impact-projection",
+      "path": "variants/sqlite/lib/substrate/impact.mjs",
+      "kind": "module",
+      "sha256": "b11b1f43a354061bcb82407718313a12d7327a7b1c8217d9035e00e01b78a860"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -272,7 +280,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "f0e97e03a0f210f65ad45abf5e69ad234924ac53382af1b44de36bdbae4d5d78"
+      "sha256": "488db9ae779bbd678f5093df03745237bb95c121cfb0edef35dd9afd72c43676"
     }
   ]
 }
