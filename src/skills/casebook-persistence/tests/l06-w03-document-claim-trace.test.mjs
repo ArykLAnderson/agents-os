@@ -283,6 +283,35 @@ test("claim trace digest, evidence membership/digest, and reader-safe locator vi
       assert.equal(await exists(path.join(state.root, `${name}.preflight`)), false);
       assert.equal(await exists(path.join(state.root, `${name}.final`)), false);
     }
+
+    const unsafePublicUris = [
+      ["javascript", "javascript:alert(1)"],
+      ["data", "data:text/plain,unsafe"],
+      ["ftp", "ftp://example.test/source"],
+      ["localhost", "https://localhost/source"],
+      ["dot-local", "https://casebook.local/source"],
+      ["loopback", "http://127.0.0.1/source"],
+      ["link-local", "http://169.254.10.20/source"],
+      ["rfc1918-a", "http://10.20.30.40/source"],
+      ["rfc1918-b", "http://172.20.30.40/source"],
+      ["rfc1918-c", "http://192.168.20.40/source"],
+      ["ipv6-loopback", "http://[::1]/source"],
+      ["ipv6-link-local", "http://[fe80::1]/source"],
+      ["ipv6-private", "http://[fc00::1]/source"],
+      ["credentials", "https://reader:secret@example.test/source"],
+    ];
+    for (const [name, uri] of unsafePublicUris) {
+      const readerLocator = { ...state.locator, uri };
+      const result = await preflight(state, `unsafe-${name}`, claimTrace(state, { evidenceOverride: {
+        reader_locator: readerLocator,
+        locator_digest: mechanicalDigest(readerLocator),
+      } }));
+      assert.equal(result.code, 0, `${name}: ${result.stderr || JSON.stringify(result.json)}`);
+      assert.equal(result.json.result.status, "blocked", name);
+      assert.equal(result.json.result.manifest.blockers.some((item) => item.code === "document_reader_locator_unsafe"), true, name);
+      assert.equal(await exists(path.join(state.root, `unsafe-${name}.preflight`)), false);
+      assert.equal(await exists(path.join(state.root, `unsafe-${name}.final`)), false);
+    }
   } finally {
     await rm(state.root, { recursive: true, force: true });
   }

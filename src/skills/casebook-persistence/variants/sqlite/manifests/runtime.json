@@ -2,7 +2,7 @@
   "runtime_manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.4.0-l04-w05-steward-gate"
+    "version": "0.11.0-candidate-6-final-review"
   },
   "protocol": {
     "id": "casebook-persistence-json",

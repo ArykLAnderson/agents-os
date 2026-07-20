@@ -26,6 +26,28 @@ BEGIN
   SELECT RAISE(ABORT, 'store metadata is immutable');
 END;
 
+CREATE TABLE store_authority_binding (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  store_id TEXT NOT NULL UNIQUE REFERENCES store_metadata(store_id),
+  source_kind TEXT NOT NULL,
+  source_locator TEXT NOT NULL,
+  authority_mode TEXT NOT NULL CHECK (authority_mode = 'sqlite'),
+  bound_at TEXT NOT NULL,
+  binding_operation_id TEXT NOT NULL
+) STRICT;
+
+CREATE TRIGGER store_authority_binding_immutable_update
+BEFORE UPDATE ON store_authority_binding
+BEGIN
+  SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration');
+END;
+
+CREATE TRIGGER store_authority_binding_immutable_delete
+BEFORE DELETE ON store_authority_binding
+BEGIN
+  SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration');
+END;
+
 CREATE TABLE namespaces (
   namespace_id TEXT PRIMARY KEY,
   namespace_key TEXT NOT NULL UNIQUE,

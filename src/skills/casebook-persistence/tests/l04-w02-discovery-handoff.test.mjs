@@ -62,6 +62,7 @@ async function seed(state) {
       outcome: "Semantic Frame payload must be hydrated only by Frame.",
       case_links: [{ target_kind: "case", target_id: ids.case, observed_revision_id: caseResult.json.result.revision.id, predicate: "tracks", provenance: "synthetic explicit link" }],
       discovery: [{ id: ids.discovery, display_order: 0, lifecycle: "active", category: "frontier", title: "Identity handoff", body: "No substrate brief.", human_authority: "not_required", dependencies: [] }],
+      disposition_boundaries: [], case_dispositions: [],
     },
   });
   assert.equal(frameResult.code, 0, JSON.stringify(frameResult.json));

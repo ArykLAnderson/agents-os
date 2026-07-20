@@ -58,9 +58,10 @@ export function validateAuthorityConfiguration(configuration) {
   exactObjectKeys(configuration, new Set(["source", "authority_mode", "sqlite", "markdown"]), "configuration");
   const { source, authority_mode: authorityMode } = configuration;
   exactObjectKeys(source, new Set(["kind", "locator"]), "configuration.source");
-  if (!nonEmpty(source.kind) || !nonEmpty(source.locator)) {
-    throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required.");
+  if (!nonEmpty(source.kind) || source.kind.length > 128 || !nonEmpty(source.locator) || source.locator.length > 4_096) {
+    throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required bounded strings.");
   }
+  const canonicalSource = { kind: source.kind.trim(), locator: source.locator.trim() };
   if (!new Set(["sqlite", "markdown"]).has(authorityMode)) {
     throw new ConfigurationError("authority_mode_invalid", "authority_mode must be exactly sqlite or markdown.");
   }
@@ -74,7 +75,7 @@ export function validateAuthorityConfiguration(configuration) {
     }
     exactObjectKeys(configuration.sqlite, new Set(["database_url", "sqlite_bin"]), "configuration.sqlite");
     return {
-      source: { kind: source.kind, locator: source.locator },
+      source: canonicalSource,
       authority_mode: authorityMode,
       sqlite: {
         database_url: configuration.sqlite.database_url,
@@ -94,7 +95,7 @@ export function validateAuthorityConfiguration(configuration) {
   }
   exactObjectKeys(configuration.markdown, new Set(["workspace_root"]), "configuration.markdown");
   return {
-    source: { kind: source.kind, locator: source.locator },
+    source: canonicalSource,
     authority_mode: authorityMode,
     markdown: { workspace_root: absoluteLocalPath(configuration.markdown.workspace_root, "markdown.workspace_root") },
   };

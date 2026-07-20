@@ -142,6 +142,8 @@ function frameRecord(namespaceId = ids.namespace) {
       human_authority: "unclear",
       dependencies: [],
     }],
+    disposition_boundaries: [],
+    case_dispositions: [],
   };
 }
 

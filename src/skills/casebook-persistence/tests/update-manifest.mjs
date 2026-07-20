@@ -9,6 +9,7 @@ const assetDefinitions = [
   ["human-install-guidance", "INSTALL.md", "human_documentation"],
   ["shared-protocol", "shared/protocol.mjs", "module"],
   ["shared-configuration", "shared/config.mjs", "module"],
+  ["shared-locator-safety", "shared/locator.mjs", "module"],
   ["shared-manifest", "shared/manifest.mjs", "module"],
   ["l01-interchange", "shared/l01-interchange.mjs", "module"],
   ["markdown-variant", "variants/markdown/variant.json", "variant_manifest"],

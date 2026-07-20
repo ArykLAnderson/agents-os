@@ -205,6 +205,35 @@ test("an interruption after atomic rename recovers from the operation-bound fina
   }
 });
 
+test("post-rename corruption remains truthful recovery-required state across retry without a no-effect receipt", async () => {
+  const state = await setup("corrupt-after-rename");
+  try {
+    const operationId = "operation:l06-w04:corrupt-after-rename:finalize";
+    const request = finalizeRequest(state, operationId);
+    const corrupted = await invoke(state.root, request, { CASEBOOK_PERSISTENCE_TEST_FAULT: "export_corrupt_after_rename" });
+    assert.equal(corrupted.code, 2);
+    assert.equal(corrupted.json.failure.code, "export.final_verification_failed");
+    assert.equal(corrupted.json.failure.retry_disposition, "after_operator_repair");
+    assert.equal(corrupted.json.failure.evidence.temporary_output_path, state.destination.temporary_path);
+    assert.equal(corrupted.json.failure.evidence.final_output_path, state.destination.final_path);
+    assert.equal(await exists(state.destination.temporary_path), false);
+    assert.equal(await exists(state.destination.final_path), true);
+
+    const absent = await invoke(state.root, receiptLookup(state, operationId));
+    assert.equal(absent.json.result.status, "absent_at_fence");
+
+    const retry = await invoke(state.root, request);
+    assert.equal(retry.code, 2);
+    assert.equal(retry.json.failure.code, "export.final_verification_failed");
+    assert.equal(retry.json.failure.evidence.temporary_output_path, state.destination.temporary_path);
+    assert.equal(retry.json.failure.evidence.final_output_path, state.destination.final_path);
+    const stillAbsent = await invoke(state.root, receiptLookup(state, operationId));
+    assert.equal(stillAbsent.json.result.status, "absent_at_fence");
+  } finally {
+    await rm(state.root, { recursive: true, force: true });
+  }
+});
+
 test("an interruption after binding intent resumes from the private temporary output and cleans it through atomic completion", async () => {
   const state = await setup("intent-interrupt");
   try {

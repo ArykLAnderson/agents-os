@@ -118,7 +118,7 @@ async function validateGeneratedBytes(generatorRoot) {
     const packageRoot = path.join(skillsRoot, "casebook-persistence");
     const manifestBytes = await readFile(path.join(packageRoot, "manifest.json"));
     const manifest = JSON.parse(manifestBytes);
-    assert.equal(manifest.assets.length, 28, `${target} manifest asset count`);
+    assert.equal(manifest.assets.length, 29, `${target} manifest asset count`);
     for (const operation of requiredOperations) assert.ok(manifest.supported_operations.includes(operation), `${target} manifest ${operation}`);
     for (const asset of manifest.assets) {
       assert.equal(sha256(await readFile(path.join(packageRoot, asset.path))), asset.sha256, `${target} digest ${asset.path}`);
@@ -299,14 +299,14 @@ async function assertFailClosed(entrypoint, root, state, target) {
     configuration: { source: { kind: "l11-w03-sandbox", locator: `generated:${target}:missing` } },
   });
   assert.equal(missing.exitCode, 2);
-  assert.equal(missing.json.failure.code, state.mode === "markdown" ? "authority_mode_invalid" : "case.substrate_failure");
+  assert.equal(missing.json.failure.code, "authority_mode_invalid");
 
   const ambiguous = await invoke(entrypoint, root, {
     ...request(state, "frame.read", { frame_id: ids.frame }),
     configuration: { ...state.configuration, authority_mode: ["markdown", "sqlite"] },
   });
   assert.equal(ambiguous.exitCode, 2);
-  assert.equal(ambiguous.json.failure.code, state.mode === "markdown" ? "authority_mode_invalid" : "frame.substrate_failure");
+  assert.equal(ambiguous.json.failure.code, "authority_mode_invalid");
 
   const forbiddenShadow = state.mode === "markdown" ? path.join(root, "forbidden-shadow.sqlite3") : path.join(root, "forbidden-shadow-markdown");
   const dualConfiguration = state.mode === "markdown"
@@ -314,7 +314,7 @@ async function assertFailClosed(entrypoint, root, state, target) {
     : { ...state.configuration, markdown: { workspace_root: forbiddenShadow } };
   const dual = await invoke(entrypoint, root, { ...request(state, "case.read", { case_id: ids.reconcileCase }), configuration: dualConfiguration });
   assert.equal(dual.exitCode, 2);
-  assert.equal(dual.json.failure.code, state.mode === "markdown" ? "dual_authority_rejected" : "case.substrate_failure");
+  assert.equal(dual.json.failure.code, "dual_authority_rejected");
   assert.equal(await stat(forbiddenShadow).then(() => true).catch(() => false), false, `${target} ${state.mode} dual authority did not write`);
 
   const fallback = await invoke(entrypoint, root, {
@@ -322,7 +322,7 @@ async function assertFailClosed(entrypoint, root, state, target) {
     configuration: { ...state.configuration, fallback_authority_mode: state.mode === "markdown" ? "sqlite" : "markdown" },
   });
   assert.equal(fallback.exitCode, 2);
-  assert.equal(fallback.json.failure.code, state.mode === "markdown" ? "configuration_field_unsupported" : "case.substrate_failure");
+  assert.equal(fallback.json.failure.code, "configuration_field_unsupported");
 }
 
 async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqliteBinary) {

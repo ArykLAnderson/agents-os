@@ -4,34 +4,38 @@ This document is for a human operator. It is intentionally outside model-loaded 
 
 ## Runtime prerequisites
 
-- Node.js 22 or newer, invoked explicitly as the interpreter.
+- Node.js 22 or newer, invoked explicitly.
 - SQLite 3.37 or newer with JSON, `STRICT`, `RETURNING`, FTS5, foreign-key enforcement, and WAL support.
-- One explicit workspace authority selection: `sqlite` or `markdown`, never both.
+- One explicitly selected workspace authority: `sqlite` or `markdown`, never both.
 
-A SQLite workspace must resolve to an absolute local filesystem path or local `file:` URL. `CASEBOOK_DATABASE_URL` may provide that value. The documented personal default is the absolute expansion of `$HOME/.casebook/casebook.sqlite3`; it is a named configuration source, never a current-working-directory fallback. `CASEBOOK_SQLITE_BIN` may select an absolute SQLite executable; otherwise a capability-checked PATH candidate may be used.
+A SQLite database must resolve to an absolute local path or local `file:` URL. `CASEBOOK_DATABASE_URL` may provide the configured value; no current-working-directory fallback exists. `CASEBOOK_SQLITE_BIN` may select an absolute SQLite executable, otherwise a capability-checked `PATH` candidate is used. A Markdown authority must name an absolute workspace root with an exact authority marker and private selected view.
 
-A Markdown workspace must name an absolute workspace root. It is a separate file-authoritative mode with reduced guarantees, not a mirror or fallback for SQLite. L01-W05 only implements a disposable synthetic interchange profile for compatibility proof; it is not the final L-05 operational file format.
+## Authority binding and initialization
 
-## Explicit disposable initialization
+`initialize_store` is the only operation that creates a SQLite store. It requires an absent target, a unique operation ID, and an explicit human authority claim. Initialization atomically installs the canonical schema, store identity, source locator, `authority_mode: sqlite`, initial namespace and private view, migration ledger, and durable receipt.
 
-The current slice can initialize a new disposable SQLite store only through a versioned `initialize_store` request carrying:
+The source locator, authority mode, and store identity form one immutable authority binding. Every SQLite request must reproduce it. Locator, mode, dual-configuration, and store substitution fail closed. Ordinary configuration cannot hot-switch authority; switching remains separately authorized migration work. A compatible unbound store may acquire its first binding only through an operation with an explicit human authority claim under the trusted-local boundary.
 
-- explicit SQLite authority configuration and an absolute database path;
-- a unique `operation_id`;
-- `authority_claim.human_authorized: true` plus non-empty `acting_role` and `authority_basis`.
+Retain the returned store ID, view ID, exact view-policy revision ID, and operation ID. After uncertain exceptional-operation delivery, query `get_store_operation_receipt` before retrying.
 
-Initialization creates the database only when the target is absent and its parent directory already exists. It atomically installs schema version 1, immutable store identity, the initial personal namespace, one active private default view, the initial migration ledger, and a durable receipt. A compatible repeat returns the original evidence. It never initializes or migrates an existing partial or incompatible file.
+## Implemented surface
 
-Retain the returned store ID, view ID, exact view-policy revision ID, and operation ID. If response delivery is uncertain, issue `get_store_operation_receipt` with those identities and an explicit purpose before considering a retry. Do not blindly retry.
+The SQLite connector provides:
 
-Minimal typed Case/Frame create/read, common resolve/list/bounded lexical search, deterministic synthetic SQLite export, and explicit non-mutating Markdown parse are available only within the boundaries described by the package manifest. A Markdown fixture affects SQLite only when an operator/test explicitly parses it and submits ordinary typed owner creates to a separately configured disposable store. There is no watcher, mirror, fallback, or mode toggle.
+- diagnostics, explicit initialization, disposable schema migration, exact snapshot and restore, and durable store-operation receipt lookup;
+- immutable view-policy create/revise/activate/retire;
+- typed Case and Frame create, complete revision commit, current/historical read, discovery/query surfaces, lifecycle staging, export fragments, and reconciliation preparation;
+- event paging, checkpoint CAS, reconciliation snapshots, identity discovery, impact projection, integrity observation, and projection rebuild;
+- deterministic logical export preflight and separately authorized atomic finalization;
+- bounded disposable Case purge planning and execution with retained audit truth;
+- the typed reduced common resolve/list/search subset and deterministic interchange export.
 
-The SQLite Case surface supports exact historical revision reads by revision number or revision ID. The current Frame query surface supports exact ID/namespace-alias resolution, current reads, exact historical reads by revision number or revision ID, bounded revision history, and stable-ID Discovery reads at the current or an exact historical Frame revision. Frame listing is bounded and paged: it defaults to active Frames, while closed Frames require an explicit completed, abandoned, or superseded status selection. These operations are scoped to the exact active view; paging cursors are query-bound and preserve a stable ordered snapshot fence.
+Portable/public export retains only credential-free `http`/`https` locators with non-local hosts. Localhost, `.local`, loopback, link-local, RFC1918, IPv6 local/private, file/data/javascript, and other non-web locators are blocked or omitted with truthful blockers. Finalization does not grant publication authority. If post-rename verification fails, preserve both destination paths and use receipt-first operator recovery; do not publish, delete, or blindly retry.
 
-The SQLite connector also supports non-mutating Frame legacy reconciliation preparation over immutable, digest-bound `frame.md` and exactly one selected Discovery filename. It requires an exact typed machine manifest and returns explicit parser, identity-binding, and structural-diff evidence; it never writes, renames, watches, creates view lifecycle, or performs reconciliation. Multi-namespace Frame authority remains bounded by the exact active policy grants and always includes the active home grant; narrow reads mask hidden namespace identities.
+The Markdown connector provides selected-workspace diagnostics; current file-authoritative Case/Frame create, complete replacement commit and read; Frame list and legacy reconciliation preparation; common resolve/list/search; and deterministic interchange export/parse. It uses digest-verified files or manifest-selected Frame generations. It has no SQLite fallback, mirror, watcher, durable receipts, owner revision history, events, checkpoints, snapshots, restore, migration, or global-query guarantees, and assumes one trusted logical writer.
 
-Later event, checkpoint, and snapshot query surfaces remain unavailable, as do reconciliation commit/writeback, global search, full atomic Markdown replacement/generation selection, migration, backup/restore, recovery, production cutover, and full integration with the Case and Frame semantic skills. This package supplies persistence mechanics only; it does not make semantic or reconciliation decisions. The private owner-neutral commit/read envelope remains only an implementation seam for typed façades and synthetic validation. Do not point this delivery slice at a live `.casebook` store.
+## Remaining limitations
 
-## Safe diagnostic check
+General-purpose or non-disposable migration/snapshot/restore and global search remain unsupported. Semantic classification, reconciliation judgment, publication, and external-resource mutation belong to their owning capabilities and are never inferred from persistence success. SQLite cursor integrity is a trusted-local accidental-tamper boundary, not hostile-client authentication.
 
-Run the connector with an explicit Node interpreter, a synthetic store location, and a disposable probe directory. Diagnostics never use the configured store and delete their bounded SQLite feature probe before returning.
+Do not point tests or unreviewed requests at a live `.casebook` workspace. Diagnostics are read-only: SQLite diagnostics validate an existing store's authority binding, then use a deleted bounded feature probe without reading owner content; an absent configured target is not created. Markdown diagnostics verify the exact selected authority marker and workspace without parsing owner content or mutating files.

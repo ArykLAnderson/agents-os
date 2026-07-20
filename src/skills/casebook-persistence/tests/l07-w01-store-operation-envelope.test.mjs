@@ -158,8 +158,8 @@ test("migrate_store envelope requires explicit human confirmation and exact name
     wrongStore.expected.store_id = wrongStore.store_id;
     const storeRejected = await invoke(root, wrongStore);
     assert.equal(storeRejected.exitCode, 2);
-    assert.equal(storeRejected.json.failure.class, "migration_precondition_failed");
-    assert.equal(storeRejected.json.failure.code, "expected_store_mismatch");
+    assert.equal(storeRejected.json.failure.class, "authority_binding_mismatch");
+    assert.equal(storeRejected.json.failure.code, "authority_binding_mismatch");
 
     assert.deepEqual(
       await scalar(sqliteBinary, storePath, "SELECT operation_fence, (SELECT count(*) FROM store_operation_receipts) AS receipts FROM store_fence;"),
@@ -311,7 +311,8 @@ test("migration receipts are lookup-visible only under the exact store and activ
       },
       configuration: configuration(one.storePath, sqliteBinary),
     });
-    assert.equal(hidden.json.result.status, "not_visible");
+    assert.equal(hidden.exitCode, 2);
+    assert.equal(hidden.json.failure.code, "authority_binding_mismatch");
   } finally {
     await rm(root, { recursive: true, force: true });
     assert.equal(await stat(root).then(() => true).catch(() => false), false);

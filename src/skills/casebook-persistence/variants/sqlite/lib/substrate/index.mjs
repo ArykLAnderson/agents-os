@@ -22,6 +22,7 @@ const REQUIRED_TABLES = Object.freeze([
   "owner_versions",
   "owners",
   "schema_migrations",
+  "store_authority_binding",
   "store_fence",
   "store_metadata",
   "store_operation_receipts",
@@ -50,6 +51,37 @@ function unavailable(code, evidence = {}) {
 
 export async function storeExists(storePath) {
   return lstat(storePath).then((entry) => entry.isFile()).catch(() => false);
+}
+
+export async function bindStoreAuthorityIfAuthorized(binary, storePath, configuration, request) {
+  if (request?.authority_claim?.human_authorized !== true
+    || typeof request.operation_id !== "string" || !request.operation_id.trim()
+    || typeof request.store_id !== "string") return false;
+  let rows;
+  try {
+    rows = await queryJson(binary, storePath, `
+      SELECT m.store_id,
+        (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name='store_authority_binding') AS binding_table_count,
+        CASE WHEN EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='store_authority_binding')
+          THEN (SELECT count(*) FROM store_authority_binding) ELSE -1 END AS binding_count
+      FROM store_metadata m WHERE singleton=1;
+    `);
+  } catch {
+    return false;
+  }
+  if (rows.length !== 1 || rows[0].store_id !== request.store_id
+    || rows[0].binding_table_count !== 1 || rows[0].binding_count !== 0) return false;
+  const now = new Date().toISOString();
+  try {
+    await sqlite(binary, storePath, `.bail on\nPRAGMA foreign_keys=ON;\nPRAGMA busy_timeout=5000;\nBEGIN IMMEDIATE;
+      INSERT INTO store_authority_binding(singleton,store_id,source_kind,source_locator,authority_mode,bound_at,binding_operation_id)
+      SELECT 1,${sqlText(request.store_id)},${sqlText(configuration.source.kind)},${sqlText(configuration.source.locator)},'sqlite',${sqlText(now)},${sqlText(request.operation_id)}
+      WHERE NOT EXISTS(SELECT 1 FROM store_authority_binding);
+      COMMIT;`, { args: ["-batch", "-bail"], timeout: 20_000, maxBuffer: 4 * 1024 * 1024 });
+  } catch {
+    return false;
+  }
+  return true;
 }
 
 export async function inspectStore(binary, storePath) {
@@ -116,6 +148,15 @@ export async function inspectStore(binary, storePath) {
           'initialization_operation_id', initialization_operation_id
         ) FROM store_metadata WHERE singleton = 1),
         'metadata_count', (SELECT count(*) FROM store_metadata),
+        'authority_binding', (SELECT json_object(
+          'store_id', store_id,
+          'source_kind', source_kind,
+          'source_locator', source_locator,
+          'authority_mode', authority_mode,
+          'bound_at', bound_at,
+          'binding_operation_id', binding_operation_id
+        ) FROM store_authority_binding WHERE singleton = 1),
+        'authority_binding_count', (SELECT count(*) FROM store_authority_binding),
         'namespace', (SELECT json_object(
           'namespace_id', namespace_id,
           'namespace_key', namespace_key,
@@ -196,7 +237,7 @@ export async function inspectStore(binary, storePath) {
       ) AS inspection_json;
     `);
     detail = JSON.parse(rows[0]?.inspection_json ?? "{}");
-    for (const key of ["metadata", "namespace", "view", "migration", "latest_migration"]) {
+    for (const key of ["metadata", "authority_binding", "namespace", "view", "migration", "latest_migration"]) {
       if (typeof detail[key] === "string") detail[key] = JSON.parse(detail[key]);
     }
   } catch {
@@ -230,6 +271,13 @@ export async function inspectStore(binary, storePath) {
 
   const complete = detail.metadata_count === 1
     && detail.metadata.store_id?.startsWith("store:")
+    && detail.authority_binding_count === 1
+    && detail.authority_binding?.store_id === detail.metadata.store_id
+    && detail.authority_binding?.authority_mode === "sqlite"
+    && typeof detail.authority_binding?.source_kind === "string"
+    && detail.authority_binding.source_kind.length > 0
+    && typeof detail.authority_binding?.source_locator === "string"
+    && detail.authority_binding.source_locator.length > 0
     && detail.namespace_count >= 1
     && detail.active_namespace_count >= 1
     && detail.view_family_count >= 1
@@ -269,6 +317,7 @@ export async function inspectStore(binary, storePath) {
     return unavailable("store_partial_initialization", {
       components: {
         metadata: detail.metadata_count,
+        authority_binding: detail.authority_binding_count,
         namespaces: detail.namespace_count,
         view_families: detail.view_family_count,
         policy_revisions: detail.policy_revision_count,
@@ -295,6 +344,7 @@ export async function inspectStore(binary, storePath) {
   return {
     status: "available",
     metadata: detail.metadata,
+    authority_binding: detail.authority_binding,
     namespace: detail.namespace,
     view: detail.view,
     operation_fence: detail.operation_fence,
@@ -545,12 +595,17 @@ export async function createInitializedStore(binary, storePath, initialization) 
   const temporaryStore = path.join(temporaryDirectory, "store.sqlite3");
   try {
     const schema = await readFile(SQL_ASSET, "utf8");
-    const { identities, receipt, migration, authorityClaim, initializedAt } = initialization;
+    const { identities, receipt, migration, authorityClaim, authorityBinding, initializedAt } = initialization;
     const command = `.bail on\nPRAGMA busy_timeout = 5000;\nPRAGMA journal_mode = WAL;\nPRAGMA application_id = ${APPLICATION_ID};\nBEGIN IMMEDIATE;\n${schema}\n
       INSERT INTO store_metadata VALUES (
         1, ${sqlText(identities.storeId)}, ${sqlText(SCHEMA_ID)}, ${SCHEMA_VERSION},
         ${sqlText(initialization.protocol.id)}, ${initialization.protocol.version},
         ${sqlText(initializedAt)}, ${sqlText(receipt.operation_id)}
+      );
+      INSERT INTO store_authority_binding VALUES (
+        1, ${sqlText(identities.storeId)}, ${sqlText(authorityBinding.source.kind)},
+        ${sqlText(authorityBinding.source.locator)}, 'sqlite', ${sqlText(initializedAt)},
+        ${sqlText(receipt.operation_id)}
       );
       INSERT INTO namespaces VALUES (
         ${sqlText(identities.namespaceId)}, 'personal', 'active', ${sqlText(initializedAt)}

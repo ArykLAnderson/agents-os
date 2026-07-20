@@ -15,6 +15,7 @@ import {
   interchangeFrontmatter,
   interchangeJsonSection,
 } from "../../../../shared/l01-interchange.mjs";
+import { locatorSafeForAudience, portablePublicLocatorAssessment } from "../../../../shared/locator.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
@@ -411,7 +412,7 @@ function normalizeDiscoveryItem(value, index) {
   return result;
 }
 
-function normalizeFrame(value) {
+function normalizeFrame(value, { requireDispositionSets = false } = {}) {
   if (!object(value)) throw new FrameRequestError("frame", "object_required", "frame must be an object.");
   exactKeys(value, FRAME_FIELDS, "frame");
   const homeNamespaceId = requiredId(value.home_namespace_id, "frame.home_namespace_id", "namespace");
@@ -422,6 +423,9 @@ function normalizeFrame(value) {
   if (!FRAME_STATUSES.has(value.status)) throw new FrameRequestError("frame.status", "frame_status_invalid", "Frame descriptive status is invalid.");
   if (!Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > MAX_DISCOVERY) throw new FrameRequestError("frame.discovery", "complete_discovery_required", `One to ${MAX_DISCOVERY} selected Discovery items are required.`);
   const discovery = value.discovery.map(normalizeDiscoveryItem);
+  if (requireDispositionSets && (value.disposition_boundaries == null || value.case_dispositions == null)) {
+    throw new FrameRequestError("frame.disposition_boundaries", "complete_disposition_sets_required", "New canonical Frames require explicit complete disposition arrays, including explicit empty arrays.");
+  }
   const dispositionBoundaries = value.disposition_boundaries == null ? [] : (() => {
     if (!Array.isArray(value.disposition_boundaries) || value.disposition_boundaries.length > 64) throw new FrameRequestError("frame.disposition_boundaries", "bounded_array_required", "Disposition boundaries must be a bounded array.");
     return value.disposition_boundaries.map(normalizeDispositionBoundary);
@@ -791,13 +795,15 @@ function hydrateFrame(mechanical) {
   const { schema: _schema, ...metadata } = frameVersion.content;
   if (!FRAME_STATUSES.has(metadata.status)) throw new FrameRequestError("stored.frame_version", "status_invalid", "Stored Frame status is invalid.");
   const withoutVersionId = ({ version_id: _versionId, ...item }) => item;
+  const dispositionStatePresent = normalized.schema === "frame-canonical-selection@3"
+    || dispositionBoundaries.length > 0 || caseDispositions.length > 0;
   const storedFrame = {
     ...metadata,
     discovery: discovery.map(withoutVersionId),
-    ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : {
+    ...(dispositionStatePresent ? {
       disposition_boundaries: dispositionBoundaries.map(withoutVersionId),
       case_dispositions: caseDispositions.map(withoutVersionId),
-    }),
+    } : {}),
   };
   // Immutable rows can still be externally damaged after trigger removal or an
   // unsafe restore. Reapply the complete owner representation invariants while
@@ -811,10 +817,10 @@ function hydrateFrame(mechanical) {
     frame: {
       ...normalizedStoredFrame,
       discovery: normalizedStoredFrame.discovery.map((item, index) => ({ ...item, version_id: discovery[index].version_id })),
-      ...(dispositionBoundaries.length === 0 && caseDispositions.length === 0 ? {} : {
+      ...(dispositionStatePresent ? {
         disposition_boundaries: normalizedStoredFrame.disposition_boundaries.map((item, index) => ({ ...item, version_id: dispositionBoundaries[index].version_id })),
         case_dispositions: normalizedStoredFrame.case_dispositions.map((item, index) => ({ ...item, version_id: caseDispositions[index].version_id })),
-      }),
+      } : {}),
     },
     revision: {
       id: frameTypedId("frame-revision", revision.id),
@@ -1037,7 +1043,7 @@ async function validateCaseRealizationEvidence(request, frame) {
 
 async function mutateFrame(request, create) {
   validateMutation(request, create);
-  const frame = normalizeFrame(request.frame);
+  const frame = normalizeFrame(request.frame, { requireDispositionSets: create });
   if (!create && request.frame_id !== frame.id) throw new FrameRequestError("frame.id", "frame_identity_mismatch", "frame.id must match frame_id.");
   let priorSelected = new Map();
   let replayAllocated = new Set();
@@ -1246,8 +1252,15 @@ function exportAudience(value) {
 }
 
 function frameLocatorSafe(locator, audience) {
-  return FRAME_LOCATOR_AUDIENCE_RANK[locator.audience] >= EXPORT_AUDIENCE_RANK[audience]
-    && (!["portable", "public"].includes(audience) || !locator.uri.startsWith("file:"));
+  return locatorSafeForAudience(locator, audience,
+    (locatorAudience, targetAudience) => FRAME_LOCATOR_AUDIENCE_RANK[locatorAudience] >= EXPORT_AUDIENCE_RANK[targetAudience]);
+}
+
+function unsafeFrameLocatorReason(locator, audience) {
+  if (["portable", "public"].includes(audience) && !portablePublicLocatorAssessment(locator.uri).safe) {
+    return locator.uri.startsWith("file:") ? "machine_local_locator_prohibited" : "unsafe_public_locator_prohibited";
+  }
+  return "audience_incompatible";
 }
 
 function frameStableIdentities(frame, revision) {
@@ -1275,9 +1288,7 @@ function projectFrameExport(frame, audience) {
   const retainLocator = (locator, descriptor, consequential) => {
     if (!frameLocatorSafe(locator, audience)) {
       redact(descriptor.kind, descriptor.stable_id, descriptor.path,
-        locator.uri.startsWith("file:") && ["portable", "public"].includes(audience)
-          ? "machine_local_locator_prohibited"
-          : "audience_incompatible", consequential);
+        unsafeFrameLocatorReason(locator, audience), consequential);
       return false;
     }
     const safe = { ...descriptor, ...locator };

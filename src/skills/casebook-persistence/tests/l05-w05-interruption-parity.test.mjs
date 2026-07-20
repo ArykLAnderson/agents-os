@@ -201,7 +201,7 @@ async function initializeSqlite(entrypoint, root, database, sqliteBinary, suffix
       acting_role: "architect",
       authority_basis: "explicit disposable L05-W05 test authority",
     },
-    configuration: sqliteConfiguration(database, sqliteBinary, `l05-w05-${suffix}`),
+    configuration: sqliteConfiguration(database, sqliteBinary),
   });
   assert.equal(result.exitCode, 0, result.stderr);
   return result.json.result.initialization;
