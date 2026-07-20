@@ -2,7 +2,7 @@
   "variant_manifest_version": 1,
   "id": "casebook-persistence-markdown",
   "authority_mode": "markdown",
-  "implementation_status": "l05_w03_coherent_frame_generation_with_l01_operations",
+  "implementation_status": "l05_w04_complete_reduced_common_subset",
   "guarantees": "reduced-file-authoritative-common-subset",
   "entrypoint": {
     "interpreter": "node",
@@ -20,9 +20,10 @@
     "common.resolve",
     "common.list",
     "common.search",
+    "interchange.export",
     "interchange.parse"
   ],
-  "identity_rule": "verified-frontmatter-and-authority-marker-digest-bound-manifest-only",
+  "identity_rule": "verified-frontmatter-and-exclusive-authority-marker-selected-file-or-generation",
   "selected_discovery_filenames": [
     "discovery.md",
     "discovery-map.md"

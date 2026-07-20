@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "3b2ada0d8a72829bdb5ef7f11cd66b9f197bf2f63255f7fcf792938773f621c2"
+    "sha256": "5977124678044c06d1df52e72b6f725751358b1f6efb6f91c748a7e9ee7f39b9"
   },
   "entrypoints": [
     {
@@ -89,7 +89,7 @@
     "discovery_dependencies": "typed stable references",
     "frame_query": "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
-    "markdown_profile": "exclusive Markdown installation with L01 synthetic parity, digest-guarded atomic Case replacement, and manifest-selected coherent Frame/Discovery/disposition generations",
+    "markdown_profile": "exclusive Markdown installation with full typed reduced common operations, digest-guarded atomic Case replacement, manifest-selected coherent Frame/Discovery/disposition generations, deterministic interchange, and explicit omitted SQLite guarantees",
     "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
     "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
     "legacy_reconciliation": "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
@@ -146,7 +146,7 @@
       "id": "markdown-variant",
       "path": "variants/markdown/variant.json",
       "kind": "variant_manifest",
-      "sha256": "0e1ad42a330394a8e25715cff1e9aeb73e603e7ae2eb4ff3eca28d0b9f1083bd"
+      "sha256": "722dbf0683f7548b12818d0cd5ba77e6a8baddd4a970c0de5aeb240d5d9068a1"
     },
     {
       "id": "markdown-entrypoint",
@@ -158,13 +158,13 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "2a3fdce39ed3776a88e2789c27ddb4b67856ae31b4b79d2d8cf740992b39f4ff"
+      "sha256": "b3b4d27bf0b4c2a512656d3708359e0ac1c2a7d5e66e0e3ab5a85da414cd2c15"
     },
     {
       "id": "markdown-interchange",
       "path": "variants/markdown/lib/interchange.mjs",
       "kind": "module",
-      "sha256": "e4b12baa9727e77041ebb6b79a86aca7272fff1813f7e4341cdab907efe2991c"
+      "sha256": "5f009309c2d9b9d2bdfc79bbdc87f7e0d697e98bdc61bfad40a8fc4e98559519"
     },
     {
       "id": "sqlite-entrypoint",
@@ -230,7 +230,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "72dd02d21e66f7fcd44d471074be62436ed13c0aa47264048b53e407bee3e285"
+      "sha256": "302d972490a720bcbd6c75b7403c8af74e81ac419f8a683c8aa5782986d97284"
     }
   ]
 }

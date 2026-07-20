@@ -2,6 +2,7 @@ import { constants as fsConstants } from "node:fs";
 import { randomBytes } from "node:crypto";
 import {
   access,
+  link,
   lstat,
   mkdir,
   open,
@@ -49,6 +50,7 @@ const idPattern = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
 const OWNER_ID = new RegExp(`^(case|frame):${UUID}$`);
 const KINDS = new Set(["case", "frame"]);
 const ACTIVE_CATEGORIES = new Set(["fog", "frontier", "blocked", "contested", "deferred", "out_of_scope"]);
+const DISCOVERY_LIFECYCLES = new Set(["active", "settled", "tombstoned"]);
 const HUMAN_AUTHORITY = new Set(["required", "not_required", "unclear"]);
 const FRAME_STATUSES = new Set(["active", "completed", "abandoned", "superseded"]);
 const BOUNDARY_CLOSURES = new Set(["open", "closed"]);
@@ -63,9 +65,15 @@ const CATEGORY = Object.freeze({
   "Contested": "contested",
   "Deferred": "deferred",
   "Out of Scope": "out_of_scope",
+  "Settled": "settled",
 });
 const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
 const DIGEST = /^[0-9a-f]{64}$/;
+const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope", "provenance", "aliases", "facets", "entries", "sources", "relationships", "references"]);
+const CASE_COMPLETE_FIELDS = ["aliases", "facets", "entries", "sources", "relationships", "references"];
+const FRAME_LINK_FIELDS = ["case_links", "frame_links", "downstream_links", "artifact_links"];
+const OMITTED_CAPABILITIES = Object.freeze(["revisions", "events", "durable_receipts", "checkpoints", "snapshots", "namespace_global_queries"]);
+const MARKDOWN_COMMON_OPERATIONS = Object.freeze(["case.create", "case.read", "frame.create", "frame.read", "common.resolve", "common.list", "common.search", "interchange.export", "interchange.parse"]);
 
 export class MarkdownError extends Error {
   constructor(code, pathName, rule, message, evidence = {}) {
@@ -276,18 +284,29 @@ function parseCase(bytes, manifestRecord) {
   const map = sections(body, manifestRecord.path, ["Scope", "Knowledge", "Sources"], {
     required: ["Scope", "Knowledge", "Sources"],
   });
-  const scope = requiredString(optionalSection(map, "Scope"), "section.Scope");
-  requireEmptySection(map, "Knowledge", manifestRecord.path);
-  requireEmptySection(map, "Sources", manifestRecord.path);
-  if (fields.state !== "active") throw new MarkdownError("markdown.parse_invalid", "frontmatter.state", "active_case_only_l01", "Only active minimal Cases are supported.");
-  return {
+  const base = {
     id,
     home_namespace_id: requiredId(fields.home_namespace_id, "frontmatter.home_namespace_id", "namespace"),
     state: fields.state,
     title: requiredString(fields.title, "frontmatter.title", 512),
     summary: requiredString(fields.summary, "frontmatter.summary", 4_096),
-    scope,
+    scope: requiredString(optionalSection(map, "Scope"), "section.Scope"),
   };
+  if (fields.state !== "active") throw new MarkdownError("markdown.parse_invalid", "frontmatter.state", "active_case_only", "Only current active Cases are exposed by the Markdown common subset.");
+  const knowledgeRaw = map.get("Knowledge");
+  const sourcesRaw = map.get("Sources");
+  if (!knowledgeRaw && !sourcesRaw) return base;
+  if ((knowledgeRaw && !knowledgeRaw.startsWith("```json\n")) || (sourcesRaw && !sourcesRaw.startsWith("```json\n"))) {
+    if (knowledgeRaw) requireEmptySection(map, "Knowledge", manifestRecord.path);
+    if (sourcesRaw) requireEmptySection(map, "Sources", manifestRecord.path);
+  }
+  const knowledge = optionalSection(map, "Knowledge");
+  const sources = optionalSection(map, "Sources");
+  if (!object(knowledge) || !Array.isArray(sources)) {
+    throw new MarkdownError("case.invalid_representation", manifestRecord.path, "complete_case_sections_required", "Complete Case Knowledge and Sources sections must be supplied together.");
+  }
+  exactKeys(knowledge, new Set(["provenance", "aliases", "facets", "entries", "relationships", "references"]), "section.Knowledge");
+  return normalizeCase({ ...base, ...knowledge, sources });
 }
 
 function parseDiscovery(bytes, manifestRecord) {
@@ -333,23 +352,27 @@ function parseDiscovery(bytes, manifestRecord) {
       const authorityMatch = itemBody.match(/^- Human authority: (required|not_required|unclear)\n\n```json\n([^\n]+)\n```$/);
       if (!authorityMatch) throw new MarkdownError("markdown.parse_invalid", `discovery.${label}`, "discovery_shape_invalid", "A human-authority line and canonical JSON body are required.");
       let title;
-      let discoveryBody;
+      let payload;
       try {
         title = JSON.parse(match[2]);
-        discoveryBody = JSON.parse(authorityMatch[2]);
+        payload = JSON.parse(authorityMatch[2]);
       } catch {
         throw new MarkdownError("markdown.parse_invalid", `discovery.${label}`, "discovery_json_invalid", "Discovery title/body JSON is invalid.");
       }
+      const full = object(payload) && payload.schema === "casebook-discovery-full@1";
+      if (object(payload) && !full) throw new MarkdownError("markdown.parse_invalid", `discovery.${label}`, "discovery_payload_schema_invalid", "A structured Discovery payload requires the supported schema identity.");
+      if (full) exactKeys(payload, new Set(["schema", "body", "lifecycle", "dependencies", "scope_namespace_ids", "disposition", "resolution", "reopened_from_version", "reopening_basis"]), `discovery.${label}.payload`);
       const item = {
         id: identity.id,
         display_order: identity.display_order,
-        lifecycle: "active",
+        lifecycle: full ? payload.lifecycle : "active",
         category,
         title: requiredString(title, `discovery.${label}.title`, 512),
-        body: requiredString(discoveryBody, `discovery.${label}.body`),
+        body: requiredString(full ? payload.body : payload, `discovery.${label}.body`),
         human_authority: authorityMatch[1],
-        dependencies: [],
+        dependencies: full ? payload.dependencies : [],
       };
+      if (full) for (const key of ["scope_namespace_ids", "disposition", "resolution", "reopened_from_version", "reopening_basis"]) if (payload[key] != null) item[key] = payload[key];
       if (identity.display_label != null) item.display_label = requiredString(identity.display_label, `manifest.discovery_items.${label}.display_label`, 64);
       items.push(item);
       byLabel.delete(label);
@@ -401,11 +424,13 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const id = requiredId(fields.id, "frontmatter.id", "frame");
   if (id !== manifestRecord.id) throw new MarkdownError("markdown.identity_unverified", "frontmatter.id", "manifest_identity_mismatch", "Frame identity differs from the verified manifest.");
   const home = requiredId(fields.home_namespace_id, "frontmatter.home_namespace_id", "namespace");
-  if (!Array.isArray(fields.authority_scope_namespace_ids) || fields.authority_scope_namespace_ids.length !== 1 || fields.authority_scope_namespace_ids[0] !== home) {
-    throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "cross_namespace_scope_unsupported", "L-01 supports exactly the home namespace.");
+  if (!Array.isArray(fields.authority_scope_namespace_ids) || fields.authority_scope_namespace_ids.length < 1 || fields.authority_scope_namespace_ids.length > 64) {
+    throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "bounded_scope_required", "A bounded explicit authority scope is required.");
   }
+  const authorityScope = fields.authority_scope_namespace_ids.map((namespaceId, index) => requiredId(namespaceId, `frontmatter.authority_scope_namespace_ids[${index}]`, "namespace"));
+  if (new Set(authorityScope).size !== authorityScope.length || !authorityScope.includes(home)) throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "home_namespace_required", "Authority scope must uniquely include the home namespace.");
   if (!FRAME_STATUSES.has(fields.status)) throw new MarkdownError("markdown.parse_invalid", "frontmatter.status", "frame_status_invalid", "The Frame status is unsupported.");
-  const frameHeadings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Discovery", "Case Dispositions"];
+  const frameHeadings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Links", "Authorization", "Discovery", "Case Dispositions"];
   const map = sections(body, manifestRecord.frame_path, frameHeadings, { required: ["Discovery"] });
   if (map.get("Discovery") !== "See the manifest-selected Discovery file.") {
     throw new MarkdownError("markdown.parse_invalid", "section.Discovery", "discovery_reference_invalid", "The synthetic Frame must contain only its exact manifest-selected Discovery reference.");
@@ -413,7 +438,7 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const record = {
     id,
     home_namespace_id: home,
-    authority_scope_namespace_ids: [home],
+    authority_scope_namespace_ids: authorityScope,
     status: fields.status,
     discovery: parseDiscovery(discoveryBytes, manifestRecord),
   };
@@ -429,13 +454,20 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
       record[key] = value.map((entry, index) => requiredString(entry, `section.${heading}[${index}]`, 4_096));
     }
   }
+  const links = optionalSection(map, "Links");
+  if (links != null) {
+    if (!object(links)) throw new MarkdownError("frame.invalid_representation", "section.Links", "object_required", "Frame Links must be one canonical object.");
+    exactKeys(links, new Set(FRAME_LINK_FIELDS), "section.Links");
+    for (const key of FRAME_LINK_FIELDS) record[key] = links[key];
+  }
+  const authorization = optionalSection(map, "Authorization");
+  if (authorization != null) record.authorization_provenance = authorization;
   const dispositions = parseDispositionSection(map, manifestRecord.frame_path);
   if (dispositions.disposition_state === "present") {
-    validateDispositionSelection(dispositions.disposition_boundaries, dispositions.case_dispositions, record.status);
     record.disposition_boundaries = dispositions.disposition_boundaries;
     record.case_dispositions = dispositions.case_dispositions;
   }
-  return record;
+  return normalizeFrame(record, { requireDispositions: dispositions.disposition_state === "present" });
 }
 
 async function loadAuthorityWorkspace(request) {
@@ -578,9 +610,45 @@ function validateProvenance(value) {
   for (const [key, supplied] of Object.entries(value)) requiredString(supplied, `provenance.${key}`, 512);
 }
 
+function boundedJson(value, pathName, depth = 0) {
+  if (depth > 16) throw new MarkdownError("case.invalid_representation", pathName, "bounded_depth_required", "Typed owner content exceeds the supported nesting bound.");
+  if (typeof value === "string") { if (value.length > 16_384) throw new MarkdownError("case.invalid_representation", pathName, "bounded_string_required", "Typed owner strings must remain bounded."); return; }
+  if (value == null || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value))) return;
+  if (Array.isArray(value)) {
+    if (value.length > 256) throw new MarkdownError("case.invalid_representation", pathName, "bounded_array_required", "Typed owner arrays must remain bounded.");
+    value.forEach((item, index) => boundedJson(item, `${pathName}[${index}]`, depth + 1)); return;
+  }
+  if (!object(value)) throw new MarkdownError("case.invalid_representation", pathName, "json_value_required", "Typed owner content must be canonical JSON data.");
+  if (Object.keys(value).length > 64) throw new MarkdownError("case.invalid_representation", pathName, "bounded_object_required", "Typed owner objects must remain bounded.");
+  for (const [key, item] of Object.entries(value)) boundedJson(item, `${pathName}.${key}`, depth + 1);
+}
+
+function validateCaseReference(value, pathName) {
+  if (!object(value)) throw new MarkdownError("case.invalid_representation", pathName, "object_required", "A typed Case reference must be an object.");
+  exactKeys(value, new Set(["target_kind", "target_id", "observed_revision_id", "pinned_revision_id", "predicate", "visibility", "provenance"]), pathName);
+  const kind = requiredString(value.target_kind, `${pathName}.target_kind`, 64);
+  requiredId(value.target_id, `${pathName}.target_id`, kind);
+  requiredString(value.observed_revision_id, `${pathName}.observed_revision_id`, 128);
+  if (value.pinned_revision_id != null) requiredString(value.pinned_revision_id, `${pathName}.pinned_revision_id`, 128);
+}
+
+function validateCaseSelection(selection, pathName, prefix, versionFields) {
+  if (!object(selection)) throw new MarkdownError("case.invalid_representation", pathName, "object_required", "A typed Case family selection must be an object.");
+  exactKeys(selection, new Set(["id", "state", "selected_version_id", "version", ...(prefix === "source" ? ["display_label", "fragments"] : [])]), pathName);
+  requiredId(selection.id, `${pathName}.id`, prefix);
+  if (!new Set(["active", "tombstoned"]).has(selection.state)) throw new MarkdownError("case.invalid_representation", `${pathName}.state`, "lifecycle_invalid", "Case family lifecycle is invalid.");
+  if ((selection.selected_version_id == null) === (selection.version == null)) throw new MarkdownError("case.invalid_representation", pathName, "selection_shape_invalid", "Exactly one selected version ID or complete new version is required.");
+  if (selection.selected_version_id != null) requiredString(selection.selected_version_id, `${pathName}.selected_version_id`, 128);
+  if (selection.version != null) {
+    if (!object(selection.version)) throw new MarkdownError("case.invalid_representation", `${pathName}.version`, "object_required", "A complete Case family version is required.");
+    exactKeys(selection.version, versionFields, `${pathName}.version`);
+    boundedJson(selection.version, `${pathName}.version`);
+  }
+}
+
 function normalizeCase(value) {
   if (!object(value)) throw new MarkdownError("case.invalid_representation", "case", "object_required", "case must be an object.");
-  exactKeys(value, new Set(["id", "home_namespace_id", "state", "title", "summary", "scope"]), "case");
+  exactKeys(value, CASE_FIELDS, "case");
   const record = {
     id: requiredId(value.id, "case.id", "case"),
     home_namespace_id: requiredId(value.home_namespace_id, "case.home_namespace_id", "namespace"),
@@ -589,8 +657,36 @@ function normalizeCase(value) {
     summary: requiredString(value.summary, "case.summary", 4_096),
     scope: requiredString(value.scope, "case.scope"),
   };
-  if (record.state !== "active") throw new MarkdownError("case.invalid_representation", "case.state", "create_requires_active_case", "Only an active Case is supported.");
-  return record;
+  if (record.state !== "active") throw new MarkdownError("case.invalid_representation", "case.state", "create_requires_active_case", "Only a current active Case is supported by ordinary Markdown operations.");
+  const complete = CASE_COMPLETE_FIELDS.some((key) => value[key] != null) || value.provenance != null;
+  if (!complete) return record;
+  for (const key of CASE_COMPLETE_FIELDS) if (!Array.isArray(value[key]) || value[key].length > 256) throw new MarkdownError("case.invalid_representation", `case.${key}`, "complete_selection_required", "Every complete Case family selection must be supplied as a bounded array.");
+  if (value.provenance != null) boundedJson(value.provenance, "case.provenance");
+  const selectionFields = {
+    alias: new Set(["value", "kind"]),
+    facet: new Set(["key", "value", "visibility", "provenance"]),
+    knowledge: new Set(["display_label", "title", "purpose", "classification", "body", "scope", "visibility", "provenance", "support", "authority", "authority_required", "positions", "supersession", "relationships", "references"]),
+    source: new Set(["title", "author", "accessed_at", "examined_for", "digest", "visibility", "locators", "provenance"]),
+    evidence: new Set(["source_version_id", "excerpt", "purpose", "captured_at", "digest", "visibility", "provenance"]),
+    relationship: new Set(["subject", "predicate", "object", "visibility", "provenance"]),
+  };
+  value.aliases.forEach((item, index) => validateCaseSelection(item, `case.aliases[${index}]`, "alias", selectionFields.alias));
+  value.facets.forEach((item, index) => validateCaseSelection(item, `case.facets[${index}]`, "facet", selectionFields.facet));
+  value.entries.forEach((item, index) => {
+    validateCaseSelection(item, `case.entries[${index}]`, "knowledge", selectionFields.knowledge);
+    for (const [referenceIndex, reference] of (item.version?.references ?? []).entries()) validateCaseReference(reference, `case.entries[${index}].version.references[${referenceIndex}]`);
+  });
+  value.sources.forEach((item, index) => {
+    validateCaseSelection(item, `case.sources[${index}]`, "source", selectionFields.source);
+    requiredString(item.display_label, `case.sources[${index}].display_label`, 64);
+    if (!Array.isArray(item.fragments) || item.fragments.length > 256) throw new MarkdownError("case.invalid_representation", `case.sources[${index}].fragments`, "bounded_array_required", "Source evidence fragments must be a bounded array.");
+    item.fragments.forEach((fragment, fragmentIndex) => validateCaseSelection(fragment, `case.sources[${index}].fragments[${fragmentIndex}]`, "evidence", selectionFields.evidence));
+  });
+  value.relationships.forEach((item, index) => validateCaseSelection(item, `case.relationships[${index}]`, "relationship", selectionFields.relationship));
+  value.references.forEach((item, index) => validateCaseReference(item, `case.references[${index}]`));
+  const familyIds = [record.id, ...value.aliases, ...value.facets, ...value.entries, ...value.sources, ...value.sources.flatMap((item) => item.fragments), ...value.relationships].map((item) => typeof item === "string" ? item : item.id);
+  if (new Set(familyIds).size !== familyIds.length) throw new MarkdownError("case.invalid_representation", "case", "duplicate_stable_id", "Complete Case stable family IDs must be unique.");
+  return structuredClone(value);
 }
 
 function normalizeReplacementCase(value) {
@@ -771,34 +867,86 @@ function validateDispositionSelection(boundaries, dispositions, frameStatus) {
   if (frameStatus === "completed" && dispositions.some((item) => item.classification_state === "pending_classification" || item.realization_state === "awaiting_case")) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "completed_frame_unsettled_disposition", "Completed Frames cannot retain unsettled dispositions.");
 }
 
+function normalizeFrameReference(value, pathName) {
+  if (!object(value)) throw new MarkdownError("frame.invalid_representation", pathName, "object_required", "A typed Frame reference is required.");
+  exactKeys(value, new Set(["target_kind", "target_id", "observed_revision_id", "pinned_revision_id", "predicate", "provenance", "authority_scope"]), pathName);
+  const kind = requiredString(value.target_kind, `${pathName}.target_kind`, 64);
+  const result = {
+    target_kind: kind,
+    target_id: requiredId(value.target_id, `${pathName}.target_id`, kind),
+    predicate: requiredString(value.predicate, `${pathName}.predicate`, 256),
+  };
+  for (const key of ["observed_revision_id", "pinned_revision_id", "provenance"]) if (value[key] != null) result[key] = requiredString(value[key], `${pathName}.${key}`, 512);
+  if (value.authority_scope != null) {
+    if (value.authority_scope !== "external_read_only") throw new MarkdownError("frame.invalid_representation", `${pathName}.authority_scope`, "external_read_only_marker_invalid", "Only external_read_only authority scope is supported.");
+    result.authority_scope = value.authority_scope;
+  }
+  return result;
+}
+
+function normalizeArtifactLink(value, pathName) {
+  if (!object(value)) throw new MarkdownError("frame.invalid_representation", pathName, "object_required", "Artifact metadata must be an object.");
+  exactKeys(value, new Set(["artifact_id", "kind", "title", "summary", "locator", "observed_revision_id", "pinned_revision_id"]), pathName);
+  if (!object(value.locator)) throw new MarkdownError("frame.invalid_representation", `${pathName}.locator`, "object_required", "Artifact locator metadata is required.");
+  exactKeys(value.locator, new Set(["uri", "media_type", "audience", "digest"]), `${pathName}.locator`);
+  if (!LOCATOR_AUDIENCES.has(value.locator.audience)) throw new MarkdownError("frame.invalid_representation", `${pathName}.locator.audience`, "audience_invalid", "Artifact locator audience is invalid.");
+  const result = {
+    artifact_id: requiredId(value.artifact_id, `${pathName}.artifact_id`, "artifact"),
+    kind: requiredString(value.kind, `${pathName}.kind`, 256),
+    title: requiredString(value.title, `${pathName}.title`, 512),
+    locator: { uri: requiredString(value.locator.uri, `${pathName}.locator.uri`, 4_096), audience: value.locator.audience },
+  };
+  for (const key of ["media_type", "digest"]) if (value.locator[key] != null) result.locator[key] = requiredString(value.locator[key], `${pathName}.locator.${key}`, 512);
+  for (const key of ["summary", "observed_revision_id", "pinned_revision_id"]) if (value[key] != null) result[key] = requiredString(value[key], `${pathName}.${key}`, key === "summary" ? 4_096 : 512);
+  return result;
+}
+
+function normalizeFrameAuthorization(value) {
+  if (!object(value)) throw new MarkdownError("frame.invalid_representation", "frame.authorization_provenance", "object_required", "Authorization provenance must be an object.");
+  exactKeys(value, new Set(["session", "acting_role", "authority_basis", "human_confirmation", "causation", "correlation"]), "frame.authorization_provenance");
+  boundedJson(value, "frame.authorization_provenance");
+  if (value.human_confirmation != null) {
+    exactKeys(value.human_confirmation, new Set(["reference", "confirmed_at", "scope", "expires_at"]), "frame.authorization_provenance.human_confirmation");
+    for (const key of ["reference", "confirmed_at", "scope"]) requiredString(value.human_confirmation[key], `frame.authorization_provenance.human_confirmation.${key}`, 2_048);
+  }
+  return structuredClone(value);
+}
+
 function normalizeFrame(value, { requireDispositions = false } = {}) {
   if (!object(value)) throw new MarkdownError("frame.invalid_representation", "frame", "object_required", "frame must be an object.");
   exactKeys(value, new Set([
     "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title", "outcome",
-    "included_scope", "excluded_scope", "limitations", "completion_condition", "discovery",
+    "included_scope", "excluded_scope", "limitations", "completion_condition", "case_links", "frame_links",
+    "downstream_links", "artifact_links", "authorization_provenance", "discovery",
     "disposition_boundaries", "case_dispositions",
   ]), "frame");
   const home = requiredId(value.home_namespace_id, "frame.home_namespace_id", "namespace");
-  if (!Array.isArray(value.authority_scope_namespace_ids) || value.authority_scope_namespace_ids.length !== 1 || value.authority_scope_namespace_ids[0] !== home) {
-    throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "cross_namespace_scope_unsupported", "Only the home namespace is supported.");
-  }
-  if (!FRAME_STATUSES.has(value.status) || !Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > 128) {
-    throw new MarkdownError("frame.invalid_representation", "frame", "complete_frame_required", "A supported Frame with complete Discovery is required.");
-  }
+  if (!Array.isArray(value.authority_scope_namespace_ids) || value.authority_scope_namespace_ids.length < 1 || value.authority_scope_namespace_ids.length > 64) throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "bounded_scope_required", "A bounded explicit Frame authority scope is required.");
+  const authorityScope = value.authority_scope_namespace_ids.map((item, index) => requiredId(item, `frame.authority_scope_namespace_ids[${index}]`, "namespace"));
+  if (new Set(authorityScope).size !== authorityScope.length || !authorityScope.includes(home)) throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "home_namespace_required", "Frame authority scope must uniquely include its home namespace.");
+  if (!FRAME_STATUSES.has(value.status) || !Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > 128) throw new MarkdownError("frame.invalid_representation", "frame", "complete_frame_required", "A supported Frame with complete Discovery is required.");
   const discovery = value.discovery.map((item, index) => {
-    if (!object(item)) throw new MarkdownError("frame.invalid_representation", `frame.discovery[${index}]`, "object_required", "A Discovery object is required.");
-    exactKeys(item, new Set(["id", "display_label", "display_order", "lifecycle", "category", "title", "body", "human_authority", "dependencies"]), `frame.discovery[${index}]`);
-    if (item.lifecycle !== "active" || !ACTIVE_CATEGORIES.has(item.category) || !HUMAN_AUTHORITY.has(item.human_authority)
-      || !Array.isArray(item.dependencies) || item.dependencies.length !== 0 || !Number.isInteger(item.display_order)
-      || item.display_order < 0 || item.display_order > 1_000_000) {
-      throw new MarkdownError("frame.invalid_representation", `frame.discovery[${index}]`, "active_discovery_shape_required", "Only active dependency-free L-05 Discovery is supported.");
-    }
+    const itemPath = `frame.discovery[${index}]`;
+    if (!object(item)) throw new MarkdownError("frame.invalid_representation", itemPath, "object_required", "A Discovery object is required.");
+    exactKeys(item, new Set(["id", "display_label", "display_order", "lifecycle", "category", "title", "body", "human_authority", "dependencies", "scope_namespace_ids", "disposition", "resolution", "reopened_from_version", "reopening_basis"]), itemPath);
+    if (!DISCOVERY_LIFECYCLES.has(item.lifecycle) || !HUMAN_AUTHORITY.has(item.human_authority) || !Array.isArray(item.dependencies) || item.dependencies.length > 128 || !Number.isInteger(item.display_order) || item.display_order < 0 || item.display_order > 1_000_000) throw new MarkdownError("frame.invalid_representation", itemPath, "discovery_shape_invalid", "Discovery lifecycle, authority, dependencies, and order must be valid and bounded.");
+    if (item.lifecycle === "active" && !ACTIVE_CATEGORIES.has(item.category)) throw new MarkdownError("frame.invalid_representation", `${itemPath}.category`, "active_category_invariant", "Active Discovery requires an active category.");
+    if (item.lifecycle !== "active" && item.category !== "settled") throw new MarkdownError("frame.invalid_representation", `${itemPath}.category`, "settled_category_required", "Settled or tombstoned Discovery requires the settled category.");
+    if (item.lifecycle !== "active" && item.disposition == null && item.resolution == null) throw new MarkdownError("frame.invalid_representation", `${itemPath}.disposition`, "disposition_or_resolution_required", "Settled or tombstoned Discovery requires disposition or resolution.");
+    if ((item.reopened_from_version == null) !== (item.reopening_basis == null) || (item.lifecycle !== "active" && item.reopened_from_version != null)) throw new MarkdownError("frame.invalid_representation", `${itemPath}.reopened_from_version`, "reopen_pair_required", "Reopening metadata must be a complete active-only pair.");
     const normalized = {
-      id: requiredId(item.id, `frame.discovery[${index}].id`, "discovery"), display_order: item.display_order,
-      lifecycle: item.lifecycle, category: item.category, title: requiredString(item.title, `frame.discovery[${index}].title`, 512),
-      body: requiredString(item.body, `frame.discovery[${index}].body`), human_authority: item.human_authority, dependencies: [],
+      id: requiredId(item.id, `${itemPath}.id`, "discovery"), display_order: item.display_order,
+      lifecycle: item.lifecycle, category: item.category, title: requiredString(item.title, `${itemPath}.title`, 512),
+      body: requiredString(item.body, `${itemPath}.body`), human_authority: item.human_authority,
+      dependencies: item.dependencies.map((reference, referenceIndex) => normalizeFrameReference(reference, `${itemPath}.dependencies[${referenceIndex}]`)),
     };
-    if (item.display_label != null) normalized.display_label = requiredString(item.display_label, `frame.discovery[${index}].display_label`, 64);
+    if (item.display_label != null) normalized.display_label = requiredString(item.display_label, `${itemPath}.display_label`, 64);
+    if (item.scope_namespace_ids != null) {
+      if (!Array.isArray(item.scope_namespace_ids) || item.scope_namespace_ids.length > 64) throw new MarkdownError("frame.invalid_representation", `${itemPath}.scope_namespace_ids`, "bounded_scope_required", "Discovery scope namespaces must be bounded.");
+      normalized.scope_namespace_ids = item.scope_namespace_ids.map((namespaceId, namespaceIndex) => requiredId(namespaceId, `${itemPath}.scope_namespace_ids[${namespaceIndex}]`, "namespace"));
+    }
+    for (const key of ["disposition", "resolution", "reopening_basis"]) if (item[key] != null) normalized[key] = requiredString(item[key], `${itemPath}.${key}`, 4_096);
+    if (item.reopened_from_version != null) normalized.reopened_from_version = requiredId(item.reopened_from_version, `${itemPath}.reopened_from_version`, "discovery-item-version");
     return normalized;
   });
   if (new Set(discovery.map((item) => item.id)).size !== discovery.length || new Set(discovery.map((item) => item.display_order)).size !== discovery.length) throw new MarkdownError("frame.invalid_representation", "frame.discovery", "duplicate_discovery_identity", "Discovery IDs and orders must be unique.");
@@ -807,7 +955,7 @@ function normalizeFrame(value, { requireDispositions = false } = {}) {
   const dispositions = value.case_dispositions?.map(normalizeCaseDisposition);
   if ((boundaries?.length ?? 0) > 64 || (dispositions?.length ?? 0) > 128) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "bounded_array_required", "Disposition selections exceed their bounds.");
   if (boundaries != null) validateDispositionSelection(boundaries, dispositions, value.status);
-  const record = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: home, authority_scope_namespace_ids: [home], status: value.status, discovery };
+  const record = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: home, authority_scope_namespace_ids: authorityScope, status: value.status, discovery };
   for (const key of ["title", "outcome", "limitations", "completion_condition"]) if (value[key] != null) record[key] = requiredString(value[key], `frame.${key}`, key === "title" ? 512 : 4_096);
   for (const key of ["included_scope", "excluded_scope"]) {
     if (value[key] != null) {
@@ -815,6 +963,15 @@ function normalizeFrame(value, { requireDispositions = false } = {}) {
       record[key] = value[key].map((entry, index) => requiredString(entry, `frame.${key}[${index}]`, 4_096));
     }
   }
+  for (const key of ["case_links", "frame_links", "downstream_links"]) if (value[key] != null) {
+    if (!Array.isArray(value[key]) || value[key].length > 128) throw new MarkdownError("frame.invalid_representation", `frame.${key}`, "bounded_array_required", "Frame links must be bounded arrays.");
+    record[key] = value[key].map((item, index) => normalizeFrameReference(item, `frame.${key}[${index}]`));
+  }
+  if (value.artifact_links != null) {
+    if (!Array.isArray(value.artifact_links) || value.artifact_links.length > 128) throw new MarkdownError("frame.invalid_representation", "frame.artifact_links", "bounded_array_required", "Artifact links must be bounded.");
+    record.artifact_links = value.artifact_links.map((item, index) => normalizeArtifactLink(item, `frame.artifact_links[${index}]`));
+  }
+  if (value.authorization_provenance != null) record.authorization_provenance = normalizeFrameAuthorization(value.authorization_provenance);
   if (boundaries != null) { record.disposition_boundaries = boundaries; record.case_dispositions = dispositions; }
   return record;
 }
@@ -864,14 +1021,31 @@ async function persistCreate(workspace, kind, record) {
   }
 }
 
+function lexicalText(value, output = []) {
+  if (typeof value === "string") output.push(value);
+  else if (Array.isArray(value)) for (const item of value) lexicalText(item, output);
+  else if (object(value)) for (const item of Object.values(value)) lexicalText(item, output);
+  return output;
+}
+
 function lexicalFields(item) {
   const record = item.record;
-  if (item.owner_kind === "case") return { title: record.title, summary: record.summary, scope: record.scope };
+  if (item.owner_kind === "case") {
+    const fields = { title: record.title, summary: record.summary, scope: record.scope };
+    if (record.entries) fields.entries = lexicalText(record.entries).join("\n");
+    if (record.sources) fields.sources = lexicalText(record.sources).join("\n");
+    if (record.aliases) fields.aliases = lexicalText(record.aliases).join("\n");
+    if (record.facets) fields.facets = lexicalText(record.facets).join("\n");
+    return fields;
+  }
   const fields = {};
   for (const key of ["title", "outcome", "limitations", "completion_condition"]) if (record[key] != null) fields[key] = record[key];
   if (record.included_scope) fields.included_scope = record.included_scope.join("\n");
   if (record.excluded_scope) fields.excluded_scope = record.excluded_scope.join("\n");
-  fields.discovery = record.discovery.map((entry) => `${entry.title}\n${entry.body}`).join("\n");
+  fields.discovery = lexicalText(record.discovery).join("\n");
+  if (record.disposition_boundaries) fields.disposition_boundaries = lexicalText(record.disposition_boundaries).join("\n");
+  if (record.case_dispositions) fields.case_dispositions = lexicalText(record.case_dispositions).join("\n");
+  if (FRAME_LINK_FIELDS.some((key) => record[key]?.length)) fields.links = lexicalText(FRAME_LINK_FIELDS.flatMap((key) => record[key] ?? [])).join("\n");
   return fields;
 }
 
@@ -907,8 +1081,37 @@ function commonResult(workspace, items, stableSort, completeness = "complete_wit
     result_completeness: completeness,
     stable_sort: stableSort,
     snapshot_query_fence: `markdown:${sha256(workspace.manifestBytes)}`,
+    capabilities: capabilities(),
     applied_view: workspace.appliedView,
   };
+}
+
+function publicItem(item) {
+  return { owner_kind: item.owner_kind, id: item.id, record: item.record };
+}
+
+function capabilities() {
+  return { profile: "reduced_file_authoritative_common_subset", supported: [...MARKDOWN_COMMON_OPERATIONS], omitted: [...OMITTED_CAPABILITIES] };
+}
+
+async function createFileAuthorityCase(authority, record) {
+  const relativePath = caseRelativePath(record.id);
+  const destination = await secureWriteParent(authority.root, relativePath, relativePath);
+  if (await lstat(destination).catch(() => null)) return { failure: failure("case.create_identity_exists", "The Case identity already exists in the selected Markdown authority.", { failureClass: "case.mutation_conflict", evidence: {} }) };
+  const rendered = renderInterchange([{ kind: "case", id: record.id, record }]).files[0];
+  if (!isDeepStrictEqual(parseCase(rendered.content, { id: record.id, path: relativePath }), record)) throw new MarkdownError("case.invalid_representation", "case", "complete_round_trip_required", "The complete Case must round-trip before selection.");
+  const parent = path.dirname(destination); const key = record.id.slice(5);
+  const stagePath = path.join(parent, `${CASE_STAGE_PREFIX}${key}-${process.pid}-${randomBytes(8).toString("hex")}.tmp`);
+  try {
+    await writeFlushedFile(stagePath, rendered.content);
+    if (!isDeepStrictEqual(parseCase(await readFile(stagePath, "utf8"), { id: record.id, path: relativePath }), record)) throw new MarkdownError("case.invalid_representation", "case", "staged_round_trip_mismatch", "The staged Case did not round-trip completely.");
+    try { await link(stagePath, destination); } catch (error) {
+      if (error.code === "EEXIST") return { failure: failure("case.create_identity_exists", "The Case identity already exists in the selected Markdown authority.", { failureClass: "case.mutation_conflict", evidence: {} }) };
+      throw error;
+    }
+    await rm(stagePath, { force: true }); await syncDirectoryAsAvailable(parent);
+    return { digest: rendered.sha256, files: [relativePath], selection: "same_directory_atomic_link" };
+  } finally { await rm(stagePath, { force: true }); }
 }
 
 async function createCase(request) {
@@ -917,11 +1120,17 @@ async function createCase(request) {
   if (request.expected_revision !== 0) throw new MarkdownError("case.invalid_representation", "expected_revision", "create_requires_absent_revision", "Case create requires expected revision 0.");
   requiredString(request.commit_basis, "commit_basis", 2_048);
   validateProvenance(request.provenance);
-  const workspace = await loadWorkspace(request, { allowEmpty: true });
   const record = normalizeCase(request.case);
+  const authority = await loadAuthorityWorkspace(request);
+  if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
+    const persisted = await createFileAuthorityCase(authority, record);
+    if (persisted.failure) return persisted.failure;
+    return success("case.create", { status: "settled", case: record, persistence: { authority_mode: "markdown", content_digest: persisted.digest, selected_files: persisted.files, selection: persisted.selection }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
+  }
+  const workspace = await loadWorkspace(request, { allowEmpty: true });
   const persisted = await persistCreate(workspace, "case", record);
   if (persisted.failure) return persisted.failure;
-  return success("case.create", { status: "settled", case: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_or_revision_history"] });
+  return success("case.create", { status: "settled", case: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, capabilities: capabilities(), limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_or_revision_history"] });
 }
 
 async function loadFileAuthorityCase(request, caseId) {
@@ -1377,17 +1586,63 @@ async function prepareFileAuthorityFrameReconciliation(request) {
   });
 }
 
+async function createFileAuthorityFrame(authority, record) {
+  if (record.disposition_boundaries == null || record.case_dispositions == null) throw new MarkdownError("frame.invalid_representation", "frame.disposition_boundaries", "complete_disposition_sets_required", "New file-authoritative Frames require explicit complete disposition sets, including empty arrays.");
+  const relative = frameOwnerRelativePath(record.id);
+  const finalOwner = path.join(authority.root, relative);
+  await secureWriteParent(authority.root, `${path.dirname(relative)}/.casebook-create-parent`, relative);
+  if (await lstat(finalOwner).catch(() => null)) return { failure: failure("frame.create_identity_exists", "The Frame identity already exists in the selected Markdown authority.", { failureClass: "frame.mutation_conflict", evidence: {} }) };
+  const rendered = renderInterchange([{ kind: "frame", id: record.id, record }]);
+  const renderedRecord = rendered.manifest.records[0];
+  const documents = Object.fromEntries(rendered.files.map((file) => [path.basename(file.path), file.sha256]));
+  const dispositionBoundaries = record.disposition_boundaries.map(({ id, version_id }) => ({ id, version_id }));
+  const caseDispositions = record.case_dispositions.map(({ id, version_id }) => ({ id, version_id }));
+  const aggregateDigest = frameAggregateDigest({ frameId: record.id, selectedDiscoveryFilename: "discovery.md", documents, discoveryItems: renderedRecord.discovery_items, dispositionBoundaries, caseDispositions });
+  const generationDirectory = `${FRAME_GENERATION_PREFIX}${aggregateDigest}`;
+  const manifest = {
+    schema: FRAME_GENERATION_SCHEMA, frame_id: record.id, previous_aggregate_digest: "0".repeat(64), aggregate_digest: aggregateDigest,
+    generation_directory: generationDirectory, selected_discovery_filename: "discovery.md", documents,
+    discovery_items: renderedRecord.discovery_items, disposition_boundaries: dispositionBoundaries, case_dispositions: caseDispositions,
+  };
+  validateGenerationManifest(manifest, record.id);
+  const parent = path.dirname(finalOwner); const key = record.id.slice(6);
+  const stageOwner = path.join(parent, `${FRAME_STAGE_PREFIX}${key}-${process.pid}-${randomBytes(8).toString("hex")}.tmp`);
+  try {
+    const generation = path.join(stageOwner, generationDirectory);
+    await mkdir(generation, { recursive: true, mode: 0o700 });
+    for (const file of rendered.files) await writeFlushedFile(path.join(generation, path.basename(file.path)), file.content);
+    await writeFlushedFile(path.join(generation, FRAME_GENERATION_MANIFEST), canonicalJson(manifest));
+    await writeFlushedFile(path.join(stageOwner, FRAME_SELECTOR), canonicalJson(manifest));
+    await syncDirectoryAsAvailable(generation); await syncDirectoryAsAvailable(stageOwner);
+    const ownerState = { ...authority, owner: stageOwner, root: authority.root, relative, frameId: record.id };
+    const selected = await loadSelectedFrame(ownerState);
+    if (selected.kind !== "generation" || !isDeepStrictEqual(selected.record, record)) throw new MarkdownError("frame.invalid_representation", "frame", "staged_round_trip_mismatch", "The staged Frame generation did not round-trip completely.");
+    try { await rename(stageOwner, finalOwner); } catch (error) {
+      if (["EEXIST", "ENOTEMPTY"].includes(error.code)) return { failure: failure("frame.create_identity_exists", "The Frame identity already exists in the selected Markdown authority.", { failureClass: "frame.mutation_conflict", evidence: {} }) };
+      throw error;
+    }
+    await syncDirectoryAsAvailable(parent);
+    return { digest: aggregateDigest, files: rendered.files.map((file) => file.path), generationDirectory };
+  } finally { await rm(stageOwner, { recursive: true, force: true }); }
+}
+
 async function createFrame(request) {
   validateBase(request, ["operation_id", "expected_revision", "commit_basis", "provenance", "frame"]);
   requiredString(request.operation_id, "operation_id", 256);
   if (request.expected_revision !== 0) throw new MarkdownError("frame.invalid_representation", "expected_revision", "create_requires_absent_revision", "Frame create requires expected revision 0.");
   requiredString(request.commit_basis, "commit_basis", 2_048);
   validateProvenance(request.provenance);
-  const workspace = await loadWorkspace(request, { allowEmpty: true });
   const record = normalizeFrame(request.frame);
+  const authority = await loadAuthorityWorkspace(request);
+  if (authority.marker.profile === FILE_AUTHORITY_PROFILE) {
+    const persisted = await createFileAuthorityFrame(authority, record);
+    if (persisted.failure) return persisted.failure;
+    return success("frame.create", { status: "settled", frame: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files, selected_generation: persisted.generationDirectory, selection: "atomic_owner_directory_rename" }, capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"] });
+  }
+  const workspace = await loadWorkspace(request, { allowEmpty: true });
   const persisted = await persistCreate(workspace, "frame", record);
   if (persisted.failure) return persisted.failure;
-  return success("frame.create", { status: "settled", frame: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_revision_history_or_atomic_frame_replacement"] });
+  return success("frame.create", { status: "settled", frame: record, persistence: { authority_mode: "markdown", aggregate_digest: persisted.digest, selected_files: persisted.files }, capabilities: capabilities(), limitations: ["l01_synthetic_interchange_only", "no_durable_receipt_revision_history_or_atomic_frame_replacement"] });
 }
 
 async function readOwner(request, kind) {
@@ -1402,6 +1657,7 @@ async function readOwner(request, kind) {
         status: "found",
         case: workspace.record,
         persistence: { authority_mode: "markdown", selected_file: workspace.relativePath, content_digest: workspace.digest },
+        capabilities: capabilities(),
         limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"],
         applied_view: workspace.appliedView,
       });
@@ -1419,7 +1675,7 @@ async function readOwner(request, kind) {
       return success("frame.read", {
         status: "found", frame: workspace.record,
         persistence: { authority_mode: "markdown", aggregate_digest: workspace.aggregateDigest, selected_generation: workspace.manifest.generation_directory, selected_discovery_filename: workspace.selectedDiscoveryFilename },
-        limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"], applied_view: workspace.appliedView,
+        capabilities: capabilities(), limitations: ["no_owner_revision_history", "no_durable_receipt", "one_trusted_logical_writer"], applied_view: workspace.appliedView,
       });
     }
   }
@@ -1427,16 +1683,61 @@ async function readOwner(request, kind) {
   const records = await parseRecords(workspace);
   const found = records.find((item) => item.owner_kind === kind && item.id === id);
   if (!found) return failure(`${kind}.not_found_or_not_visible`, `The ${kind} is unknown or not visible under the exact selected Markdown workspace.`, { failureClass: `${kind}.read_failure`, evidence: {} });
-  return success(`${kind}.read`, { status: "found", [kind]: found.record, persistence: { authority_mode: "markdown", manifest_digest: sha256(workspace.manifestBytes) }, applied_view: workspace.appliedView });
+  return success(`${kind}.read`, { status: "found", [kind]: found.record, persistence: { authority_mode: "markdown", manifest_digest: sha256(workspace.manifestBytes) }, capabilities: capabilities(), applied_view: workspace.appliedView });
+}
+
+async function fileAuthorityRecords(authority, kinds = ["case", "frame"]) {
+  const records = [];
+  if (kinds.includes("case")) {
+    const casesDirectory = path.join(authority.root, "cases");
+    const entry = await lstat(casesDirectory).catch(() => null);
+    if (entry) {
+      if (entry.isSymbolicLink() || !entry.isDirectory() || await realpath(casesDirectory) !== casesDirectory) throw new MarkdownError("markdown.path_invalid", "cases", "real_owner_directory_required", "The Case owner directory must be real and unchanged.");
+      for (const item of await readdir(casesDirectory, { withFileTypes: true })) {
+        if (item.name.startsWith(CASE_STAGE_PREFIX) || item.name.startsWith(".")) continue;
+        const match = item.name.match(new RegExp(`^(${UUID})\\.md$`));
+        if (!match || !item.isFile()) throw new MarkdownError("markdown.index_invalid", `cases/${item.name}`, "canonical_owner_entry_required", "File-authoritative owner scans fail closed on non-canonical entries.");
+        const id = `case:${match[1]}`; const relativePath = `cases/${item.name}`;
+        const selected = await readRegularNoFollow(authority.root, relativePath, relativePath);
+        records.push({ owner_kind: "case", id, record: parseCase(selected.bytes, { id, path: relativePath }), persistence_digest: selected.digest });
+      }
+    }
+  }
+  if (kinds.includes("frame")) {
+    const framesDirectory = path.join(authority.root, "frames");
+    const entry = await lstat(framesDirectory).catch(() => null);
+    if (entry) {
+      if (entry.isSymbolicLink() || !entry.isDirectory() || await realpath(framesDirectory) !== framesDirectory) throw new MarkdownError("markdown.path_invalid", "frames", "real_owner_directory_required", "The Frame owner directory must be real and unchanged.");
+      for (const item of await readdir(framesDirectory, { withFileTypes: true })) {
+        if (item.name.startsWith(FRAME_STAGE_PREFIX) || item.name.startsWith(".")) continue;
+        if (!new RegExp(`^${UUID}$`).test(item.name) || !item.isDirectory()) throw new MarkdownError("markdown.index_invalid", `frames/${item.name}`, "canonical_owner_entry_required", "File-authoritative owner scans fail closed on non-canonical entries.");
+        const id = `frame:${item.name}`; const ownerState = await loadFrameOwner(authority, id); ownerState.frameId = id;
+        const selected = await loadSelectedFrame(ownerState);
+        if (selected.kind !== "generation") throw new MarkdownError("frame.requires_semantic_reconcile", ownerState.relative, "selected_generation_required", "A legacy Frame must be explicitly reconciled before common queries can expose it.", { aggregate_digest: selected.aggregateDigest });
+        records.push({ owner_kind: "frame", id, record: selected.record, persistence_digest: selected.aggregateDigest });
+      }
+    }
+  }
+  if (records.length > MAX_RECORDS) throw new MarkdownError("common.bound_exceeded", "workspace", "maximum_owner_scan_exceeded", "The bounded Markdown owner scan was exceeded.", { maximum_owner_scan: MAX_RECORDS });
+  records.sort((left, right) => left.owner_kind.localeCompare(right.owner_kind) || left.id.localeCompare(right.id));
+  const manifestBytes = canonicalJson(records.map(({ owner_kind, id, persistence_digest }) => ({ owner_kind, id, persistence_digest })));
+  return { ...authority, manifestBytes, records };
+}
+
+async function commonWorkspace(request, kinds = ["case", "frame"]) {
+  const authority = await loadAuthorityWorkspace(request);
+  if (authority.marker.profile === FILE_AUTHORITY_PROFILE) return fileAuthorityRecords(authority, kinds);
+  const workspace = await loadWorkspace(request);
+  return { ...workspace, records: await parseRecords(workspace) };
 }
 
 async function frameList(request) {
   validateBase(request, []);
-  const workspace = await loadWorkspace(request);
-  const records = (await parseRecords(workspace)).filter((item) => item.owner_kind === "frame");
+  const workspace = await commonWorkspace(request, ["frame"]);
+  const records = workspace.records.filter((item) => item.owner_kind === "frame");
   return success("frame.list", {
     ...commonResult(workspace, records.map((item) => ({ id: item.id, ...item.record })), "owner_id_asc"),
-    applied_lifecycle_scope: "active_only",
+    applied_lifecycle_scope: "active_only", capabilities: capabilities(),
   });
 }
 
@@ -1444,17 +1745,17 @@ async function commonResolve(request) {
   validateBase(request, ["owner_id"]);
   requiredString(request.owner_id, "owner_id", 128);
   if (!OWNER_ID.test(request.owner_id)) throw new MarkdownError("markdown.identity_unverified", "owner_id", "stable_owner_identity_required", "A stable Case or Frame ID is required.");
-  const workspace = await loadWorkspace(request);
-  const item = (await parseRecords(workspace)).find((candidate) => candidate.id === request.owner_id);
+  const workspace = await commonWorkspace(request, [request.owner_id.slice(0, request.owner_id.indexOf(":"))]);
+  const item = workspace.records.find((candidate) => candidate.id === request.owner_id);
   if (!item) return failure("common.not_found_or_not_visible", "The owner is unknown or not visible under the exact selected Markdown workspace.", { failureClass: "common.read_failure", evidence: {} });
-  return success("common.resolve", { status: "found", item, index_state: "current", result_completeness: "complete_within_bounds", applied_view: workspace.appliedView });
+  return success("common.resolve", { status: "found", item: publicItem(item), index_state: "current", result_completeness: "complete_within_bounds", capabilities: capabilities(), applied_view: workspace.appliedView });
 }
 
 async function commonList(request) {
   validateBase(request, ["owner_kinds"]);
   const kinds = ownerKinds(request.owner_kinds);
-  const workspace = await loadWorkspace(request);
-  const records = (await parseRecords(workspace)).filter((item) => kinds.includes(item.owner_kind));
+  const workspace = await commonWorkspace(request, kinds);
+  const records = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map(publicItem);
   return success("common.list", commonResult(workspace, records, "owner_kind_asc_id_asc"));
 }
 
@@ -1465,8 +1766,8 @@ async function commonSearch(request) {
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > MAX_SEARCH_LIMIT) {
     throw new MarkdownError("markdown.invalid_request", "limit", "bounded_search_limit_required", "Search limit must be 1 through 50.");
   }
-  const workspace = await loadWorkspace(request);
-  const matches = (await parseRecords(workspace)).filter((item) => kinds.includes(item.owner_kind)).map((item) => match(item, tokens)).filter(Boolean);
+  const workspace = await commonWorkspace(request, kinds);
+  const matches = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map((item) => match(publicItem(item), tokens)).filter(Boolean);
   matches.sort((left, right) => right.lexical_score - left.lexical_score || left.owner_kind.localeCompare(right.owner_kind) || left.id.localeCompare(right.id));
   const completeness = matches.length > request.limit ? "truncated" : "complete_within_bounds";
   return success("common.search", {
@@ -1476,17 +1777,51 @@ async function commonSearch(request) {
   });
 }
 
+async function exportInterchange(request) {
+  validateBase(request, ["owner_ids"]);
+  if (!Array.isArray(request.owner_ids) || request.owner_ids.length < 1 || request.owner_ids.length > MAX_RECORDS) throw new MarkdownError("common.invalid_request", "owner_ids", "bounded_owner_ids_required", "Export requires one bounded owner identity set.");
+  const ids = request.owner_ids.map((ownerId, index) => {
+    requiredString(ownerId, `owner_ids[${index}]`, 128);
+    if (!OWNER_ID.test(ownerId)) throw new MarkdownError("common.invalid_request", `owner_ids[${index}]`, "stable_owner_identity_required", "Export owner IDs must be stable Case or Frame identities.");
+    return ownerId;
+  });
+  if (new Set(ids).size !== ids.length) throw new MarkdownError("common.invalid_request", "owner_ids", "duplicate_owner_identity", "Export owner IDs must be unique.");
+  ids.sort();
+  const kinds = [...new Set(ids.map((id) => id.slice(0, id.indexOf(":"))))];
+  const workspace = await commonWorkspace(request, kinds);
+  const selected = [];
+  for (const id of ids) {
+    const item = workspace.records.find((candidate) => candidate.id === id);
+    if (!item) return failure("common.not_found_or_not_visible", "An export owner is unknown or not visible under the selected Markdown authority.", { failureClass: "common.read_failure", evidence: {} });
+    selected.push({ kind: item.owner_kind, id: item.id, record: item.record });
+  }
+  const rendered = renderInterchange(selected);
+  return success("interchange.export", {
+    status: "rendered", ...rendered, authority_selected: false, capabilities: capabilities(),
+    applied_view: workspace.appliedView,
+    limitations: ["logical_current_records_only", "no_history_events_receipts_checkpoints_snapshots_or_namespace_global_query_guarantee"],
+  });
+}
+
 async function parseInterchange(request) {
   validateBase(request, []);
-  const workspace = await loadWorkspace(request);
-  const records = await parseRecords(workspace);
+  const authority = await loadAuthorityWorkspace(request);
+  const fileAuthority = authority.marker.profile === FILE_AUTHORITY_PROFILE;
+  const workspace = fileAuthority ? await fileAuthorityRecords(authority) : await loadWorkspace(request);
+  const records = fileAuthority ? workspace.records : await parseRecords(workspace);
   const requiresCaseReconcile = records.some((item) => item.owner_kind === "case");
+  const selectedDiscoveryFilenames = fileAuthority
+    ? await Promise.all(records.filter((item) => item.owner_kind === "frame").map(async (item) => {
+        const selected = await loadFileAuthorityFrame(request, item.id);
+        return { frame_id: item.id, filename: selected.selectedDiscoveryFilename };
+      }))
+    : workspace.manifest.records.filter((item) => item.kind === "frame").map((item) => ({ frame_id: item.id, filename: item.discovery_filename }));
   return success("interchange.parse", {
     status: "parsed",
     format: L01_INTERCHANGE_FORMAT,
     records: records.map((item) => ({ kind: item.owner_kind, id: item.id, record: item.record })),
     manifest_sha256: sha256(workspace.manifestBytes),
-    identity_basis: "verified_frontmatter_and_manifest",
+    identity_basis: fileAuthority ? "verified_frontmatter_and_selected_owner_generation" : "verified_frontmatter_and_manifest",
     semantic_evidence: {
       kind: "case.semantic_evidence",
       affected_visible_ids: records.filter((item) => item.owner_kind === "case").map((item) => item.id).sort(),
@@ -1497,8 +1832,9 @@ async function parseInterchange(request) {
     reconcile_disposition: requiresCaseReconcile ? "requires-explicit-case-reconcile" : "not_applicable",
     requires_case_reconcile: requiresCaseReconcile,
     mutation_performed: false,
-    selected_discovery_filenames: workspace.manifest.records.filter((item) => item.kind === "frame").map((item) => ({ frame_id: item.id, filename: item.discovery_filename })),
-    limitations: ["l01_synthetic_interchange_only", "not_l05_markdown_authority_format"],
+    selected_discovery_filenames: selectedDiscoveryFilenames,
+    capabilities: capabilities(),
+    limitations: fileAuthority ? ["current_selected_owner_state_only", "explicit_semantic_reconcile_required_before_import"] : ["l01_synthetic_interchange_only", "not_l05_markdown_authority_format"],
     applied_view: workspace.appliedView,
   });
 }
@@ -1521,6 +1857,24 @@ function asFailure(error) {
   });
 }
 
+function markdownCapability(operation) {
+  if (new Set(["case.history", "frame.history", "case.revision.read", "frame.revision.read"]).has(operation) || /revision/i.test(operation ?? "")) return "revisions";
+  if (/receipt/i.test(operation ?? "")) return "durable_receipts";
+  if (/checkpoint/i.test(operation ?? "")) return "checkpoints";
+  if (/snapshot|backup|restore/i.test(operation ?? "")) return "snapshots";
+  if (/event/i.test(operation ?? "")) return "events";
+  if (new Set(["global.search", "case.traverse", "case.search", "case.resolve", "frame.resolve"]).has(operation)) return "namespace_global_queries";
+  return null;
+}
+
+function unsupportedMarkdownCapability(operation, capability) {
+  return failure("markdown.capability_unsupported", `Markdown authority does not provide the SQLite-only ${capability} capability or its guarantees.`, {
+    failureClass: "capability_unavailable",
+    correctiveGuidance: "Use only the declared reduced Markdown common subset, or perform a separately authorized migration to SQLite authority.",
+    evidence: { authority_mode: "markdown", requested_operation: operation ?? null, capability, omitted_guarantees: [...OMITTED_CAPABILITIES], supported_common_operations: [...MARKDOWN_COMMON_OPERATIONS] },
+  });
+}
+
 export async function invokeMarkdownOperation(request) {
   try {
     if (request.operation === "case.create") return await createCase(request);
@@ -1534,7 +1888,10 @@ export async function invokeMarkdownOperation(request) {
     if (request.operation === "common.resolve") return await commonResolve(request);
     if (request.operation === "common.list") return await commonList(request);
     if (request.operation === "common.search") return await commonSearch(request);
+    if (request.operation === "interchange.export") return await exportInterchange(request);
     if (request.operation === "interchange.parse") return await parseInterchange(request);
+    const capability = markdownCapability(request.operation);
+    if (capability) return unsupportedMarkdownCapability(request.operation, capability);
     return unsupported(request.operation);
   } catch (error) {
     return asFailure(error);
