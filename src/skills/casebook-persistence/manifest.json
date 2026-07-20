@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.3.0-l04-w02-discovery-handoff"
+    "version": "0.4.0-l04-w03-event-checkpoints"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -21,7 +21,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "51a7b75c466c3252230d7e514b7c556b47379db10b9bf9ca74e1248d670f7992"
+    "sha256": "0f6f4bb75675a7771b9862fc5ebe450a51d1e027a25d1a71b8f1b41272cbe99a"
   },
   "entrypoints": [
     {
@@ -44,6 +44,12 @@
     "view_policy.activate",
     "view_policy.retire",
     "identity.discover",
+    "events.page",
+    "checkpoint.read",
+    "checkpoint.compare_and_set",
+    "reconciliation_snapshot.begin",
+    "reconciliation_snapshot.page",
+    "reconciliation_snapshot.finish",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -84,6 +90,7 @@
     ],
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
+    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -112,7 +119,7 @@
     "case purge execution and publication",
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
-    "events/checkpoints/snapshots/global-search",
+    "global-search",
     "migration",
     "backup",
     "restore",
@@ -135,7 +142,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "99b48a8f230bb552f566dc235fd65d5474629ba9064465c34aecbdad75e36ce6"
+      "sha256": "8a9484c8f1d71c88cf23dac10373193321436ca24de4d0b81d4c55b02acd6c45"
     },
     {
       "id": "shared-configuration",
@@ -183,7 +190,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "0cdefea3fea25d6c8f5c615b92f8d0928f137c9e4c423ee5c4fe5745ef078ba6"
+      "sha256": "ef5a2e905462004d10f12adf938bd3b22f4ea50287158c2baeeb41eedb94bd3d"
     },
     {
       "id": "sqlite-diagnostics",
@@ -195,13 +202,19 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "937317d1d4f72daaa086185c99a916dfbf39c49b88b675655073e3f45f9049e0"
+      "sha256": "68b3d037dce93e69f9f40961dec5ec4e8a706463228ebf47c450fb2b48860a7c"
     },
     {
       "id": "sqlite-identity-discovery",
       "path": "variants/sqlite/lib/substrate/discovery.mjs",
       "kind": "module",
       "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+    },
+    {
+      "id": "sqlite-observation",
+      "path": "variants/sqlite/lib/substrate/observation.mjs",
+      "kind": "module",
+      "sha256": "6f6152d91093eafb323c390ad71738f7390b4e7101802c1306aec3685f5f2c14"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -237,7 +250,7 @@
       "id": "sqlite-schema",
       "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "80ebca79901cff9cdae059503ffe9a2b5784a5a03c1ffc20334142e275dd9199"
+      "sha256": "954fb667ac53e17044d7bca93080402904b0bbc4b8084c9f7e5c5bb16eb3d3b2"
     },
     {
       "id": "sqlite-migrations",
@@ -249,7 +262,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "a7fc6091db39f5829f6cf34de302aa04956a46fedfe4263da5e91757f1f3a26d"
+      "sha256": "1e4b8750643e60da4b65a3e7c124e2b2d6f9702efe98831e65f8ed4ead86afc6"
     }
   ]
 }

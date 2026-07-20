@@ -14,7 +14,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 22);
+  assert.equal(check.manifest.assets.length, 23);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
@@ -24,6 +24,12 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "view_policy.activate",
     "view_policy.retire",
     "identity.discover",
+    "events.page",
+    "checkpoint.read",
+    "checkpoint.compare_and_set",
+    "reconciliation_snapshot.begin",
+    "reconciliation_snapshot.page",
+    "reconciliation_snapshot.finish",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -65,6 +71,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     ],
     view_policy_lifecycle: "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
     mixed_owner_discovery: "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
+    consumer_observation: "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
