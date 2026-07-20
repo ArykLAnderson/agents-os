@@ -249,7 +249,7 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
       "diagnose", "initialize_store", "migrate_store", "get_store_operation_receipt",
       "events.page", "checkpoint.read", "checkpoint.compare_and_set",
       "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish",
-      "impact.project", "export.preflight",
+      "impact.project", "export.preflight", "export.finalize",
       "case.create", "case.commit_revision", "case.read",
       "case.resolve", "case.search", "case.traverse",
       "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect",

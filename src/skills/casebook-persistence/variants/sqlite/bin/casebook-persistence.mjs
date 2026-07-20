@@ -38,7 +38,7 @@ try {
     result = await invokeObservationOperation(request);
   } else if (request.operation === "impact.project") {
     result = await invokeImpactOperation(request);
-  } else if (request.operation === "export.preflight") {
+  } else if (["export.preflight", "export.finalize"].includes(request.operation)) {
     result = await invokeExportOperation(request);
   } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse", "case.discovery.hydrate"].includes(request.operation)) {
     result = await invokeCaseOperation(request);

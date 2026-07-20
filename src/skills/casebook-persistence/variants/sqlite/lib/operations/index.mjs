@@ -1206,7 +1206,7 @@ async function getStoreOperationReceipt(request) {
   // accepted exceptional operation kinds. Owner commit receipts are private
   // mechanical material and must be recovered only through a future typed
   // owner façade operation, not leaked through store-operation lookup.
-  if (!["initialize_store", "migration"].includes(receipt.operation_kind)
+  if (!["initialize_store", "migration", "export.finalize"].includes(receipt.operation_kind)
     && !receipt.operation_kind.startsWith("view_policy.")) {
     return success("get_store_operation_receipt", { status: "not_visible" });
   }
