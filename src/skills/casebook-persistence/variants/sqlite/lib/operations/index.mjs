@@ -1743,7 +1743,12 @@ async function settleRestoreNotReplaced(sqliteBinary, storePath, state, operatio
   const settled = await settleRestoreResult(sqliteBinary, storePath, state, operationId, requestDigest, authorityClaim, {
     terminal,
     preconditions: { ...preconditions, failure_evidence: evidence },
-    replacement: { classification: "not_replaced", atomic: false, merge_performed: false },
+    replacement: {
+      classification: "not_replaced",
+      atomic: false,
+      merge_performed: false,
+      semantic_interpretation_performed: false,
+    },
     health: { exposed: true, quick_check: "ok", foreign_key_violations: 0 },
   });
   if (settled === false) {
@@ -1938,7 +1943,9 @@ async function restoreStore(request) {
       priorCopy = await createVerifiedStoreSnapshot(sqliteBinary, storePath, envelope.pre_restore.path, envelope.expected_target);
     }
     operationState.prior_copy = priorCopy;
-    operationState.stage = "prior_copy_verified";
+    if (["authorized", "prior_copy_verified"].includes(operationState.stage)) {
+      operationState.stage = "prior_copy_verified";
+    }
     await writeRestoreState(envelope.pre_restore.path, operationState);
   } catch (error) {
     if (current.status === "available" && canonicalJson(restoreObserved(current)) === canonicalJson(envelope.expected_target)) {
@@ -1958,6 +1965,121 @@ async function restoreStore(request) {
   const decoratedPrior = decorateRestoreArtifact(priorCopy, envelope);
   if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_after_prior_copy_verified") {
     process.kill(process.pid, "SIGKILL");
+  }
+
+  const settleUnhealthyReplacement = async (replacementError, { alreadyQuarantined = false } = {}) => {
+    if (alreadyQuarantined) {
+      const [targetExists, quarantineExists] = await Promise.all([
+        lstat(storePath).then(() => true).catch(() => false),
+        lstat(quarantinePath).then(() => true).catch(() => false),
+      ]);
+      if (targetExists || !quarantineExists) {
+        return failure("restore_recovery_required", "Recorded unhealthy quarantine state does not match the disposable restore artifacts.", {
+          failureClass: "restore_recovery_required",
+          retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+          evidence: { state_path: statePath, target_exists: targetExists, quarantine_exists: quarantineExists },
+        });
+      }
+    } else {
+      await rm(quarantinePath, { force: true });
+      if (await lstat(storePath).then(() => true).catch(() => false)) {
+        await rename(storePath, quarantinePath);
+      }
+      operationState.stage = "unhealthy_quarantined";
+      operationState.replacement_error = replacementError?.code ?? "restored_store_unhealthy";
+      await writeRestoreState(envelope.pre_restore.path, operationState);
+      if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_after_unhealthy_quarantine") {
+        process.kill(process.pid, "SIGKILL");
+      }
+    }
+
+    try {
+      if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_before_rollback") {
+        process.kill(process.pid, "SIGKILL");
+      }
+      await rm(rollbackPath, { force: true });
+      await copyFile(envelope.pre_restore.path, rollbackPath);
+      await verifyRestoreArtifact(sqliteBinary, rollbackPath, envelope.expected_target, priorCopy);
+      if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_rollback_fail") {
+        throw Object.assign(new Error("controlled rollback failure"), { code: "restore_rollback_fault" });
+      }
+      await rename(rollbackPath, storePath);
+      const rolledBack = await inspectStore(sqliteBinary, storePath);
+      if (rolledBack.status !== "available"
+        || canonicalJson(restoreObserved(rolledBack)) !== canonicalJson(envelope.expected_target)) {
+        throw Object.assign(new Error("rolled back target is not exact prior health"), { code: "rollback_verification_failed" });
+      }
+      const body = {
+        terminal: restoreTerminal("failed", "restore_replaced_unhealthy_rolled_back", "restore_execution_failure", RETRY_DISPOSITIONS.NEVER, "rolled_back_healthy"),
+        preconditions,
+        snapshot: { ...sourceSnapshot, verified: true },
+        pre_restore: decoratedPrior,
+        replacement: {
+          classification: "rolled_back_healthy",
+          atomic: false,
+          merge_performed: false,
+          semantic_interpretation_performed: false,
+          unhealthy_quarantine: {
+            path: quarantinePath,
+            owner: envelope.pre_restore.owner,
+            authoritative: false,
+            retention: envelope.pre_restore.retention,
+          },
+        },
+        health: { exposed: true, quick_check: "ok", foreign_key_violations: 0 },
+        recovery: { disposition: "prior_health_rolled_back", intent_matched: true },
+      };
+      const settled = await settleRestoreResult(sqliteBinary, storePath, rolledBack, operationId, requestDigest, authorityClaim, body);
+      if (!settled || settled === false) throw Object.assign(new Error("rollback receipt settlement failed"), { code: "rollback_receipt_failed" });
+      await rm(statePath, { force: true });
+      return success("restore_store", settled.result);
+    } catch (rollbackError) {
+      await rm(rollbackPath, { force: true });
+      if (await lstat(storePath).then(() => true).catch(() => false)) {
+        const observed = await inspectStore(sqliteBinary, storePath);
+        if (observed.status !== "available") {
+          await rm(quarantinePath, { force: true });
+          await rename(storePath, quarantinePath);
+        }
+      }
+      const body = {
+        terminal: restoreTerminal("failed", "restore_replaced_unhealthy", "restore_execution_failure", RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR, "replaced_unhealthy"),
+        preconditions,
+        snapshot: { ...sourceSnapshot, verified: true },
+        pre_restore: decoratedPrior,
+        replacement: {
+          classification: "replaced_unhealthy",
+          atomic: false,
+          merge_performed: false,
+          semantic_interpretation_performed: false,
+          unhealthy_quarantine: {
+            path: quarantinePath,
+            owner: envelope.pre_restore.owner,
+            authoritative: false,
+            retention: envelope.pre_restore.retention,
+          },
+        },
+        health: { exposed: false, quick_check: "unavailable", foreign_key_violations: "unknown" },
+        recovery: {
+          disposition: "operator_repair_required",
+          intent_matched: true,
+          replacement_error: replacementError?.code ?? "restored_store_unhealthy",
+          rollback_error: rollbackError?.code ?? "rollback_failed",
+        },
+      };
+      const result = externalUnhealthyRestoreResult(operationId, requestDigest, envelope.store_id, body);
+      operationState.stage = "terminal_external";
+      operationState.result = result;
+      await writeRestoreState(envelope.pre_restore.path, operationState);
+      return success("restore_store", result);
+    }
+  };
+
+  if (operationState.stage === "unhealthy_quarantined") {
+    return settleUnhealthyReplacement(
+      { code: operationState.replacement_error ?? "restored_store_unhealthy" },
+      { alreadyQuarantined: true },
+    );
   }
 
   let replacementAlreadyPresent = false;
@@ -2001,7 +2123,12 @@ async function restoreStore(request) {
           preconditions,
           snapshot: { ...sourceSnapshot, verified: true },
           pre_restore: decoratedPrior,
-          replacement: { classification: "not_replaced", atomic: false, merge_performed: false },
+          replacement: {
+            classification: "not_replaced",
+            atomic: false,
+            merge_performed: false,
+            semantic_interpretation_performed: false,
+          },
           health: { exposed: true, quick_check: "ok", foreign_key_violations: 0 },
         });
         await rm(statePath, { force: true });
@@ -2021,7 +2148,12 @@ async function restoreStore(request) {
   if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_after_atomic_replace_before_verification") {
     process.kill(process.pid, "SIGKILL");
   }
-  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_force_post_replace_unhealthy") {
+  if ([
+    "restore_force_post_replace_unhealthy",
+    "restore_after_unhealthy_quarantine",
+    "restore_before_rollback",
+    "restore_rollback_fail",
+  ].includes(process.env.CASEBOOK_PERSISTENCE_TEST_FAULT)) {
     await writeFile(storePath, "controlled unhealthy restored target", { flag: "w" });
   }
 
@@ -2074,94 +2206,7 @@ async function restoreStore(request) {
     await rm(statePath, { force: true });
     return success("restore_store", settled.result);
   } catch (replacementError) {
-    await rm(quarantinePath, { force: true });
-    if (await lstat(storePath).then(() => true).catch(() => false)) {
-      await rename(storePath, quarantinePath);
-    }
-    operationState.stage = "unhealthy_quarantined";
-    operationState.replacement_error = replacementError?.code ?? "restored_store_unhealthy";
-    await writeRestoreState(envelope.pre_restore.path, operationState);
-    if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_after_unhealthy_quarantine") {
-      process.kill(process.pid, "SIGKILL");
-    }
-    try {
-      if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_before_rollback") {
-        process.kill(process.pid, "SIGKILL");
-      }
-      await rm(rollbackPath, { force: true });
-      await copyFile(envelope.pre_restore.path, rollbackPath);
-      await verifyRestoreArtifact(sqliteBinary, rollbackPath, envelope.expected_target, priorCopy);
-      if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "restore_rollback_fail") {
-        throw Object.assign(new Error("controlled rollback failure"), { code: "restore_rollback_fault" });
-      }
-      await rename(rollbackPath, storePath);
-      const rolledBack = await inspectStore(sqliteBinary, storePath);
-      if (rolledBack.status !== "available"
-        || canonicalJson(restoreObserved(rolledBack)) !== canonicalJson(envelope.expected_target)) {
-        throw Object.assign(new Error("rolled back target is not exact prior health"), { code: "rollback_verification_failed" });
-      }
-      const body = {
-        terminal: restoreTerminal("failed", "restore_replaced_unhealthy_rolled_back", "restore_execution_failure", RETRY_DISPOSITIONS.NEVER, "rolled_back_healthy"),
-        preconditions,
-        snapshot: { ...sourceSnapshot, verified: true },
-        pre_restore: decoratedPrior,
-        replacement: {
-          classification: "rolled_back_healthy",
-          atomic: false,
-          merge_performed: false,
-          unhealthy_quarantine: {
-            path: quarantinePath,
-            owner: envelope.pre_restore.owner,
-            authoritative: false,
-            retention: envelope.pre_restore.retention,
-          },
-        },
-        health: { exposed: true, quick_check: "ok", foreign_key_violations: 0 },
-        recovery: { disposition: "prior_health_rolled_back", intent_matched: true },
-      };
-      const settled = await settleRestoreResult(sqliteBinary, storePath, rolledBack, operationId, requestDigest, authorityClaim, body);
-      if (!settled || settled === false) throw Object.assign(new Error("rollback receipt settlement failed"), { code: "rollback_receipt_failed" });
-      await rm(statePath, { force: true });
-      return success("restore_store", settled.result);
-    } catch (rollbackError) {
-      await rm(rollbackPath, { force: true });
-      if (await lstat(storePath).then(() => true).catch(() => false)) {
-        const observed = await inspectStore(sqliteBinary, storePath);
-        if (observed.status !== "available") {
-          await rm(quarantinePath, { force: true });
-          await rename(storePath, quarantinePath);
-        }
-      }
-      const body = {
-        terminal: restoreTerminal("failed", "restore_replaced_unhealthy", "restore_execution_failure", RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR, "replaced_unhealthy"),
-        preconditions,
-        snapshot: { ...sourceSnapshot, verified: true },
-        pre_restore: decoratedPrior,
-        replacement: {
-          classification: "replaced_unhealthy",
-          atomic: false,
-          merge_performed: false,
-          unhealthy_quarantine: {
-            path: quarantinePath,
-            owner: envelope.pre_restore.owner,
-            authoritative: false,
-            retention: envelope.pre_restore.retention,
-          },
-        },
-        health: { exposed: false, quick_check: "unavailable", foreign_key_violations: "unknown" },
-        recovery: {
-          disposition: "operator_repair_required",
-          intent_matched: true,
-          replacement_error: replacementError?.code ?? "restored_store_unhealthy",
-          rollback_error: rollbackError?.code ?? "rollback_failed",
-        },
-      };
-      const result = externalUnhealthyRestoreResult(operationId, requestDigest, envelope.store_id, body);
-      operationState.stage = "terminal_external";
-      operationState.result = result;
-      await writeRestoreState(envelope.pre_restore.path, operationState);
-      return success("restore_store", result);
-    }
+    return settleUnhealthyReplacement(replacementError);
   }
 }
 
