@@ -342,6 +342,11 @@ async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqli
     case: caseRecord(ids.reconcileCase, state.namespaceId, `${target} ${mode} intake Case`),
   }));
   assert.equal(baseCreated.exitCode, 0, `${target} ${mode} Case intake: ${JSON.stringify(baseCreated.json)}`);
+  if (mode === "markdown") {
+    assert.match(baseCreated.json.result.current_committed_version_evidence.id, /^case-revision:/);
+    assert.equal(baseCreated.json.result.current_committed_version_evidence.content_digest, baseCreated.json.result.persistence.content_digest);
+    assert.equal(baseCreated.json.result.current_committed_version_evidence.semantics, "current_selected_content_only");
+  }
 
   const initialFrame = frameRecord(state.namespaceId, target);
   const frameCreated = await invoke(entrypoint, runtimeRoot, request(state, "frame.create", {
@@ -378,6 +383,7 @@ async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqli
 
   const caseRead = await invoke(entrypoint, runtimeRoot, request(state, "case.read", { case_id: ids.reconcileCase }));
   assert.equal(caseRead.exitCode, 0, `${target} ${mode} Case read: ${JSON.stringify(caseRead.json)}`);
+  if (mode === "markdown") assert.deepEqual(caseRead.json.result.current_committed_version_evidence, baseCreated.json.result.current_committed_version_evidence);
   const reconciled = await invoke(entrypoint, runtimeRoot, request(state, "case.commit_revision", {
     operation_id: "operation:l11-w03-reconcile-realization",
     ...(mode === "markdown" ? { expected_digest: caseRead.json.result.persistence.content_digest } : { expected_revision: caseRead.json.result.revision.number }),
@@ -386,6 +392,10 @@ async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqli
     case: { ...caseRead.json.result.case, title: `${target} ${mode} reconciled Case` },
   }));
   assert.equal(reconciled.exitCode, 0, `${target} ${mode} Case reconcile: ${JSON.stringify(reconciled.json)}`);
+  if (mode === "markdown") {
+    assert.notEqual(reconciled.json.result.current_committed_version_evidence.id, caseRead.json.result.current_committed_version_evidence.id);
+    assert.equal(reconciled.json.result.current_committed_version_evidence.content_digest, reconciled.json.result.current_digest);
+  }
 
   const afterCaseCommits = await invoke(entrypoint, runtimeRoot, request(state, "frame.read", {
     frame_id: ids.frame,
@@ -397,6 +407,12 @@ async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqli
   const finalFrame = mode === "markdown"
     ? structuredClone(afterCaseCommits.json.result.frame)
     : accountedFrame(initialFrame, mode);
+  finalFrame.status = "completed";
+  Object.assign(finalFrame.discovery[0], {
+    lifecycle: "settled", category: "settled", disposition: "accepted",
+    resolution: "Every material result was classified and separate Case owner commits were observed.",
+  });
+  finalFrame.disposition_boundaries[0].closure = "closed";
   finalFrame.case_dispositions[0] = {
     id: ids.pending,
     ...(mode === "markdown" ? { version_id: ids.pendingVersion } : {}),
@@ -406,36 +422,43 @@ async function exerciseSemanticFlow(packageRoot, runtimeRoot, target, mode, sqli
     disposition: "no_case",
     no_case_reason: "Bounded human review established that this result is transient.",
   };
+  Object.assign(finalFrame.case_dispositions[1], {
+    realization_state: "settled",
+    observed_case_revision_id: mode === "markdown" ? intake.json.result.current_committed_version_evidence.id : intake.json.result.revision.id,
+  });
+  Object.assign(finalFrame.case_dispositions[2], {
+    realization_state: "settled",
+    pinned_case_revision_id: mode === "markdown" ? reconciled.json.result.current_committed_version_evidence.id : reconciled.json.result.revision.id,
+  });
 
-  if (mode === "sqlite") {
-    finalFrame.status = "completed";
-    Object.assign(finalFrame.discovery[0], {
-      lifecycle: "settled", category: "settled", disposition: "accepted",
-      resolution: "Every material result was classified and separate Case owner commits were observed.",
-    });
-    finalFrame.disposition_boundaries[0].closure = "closed";
-    Object.assign(finalFrame.case_dispositions[1], { realization_state: "settled", observed_case_revision_id: intake.json.result.revision.id });
-    Object.assign(finalFrame.case_dispositions[2], { realization_state: "settled", pinned_case_revision_id: reconciled.json.result.revision.id });
+  if (mode === "markdown") {
+    const staleEvidence = structuredClone(finalFrame);
+    staleEvidence.case_dispositions[2].pinned_case_revision_id = baseCreated.json.result.current_committed_version_evidence.id;
+    const staleCommit = await invoke(entrypoint, runtimeRoot, request(state, "frame.commit_revision", {
+      operation_id: `operation:l11-w03-${target}-markdown-stale-case-evidence`, frame_id: ids.frame,
+      expected_digest: afterCaseCommits.json.result.persistence.aggregate_digest,
+      commit_basis: "stale replaced Case content must not settle current realization",
+      provenance: { acting_role: "frame", authority_basis: "synthetic negative conformance proof" }, frame: staleEvidence,
+    }));
+    assert.equal(staleCommit.exitCode, 2, `${target} Markdown stale Case evidence: ${JSON.stringify(staleCommit.json)}`);
+    assert.equal(staleCommit.json.failure.evidence.violations[0].rule, "case_realization_evidence_not_current");
   }
 
   const finalCommit = await invoke(entrypoint, runtimeRoot, request(state, "frame.commit_revision", {
     operation_id: `operation:l11-w03-${target}-${mode}-final-frame`, frame_id: ids.frame,
     ...(mode === "markdown" ? { expected_digest: afterCaseCommits.json.result.persistence.aggregate_digest } : { expected_revision: afterCaseCommits.json.result.revision.number }),
-    commit_basis: mode === "sqlite" ? "settle exact visible Case revisions in a fresh Frame commit" : "settle classification while retaining truthful awaiting-Case capability blocks",
+    commit_basis: "settle exact visible current Case version evidence in a fresh Frame commit",
     provenance: { acting_role: "frame", authority_basis: "synthetic human completion judgment" }, frame: finalFrame,
   }));
   assert.equal(finalCommit.exitCode, 0, `${target} ${mode} final Frame: ${JSON.stringify(finalCommit.json)}`);
-  if (mode === "sqlite") {
-    assert.equal(finalCommit.json.result.completion_evidence.cross_owner_completion.state, "settled");
-    assert.deepEqual(finalCommit.json.result.completion_evidence.completion_blocks, []);
-  } else {
-    assert.deepEqual(finalCommit.json.result.completion_evidence.completion_blocks.map((item) => item.kind), ["awaiting_case"]);
-    assert.equal(finalCommit.json.result.frame.disposition_boundaries[0].closure, "open");
-  }
+  assert.equal(finalCommit.json.result.completion_evidence.cross_owner_completion.state, "settled");
+  assert.deepEqual(finalCommit.json.result.completion_evidence.completion_blocks, []);
+  assert.equal(finalCommit.json.result.frame.disposition_boundaries[0].closure, "closed");
 
   const finalCaseRead = await invoke(entrypoint, runtimeRoot, request(state, "case.read", { case_id: ids.reconcileCase }));
   assert.equal(finalCaseRead.exitCode, 0);
   assert.equal(finalCaseRead.json.result.case.title, `${target} ${mode} reconciled Case`);
+  if (mode === "markdown") assert.deepEqual(finalCaseRead.json.result.current_committed_version_evidence, reconciled.json.result.current_committed_version_evidence);
   await assertFailClosed(entrypoint, runtimeRoot, state, target);
   assert.equal(await readFile(path.join(conventionalWorkspace, "DO-NOT-ACCESS"), "utf8"), conventionalCanary);
   assert.equal(await readFile(path.join(conventionalWorkspace, WORKSPACE_MARKER), "utf8"), "not selected authority\n");
