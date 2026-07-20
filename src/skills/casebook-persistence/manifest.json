@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "bed6db82e1cbe15f17381df30132eeb0b390715982e87a50dcafec603415dcd7"
+    "sha256": "b78786fbcbbec30841754e9001f4282dccb0513878e2ccadee9312368286fc85"
   },
   "entrypoints": [
     {
@@ -236,7 +236,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "0813bd07a55f9c16e10ae4c89cf3dd4ee3497ab7ee8abcf8aa04a9685c15abd9"
+      "sha256": "847646b45dd8cd7158ae2142fc34cb51b63a7e5e1177a25380b2a48a3fa0290b"
     },
     {
       "id": "sqlite-identity-discovery",

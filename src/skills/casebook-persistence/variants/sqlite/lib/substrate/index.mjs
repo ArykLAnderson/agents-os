@@ -60,20 +60,46 @@ export async function bindStoreAuthorityIfAuthorized(binary, storePath, configur
   let rows;
   try {
     rows = await queryJson(binary, storePath, `
-      SELECT m.store_id,
-        (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name='store_authority_binding') AS binding_table_count,
-        CASE WHEN EXISTS(SELECT 1 FROM sqlite_schema WHERE type='table' AND name='store_authority_binding')
-          THEN (SELECT count(*) FROM store_authority_binding) ELSE -1 END AS binding_count
+      SELECT m.store_id,m.schema_id,m.schema_version,m.protocol_id,m.protocol_version,
+        (SELECT application_id FROM pragma_application_id) AS application_id,
+        (SELECT user_version FROM pragma_user_version) AS user_version,
+        (SELECT json_group_array(name) FROM (SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name)) AS tables
       FROM store_metadata m WHERE singleton=1;
     `);
   } catch {
     return false;
   }
-  if (rows.length !== 1 || rows[0].store_id !== request.store_id
-    || rows[0].binding_table_count !== 1 || rows[0].binding_count !== 0) return false;
+  const observed = rows[0];
+  const tableValues = typeof observed?.tables === "string" ? JSON.parse(observed.tables) : observed?.tables;
+  const tables = new Set(tableValues ?? []);
+  const requiredBeforeBinding = REQUIRED_TABLES.filter((table) => table !== "store_authority_binding");
+  if (rows.length !== 1 || observed.store_id !== request.store_id
+    || observed.schema_id !== SCHEMA_ID || !SUPPORTED_SCHEMA_VERSIONS.includes(observed.schema_version)
+    || observed.protocol_id !== PROTOCOL_ID || observed.protocol_version !== PROTOCOL_VERSION
+    || observed.application_id !== APPLICATION_ID || observed.user_version !== observed.schema_version
+    || requiredBeforeBinding.some((table) => !tables.has(table))) return false;
+  if (tables.has("store_authority_binding")) {
+    const count = await queryJson(binary, storePath, "SELECT count(*) AS binding_count FROM store_authority_binding;").catch(() => []);
+    if (count[0]?.binding_count !== 0) return false;
+  }
   const now = new Date().toISOString();
   try {
     await sqlite(binary, storePath, `.bail on\nPRAGMA foreign_keys=ON;\nPRAGMA busy_timeout=5000;\nBEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS store_authority_binding (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        store_id TEXT NOT NULL UNIQUE REFERENCES store_metadata(store_id),
+        source_kind TEXT NOT NULL,
+        source_locator TEXT NOT NULL,
+        authority_mode TEXT NOT NULL CHECK (authority_mode = 'sqlite'),
+        bound_at TEXT NOT NULL,
+        binding_operation_id TEXT NOT NULL
+      ) STRICT;
+      CREATE TRIGGER IF NOT EXISTS store_authority_binding_immutable_update
+      BEFORE UPDATE ON store_authority_binding
+      BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration'); END;
+      CREATE TRIGGER IF NOT EXISTS store_authority_binding_immutable_delete
+      BEFORE DELETE ON store_authority_binding
+      BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration'); END;
       INSERT INTO store_authority_binding(singleton,store_id,source_kind,source_locator,authority_mode,bound_at,binding_operation_id)
       SELECT 1,${sqlText(request.store_id)},${sqlText(configuration.source.kind)},${sqlText(configuration.source.locator)},'sqlite',${sqlText(now)},${sqlText(request.operation_id)}
       WHERE NOT EXISTS(SELECT 1 FROM store_authority_binding);
