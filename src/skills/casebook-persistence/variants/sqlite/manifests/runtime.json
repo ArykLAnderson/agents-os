@@ -2,7 +2,7 @@
   "runtime_manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.3.0-l04-w01-view-policy"
+    "version": "0.3.0-l04-w02-discovery-handoff"
   },
   "protocol": {
     "id": "casebook-persistence-json",
@@ -27,6 +27,9 @@
     "view_policy.revise",
     "view_policy.activate",
     "view_policy.retire",
+    "identity.discover",
+    "case.discovery.hydrate",
+    "frame.discovery.hydrate",
     "case.create",
     "case.commit_revision",
     "case.read",
@@ -63,6 +66,7 @@
       "view_policy.retire"
     ],
     "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
+    "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
