@@ -247,6 +247,8 @@ test("shipped connector rejects generic W03 mechanical operations without touchi
     assert.equal(rejected.json.failure.code, "not_yet_implemented");
     assert.deepEqual(rejected.json.failure.evidence.supported_operations, [
       "diagnose", "initialize_store", "migrate_store", "get_store_operation_receipt",
+      "events.page", "checkpoint.read", "checkpoint.compare_and_set",
+      "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish",
       "case.create", "case.commit_revision", "case.read",
       "case.resolve", "case.search", "case.traverse",
       "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect",
@@ -537,18 +539,21 @@ async function rotateActivePolicy(sqliteBinary, storePath, initialized) {
   await execFileAsync(sqliteBinary, ["-batch", "-bail", storePath, `
     PRAGMA foreign_keys = ON;
     BEGIN IMMEDIATE;
-    UPDATE view_policy_revisions SET lifecycle = 'superseded'
-      WHERE view_policy_revision_id = '${initialized.view.policy_revision_id}';
     INSERT INTO view_policy_revisions (
       view_policy_revision_id, view_id, revision_number, audience_ceiling, lifecycle,
       authority_claim_json, object_kinds_json, store_operation_receipts_visible,
       predecessor_revision_id, activation_fence, created_at
     ) SELECT
-      '${successor}', view_id, 2, audience_ceiling, 'active', authority_claim_json,
+      '${successor}', view_id, 2, audience_ceiling, 'created', authority_claim_json,
       object_kinds_json, store_operation_receipts_visible, view_policy_revision_id,
-      (SELECT operation_fence FROM store_fence WHERE singleton = 1), 'synthetic-policy-rotation'
+      NULL, 'synthetic-policy-rotation'
     FROM view_policy_revisions WHERE view_policy_revision_id = '${initialized.view.policy_revision_id}';
     INSERT INTO view_policy_namespace_grants VALUES ('${successor}', '${initialized.namespace.id}');
+    UPDATE view_policy_revisions SET lifecycle = 'superseded'
+      WHERE view_policy_revision_id = '${initialized.view.policy_revision_id}';
+    UPDATE view_policy_revisions SET lifecycle = 'active',
+      activation_fence = (SELECT operation_fence FROM store_fence WHERE singleton = 1)
+      WHERE view_policy_revision_id = '${successor}';
     COMMIT;
   `], { encoding: "utf8" });
   return successor;

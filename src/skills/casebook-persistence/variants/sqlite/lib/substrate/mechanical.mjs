@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { validateAuthorityConfiguration, ConfigurationError } from "../../../../shared/config.mjs";
 import { loadAndValidateManifest } from "../../../../shared/manifest.mjs";
@@ -20,6 +20,8 @@ const MAX_SELECTIONS = 256;
 const MAX_OUTBOX = 64;
 const MAX_LIST_SCAN = 256;
 const MAX_CURRENT_PAGE = 100;
+const MAX_IDENTITY_CORPUS = 256;
+const MAX_HANDOFF_BYTES = 64 * 1024;
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const UUID_ID = new RegExp(`^[a-z][a-z0-9_-]*:${UUID}$`);
 const OWNER_KIND = /^[a-z][a-z0-9_-]{0,63}$/;
@@ -160,6 +162,25 @@ function validateEnvelope(value) {
   }
   requireObject(revision.normalized, "envelope.revision.normalized");
   requireObject(value.current_projection, "envelope.current_projection");
+  const identityLinks = value.current_projection.identity_links ?? [];
+  if (!Array.isArray(identityLinks) || identityLinks.length > 512) {
+    throw new RequestError("representation_invalid", "envelope.current_projection.identity_links must be a bounded array.");
+  }
+  for (const link of identityLinks) {
+    requireObject(link, "envelope.current_projection.identity_links[]");
+    for (const endpointName of ["from", "to"]) {
+      const endpoint = requireObject(link[endpointName], `envelope.current_projection.identity_links[].${endpointName}`);
+      const endpointKind = requireString(endpoint.kind, `envelope.current_projection.identity_links[].${endpointName}.kind`, 64);
+      if (!OWNER_KIND.test(endpointKind)) throw new RequestError("identity_invalid", "identity link endpoint kind is invalid.");
+      requireUuidId(endpoint.id, `envelope.current_projection.identity_links[].${endpointName}.id`, endpointKind);
+    }
+    requireString(link.predicate, "envelope.current_projection.identity_links[].predicate", 256);
+    if (link.direction !== "outgoing") throw new RequestError("representation_invalid", "identity links use canonical outgoing direction.");
+    for (const key of ["observed_revision_id", "pinned_revision_id"]) if (link[key] != null) requireUuidId(link[key], `envelope.current_projection.identity_links[].${key}`);
+  }
+  if (value.current_projection.identity_discoverable != null && typeof value.current_projection.identity_discoverable !== "boolean") {
+    throw new RequestError("representation_invalid", "envelope.current_projection.identity_discoverable must be boolean.");
+  }
   const structuralClaims = value.current_projection.structural_claims ?? [];
   if (!Array.isArray(structuralClaims) || structuralClaims.length > MAX_SELECTIONS) {
     throw new RequestError("representation_invalid", "envelope.current_projection.structural_claims must be a bounded array.");
@@ -316,7 +337,7 @@ async function validateActiveView(binary, storePath, state, context, owner = nul
   }
   const rows = await queryJson(binary, storePath, `
     SELECT vf.view_id, vpr.view_policy_revision_id, vpr.audience_ceiling,
-      vpr.object_kinds_json, vf.home_namespace_id
+      vpr.object_kinds_json, vpr.limits_json, vf.home_namespace_id
     FROM view_families vf
     JOIN view_policy_revisions vpr ON vpr.view_id = vf.view_id
     WHERE vf.view_id = ${sqlText(context.view_id)}
@@ -325,7 +346,7 @@ async function validateActiveView(binary, storePath, state, context, owner = nul
       AND vpr.audience_ceiling = 'private'
     LIMIT 1;
   `);
-  if (!rows.length || context.view_id !== state.view.view_id || context.view_policy_revision_id !== state.view.view_policy_revision_id) {
+  if (!rows.length) {
     return { failure: failure("view_invalid", "The exact active view-policy revision is invalid or unavailable.", {
       failureClass: "view_invalid",
       retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
@@ -1088,6 +1109,207 @@ async function listOwnerCurrent(request) {
   return success("list_owner_current", { status: "found", items, operation_fence: fence, applied_view: appliedView });
 }
 
+function identitySigningKey(state) {
+  return createHash("sha256").update(canonicalJson({
+    domain: "casebook-identity-handoff-key@1",
+    store_id: state.metadata.store_id,
+    initialization_operation_id: state.metadata.initialization_operation_id,
+  })).digest();
+}
+
+function signedIdentityState(state, value) {
+  const payload = canonicalJson(value);
+  const signature = createHmac("sha256", identitySigningKey(state)).update(`casebook-identity-state@1\0${payload}`).digest("hex");
+  return Buffer.from(JSON.stringify({ payload, signature }), "utf8").toString("base64url");
+}
+
+function parseSignedIdentityState(state, value) {
+  try {
+    if (!nonEmpty(value, MAX_HANDOFF_BYTES) || Buffer.byteLength(value) > MAX_HANDOFF_BYTES) throw new Error();
+    const envelope = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    if (typeof envelope.payload !== "string" || typeof envelope.signature !== "string") throw new Error();
+    const expected = createHmac("sha256", identitySigningKey(state)).update(`casebook-identity-state@1\0${envelope.payload}`).digest("hex");
+    if (expected.length !== envelope.signature.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(envelope.signature))) throw new Error();
+    return JSON.parse(envelope.payload);
+  } catch {
+    throw new RequestError("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  }
+}
+
+function identityRevisionId(kind, mechanicalId) {
+  return `${kind}-revision:${mechanicalId.slice(mechanicalId.indexOf(":") + 1)}`;
+}
+
+function normalizedIdentityQuery(value) {
+  requireObject(value, "query");
+  const keys = Object.keys(value);
+  if (keys.length !== 1 || !["text", "identity", "alias", "relationship"].includes(keys[0])) {
+    throw new RequestError("representation_invalid", "query must contain exactly one supported identity selector.");
+  }
+  if (keys[0] === "text") {
+    const text = requireString(value.text, "query.text", 256).normalize("NFKC").toLocaleLowerCase("en-US");
+    const tokens = [...new Set(text.split(/[^\p{L}\p{N}_-]+/u).filter(Boolean))];
+    if (!tokens.length) throw new RequestError("representation_invalid", "query.text requires a lexical token.");
+    return { text: tokens };
+  }
+  if (keys[0] === "identity") {
+    const selector = requireObject(value.identity, "query.identity");
+    const kind = requireString(selector.kind, "query.identity.kind", 64);
+    if (Object.keys(selector).length !== 2 || !OWNER_KIND.test(kind)) throw new RequestError("representation_invalid", "query.identity has an invalid shape.");
+    return { identity: { kind, id: requireUuidId(selector.id, "query.identity.id", kind) } };
+  }
+  if (keys[0] === "alias") {
+    const selector = requireObject(value.alias, "query.alias");
+    if (Object.keys(selector).some((key) => !["namespace_id", "kind", "value"].includes(key)) || Object.keys(selector).length !== 3) throw new RequestError("representation_invalid", "query.alias has an invalid shape.");
+    return { alias: {
+      namespace_id: requireUuidId(selector.namespace_id, "query.alias.namespace_id", "namespace"),
+      kind: requireString(selector.kind, "query.alias.kind", 64),
+      value: requireString(selector.value, "query.alias.value", 256).trim().normalize("NFKC").toLocaleLowerCase("en-US"),
+    } };
+  }
+  const relationship = requireObject(value.relationship, "query.relationship");
+  if (Object.keys(relationship).some((key) => !["start", "predicates", "direction"].includes(key)) || Object.keys(relationship).length !== 3) throw new RequestError("representation_invalid", "query.relationship has an invalid shape.");
+  if (!Array.isArray(relationship.start) || relationship.start.length < 1 || relationship.start.length > 32) throw new RequestError("representation_invalid", "query.relationship.start must be bounded and non-empty.");
+  const start = relationship.start.map((item) => {
+    const endpoint = requireObject(item, "query.relationship.start[]");
+    const kind = requireString(endpoint.kind, "query.relationship.start[].kind", 64);
+    if (Object.keys(endpoint).length !== 2 || !OWNER_KIND.test(kind)) throw new RequestError("representation_invalid", "query.relationship.start endpoint is invalid.");
+    return { kind, id: requireUuidId(endpoint.id, "query.relationship.start[].id", kind) };
+  });
+  if (new Set(start.map((item) => `${item.kind}\0${item.id}`)).size !== start.length) throw new RequestError("representation_invalid", "query.relationship.start must be unique.");
+  if (!Array.isArray(relationship.predicates) || relationship.predicates.length > 32) throw new RequestError("representation_invalid", "query.relationship.predicates must be bounded.");
+  const predicates = relationship.predicates.map((item) => requireString(item, "query.relationship.predicates[]", 256));
+  if (!["outgoing", "incoming", "both"].includes(relationship.direction)) throw new RequestError("representation_invalid", "query.relationship.direction is invalid.");
+  return { relationship: { start, predicates: [...new Set(predicates)].sort(), direction: relationship.direction } };
+}
+
+function visibleProjectionText(projection) {
+  return [projection.title, projection.summary, projection.outcome].filter((value) => typeof value === "string").join("\n").normalize("NFKC").toLocaleLowerCase("en-US");
+}
+
+function identityCodepointCompare(left, right) {
+  return left === right ? 0 : left < right ? -1 : 1;
+}
+
+async function discoverIdentities(request) {
+  const context = contextShape(request.context);
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  if (!Array.isArray(request.owner_kinds) || request.owner_kinds.length < 1 || request.owner_kinds.length > 2) throw new RequestError("representation_invalid", "owner_kinds must select Case and/or Frame.");
+  const ownerKinds = [...new Set(request.owner_kinds.map((kind) => requireString(kind, "owner_kinds[]", 64)))].sort();
+  if (ownerKinds.length !== request.owner_kinds.length || ownerKinds.some((kind) => !["case", "frame"].includes(kind))) throw new RequestError("representation_invalid", "owner_kinds must be unique supported semantic owner kinds.");
+  const query = normalizedIdentityQuery(request.query);
+  if (!Number.isInteger(request.limit) || request.limit < 1) throw new RequestError("representation_invalid", "limit must be a positive integer.");
+  if (!Number.isInteger(request.max_depth) || request.max_depth < 0) throw new RequestError("representation_invalid", "max_depth must be a non-negative integer.");
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested identity is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const active = await validateActiveView(binary, storePath, state, context);
+  if (active.failure) return active.failure;
+  const limits = JSON.parse(active.policy.limits_json);
+  if (request.limit > limits.max_results || request.max_depth > limits.max_traversal_depth) throw new RequestError("representation_invalid", "The requested bounds widen the exact active policy.");
+  const kindsSql = ownerKinds.map(sqlText).join(",");
+  const rows = await queryJson(binary, storePath, `
+    SELECT visible.*, fence.operation_fence
+    FROM store_fence fence LEFT JOIN (
+      SELECT o.owner_id, o.owner_kind, o.home_namespace_id, r.revision_id, r.revision_number,
+        c.projection_json
+      FROM owners o JOIN owner_current c ON c.owner_id = o.owner_id
+      JOIN owner_revisions r ON r.revision_id = c.revision_id
+      JOIN view_policy_namespace_grants grant ON grant.namespace_id = o.home_namespace_id
+        AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
+      JOIN view_policy_revisions policy ON policy.view_policy_revision_id = grant.view_policy_revision_id
+        AND policy.view_id = ${sqlText(context.view_id)} AND policy.lifecycle = 'active'
+      JOIN json_each(policy.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
+      WHERE o.owner_kind IN (${kindsSql})
+      ORDER BY o.owner_kind, o.owner_id LIMIT ${MAX_IDENTITY_CORPUS + 1}
+    ) visible ON 1 = 1 ORDER BY visible.owner_kind, visible.owner_id;
+  `);
+  const ownerRows = rows.filter((row) => row.owner_id != null);
+  if (ownerRows.length > MAX_IDENTITY_CORPUS) return failure("capability_unavailable", "The bounded identity corpus limit was exceeded.", { failureClass: "capability_unavailable", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: { maximum_owner_scan: MAX_IDENTITY_CORPUS } });
+  const corpus = ownerRows.map((row) => ({ ...row, projection: JSON.parse(row.projection_json) })).filter((row) => row.projection.identity_discoverable !== false);
+  const byKey = new Map(corpus.map((row) => [`${row.owner_kind}\0${row.owner_id}`, row]));
+  const allLinks = [];
+  for (const row of corpus) for (const link of row.projection.identity_links ?? []) {
+    const fromOwner = byKey.get(`${link.from.kind}\0${link.from.id}`) ?? (link.from.kind === row.owner_kind && link.from.id === row.owner_id ? row : null);
+    const toOwner = byKey.get(`${link.to.kind}\0${link.to.id}`);
+    if (fromOwner && toOwner) allLinks.push({ row, link });
+  }
+  const selected = new Map();
+  const retainedLinks = [];
+  if (query.text) {
+    for (const row of corpus) if (query.text.every((token) => visibleProjectionText(row.projection).includes(token))) selected.set(`${row.owner_kind}\0${row.owner_id}`, { row, depth: 0 });
+  } else if (query.identity) {
+    const row = byKey.get(`${query.identity.kind}\0${query.identity.id}`);
+    if (row) selected.set(`${row.owner_kind}\0${row.owner_id}`, { row, depth: 0 });
+  } else if (query.alias) {
+    for (const row of corpus) if (row.home_namespace_id === query.alias.namespace_id && (row.projection.aliases ?? []).some((alias) => alias.type === query.alias.kind && alias.normalized_value === query.alias.value)) selected.set(`${row.owner_kind}\0${row.owner_id}`, { row, depth: 0 });
+  } else {
+    const predicates = new Set(query.relationship.predicates);
+    const queue = [];
+    for (const endpoint of query.relationship.start) {
+      const key = `${endpoint.kind}\0${endpoint.id}`, row = byKey.get(key);
+      if (row) selected.set(key, { row, depth: 0 }), queue.push(key);
+    }
+    const retained = new Set();
+    while (queue.length) {
+      const currentKey = queue.shift(), depth = selected.get(currentKey).depth;
+      if (depth >= request.max_depth) continue;
+      for (const { link } of allLinks) {
+        if (predicates.size && !predicates.has(link.predicate)) continue;
+        const from = `${link.from.kind}\0${link.from.id}`, to = `${link.to.kind}\0${link.to.id}`;
+        const forward = from === currentKey && query.relationship.direction !== "incoming";
+        const reverse = to === currentKey && query.relationship.direction !== "outgoing";
+        if (!forward && !reverse) continue;
+        const next = forward ? to : from;
+        if (!retained.has(`${from}\0${link.predicate}\0${to}`)) {
+          retained.add(`${from}\0${link.predicate}\0${to}`);
+          retainedLinks.push({ ...link, depth: depth + 1 });
+        }
+        if (!selected.has(next)) selected.set(next, { row: byKey.get(next), depth: depth + 1 }), queue.push(next);
+      }
+    }
+  }
+  const ordered = [...selected.values()].sort((left, right) => left.depth - right.depth || identityCodepointCompare(left.row.owner_kind, right.row.owner_kind) || identityCodepointCompare(left.row.owner_id, right.row.owner_id));
+  const queryDigest = mechanicalDigest({ domain: "identity-discovery-query@1", store_id: storeId, view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id, audience_ceiling: "private", owner_kinds: ownerKinds, query, bounds: { result_limit: request.limit, max_depth: request.max_depth } });
+  const fence = rows[0].operation_fence;
+  let offset = 0;
+  if (request.cursor != null) {
+    const cursor = parseSignedIdentityState(state, request.cursor);
+    if (cursor.domain !== "identity-discovery-cursor@1" || cursor.store_id !== storeId || cursor.view_policy_revision_id !== context.view_policy_revision_id || cursor.query_digest !== queryDigest || cursor.fence !== fence || !Number.isInteger(cursor.offset) || cursor.offset < 0) throw new RequestError("representation_invalid", "The opaque cursor is invalid or belongs to another query.");
+    offset = cursor.offset;
+  }
+  if (offset > ordered.length) throw new RequestError("representation_invalid", "The opaque cursor is stale.");
+  const page = ordered.slice(offset, offset + request.limit), pageKeys = new Set(page.map(({ row }) => `${row.owner_kind}\0${row.owner_id}`));
+  const more = offset + page.length < ordered.length;
+  const candidates = page.map(({ row }) => ({ stable_id: row.owner_id, owner_kind: row.owner_kind, home_namespace_id: row.home_namespace_id, current_owner_revision: { id: identityRevisionId(row.owner_kind, row.revision_id), number: row.revision_number } }));
+  const links = retainedLinks.filter((link) => pageKeys.has(`${link.from.kind}\0${link.from.id}`) && pageKeys.has(`${link.to.kind}\0${link.to.id}`)).map((link) => ({ from: link.from, to: link.to, predicate: link.predicate, direction: link.direction, ...(link.observed_revision_id == null ? {} : { observed_revision_id: link.observed_revision_id }), ...(link.pinned_revision_id == null ? {} : { pinned_revision_id: link.pinned_revision_id }), depth: link.depth }));
+  const handoff = { domain: "identity-discovery-handoff@1", store_id: storeId, view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id, query_digest: queryDigest, fence, audience_ceiling: "private", bounds: { result_limit: request.limit, max_depth: request.max_depth }, candidates: page.map(({ row }) => ({ id: row.owner_id, kind: row.owner_kind, home_namespace_id: row.home_namespace_id, revision_id: row.revision_id, revision_number: row.revision_number })) };
+  return success("discover_identities", { status: "found", candidates, links, query_digest: queryDigest, snapshot_query_fence: `sqlite:${fence}`, result_completeness: more ? "truncated" : "complete_within_bounds", stable_sort: "depth_asc_owner_kind_asc_stable_id_asc", next_cursor: more ? signedIdentityState(state, { domain: "identity-discovery-cursor@1", store_id: storeId, view_policy_revision_id: context.view_policy_revision_id, query_digest: queryDigest, fence, offset: offset + page.length }) : null, handoff_token: signedIdentityState(state, handoff), applied_bounds: handoff.bounds, audience_ceiling: "private", applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id } });
+}
+
+async function validateIdentityHandoff(request) {
+  const context = contextShape(request.context);
+  const storeId = requireUuidId(request.store_id, "store_id", "store");
+  const ownerKind = requireString(request.owner_kind, "owner_kind", 64);
+  if (!["case", "frame"].includes(ownerKind)) throw new RequestError("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  requireDigest(request.query_digest, "query_digest");
+  if (!Array.isArray(request.candidate_ids) || request.candidate_ids.length < 1 || request.candidate_ids.length > MAX_CURRENT_PAGE) throw new RequestError("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const candidateIds = request.candidate_ids.map((candidateId) => requireUuidId(candidateId, "candidate_ids[]", ownerKind));
+  if (new Set(candidateIds).size !== candidateIds.length) throw new RequestError("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { binary, storePath, state } = prepared;
+  if (storeId !== state.metadata.store_id) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const active = await validateActiveView(binary, storePath, state, context);
+  if (active.failure) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const handoff = parseSignedIdentityState(state, request.handoff_token);
+  if (handoff.domain !== "identity-discovery-handoff@1" || handoff.store_id !== storeId || handoff.view_id !== context.view_id || handoff.view_policy_revision_id !== context.view_policy_revision_id || handoff.query_digest !== request.query_digest || handoff.audience_ceiling !== "private" || !Array.isArray(handoff.candidates)) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  const bound = new Map(handoff.candidates.filter((item) => item.kind === ownerKind).map((item) => [item.id, item]));
+  if (candidateIds.some((candidateId) => !bound.has(candidateId))) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  return success("validate_identity_handoff", { status: "validated", candidates: candidateIds.map((candidateId) => bound.get(candidateId)), query_digest: handoff.query_digest, snapshot_query_fence: `sqlite:${handoff.fence}`, audience_ceiling: handoff.audience_ceiling, applied_bounds: handoff.bounds, applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id } });
+}
+
 async function readActiveViewScope(request) {
   const available = await prepare(request);
   if (available.failure) return available.failure;
@@ -1116,6 +1338,8 @@ export async function invokeMechanicalOperation(request) {
     if (request.operation === "read_owner_current") return await readOwnerCurrent(request);
     if (request.operation === "read_owner_revision") return await readOwnerRevision(request);
     if (request.operation === "read_owner_current_corpus") return await readOwnerCurrentCorpus(request);
+    if (request.operation === "discover_identities") return await discoverIdentities(request);
+    if (request.operation === "validate_identity_handoff") return await validateIdentityHandoff(request);
     if (request.operation === "page_owner_current") return await pageOwnerCurrent(request);
     if (request.operation === "list_owner_current") return await listOwnerCurrent(request);
     return null;

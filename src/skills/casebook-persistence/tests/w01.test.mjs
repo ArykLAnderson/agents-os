@@ -14,12 +14,25 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 22);
+  assert.equal(check.manifest.assets.length, 24);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
     "migrate_store",
     "get_store_operation_receipt",
+    "view_policy.create",
+    "view_policy.revise",
+    "view_policy.activate",
+    "view_policy.retire",
+    "identity.discover",
+    "events.page",
+    "checkpoint.read",
+    "checkpoint.compare_and_set",
+    "reconciliation_snapshot.begin",
+    "reconciliation_snapshot.page",
+    "reconciliation_snapshot.finish",
+    "case.discovery.hydrate",
+    "frame.discovery.hydrate",
     "case.create",
     "case.commit_revision",
     "case.read",
@@ -50,8 +63,18 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
   ]);
   assert.equal(check.manifest.schema.store_initialization, "explicit_human_authorized");
   assert.deepEqual(check.manifest.implemented_slice_constraints, {
-    store_receipt_visible_operation_kinds: ["initialize_store", "migration"],
+    store_receipt_visible_operation_kinds: [
+      "initialize_store",
+      "migration",
+      "view_policy.create",
+      "view_policy.revise",
+      "view_policy.activate",
+      "view_policy.retire",
+    ],
     migration_execution: "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
+    view_policy_lifecycle: "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
+    mixed_owner_discovery: "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
+    consumer_observation: "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence policy-bootstrap snapshot reconciliation",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -105,6 +128,8 @@ test("authority configuration selects exactly one mode and rejects relative or d
 test("module direction remains private and substrate owner-neutral", async () => {
   const substrate = await readFile(path.join(packageRoot, "variants/sqlite/lib/substrate/index.mjs"), "utf8");
   assert.doesNotMatch(substrate, /lib\/(case|frame)|\.\.\/(case|frame)/);
+  const identityDiscovery = await readFile(path.join(packageRoot, "variants/sqlite/lib/substrate/discovery.mjs"), "utf8");
+  assert.doesNotMatch(identityDiscovery, /lib\/(case|frame)|\.\.\/(case|frame)|hydrateFrame|normalizeCase/);
   for (const owner of ["case", "frame"]) {
     const source = await readFile(path.join(packageRoot, `variants/sqlite/lib/${owner}/index.mjs`), "utf8");
     assert.match(source, /shared\/protocol\.mjs/);
