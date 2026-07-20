@@ -174,6 +174,76 @@ async function visibleOwners(binary, storePath, request) {
   return result;
 }
 
+async function inspectDisposableProjection(binary, storePath) {
+  const schema = await queryJson(binary, storePath, `
+    SELECT name FROM sqlite_schema
+    WHERE type='table' AND name IN (
+      'disposable_projection_generations','disposable_projection_entries','disposable_projection_selection'
+    ) ORDER BY name;
+  `, { tolerateFailure: true });
+  if (schema.error) return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  if (!schema.rows.length) return [];
+  if (schema.rows.length !== 3) return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  const selection = await queryJson(binary, storePath, `
+    SELECT selection_status,current_generation_id,source_fence
+    FROM disposable_projection_selection WHERE singleton=1;
+  `, { tolerateFailure: true });
+  if (selection.error || selection.rows.length !== 1) {
+    return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  }
+  const selected = selection.rows[0];
+  if (selected.selection_status !== "current") {
+    return [{
+      component: "disposable_projection",
+      visibility: "exact_view",
+      condition: selected.selection_status === "stale" ? "selected_generation_stale" : "selected_generation_unavailable",
+    }];
+  }
+  if (!selected.current_generation_id || !Number.isInteger(selected.source_fence)) {
+    return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  }
+  const generation = await queryJson(binary, storePath, `
+    SELECT generation_id,source_fence,projection_kinds_json,projection_digest,entry_count,verification_status
+    FROM disposable_projection_generations
+    WHERE generation_id=${sqlText(selected.current_generation_id)};
+  `, { tolerateFailure: true });
+  const entries = await queryJson(binary, storePath, `
+    SELECT projection_kind,entry_key,payload_json,payload_digest
+    FROM disposable_projection_entries
+    WHERE generation_id=${sqlText(selected.current_generation_id)}
+    ORDER BY projection_kind,entry_key;
+  `, { tolerateFailure: true });
+  if (generation.error || entries.error || generation.rows.length !== 1) {
+    return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  }
+  try {
+    const stored = generation.rows[0];
+    const kinds = JSON.parse(stored.projection_kinds_json);
+    const normalizedEntries = entries.rows.map((entry) => {
+      const payload = JSON.parse(entry.payload_json);
+      if (mechanicalDigest(payload) !== entry.payload_digest) throw new Error("projection entry digest mismatch");
+      return { kind: entry.projection_kind, key: entry.entry_key, payload, digest: entry.payload_digest };
+    });
+    const digest = mechanicalDigest({
+      domain: "casebook-disposable-projection-generation@1",
+      generation_id: stored.generation_id,
+      source_fence: stored.source_fence,
+      projection_kinds: kinds,
+      entries: normalizedEntries,
+    });
+    if (stored.source_fence !== selected.source_fence
+      || stored.verification_status !== "verified"
+      || stored.entry_count !== normalizedEntries.length
+      || !DIGEST.test(stored.projection_digest ?? "")
+      || stored.projection_digest !== digest) {
+      throw new Error("selected projection generation mismatch");
+    }
+    return [];
+  } catch {
+    return [{ component: "disposable_projection", visibility: "exact_view", condition: "selected_generation_integrity_failed" }];
+  }
+}
+
 function projectionMismatch(row, profile, projection) {
   if (!profile || !projection || projection.id !== row.owner_id || projection.home_namespace_id !== row.home_namespace_id) return true;
   if (row.owner_kind === "case") {
@@ -193,10 +263,34 @@ function projectionMismatch(row, profile, projection) {
   return true;
 }
 
+async function semanticTargetVisible(binary, storePath, endpoint) {
+  const selected = await queryJson(binary, storePath, `
+    SELECT owner.owner_id,owner.owner_kind,version.content_json
+    FROM owner_family_bindings binding
+    JOIN owners owner ON owner.owner_id=binding.owner_id
+    JOIN owner_current current ON current.owner_id=owner.owner_id
+    JOIN owner_revision_selections selection
+      ON selection.revision_id=current.revision_id AND selection.family_id=binding.family_id
+    JOIN owner_versions version ON version.version_id=selection.version_id
+    WHERE binding.family_id=${sqlText(endpoint.id)}
+    LIMIT 1;
+  `, { tolerateFailure: true });
+  if (selected.error || selected.rows.length !== 1) return false;
+  const row = selected.rows[0];
+  if ((endpoint.kind === "case" || endpoint.kind === "frame")
+    && (row.owner_id !== endpoint.id || row.owner_kind !== endpoint.kind)) return false;
+  try {
+    const content = JSON.parse(row.content_json);
+    if (endpoint.kind === "frame" && row.owner_id === endpoint.id) return content.status === "active";
+    return content.state === "active";
+  } catch {
+    return false;
+  }
+}
+
 async function inspectVisibleRecords(binary, storePath, request, rows) {
   const semantic = [];
   const projections = [];
-  const ownersById = new Map(rows.map((row) => [row.owner_id, { id: row.owner_id, kind: row.owner_kind }]));
   for (const row of rows) {
     let profile;
     let projection;
@@ -222,9 +316,7 @@ async function inspectVisibleRecords(binary, storePath, request, rows) {
     for (const link of projection.identity_links ?? []) {
       const endpoint = link?.to;
       if (!endpoint || !["case", "frame", "knowledge", "source", "evidence"].includes(endpoint.kind)) continue;
-      if (ownersById.has(endpoint.id)) continue;
-      const found = await queryJson(binary, storePath, `SELECT 1 AS present FROM owner_family_bindings WHERE family_id=${sqlText(endpoint.id)} LIMIT 1;`);
-      if (!found.rows.length) {
+      if (!await semanticTargetVisible(binary, storePath, endpoint)) {
         semantic.push({ row, condition: "dangling_semantic_link" });
         break;
       }
@@ -323,12 +415,16 @@ async function observe(request) {
       finding_count: components.length,
     }, { owners });
   }
-  if (recordChecks.projections.length) {
-    const components = recordChecks.projections.map(({ row, condition }) => ({
-      component: "current_projection",
-      owner: { id: row.owner_id, kind: row.owner_kind },
-      condition,
-    }));
+  const disposableProjectionComponents = await inspectDisposableProjection(selected.path, configuration.sqlite.store_path);
+  if (recordChecks.projections.length || disposableProjectionComponents.length) {
+    const components = [
+      ...recordChecks.projections.map(({ row, condition }) => ({
+        component: "current_projection",
+        owner: { id: row.owner_id, kind: row.owner_kind },
+        condition,
+      })),
+      ...disposableProjectionComponents,
+    ];
     return resultFor("projection_only", components, {
       checks: { package_assets: "passed", canonical_integrity: "passed", semantic_records: "passed", projections: "failed" },
       canonical_fence: state.canonicalFence,

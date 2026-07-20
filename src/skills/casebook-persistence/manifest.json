@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "1b413ec5b3066a33437bf24751c759a161a25587d99fdd9f52c510a7a714c1a7"
+    "sha256": "829a7c646058b4c3a1393b1ae546494d5176d8bcad02ec6620a4ce85c5b94d8f"
   },
   "entrypoints": [
     {
@@ -195,7 +195,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "49db012edd5599fbe2d14a9eaca6431770303a1bd8260ea6086ee80cf7000ffc"
+      "sha256": "ab5b450ef3e319ff12b4a328477196e8cdb82a5a9e49b9bd41b9763fa401a859"
     },
     {
       "id": "markdown-interchange",
@@ -243,7 +243,7 @@
       "id": "sqlite-integrity-observation",
       "path": "variants/sqlite/lib/substrate/integrity.mjs",
       "kind": "module",
-      "sha256": "b3ae3043eb8e087c9af1673217332aca28e34e1d5f965dd9098f2cc5c9c3aaa1"
+      "sha256": "be54f975b296ac9a01c0175fd2371fa9a891cf797fec20a959a4a9eaa25020df"
     },
     {
       "id": "sqlite-projection-rebuild",
@@ -261,7 +261,7 @@
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "62a7ef6cf2e01a2a3739170049f6a0fbd2124b390bf77730afcc71dc416d1703"
+      "sha256": "f2e2f322b34583c3fe93db3b547648313b65c86a29546883a911c4401f7f8f28"
     },
     {
       "id": "frame-facade",
