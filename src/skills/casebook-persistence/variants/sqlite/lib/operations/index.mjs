@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, readFile, realpath, rm, stat } from "node:fs/promises";
+import { lstat, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateAuthorityConfiguration, ConfigurationError } from "../../../../shared/config.mjs";
 import { loadAndValidateManifest } from "../../../../shared/manifest.mjs";
@@ -23,10 +23,12 @@ import {
   applyMigrationV2,
   createInitializedStore,
   createVerifiedMigrationSnapshot,
+  createVerifiedStoreSnapshot,
   inspectStore,
   readStoreOperationReceipt,
   restoreVerifiedMigrationSnapshot,
   settleStoreOperationReceipt,
+  verifyExactStoreSnapshot,
 } from "../substrate/index.mjs";
 
 function canonicalValue(value) {
@@ -253,6 +255,76 @@ function migrationRequestDigest(operationId, envelope, authorityClaim) {
   return digest({
     protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
     operation: "migrate_store",
+    operation_id: operationId,
+    ...envelope,
+    authority_claim: authorityClaim,
+  });
+}
+
+const SNAPSHOT_EVIDENCE = Object.freeze([
+  "consistency", "digest", "integrity", "operation_fence", "schema_identity", "size", "store_identity",
+]);
+
+function validateSnapshotEnvelope(request) {
+  if (request.operation_kind !== "snapshot") {
+    throw new ConfigurationError("operation_kind_invalid", "snapshot_store requires operation_kind snapshot.");
+  }
+  if (!nonEmpty(request.purpose)) {
+    throw new ConfigurationError("operation_purpose_required", "snapshot_store requires a non-empty purpose.");
+  }
+  if (!nonEmpty(request.store_id)) {
+    throw new ConfigurationError("store_id_invalid", "snapshot_store requires the exact affected store_id.");
+  }
+  exactObject(request.safety, ["store_class", "authorization_reference"], "disposable_store_authorization_required", "safety");
+  if (request.safety.store_class !== "disposable" || !nonEmpty(request.safety.authorization_reference)) {
+    throw new ConfigurationError("disposable_store_authorization_required", "This delivery slice permits snapshots only for an explicitly authorized disposable store.");
+  }
+  exactObject(request.expected, ["store_id", "schema", "protocol", "operation_fence"], "snapshot_preconditions_invalid", "expected");
+  if (!nonEmpty(request.expected.store_id)
+    || !Number.isInteger(request.expected.operation_fence)
+    || request.expected.operation_fence < 1) {
+    throw new ConfigurationError("snapshot_preconditions_invalid", "expected store_id and positive operation_fence are required.");
+  }
+  exactObject(request.snapshot, ["path", "owner", "retention"], "snapshot_target_invalid", "snapshot");
+  if (!nonEmpty(request.snapshot.path) || !path.isAbsolute(request.snapshot.path) || !nonEmpty(request.snapshot.owner)
+    || request.snapshot.owner.length > 256 || request.snapshot.retention !== "retain_until_explicit_deletion") {
+    throw new ConfigurationError(
+      "snapshot_target_invalid",
+      "snapshot must name an absolute target, bounded explicit owner, and retain_until_explicit_deletion retention.",
+    );
+  }
+  if (request.canonical_state_effect !== "none") {
+    throw new ConfigurationError("canonical_state_effect_invalid", "snapshot_store must explicitly declare no canonical-state effect.");
+  }
+  if (!Array.isArray(request.requested_postcondition_evidence)
+    || [...request.requested_postcondition_evidence].sort().join("\0") !== SNAPSHOT_EVIDENCE.join("\0")) {
+    throw new ConfigurationError("postcondition_evidence_invalid", "snapshot_store requires the exact L08-W01 snapshot evidence set.");
+  }
+  return {
+    operation_kind: "snapshot",
+    purpose: request.purpose.trim(),
+    store_id: request.store_id.trim(),
+    safety: { store_class: "disposable", authorization_reference: request.safety.authorization_reference.trim() },
+    expected: {
+      store_id: request.expected.store_id.trim(),
+      schema: validateSchemaCondition(request.expected.schema, "expected.schema"),
+      protocol: validateProtocolCondition(request.expected.protocol, "expected.protocol"),
+      operation_fence: request.expected.operation_fence,
+    },
+    snapshot: {
+      path: request.snapshot.path,
+      owner: request.snapshot.owner.trim(),
+      retention: "retain_until_explicit_deletion",
+    },
+    canonical_state_effect: "none",
+    requested_postcondition_evidence: [...request.requested_postcondition_evidence],
+  };
+}
+
+function snapshotRequestDigest(operationId, envelope, authorityClaim) {
+  return digest({
+    protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
+    operation: "snapshot_store",
     operation_id: operationId,
     ...envelope,
     authority_claim: authorityClaim,
@@ -1150,6 +1222,270 @@ async function migrateStore(request) {
   return success("migrate_store", settled.result);
 }
 
+function snapshotTerminal(outcome, code, failureClass, retryDisposition) {
+  return {
+    outcome,
+    code,
+    failure_class: failureClass,
+    retry_disposition: retryDisposition,
+    canonical_state_effect: "none",
+  };
+}
+
+function snapshotIntentPath(snapshotPath) {
+  return `${snapshotPath}.intent.json`;
+}
+
+async function readMatchingSnapshotIntent(snapshotPath, operationId, requestDigest) {
+  try {
+    const intent = JSON.parse(await readFile(snapshotIntentPath(snapshotPath), "utf8"));
+    return intent?.version === 1 && intent.operation_id === operationId && intent.request_digest === requestDigest
+      ? intent
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function removeMatchingSnapshotIntent(snapshotPath, operationId, requestDigest) {
+  if (await readMatchingSnapshotIntent(snapshotPath, operationId, requestDigest)) {
+    await rm(snapshotIntentPath(snapshotPath), { force: true });
+  }
+}
+
+function snapshotCustody(envelope) {
+  return {
+    owner: envelope.snapshot.owner,
+    retention: envelope.snapshot.retention,
+    authoritative: false,
+    cleanup: "delete_only_after_explicit_owner_authorization",
+  };
+}
+
+function decorateSnapshot(snapshot, envelope, recoveredAfterInterruption) {
+  return {
+    ...snapshot,
+    consistency: {
+      mode: "sqlite_transactionally_consistent",
+      method: snapshot.method,
+    },
+    integrity: { quick_check: "ok", foreign_key_violations: 0 },
+    custody: snapshotCustody(envelope),
+    recovered_after_interruption: recoveredAfterInterruption,
+  };
+}
+
+async function settleSnapshotResult(sqliteBinary, storePath, state, operationId, requestDigest, authorityClaim, body) {
+  const settledAt = new Date().toISOString();
+  const resultDigest = digest({
+    terminal: body.terminal,
+    preconditions: body.preconditions,
+    snapshot: body.snapshot ?? null,
+    recovery: body.recovery ?? null,
+  });
+  const receipt = {
+    operation_id: operationId,
+    operation_kind: "snapshot",
+    store_id: state.metadata.store_id,
+    request_digest: requestDigest,
+    outcome: body.terminal.outcome,
+    result_digest: resultDigest,
+    settled_at: settledAt,
+    failure_class: body.terminal.failure_class,
+    retry_disposition: body.terminal.retry_disposition,
+    operation_fence: state.operation_fence + 1,
+  };
+  const result = {
+    status: "settled",
+    terminal: body.terminal,
+    preconditions: body.preconditions,
+    ...(body.snapshot ? { snapshot: body.snapshot } : {}),
+    ...(body.recovery ? { recovery: body.recovery } : {}),
+    receipt,
+  };
+  let settled;
+  try {
+    settled = await settleStoreOperationReceipt(sqliteBinary, storePath, {
+      receipt,
+      authorityClaim,
+      result,
+      expectedOperationFence: state.operation_fence,
+    });
+  } catch (error) {
+    settled = await readStoreOperationReceipt(sqliteBinary, storePath, operationId).catch(() => null);
+    if (!settled) throw error;
+  }
+  if (!settled) return null;
+  return settled.operation_kind === "snapshot" && settled.request_digest === requestDigest ? settled : false;
+}
+
+async function snapshotStore(request) {
+  const operationId = validateOperationId(request.operation_id);
+  const authorityClaim = validateAuthorityClaim(request.authority_claim, { requireHumanConfirmation: true });
+  const envelope = validateSnapshotEnvelope(request);
+  if (envelope.store_id !== envelope.expected.store_id) {
+    return migrationPreconditionFailure(
+      "expected_store_mismatch",
+      "The affected store and expected store identities do not match.",
+      { affected_store_id: envelope.store_id, expected_store_id: envelope.expected.store_id },
+    );
+  }
+
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const { configuration, sqliteBinary } = prepared;
+  const storePath = configuration.sqlite.store_path;
+  const storeReal = await realpath(storePath).catch(() => null);
+  const snapshotParent = await realpath(path.dirname(envelope.snapshot.path)).catch(() => null);
+  if (!snapshotParent || (storeReal && path.resolve(envelope.snapshot.path) === storeReal)) {
+    return migrationPreconditionFailure(
+      "snapshot_target_invalid",
+      "The exact snapshot target must be distinct from the named store and under an existing directory.",
+      { snapshot_parent_available: Boolean(snapshotParent), distinct_from_store: path.resolve(envelope.snapshot.path) !== storeReal },
+    );
+  }
+
+  const state = await inspectStore(sqliteBinary, storePath);
+  if (state.status !== "available") return storeStateFailure(state);
+  if (envelope.store_id !== state.metadata.store_id) {
+    return migrationPreconditionFailure(
+      "expected_store_mismatch",
+      "The configured store does not have the exact authorized store identity.",
+      { expected_store_id: envelope.store_id, observed_store_id: state.metadata.store_id },
+    );
+  }
+
+  const requestDigest = snapshotRequestDigest(operationId, envelope, authorityClaim);
+  const existing = await readStoreOperationReceipt(sqliteBinary, storePath, operationId);
+  if (existing) {
+    if (existing.operation_kind !== "snapshot" || existing.request_digest !== requestDigest) {
+      return failure("idempotency_mismatch", "operation_id is already settled for a different canonical request.", {
+        failureClass: "idempotency_mismatch",
+        retryDisposition: RETRY_DISPOSITIONS.NEVER,
+        correctiveGuidance: "Do not retry with this operation_id. Reconcile against the settled store-scoped receipt.",
+        evidence: { operation_id: operationId, settled_kind: existing.operation_kind },
+      });
+    }
+    await removeMatchingSnapshotIntent(envelope.snapshot.path, operationId, requestDigest);
+    return success("snapshot_store", existing.result);
+  }
+
+  const observed = {
+    store_id: state.metadata.store_id,
+    schema: { id: state.metadata.schema_id, version: state.metadata.schema_version },
+    protocol: { id: state.metadata.protocol_id, version: state.metadata.protocol_version },
+    operation_fence: state.operation_fence,
+  };
+  const preconditions = { expected: envelope.expected, observed, safety: envelope.safety };
+  let terminal = null;
+  if (canonicalJson(envelope.expected.schema) !== canonicalJson(observed.schema)) {
+    terminal = snapshotTerminal("rejected", "expected_schema_mismatch", "snapshot_precondition_failed", RETRY_DISPOSITIONS.NEVER);
+  } else if (canonicalJson(envelope.expected.protocol) !== canonicalJson(observed.protocol)) {
+    terminal = snapshotTerminal("rejected", "expected_protocol_mismatch", "snapshot_precondition_failed", RETRY_DISPOSITIONS.NEVER);
+  } else if (envelope.expected.operation_fence !== observed.operation_fence) {
+    terminal = snapshotTerminal("conflict", "expected_store_fence_mismatch", "snapshot_precondition_failed", RETRY_DISPOSITIONS.AFTER_RECONCILE);
+  }
+
+  const targetExists = await lstat(envelope.snapshot.path).then(() => true).catch(() => false);
+  const matchingIntent = targetExists
+    ? await readMatchingSnapshotIntent(envelope.snapshot.path, operationId, requestDigest)
+    : null;
+  if (!terminal && targetExists && !matchingIntent) {
+    terminal = snapshotTerminal("rejected", "snapshot_target_exists", "snapshot_precondition_failed", RETRY_DISPOSITIONS.NEVER);
+  }
+  if (terminal) {
+    const settled = await settleSnapshotResult(
+      sqliteBinary, storePath, state, operationId, requestDigest, authorityClaim,
+      { terminal, preconditions },
+    );
+    if (settled === false) {
+      return failure("idempotency_mismatch", "operation_id settled concurrently for a different request.", { failureClass: "idempotency_mismatch" });
+    }
+    if (!settled) {
+      return failure("store_operation_conflict", "The store operation fence changed before settlement.", {
+        failureClass: "snapshot_precondition_failed",
+        retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      });
+    }
+    return success("snapshot_store", settled.result);
+  }
+
+  let snapshot;
+  let recoveredAfterInterruption = false;
+  if (matchingIntent) {
+    try {
+      snapshot = await verifyExactStoreSnapshot(sqliteBinary, envelope.snapshot.path, envelope.expected);
+      recoveredAfterInterruption = true;
+    } catch (error) {
+      return failure("snapshot_recovery_mismatch", "The interrupted snapshot artifact no longer verifies against its exact request intent.", {
+        failureClass: "snapshot_execution_failure",
+        retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+        evidence: { error_code: error?.code ?? "snapshot_verification_failed", intent_path: snapshotIntentPath(envelope.snapshot.path) },
+      });
+    }
+  } else {
+    const intent = {
+      version: 1,
+      operation_id: operationId,
+      request_digest: requestDigest,
+      store_id: state.metadata.store_id,
+      snapshot_path: envelope.snapshot.path,
+      custody: snapshotCustody(envelope),
+    };
+    try {
+      await writeFile(snapshotIntentPath(envelope.snapshot.path), `${canonicalJson(intent)}\n`, { flag: "wx", mode: 0o600 });
+      snapshot = await createVerifiedStoreSnapshot(sqliteBinary, storePath, envelope.snapshot.path, envelope.expected);
+    } catch (error) {
+      const artifactRetained = await lstat(envelope.snapshot.path).then(() => true).catch(() => false);
+      if (!artifactRetained) {
+        await removeMatchingSnapshotIntent(envelope.snapshot.path, operationId, requestDigest);
+      }
+      return failure("snapshot_execution_failed", "The exact SQLite snapshot could not be created and verified; the source store remains canonical.", {
+        failureClass: "snapshot_execution_failure",
+        retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
+        evidence: {
+          error_code: error?.code ?? "snapshot_failed",
+          store_id: state.metadata.store_id,
+          artifact_retained: artifactRetained,
+          snapshot_path: envelope.snapshot.path,
+          intent_path: artifactRetained ? snapshotIntentPath(envelope.snapshot.path) : null,
+          custody: snapshotCustody(envelope),
+        },
+      });
+    }
+  }
+
+  if (process.env.CASEBOOK_PERSISTENCE_TEST_FAULT === "snapshot_after_snapshot_verified") {
+    process.kill(process.pid, "SIGKILL");
+  }
+
+  const decorated = decorateSnapshot(snapshot, envelope, recoveredAfterInterruption);
+  const successTerminal = snapshotTerminal("snapshotted", "snapshot_completed", null, RETRY_DISPOSITIONS.NEVER);
+  const body = {
+    terminal: successTerminal,
+    preconditions,
+    snapshot: decorated,
+    ...(recoveredAfterInterruption
+      ? { recovery: { disposition: "verified_snapshot_receipt_recovered", intent_matched: true } }
+      : {}),
+  };
+  const settled = await settleSnapshotResult(
+    sqliteBinary, storePath, state, operationId, requestDigest, authorityClaim, body,
+  );
+  if (settled === false) {
+    return failure("idempotency_mismatch", "operation_id settled concurrently for a different request.", { failureClass: "idempotency_mismatch" });
+  }
+  if (!settled) {
+    return failure("snapshot_receipt_unavailable", "The verified snapshot is retained but its durable receipt could not be settled.", {
+      failureClass: "snapshot_execution_failure",
+      retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
+      evidence: { snapshot: { path: decorated.path, sha256: decorated.sha256 }, custody: decorated.custody },
+    });
+  }
+  await removeMatchingSnapshotIntent(envelope.snapshot.path, operationId, requestDigest);
+  return success("snapshot_store", settled.result);
+}
+
 function validateLookupContext(context) {
   if (!context || typeof context !== "object"
     || !nonEmpty(context.view_id)
@@ -1206,7 +1542,7 @@ async function getStoreOperationReceipt(request) {
   // accepted exceptional operation kinds. Owner commit receipts are private
   // mechanical material and must be recovered only through a future typed
   // owner façade operation, not leaked through store-operation lookup.
-  if (!["initialize_store", "migration"].includes(receipt.operation_kind)
+  if (!["initialize_store", "migration", "snapshot"].includes(receipt.operation_kind)
     && !receipt.operation_kind.startsWith("view_policy.")) {
     return success("get_store_operation_receipt", { status: "not_visible" });
   }
@@ -1221,6 +1557,7 @@ export async function invokeExceptionalOperation(request) {
   try {
     if (request.operation === "initialize_store") return await initializeStore(request);
     if (request.operation === "migrate_store") return await migrateStore(request);
+    if (request.operation === "snapshot_store") return await snapshotStore(request);
     if (request.operation === "get_store_operation_receipt") return await getStoreOperationReceipt(request);
     if (request.operation === "view_policy.create") return await createViewPolicy(request);
     if (request.operation === "view_policy.revise") return await reviseViewPolicy(request);
