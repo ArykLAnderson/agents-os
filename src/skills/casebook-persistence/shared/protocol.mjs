@@ -33,6 +33,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "case.tombstone.commit",
   "case.purge.inspect",
   "case.purge.plan",
+  "case.purge.execute",
   "case.export.fragment",
   "case.markdown.render",
   "case.markdown.stage_reconciliation",

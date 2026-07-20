@@ -46,7 +46,7 @@ try {
     result = await invokeProjectionOperation(request);
   } else if (["export.preflight", "export.finalize"].includes(request.operation)) {
     result = await invokeExportOperation(request);
-  } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.purge.plan", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse", "case.discovery.hydrate"].includes(request.operation)) {
+  } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.purge.plan", "case.purge.execute", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse", "case.discovery.hydrate"].includes(request.operation)) {
     result = await invokeCaseOperation(request);
   } else if (["frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read", "frame.export.fragment", "frame.discovery.read", "frame.discovery.hydrate", "frame.disposition.read", "frame.history", "frame.list", "frame.legacy.prepare_reconciliation"].includes(request.operation)) {
     result = await invokeFrameOperation(request);
