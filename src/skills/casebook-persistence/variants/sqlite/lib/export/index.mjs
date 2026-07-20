@@ -21,12 +21,22 @@ const DESTINATIONS = new Map([
 const AUDIENCES = new Set(["private", "internal", "restricted", "portable", "public"]);
 const REQUEST_FIELDS = new Set([
   "protocol", "operation", "request_version", "operation_id", "store_id", "context",
-  "authority_claim", "mode", "audience", "destination", "owners", "configuration",
+  "authority_claim", "mode", "audience", "destination", "owners", "document_trace", "configuration",
 ]);
 const CONTEXT_FIELDS = new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]);
 const AUTHORITY_FIELDS = new Set(["human_authorized", "acting_role", "authority_basis", "human_confirmation_reference", "causation", "correlation", "session"]);
 const OWNER_FIELDS = new Set(["kind", "id", "requirement", "revision_id", "evidence_selection"]);
 const DESTINATION_FIELDS = new Set(["classification", "temporary_path", "final_path"]);
+const DOCUMENT_TRACE_FIELDS = new Set(["trace_schema", "document", "claims", "digest"]);
+const DOCUMENT_FIELDS = new Set(["id", "revision_id"]);
+const DOCUMENT_CLAIM_FIELDS = new Set(["claim_id", "text", "text_digest", "consequence_classification", "evidence"]);
+const DOCUMENT_EVIDENCE_FIELDS = new Set([
+  "owner_id", "source_id", "evidence_id", "evidence_version_id", "evidence_digest", "reader_locator", "locator_digest",
+]);
+const READER_LOCATOR_FIELDS = new Set(["kind", "uri", "audience", "version_ref", "digest"]);
+const CONSEQUENCE_CLASSIFICATIONS = new Set(["consequential", "nonconsequential"]);
+const MAX_DOCUMENT_CLAIMS = 256;
+const MAX_CLAIM_EVIDENCE = 256;
 const FRAGMENT_SCHEMAS = Object.freeze({ case: "case-owner-export-fragment@3", frame: "frame-owner-export-fragment@1" });
 const SEMANTIC_PREDICATES = new Set(["depends-on", "depends_on", "requires", "governed-by", "governed_by", "implements", "realizes"]);
 const MAX_OWNERS = 64;
@@ -64,6 +74,51 @@ function codepointCompare(left, right) {
 
 function typedRevision(kind, revisionId) {
   return `${kind}-revision:${revisionId.slice(revisionId.indexOf(":") + 1)}`;
+}
+
+function typedId(value, prefix) {
+  return new RegExp(`^${prefix}:${UUID}$`).test(value ?? "");
+}
+
+function validateDocumentTrace(trace) {
+  exact(trace, DOCUMENT_TRACE_FIELDS, "document_trace");
+  if (trace.trace_schema !== "document-claim-trace@1" || !DIGEST.test(trace.digest ?? "")) {
+    throw new ExportError("export.request_invalid", "document_trace must use the supported schema and a lowercase sha256 digest.");
+  }
+  exact(trace.document, DOCUMENT_FIELDS, "document_trace.document");
+  if (!typedId(trace.document.id, "document") || !typedId(trace.document.revision_id, "document-revision")) {
+    throw new ExportError("export.request_invalid", "document_trace must identify one Document revision.");
+  }
+  if (!Array.isArray(trace.claims) || trace.claims.length < 1 || trace.claims.length > MAX_DOCUMENT_CLAIMS) {
+    throw new ExportError("export.request_invalid", `document_trace.claims must contain 1 to ${MAX_DOCUMENT_CLAIMS} claims.`);
+  }
+  const claimIds = new Set();
+  for (const [claimIndex, claim] of trace.claims.entries()) {
+    exact(claim, DOCUMENT_CLAIM_FIELDS, `document_trace.claims[${claimIndex}]`);
+    if (!typedId(claim.claim_id, "claim") || claimIds.has(claim.claim_id) || !nonEmpty(claim.text, 16_384)
+      || !DIGEST.test(claim.text_digest ?? "") || !CONSEQUENCE_CLASSIFICATIONS.has(claim.consequence_classification)
+      || !Array.isArray(claim.evidence) || claim.evidence.length > MAX_CLAIM_EVIDENCE) {
+      throw new ExportError("export.request_invalid", `document_trace.claims[${claimIndex}] is structurally invalid.`);
+    }
+    claimIds.add(claim.claim_id);
+    const evidenceKeys = new Set();
+    for (const [evidenceIndex, evidence] of claim.evidence.entries()) {
+      exact(evidence, DOCUMENT_EVIDENCE_FIELDS, `document_trace.claims[${claimIndex}].evidence[${evidenceIndex}]`);
+      exact(evidence.reader_locator, READER_LOCATOR_FIELDS, `document_trace.claims[${claimIndex}].evidence[${evidenceIndex}].reader_locator`);
+      const locator = evidence.reader_locator;
+      const evidenceKey = `${evidence.owner_id}\0${evidence.source_id}\0${evidence.evidence_id}`;
+      if (!typedId(evidence.owner_id, "case") || !typedId(evidence.source_id, "source")
+        || !typedId(evidence.evidence_id, "evidence") || !typedId(evidence.evidence_version_id, "case-version")
+        || !DIGEST.test(evidence.evidence_digest ?? "") || !DIGEST.test(evidence.locator_digest ?? "")
+        || evidenceKeys.has(evidenceKey) || !nonEmpty(locator.kind, 64) || !nonEmpty(locator.uri, 4_096)
+        || !AUDIENCES.has(locator.audience) || (locator.version_ref != null && !nonEmpty(locator.version_ref, 512))
+        || (locator.digest != null && !DIGEST.test(locator.digest))) {
+        throw new ExportError("export.request_invalid", `document_trace.claims[${claimIndex}].evidence[${evidenceIndex}] is structurally invalid.`);
+      }
+      evidenceKeys.add(evidenceKey);
+    }
+  }
+  return structuredClone(trace);
 }
 
 function validateRequest(request) {
@@ -115,7 +170,8 @@ function validateRequest(request) {
       || owner.evidence_selection.some((item) => !new RegExp(`^evidence:${UUID}$`).test(item)))) throw new ExportError("export.request_invalid", "evidence_selection must contain typed evidence identities.");
     return { ...owner, evidence_selection: owner.evidence_selection == null ? undefined : [...new Set(owner.evidence_selection)].sort(codepointCompare) };
   }).sort((left, right) => codepointCompare(left.kind, right.kind) || codepointCompare(left.id, right.id));
-  return { owners, temporary, final };
+  const documentTrace = request.document_trace == null ? null : validateDocumentTrace(request.document_trace);
+  return { owners, temporary, final, documentTrace };
 }
 
 async function currentCorpus(request, kind) {
@@ -180,6 +236,108 @@ async function renderOwnerFragment(request, selection, snapshotOwner) {
   const violation = verifyFragment(request, selection, response.result.fragment, snapshotOwner);
   if (violation) return { status: "blocked", reason: violation, fragment: response.result.fragment };
   return { status: response.result.fragment.status, reason: response.result.fragment.status, fragment: response.result.fragment };
+}
+
+function readerLocatorSafe(locator, audience) {
+  if (audienceRank(locator.audience) < audienceRank(audience)) return false;
+  let parsed;
+  try {
+    parsed = new URL(locator.uri);
+  } catch {
+    return false;
+  }
+  if (["file:", "data:", "javascript:", "blob:", "about:"].includes(parsed.protocol) || parsed.username || parsed.password) return false;
+  if (["http:", "https:"].includes(parsed.protocol)) {
+    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
+      || host === "::1" || host === "0.0.0.0" || host.startsWith("127.") || host.startsWith("10.")
+      || host.startsWith("192.168.") || host.startsWith("169.254.")) return false;
+    const match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host);
+    if (match && Number(match[1]) === 172 && Number(match[2]) >= 16 && Number(match[2]) <= 31) return false;
+  }
+  return true;
+}
+
+function audienceRank(value) {
+  return ["private", "internal", "restricted", "portable", "public"].indexOf(value);
+}
+
+function verifyDocumentTrace(request, trace, rendered) {
+  if (!trace) return { summary: null, blockers: [] };
+  const blockers = [];
+  const documentOwner = { kind: "document", id: trace.document.id };
+  const addBlocker = (code, claimId = null) => blockers.push({
+    owner: documentOwner,
+    code,
+    reason: code,
+    ...(claimId == null ? {} : { source: `claims/${claimId}` }),
+  });
+  const { digest, ...traceCore } = trace;
+  if (mechanicalDigest(traceCore) !== digest) addBlocker("document_trace_digest_mismatch");
+
+  const caseFragments = new Map(rendered
+    .filter((item) => item.selection.kind === "case" && item.outcome.fragment)
+    .map((item) => [item.selection.id, item.outcome.fragment]));
+  const claimSummaries = [];
+  for (const claim of trace.claims) {
+    const claimBlockerCount = blockers.length;
+    if (sha256(Buffer.from(claim.text, "utf8")) !== claim.text_digest) {
+      addBlocker("document_claim_text_digest_mismatch", claim.claim_id);
+    }
+    if (claim.evidence.length === 0) {
+      if (claim.consequence_classification === "consequential") {
+        addBlocker("document_consequential_claim_evidence_missing", claim.claim_id);
+      }
+      claimSummaries.push({
+        claim_id: claim.claim_id,
+        text_digest: claim.text_digest,
+        consequence_classification: claim.consequence_classification,
+        evidence_count: 0,
+        status: claim.consequence_classification === "consequential"
+          ? "consequential_evidence_missing"
+          : "declared_nonconsequential_without_evidence",
+      });
+      continue;
+    }
+    for (const evidence of claim.evidence) {
+      const fragment = caseFragments.get(evidence.owner_id);
+      const source = fragment?.case?.sources?.find((item) => item.id === evidence.source_id);
+      const member = source?.fragments?.find((item) => item.id === evidence.evidence_id);
+      const exportedMember = fragment?.evidence?.fragments?.find((item) => item.source_id === evidence.source_id
+        && item.evidence_id === evidence.evidence_id);
+      if (!member || !exportedMember || exportedMember.version_id !== evidence.evidence_version_id) {
+        addBlocker("document_evidence_not_in_export_fragment", claim.claim_id);
+      } else if (exportedMember.digest !== evidence.evidence_digest) {
+        addBlocker("document_evidence_digest_mismatch", claim.claim_id);
+      }
+      if (!readerLocatorSafe(evidence.reader_locator, request.audience)) {
+        addBlocker("document_reader_locator_unsafe", claim.claim_id);
+      }
+      const locatorMember = source?.version?.locators?.some((locator) => canonicalJson(locator) === canonicalJson(evidence.reader_locator));
+      if (!locatorMember) addBlocker("document_reader_locator_not_in_export_fragment", claim.claim_id);
+      if (mechanicalDigest(evidence.reader_locator) !== evidence.locator_digest) {
+        addBlocker("document_reader_locator_digest_mismatch", claim.claim_id);
+      }
+    }
+    claimSummaries.push({
+      claim_id: claim.claim_id,
+      text_digest: claim.text_digest,
+      consequence_classification: claim.consequence_classification,
+      evidence_count: claim.evidence.length,
+      status: blockers.length === claimBlockerCount ? "evidence_verified" : "evidence_invalid",
+    });
+  }
+  return {
+    summary: {
+      trace_schema: trace.trace_schema,
+      document: trace.document,
+      trace_digest: trace.digest,
+      status: blockers.length ? "blocked" : "verified",
+      semantic_classification_performed: false,
+      claims: claimSummaries,
+    },
+    blockers,
+  };
 }
 
 function semanticDependencies(fragment) {
@@ -295,6 +453,9 @@ async function buildPreflight(request) {
     rendered.push({ selection, outcome, admission, snapshotOwner });
   }
 
+  const documentTraceValidation = verifyDocumentTrace(request, validated.documentTrace, rendered);
+  blockers.push(...documentTraceValidation.blockers);
+
   const dependencies = rendered.flatMap(({ outcome }) => semanticDependencies(outcome.fragment))
     .map((dependency) => dependencyState(request, dependency, snapshot))
     .sort((left, right) => codepointCompare(left.source_owner.kind, right.source_owner.kind)
@@ -338,6 +499,12 @@ async function buildPreflight(request) {
       file,
     };
   });
+  if (validated.documentTrace) {
+    const bytes = Buffer.from(`${canonicalJson(validated.documentTrace)}\n`, "utf8");
+    const file = { path: "document/claim-trace.json", sha256: sha256(bytes), bytes: bytes.length };
+    filePayloads.push({ ...file, bytesValue: bytes });
+    documentTraceValidation.summary.file = file;
+  }
   blockers.sort(blockerSort);
   const manifestCore = {
     manifest_schema: "casebook-logical-export-manifest@1",
@@ -350,6 +517,7 @@ async function buildPreflight(request) {
     audience: request.audience,
     applied_policy: policyFor(request),
     owners: ownerEntries,
+    ...(documentTraceValidation.summary == null ? {} : { document_trace: documentTraceValidation.summary }),
     dependencies,
     blockers,
     authority: { export_preflight: "human_authorized", finalization: "not_granted", publication: "not_granted", canonical_mutation: "not_granted" },
@@ -382,6 +550,7 @@ async function buildPreflight(request) {
   try {
     await mkdir(validated.temporary, { mode: 0o700 });
     await mkdir(path.join(validated.temporary, "fragments"), { mode: 0o700 });
+    if (validated.documentTrace) await mkdir(path.join(validated.temporary, "document"), { mode: 0o700 });
     for (const file of filePayloads) await writeFile(path.join(validated.temporary, file.path), file.bytesValue, { mode: 0o600, flag: "wx" });
     const manifestBytes = Buffer.from(`${canonicalJson(manifest)}\n`, "utf8");
     await writeFile(path.join(validated.temporary, "manifest.json"), manifestBytes, { mode: 0o600, flag: "wx" });
