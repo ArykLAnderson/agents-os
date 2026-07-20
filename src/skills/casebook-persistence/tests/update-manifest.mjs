@@ -24,6 +24,7 @@ const assetDefinitions = [
   ["sqlite-common-subset", "variants/sqlite/lib/common/index.mjs", "module"],
   ["exceptional-operations", "variants/sqlite/lib/operations/index.mjs", "module"],
   ["sqlite-schema", "variants/sqlite/sql/schema-v1.sql", "sql"],
+  ["sqlite-migration-v2", "variants/sqlite/migrations/0002-migration-snapshot-evidence.sql", "sql"],
   ["sqlite-migrations", "variants/sqlite/migrations/manifest.json", "migration_manifest"],
   ["sqlite-runtime", "variants/sqlite/manifests/runtime.json", "runtime_manifest"],
 ];

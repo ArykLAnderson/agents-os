@@ -15,13 +15,14 @@
     "id": "casebook-persistence-sqlite",
     "version": 1,
     "compatible_versions": [
-      1
+      1,
+      2
     ],
     "store_initialization": "explicit_human_authorized"
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "d6ebbbbef36bae83b5bcfb7e1f344468a6e06938af13719c88117604c5c0425d"
+    "sha256": "32a862625143e7462569712c7e03af97f84b2d80dbd625234ec48e508c872067"
   },
   "entrypoints": [
     {
@@ -73,7 +74,7 @@
       "initialize_store",
       "migration"
     ],
-    "migration_execution": "L07-W01 envelope and terminal settlement only; snapshot-first schema execution remains unavailable until L07-W02",
+    "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -103,7 +104,7 @@
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "events/checkpoints/snapshots/global-search",
-    "snapshot-first migration execution",
+    "general-purpose and non-disposable migration",
     "backup",
     "restore",
     "purge"
@@ -185,7 +186,7 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "fc39dfdbe125b00f561d0f1488c57e250c78fc0a2bef768360d79cc04d05f2b2"
+      "sha256": "338e2cb81d1c56ef91e7f320da4af5790b00fd7df96337d52d7a7bc8e3938319"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -215,7 +216,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "e35d6df08d4608f7f8723aab000c188d21d83f963504951f0953e990addab0e4"
+      "sha256": "f89f5e9c0598f6bd1f8333bf8c1b3814eda1aef4da85d6522e70f8e62f41b56a"
     },
     {
       "id": "sqlite-schema",
@@ -224,16 +225,22 @@
       "sha256": "5ca739b03f0a2de54bb1f038d812dcfc9244355eef48e93ef1e3f0422ee6c1a3"
     },
     {
+      "id": "sqlite-migration-v2",
+      "path": "variants/sqlite/migrations/0002-migration-snapshot-evidence.sql",
+      "kind": "sql",
+      "sha256": "d275a9d8ff63c34bce4bc3bed336d34d2a032976591b816fdd36887b35e2419a"
+    },
+    {
       "id": "sqlite-migrations",
       "path": "variants/sqlite/migrations/manifest.json",
       "kind": "migration_manifest",
-      "sha256": "c9bd8e52c709b833f239b610df4d2359a0e4a8eee422c24261dc0e665dfa6711"
+      "sha256": "05f93ed0aaf46586c7f9656a30409f843691243382ccf4defbcb1c9503b0a0dd"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "cfe32c324ae04e6c7c29d791065bef4bd211aedf06aa4126cb00bfb15b02ddca"
+      "sha256": "9249b34f8ee72ac3cccec0b80fda1b15c84da4adbac1e8f1324bee68762be50a"
     }
   ]
 }

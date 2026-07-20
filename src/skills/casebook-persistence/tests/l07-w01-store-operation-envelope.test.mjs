@@ -10,6 +10,8 @@ import { selectCompatibleSqliteBinary } from "./sandbox-harness.mjs";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const entrypoint = path.join(packageRoot, "variants/sqlite/bin/casebook-persistence.mjs");
 const protocol = { id: "casebook-persistence-json", version: 1 };
+const packageManifest = JSON.parse(await readFile(path.join(packageRoot, "manifest.json"), "utf8"));
+const assetDigest = (id) => packageManifest.assets.find((asset) => asset.id === id).sha256;
 
 function execFileWithInput(file, args, options, input) {
   return new Promise((resolve, reject) => {
@@ -80,24 +82,39 @@ function migrationRequest(storePath, sqliteBinary, initialization, operationId) 
     operation_kind: "migration",
     purpose: "upgrade one named disposable test store",
     store_id: initialization.store_id,
+    safety: {
+      store_class: "disposable",
+      authorization_reference: "disposable-authorization:l07-w01",
+    },
     authority_claim: structuredClone(authorityClaim),
     expected: {
       store_id: initialization.store_id,
       schema: { id: "casebook-persistence-sqlite", version: 1 },
+      protocol,
+      assets: {
+        schema_asset_sha256: initialization.schema.asset_sha256,
+        migration_manifest_sha256: initialization.schema.migration.manifest_sha256,
+      },
       operation_fence: 1,
     },
     target: {
       schema: { id: "casebook-persistence-sqlite", version: 2 },
+      protocol,
     },
     migration: {
-      id: "0002-synthetic-envelope-target",
+      id: "0002-migration-snapshot-evidence",
       from_version: 1,
       to_version: 2,
-      schema_asset_sha256: "a".repeat(64),
-      manifest_sha256: "b".repeat(64),
+      schema_asset_sha256: assetDigest("sqlite-migration-v2"),
+      manifest_sha256: assetDigest("sqlite-migrations"),
+    },
+    snapshot: {
+      path: `${storePath}.${operationId.replaceAll(":", "-")}.snapshot.sqlite3`,
+      on_success: "delete",
+      on_failure: "retain",
     },
     canonical_state_effect: "schema-change",
-    requested_postcondition_evidence: ["schema_identity", "integrity"],
+    requested_postcondition_evidence: ["schema_identity", "protocol_identity", "asset_identity", "integrity", "healthy_exposure"],
     configuration: configuration(storePath, sqliteBinary),
   };
 }
@@ -129,6 +146,12 @@ test("migrate_store envelope requires explicit human confirmation and exact name
     assert.equal(authorityRejected.exitCode, 2);
     assert.equal(authorityRejected.json.failure.class, "authority_required");
     assert.equal(authorityRejected.json.failure.code, "human_confirmation_reference_required");
+
+    const missingDisposableAuthorization = migrationRequest(storePath, sqliteBinary, initialization, "operation:migration:missing-disposable-authorization");
+    delete missingDisposableAuthorization.safety;
+    const disposableRejected = await invoke(root, missingDisposableAuthorization);
+    assert.equal(disposableRejected.exitCode, 2);
+    assert.equal(disposableRejected.json.failure.code, "disposable_store_authorization_required");
 
     const wrongStore = migrationRequest(storePath, sqliteBinary, initialization, "operation:migration:wrong-store");
     wrongStore.store_id = "store:00000000-0000-4000-8000-000000000000";
@@ -170,7 +193,7 @@ test("migrate_store envelope requires explicit human confirmation and exact name
   }
 });
 
-test("migrate_store envelope durably classifies the W02 execution boundary and exact replay", async () => {
+test("migrate_store envelope durably settles verified W02 execution and exact replay", async () => {
   const sqliteBinary = await selectCompatibleSqliteBinary();
   const root = await mkdtemp(path.join(os.tmpdir(), "casebook-persistence-l07-w01-settle-"));
   try {
@@ -180,11 +203,11 @@ test("migrate_store envelope durably classifies the W02 execution boundary and e
     assert.equal(first.exitCode, 0, first.stderr);
     assert.equal(first.json.result.status, "settled");
     assert.deepEqual(first.json.result.terminal, {
-      outcome: "blocked",
-      code: "migration_execution_not_available",
-      failure_class: "operation_unsupported",
+      outcome: "migrated",
+      code: "migration_completed",
+      failure_class: null,
       retry_disposition: "never",
-      canonical_state_effect: "none",
+      canonical_state_effect: "schema-change",
     });
     assert.equal(first.json.result.receipt.operation_kind, "migration");
     assert.equal(first.json.result.receipt.store_id, initialization.store_id);
@@ -210,7 +233,7 @@ test("migrate_store envelope durably classifies the W02 execution boundary and e
         (SELECT count(*) FROM schema_migrations) AS migrations,
         (SELECT count(*) FROM store_operation_receipts WHERE operation_kind = 'migration') AS migration_receipts,
         (SELECT operation_fence FROM store_fence) AS operation_fence;
-    `), { schema_version: 1, migrations: 1, migration_receipts: 1, operation_fence: 2 });
+    `), { schema_version: 2, migrations: 2, migration_receipts: 1, operation_fence: 2 });
   } finally {
     await rm(root, { recursive: true, force: true });
     assert.equal(await stat(root).then(() => true).catch(() => false), false);
