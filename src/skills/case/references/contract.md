@@ -1,6 +1,6 @@
 # Case Contract
 
-One Case is one Markdown file at `.casebook/cases/<case-id>.md`.
+One Case is one complete logical aggregate selected under one persistence authority. Its immutable stable ID defines identity. Under file-authoritative Markdown, the selected connector materializes that aggregate as an independently readable `.casebook/cases/<case-id>.md` dossier and performs complete atomic replacement; this path is not a direct-write interface.
 
 ```markdown
 ---
@@ -38,7 +38,9 @@ relationships:
 - Scope: <material qualification or exclusion>
 ```
 
-`title`, `summary`, Scope, Knowledge, and Sources are mandatory. The immutable ID defines identity; preserve old titles as aliases when useful.
+`title`, `summary`, Scope, Knowledge, and Sources are mandatory semantic content. The Markdown above is a readable authoring projection, not permission to write the authority file. Assemble the connector request as one complete typed Case aggregate: Case profile and provenance, aliases, facets, knowledge entries, sources and evidence fragments, relationships, and references. Every family has a stable typed ID; keep `CK-001` and `SRC-001` as human-readable display labels. Preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
+
+The selected connector controls physical rendering and may include stricter normalized fields than this semantic projection. Read the current aggregate through `case.read`, validate it here, then use `case.create` or `case.commit_revision` as specified by the persistence procedure. Never reconstruct an update from a partial Markdown excerpt.
 
 ## Knowledge Integrity
 
