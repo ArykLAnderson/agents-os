@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "716c8a4c6e9d35024b42a897561fc826199984841c5769b7f0ebae270f146712"
+    "sha256": "1b413ec5b3066a33437bf24751c759a161a25587d99fdd9f52c510a7a714c1a7"
   },
   "entrypoints": [
     {
@@ -56,6 +56,7 @@
     "reconciliation_snapshot.finish",
     "impact.project",
     "integrity.observe",
+    "projection.rebuild",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -92,6 +93,7 @@
       "migration",
       "snapshot",
       "restore",
+      "projection_rebuild",
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
@@ -105,6 +107,7 @@
     "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     "integrity_observation": "read-only typed classification of canonical mechanical, disposable projection, semantic evidence, and asset/protocol anomalies with visible components, safety, evidence digest, allowed operations, and owner reconciliation handoff",
+    "projection_rebuild": "human-authorized replacement of disposable lexical, reverse-reference, staleness, and attention projections from immutable canonical revisions at one exact fence, verified before atomic selection with durable replay",
     "typed_read_target": "stable_owner_id_under_exact_active_view",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
     "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
@@ -204,7 +207,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "c9746eda10fdf05b399c9ef5978d9450042f9d784a45e54d14c631bd6131e9fa"
+      "sha256": "711a21ee16c808cffe3ca499e5cfae29ac9b86b36d4181cf5d7b6c6a5a5179b5"
     },
     {
       "id": "sqlite-diagnostics",
@@ -240,7 +243,13 @@
       "id": "sqlite-integrity-observation",
       "path": "variants/sqlite/lib/substrate/integrity.mjs",
       "kind": "module",
-      "sha256": "cbf0d38d0ae474a508f4b98e4bf8ec8a9a8256a3c46ba69ddca559e28501f445"
+      "sha256": "b3ae3043eb8e087c9af1673217332aca28e34e1d5f965dd9098f2cc5c9c3aaa1"
+    },
+    {
+      "id": "sqlite-projection-rebuild",
+      "path": "variants/sqlite/lib/substrate/projection.mjs",
+      "kind": "module",
+      "sha256": "dd82500127ee9b80b325142a5d9a91c94fd9b3019f2d1ccc471cbc736f81ed5d"
     },
     {
       "id": "sqlite-mechanical-envelope",
@@ -270,7 +279,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "8bb690e3c1ef36d025e26ad801fc6634fe0df3303b6c13896b43e0c32043d80c"
+      "sha256": "87cbfd0b53822608fbce30649281f86f124b9fbfa3e957bd1a09f6076fdc319c"
     },
     {
       "id": "sqlite-schema",
@@ -294,7 +303,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "54dca2ad3ec14d000ad32a3c44a8fb5de2c37e94eba51a0e113bebe2db99eebd"
+      "sha256": "583c532118fecac22e3fd56f6c9e65f10ba61c87b86105c0dc580032c75ca3c9"
     }
   ]
 }

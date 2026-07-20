@@ -14,7 +14,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 26);
+  assert.equal(check.manifest.assets.length, 27);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
@@ -35,6 +35,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "reconciliation_snapshot.finish",
     "impact.project",
     "integrity.observe",
+    "projection.rebuild",
     "case.discovery.hydrate",
     "frame.discovery.hydrate",
     "case.create",
@@ -72,6 +73,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
       "migration",
       "snapshot",
       "restore",
+      "projection_rebuild",
       "view_policy.create",
       "view_policy.revise",
       "view_policy.activate",
@@ -85,6 +87,7 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     consumer_observation: "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
     current_first_impact: "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
     integrity_observation: "read-only typed classification of canonical mechanical, disposable projection, semantic evidence, and asset/protocol anomalies with visible components, safety, evidence digest, allowed operations, and owner reconciliation handoff",
+    projection_rebuild: "human-authorized replacement of disposable lexical, reverse-reference, staleness, and attention projections from immutable canonical revisions at one exact fence, verified before atomic selection with durable replay",
     typed_read_target: "stable_owner_id_under_exact_active_view",
     case_revision_assembly: "complete canonical Case create and commit_revision",
     case_discovery: "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",

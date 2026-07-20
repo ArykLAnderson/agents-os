@@ -80,7 +80,7 @@ function resultFor(anomalyClass, components, evidence, options = {}) {
   const allowed = {
     none: ["integrity.observe", "ordinary_typed_operations", "snapshot_store"],
     canonical_mechanical_unsafe: ["diagnose", "integrity.observe", "restore_store"],
-    projection_only: ["integrity.observe", "ordinary_typed_canonical_operations", "snapshot_store"],
+    projection_only: ["integrity.observe", "ordinary_typed_canonical_operations", "projection.rebuild", "snapshot_store"],
     semantic_evidence: ["integrity.observe", ...new Set((options.owners ?? []).flatMap((owner) => [`${owner.kind}.read`, `${owner.kind}.commit_revision`]))],
     asset_protocol: ["diagnose", "integrity.observe"],
   }[anomalyClass];

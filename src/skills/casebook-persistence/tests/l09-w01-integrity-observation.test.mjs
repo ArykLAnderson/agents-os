@@ -174,7 +174,7 @@ async function runClassificationSuite(entrypoint, root, sqliteBinary, prefix) {
   assert.equal(projection.read_write_safety.affected_projection_reads, "unsafe");
   assert.deepEqual(projection.affected_visible_components.map((item) => item.component), ["current_projection"]);
   assert.equal(projection.owner_reconciliation_handoff, null);
-  assert.ok(!projection.allowed_operations.includes("projection.rebuild"), "W01 must not expose W02 rebuild");
+  assert.ok(projection.allowed_operations.includes("projection.rebuild"), "W02 exposes the bounded replacement operation");
 
   const semantic = await observeClass(entrypoint, root, sqliteBinary, `${prefix}-semantic`, "l09-semantic-evidence-corruption.sql", "semantic_evidence");
   assert.equal(semantic.read_write_safety.canonical_reads, "evidence_only_for_affected_owners");
