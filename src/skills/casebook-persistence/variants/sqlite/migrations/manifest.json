@@ -1,8 +1,18 @@
 {
   "migration_manifest_version": 1,
   "schema_id": "casebook-persistence-sqlite",
-  "schema_version": 1,
-  "implementation_status": "initialization_available",
+  "schema_version": 2,
+  "compatible_schema_versions": [
+    1,
+    2
+  ],
+  "protocol": {
+    "id": "casebook-persistence-json",
+    "compatible_versions": [
+      1
+    ]
+  },
+  "implementation_status": "snapshot_first_migration_available",
   "migrations": [
     {
       "id": "0001-initialize-store",
@@ -12,6 +22,18 @@
       "application_id": 1128419377,
       "ordinary_access_allowed": false,
       "requires_human_authority_claim": true
+    },
+    {
+      "id": "0002-migration-snapshot-evidence",
+      "from_version": 1,
+      "to_version": 2,
+      "asset": "0002-migration-snapshot-evidence.sql",
+      "application_id": 1128419377,
+      "ordinary_access_allowed": false,
+      "requires_human_authority_claim": true,
+      "requires_human_confirmation_reference": true,
+      "requires_verified_pre_snapshot": true,
+      "transactional": true
     }
   ]
 }
