@@ -1,24 +1,24 @@
 # Canonical Feature Atlas Representations
 
-These are readable semantic representations, not a rigid Markdown schema. A configured adapter may use sections, linked records, or native navigation when a fresh consumer can recover the same authority, ownership, currentness, prerequisites, proof, and limitations without knowing mutation order or Route scratch state.
+These are readable provider-neutral semantic representations, not a rigid Markdown schema. A configured storage adapter may use tracker sections, linked records, local files, or native navigation when Feature Atlas domain operations let a fresh consumer recover the same authority, ownership, currentness, prerequisites, proof, and limitations without knowing provider mechanics, mutation order, or Route scratch state.
 
 ## Identity And Ownership
 
 - Domain IDs are stable and independent of issue numbers, titles, repositories, paths, branches, and chats.
 - Allocate Atlas-scoped readable sequences: `FA-*` Atlas, `AIS-*` Index Segment, `FM-*` Map, `F-*` Feature, and `WI-*` Work Item. Numbers carry no meaning and never encode ownership. Legs are Feature-contained accepted structures by default and have no global ID kind.
-- Search open/closed records and comments exhaustively before allocation and immediately before creation. Never recycle an ID. A tentative allocation becomes durable only after successful create/reuse plus reread binds `(Map Decision, candidate-local label)` to it.
+- Search all active and retained records/history exposed by the configured adapter before allocation and immediately before creation. Never recycle an ID. A tentative allocation becomes durable only after successful create/reuse plus reread binds `(Map Decision, candidate-local label)` to it.
 - Every Map has exactly one Atlas owner. Every Feature has exactly one Map owner. Every implementation Work Item has exactly one Feature owner and one owning Leg label. Dependencies and convergence never change ownership.
 - Rehoming preserves identity only through its own trusted named-human Atlas Decision. Record old/new owner, consequence, and current Map Decision before changing the current projection.
 - Cross-Atlas references pair Atlas and entity identity, such as `FA-001 / F-014`, plus canonical locator.
-- Native tracker parentage, labels, index membership, and locators are navigation only.
+- Native tracker parentage, filenames/directories, Git structure, labels, index membership, and provider locators are navigation/storage only.
 
 Ordinarily one governing Blueprint identity has one stable Map. Referenced provider Blueprints retain separate Maps. Same-Blueprint/same-destination successors preserve `FM-*`; a fundamentally changed governing Blueprint or destination through split/combination/replacement requires a separate human/Blueprint disposition and new Map.
 
 ## Authority, History, And Current Projection
 
-The Issue body is a current operable projection. Comments/history retain immutable Decisions, corrections, material changes, and consequential observations. A fresh reader should not replay the entire history, but the body never outranks the current Map Decision.
+The adapter's current record is an operable projection. Its append-only/immutable history retains Decisions, corrections, material changes, and consequential observations. A fresh domain reader should not replay the entire history, but the current projection never outranks the current Map Decision. Private GitHub commonly uses an Issue body plus comments; a local adapter commonly uses mutable current files plus immutable Decision/content objects.
 
-Only a clearly headed `Decision — Map candidate` whose configured trusted Atlas provenance verifies the accepting human's identity and bounded authority for the exact Blueprint/Map question grants accepted planning authority. Display names, prose, issue creation, edits, labels, links, native relationships, agent output, reviews, status, and silence do not.
+Only a clearly headed `Decision — Map candidate` whose configured trusted Atlas provenance verifies the accepting human's identity and bounded authority for the exact Blueprint/Map question grants accepted planning authority. Display names, prose, record/file/issue creation, edits, labels, links, native relationships, Git commits, agent output, reviews, status, and silence do not.
 
 A Map Decision contains or losslessly references the complete accepted Map candidate; identifies the human/provenance/date, bounded question, exact choice/rationale, Map and exact Blueprint bindings, expected predecessor, current/superseding effect, consequences, and non-authority; and preserves the candidate-local labels used for mechanical stable-ID binding. Externally stored snapshots require a Decision-contained cryptographic binding over canonical bytes/content type and an immutable/versioned/durable/audience-compatible lifetime locator. Inline immutable Decision content needs no universal digest.
 
@@ -39,13 +39,13 @@ Use this minimum semantic form:
 - **Next step:** <mechanical publication/recovery action>
 ```
 
-Exactly one accepted Map Decision is current. A successor Decision itself names its exact predecessor, superseding reason, and current effect. Prior Decisions remain immutable and visible. During partial projection, the Decision remains semantic authority; bodies and children may truthfully report `publication incomplete` but must not contradict it.
+Exactly one accepted Map Decision is current. A successor Decision itself names its exact predecessor, superseding reason, and current effect. Prior Decisions remain immutable and visible. During partial projection, the Decision remains semantic authority; current records may truthfully report `publication incomplete` but must not contradict it.
 
-Before any material body change, append the applicable Decision, `Clarification`, `Material change`, or verified observation record, then mechanically refresh the body. Correct historical errors with a new correction; never silently rewrite accepted history. Reviewer output is advisory and cannot grant or change authority.
+Before any material current-projection change, append the applicable Decision, `Clarification`, `Material change`, or verified observation record, then mechanically refresh the projection. Correct historical errors with a new correction; never silently rewrite accepted history. Reviewer output is advisory and cannot grant or change authority.
 
 ## Atlas Root And Index
 
-Keep the Atlas root small: stable identity, configured private canonical destination, canonical locator, current Index Segment, enduring purpose, shared invariants, and direct Map ownership. Do not copy Map content/history into it.
+Keep the Atlas root record small: stable identity, configured private canonical destination, canonical locator, current Index Segment, enduring purpose, shared invariants, and direct Map ownership. Do not copy Map content/history into it.
 
 An `AIS-*` Index Segment is bounded navigation only. It names its Atlas, current/superseded state, adjacent segments, and Map links. Rotation is readability-driven; it never creates a new Atlas or changes Map ownership. Keep exactly one current segment under adapter policy.
 
@@ -156,6 +156,6 @@ Git, source repositories, tests, reports, PR providers, deployments, runtimes, a
 
 No proposed Map, Feature, Leg, or Work Item semantics are durably published before exact Map acceptance. The narrow Publisher may create only a minimum Map identity shell saying `no accepted candidate` when required to host the Decision. After Decision recording it projects identities and children in two passes, resolves all locators/edges, refreshes Feature then Map bodies, and rereads rendered history/state.
 
-A partial publication names the Decision, successful locators, failed operation, incomplete/pending records, and safe resume. Resume reuses durable bindings and never reposts the Decision, deletes successes, rolls IDs back, or overwrites semantic conflicts. Current body/child content remains projection, never a second accepted plan.
+A partial publication names the Decision, successful locators, failed operation, incomplete/pending records, and safe resume. Resume reuses durable bindings and never rerecords the Decision, deletes successes, rolls IDs back, or overwrites semantic conflicts. Current Map/Feature/Work Item records remain projections, never a second accepted plan.
 
 No representation action authorizes implementation, credentials, external effects, PR creation/landing, merge, deployment, spending, or resource creation.

@@ -70,7 +70,7 @@ Human acceptance precedes durable semantic publication. The immutable Atlas Map 
 
 Use [Successors and execution handoff](references/successors-handoff.md). Same-Blueprint/same-destination replanning preserves the stable `FM-*` identity and creates a complete successor Decision with one current Decision and immutable predecessor history. A new Map identity is reserved for a human/Blueprint disposition that fundamentally changes governing Blueprint identity or destination through split, combination, or replacement.
 
-Export only a typed, bounded projection of the current accepted Atlas plan: ready, with explicit limitations, or refusal. The handoff is not a readiness verdict, baseline lock, dispatch order, or implementation record. The installed `software-implementation` capability is a generic downstream coordinator and is not yet a proven conforming consumer of this Atlas handoff; do not omit Atlas identity, limitations, ownership, proof allocation, or successor checks to fit it.
+Export only a typed, bounded projection of the current accepted Atlas plan: ready, with explicit limitations, or refusal. The handoff is not a readiness verdict, baseline lock, dispatch order, or implementation record. A complete current `HandoffReady` or admissible `HandoffWithLimitations` may enter `software-implementation` only in explicit `atlas` mode with separate implementation/effect/PR/merge/deployment/landing authority. Summaries, historical/conflicted/incomplete handoffs, legacy Route packages, `HandoffRefusal`, and omitted authority remain fail-closed; never omit Atlas identity, limitations, ownership, proof allocation, or successor checks to fit a consumer.
 
 ## Stops And Non-Authority
 

@@ -1,6 +1,8 @@
-# Configured Private GitHub Issues
+# Configured Private GitHub Issues Adapter
 
-Use this adapter guidance only when private GitHub Issues is the configured canonical Feature Atlas. Domain identity, ownership, Decision authority, and projection semantics remain defined by [the canonical representations](issue-representations.md).
+Use this adapter only when private GitHub Issues is the configured canonical Feature Atlas. It conforms to [the storage adapter contract](storage-adapters.md); domain identity, ownership, Decision authority, currentness, handoff, and projection semantics remain defined by [the canonical representations](issue-representations.md).
+
+`gh` examples below are adapter-owned mechanics. Route, Software Implementation, and other domain consumers never invoke them or parse Issue records directly; they consume exact Feature Atlas domain operations and adapter receipts.
 
 ## Fail-Closed Capability And Destination Preflight
 
@@ -16,7 +18,7 @@ Until that evidence exists for the exact configured provider/account/repository,
 
 Obtain the exact `<owner>/<repository>` and expected visibility. The repository must be the configured dedicated private Issues repository, separate from source repositories. Never infer it from the current Git remote, create it for convenience, broaden visibility, or substitute another account.
 
-Before every authorized mutation session:
+Inside the configured adapter, before every authorized mutation session:
 
 ```sh
 gh repo view <owner>/<repository> --json nameWithOwner,visibility,hasIssuesEnabled,url
@@ -41,7 +43,7 @@ An allocated number remains tentative until successful create/reuse plus post-wr
 
 ## Narrow Recoverable Publisher
 
-Use prepared bodies/comments derived mechanically from the exact accepted Map Decision:
+The Publisher calls Feature Atlas domain mutation operations; this adapter implements them with prepared bodies/comments derived mechanically from the exact accepted Map Decision:
 
 ```sh
 gh issue create --repo <owner>/<repository> --title '<ID> — <name>' --body-file <prepared-body>
@@ -73,3 +75,5 @@ Do not repost the Decision, delete successful records, roll back/recycle IDs, cr
 ## Observations And Source Links
 
 GitHub text does not make a source fact true. Retain an observation only when the owning workflow/source authority initiates the bounded operation and the adapter verifies identity, authorization, provenance, locator/environment, audience, and integrity. Unverifiable results are `unknown`. Link to Git, tests, PRs, reports, deployments, and runtime/provider evidence rather than copying detailed facts or secrets.
+
+The adapter returns exact domain identities, immutable Decision comment/snapshot locators, rendered reread results, and receipts. Issue numbers, labels, native parentage, editable bodies, and `gh` output remain provider mechanics and never become the interface consumed by Route or Software Implementation.

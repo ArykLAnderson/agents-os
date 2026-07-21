@@ -21,7 +21,7 @@ Distinguish:
 - an accepted invalidator is verifiably triggered — preserve history/projection where unambiguous but suppress affected prerequisite/evidence/readiness claims; factual status may follow the already accepted rule, while semantic change requires a successor;
 - expected predecessor changes before successor Decision — candidate is stale and must be fully re-presented.
 
-Consumers cite the Decision they consumed and compare it with the current Map on admission, resume, dependency frontiers, effectful gates, and result. They stop or reconcile under separately accepted execution authority and never silently follow `latest`.
+Consumers cite the Decision they consumed and compare it with the current Map on admission, resume, dependency frontiers, effectful gates, and result. They perform those reads through exact Feature Atlas domain operations and the configured storage adapter—not provider commands, Issue parsing, file paths, or Git `HEAD`. They stop or reconcile under separately accepted execution authority and never silently follow `latest`.
 
 ## Typed Execution Handoff
 
@@ -33,6 +33,10 @@ Export from the exact current Map Decision as:
 
 The handoff contains Atlas/Map/current Decision locators; exact Blueprint bindings/coverage; Feature, Leg, WI identity/ownership/local-label mappings and Contracts; direct prerequisites and convergence owners; strategy, transition/migration/compatibility/cleanup, rejected alternatives, and invalidators; accepted proof/E2E/security profile; qualified Evidence References; authoritative source locators and live resolution/provenance/integrity results; publication status, successor impact, limitations, and explicit absent implementation/effect/PR/merge/deploy authorities.
 
-It is a bounded projection of planning authority—not a queue, operational graph, source baseline lock, dispatch order, readiness verdict, or execution record. Execution consumers may add repository baseline, worktree, branch, overlap, and effect details from their proper owners, but cannot change accepted behavior, Blueprint Contracts, ownership, prerequisites, convergence, or proof allocation.
+It is a bounded projection of planning authority—not a queue, operational graph, source baseline lock, dispatch order, readiness verdict, or execution record. Execution consumers may add repository baseline, worktree, branch, overlap, and effect details from their proper owners, but cannot change accepted behavior, Blueprint Contracts, ownership, prerequisites, convergence, limitations, or proof allocation/order.
 
-The installed `software-implementation` skill remains a generic coordinator with known Atlas-handoff conformance gaps. Until separately adapted, do not claim that passing it a summary preserves typed handoff limitations, stable Map/Feature/Leg/WI identities, accepted convergence/proof allocation, or successor-currentness.
+A complete current handoff includes an adapter/domain reread receipt and is admissible by `software-implementation` only in explicit `atlas` mode under a Delivery Contract that persists the entire binding and separately states implementation, commit/integration, temporary/live effect, PR, merge/deploy, and landing authorities. `HandoffWithLimitations` permits only its exact unaffected boundary; affected work and forbidden claims remain blocked. The coordinator revalidates the bound Decision at admission, resume, each dependency frontier, effectful gates, and result, and stops on an unaccounted successor/invalidator/conflict/unverifiable binding rather than following latest.
+
+Imported proof allocation remains authoritative in execution. Operational detail may be added, but generic release gates cannot weaken, OR-combine, reorder, or universally inflate it. An accepted bounded-live proof may therefore be a dependency barrier between Work Items (including FM-003's accepted WI-014 → bounded-live proof → WI-015 sequence), not postponed to final E2E.
+
+A summary, local Route candidate, historical Decision, conflicted/incomplete projection, legacy Route package, `HandoffRefusal`, or omitted authority is refused. `ad_hoc` and `prototype` remain valid for their own explicitly authorized outcomes but cannot impersonate realization of an Atlas Map.
