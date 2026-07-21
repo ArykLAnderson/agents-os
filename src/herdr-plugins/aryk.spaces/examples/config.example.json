@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "roots": [
+    { "path": "~/workspace", "depth": 2 },
+    { "path": "~/.config", "depth": 1 },
+    { "path": "~/.local/bin/scripts", "depth": 1 }
+  ],
+  "ignores": [".git", "node_modules", ".venv", "vendor", "target", "dist", "build"],
+  "zoxide": true
+}

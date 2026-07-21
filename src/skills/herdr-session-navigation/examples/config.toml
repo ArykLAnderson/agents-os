@@ -37,7 +37,15 @@ blue = "#81a1c1"
 red = "#bf616a"
 yellow = "#ebcb8b"
 
-# aryk.pins offline wiring; linking/live validation are separate gates.
+# Offline source-plugin wiring; linking/live validation are separate gates.
+# Accepted prefix+o intentionally displaces Herdr's native open_notification_target;
+# native prefix+g remains the live session navigator.
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "aryk.spaces.open-spaces"
+description = "open unified spaces"
+
 # Accepted prefix+H/T intentionally override Herdr defaults swap-left/rename-tab.
 [[keys.command]]
 key = "prefix+h"

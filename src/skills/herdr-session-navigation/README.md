@@ -34,8 +34,9 @@ Portable configuration belongs at `~/.config/herdr/trials/casebook/config.toml`.
 - `local-pins.json` — schema version 1 and exactly four canonical Pi conversation IDs/nulls;
 - `focus-history.json` — `{ "schemaVersion": 1, "projects": { "<projectCanonicalId>": "<sessionCanonicalId>" } }`, updated after a verified successful activation or a verified `pane.focused` event;
 - `action-result.json` — the most recent visible action result.
+- `spaces/` — `aryk.spaces` locked pending semantic enrollment requests and full plain-workspace create receipts (workspace/tab/root-pane/terminal IDs plus canonical root), re-attested by fresh `pane get` before use.
 
-The custom source plugin is `src/herdr-plugins/aryk.pins/`. Its tests and both config files can be prepared offline; it is deliberately not linked by setup or tests. Runtime pin/result/history files live only in the ignored XDG state root, never in the plugin checkout.
+The custom source plugins are `src/herdr-plugins/aryk.pins/` and the self-contained unified picker at `src/herdr-plugins/aryk.spaces/`. Their tests and both config files can be prepared offline; neither is linked by setup or tests. Runtime files live only in the ignored XDG state root, never in a plugin checkout.
 
 ### Authoritative registry (required)
 
@@ -43,7 +44,7 @@ A trusted machine-local Casebook/Steward publisher—not this plugin—must atom
 
 - root: `schemaVersion: 1`, `route`, `projects[]`, `sessions[]`;
 - `route`: exact `sessionName: "casebook-trial"`, absolute `configPath`, absolute `socketPath`, and `protocol: 17`;
-- project: nonempty opaque `canonicalId`, positive integer `generation`, `reconciliationState` (`current` or `stale`), and `stewardSessionCanonicalId`;
+- project: nonempty opaque `canonicalId`, positive integer `generation`, `reconciliationState` (`current` or `stale`), and `stewardSessionCanonicalId`; compatible optional presentation declarations are nonempty `displayName` and absolute `declaredRoot`;
 - session: nonempty opaque `canonicalId` and `projectCanonicalId`, positive integer `generation`, `reconciliationState`, `role` (`steward` or `interaction`), `officialPiSession`, and `binding`;
 - `officialPiSession`: exact official Pi tuple `{ "source": "pi", "agent": "pi", "kind": "session_id"|"session_path", "value": "<nonempty official ref>" }`;
 - `binding`: nonempty generation-scoped `workspaceId`, `tabId`, `paneId`, and `terminalId` replaceable locators.
@@ -62,18 +63,27 @@ Offline checks do not execute Herdr:
 
 ```sh
 node --test src/herdr-plugins/aryk.pins/test/*.test.mjs
+node --test src/herdr-plugins/aryk.spaces/test/*.test.mjs
 python3 - <<'PY'
 import tomllib
 for path in ('src/herdr-plugins/aryk.pins/herdr-plugin.toml',
+             'src/herdr-plugins/aryk.spaces/herdr-plugin.toml',
              'src/skills/herdr-session-navigation/examples/config.toml'):
     with open(path, 'rb') as f: tomllib.load(f)
 print('toml: ok')
 PY
 ```
 
-The plugin vendors its small fail-closed resolver and has a relocation test; runtime imports do not escape the plugin root. Both configs intentionally bind `prefix+H` and `prefix+T`, which override Herdr's defaults for swap-left and rename-tab respectively so the two pin managers remain on the accepted key contract.
+Each plugin is self-contained and relocation-tested; runtime imports do not escape its plugin root. Both configs bind `prefix+o` to the qualified `aryk.spaces.open-spaces` action, intentionally displacing native `open_notification_target`; native `prefix+g` remains Herdr's live session navigator. They also intentionally bind `prefix+H` and `prefix+T`; these override Herdr's defaults for swap-left and rename-tab.
 
-Only after separate live authorization, an operator may link the reviewed source directory using the exact named session/config/socket route and `HERDR_BIN_PATH`; linking is not performed here. The registry publisher must exist first. Do not use labels or the example fixture to bootstrap it.
+Only after separate live authorization, an operator may link both reviewed source directories using `HERDR_BIN_PATH`, explicit `--session casebook-trial`, and inherited config/socket proof:
+
+```sh
+"$HERDR_BIN_PATH" --session casebook-trial plugin link "$HOME/.agents-os/src/herdr-plugins/aryk.pins"
+"$HERDR_BIN_PATH" --session casebook-trial plugin link "$HOME/.agents-os/src/herdr-plugins/aryk.spaces"
+```
+
+Linking is not performed here. The registry publisher must exist first. Do not use labels or the example fixture to bootstrap it.
 
 ## Later live gate
 
