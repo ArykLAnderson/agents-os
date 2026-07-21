@@ -30,7 +30,7 @@ last_pane = ["alt+space", "prefix+space"]
 name = "terminal"
 
 [theme.custom]
-panel_bg = "#2e3440"
+panel_bg = "reset"
 accent = "#88c0d0"
 green = "#a3be8c"
 blue = "#81a1c1"
