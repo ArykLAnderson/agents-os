@@ -70,8 +70,12 @@ function validateAsset(asset, moduleId) {
   const objects = [];
   const seen = new Set();
   for (const raw of asset.statements) {
-    if (typeof raw !== "string" || raw.length > 64 * 1024 || /;\s*\S/.test(raw) || /\b(?:DROP|ALTER|INSERT|UPDATE|DELETE|REPLACE|ATTACH|DETACH|PRAGMA|VACUUM|SELECT)\b/i.test(raw)) {
-      throw new ConfigurationError("module_asset_unsafe", "Module assets may contain only bounded, single CREATE TABLE or CREATE INDEX statements.");
+    if (typeof raw !== "string" || raw.length > 64 * 1024 || /;\s*\S/.test(raw)
+      || /\b(?:DROP|ALTER|INSERT|UPDATE|DELETE|REPLACE|ATTACH|DETACH|PRAGMA|VACUUM|SELECT|REFERENCES)\b|\bFOREIGN\s+KEY\b/i.test(raw)) {
+      throw new ConfigurationError(
+        "module_asset_unsafe",
+        "Module assets may contain only bounded, single CREATE TABLE or CREATE INDEX statements without foreign-key/reference clauses.",
+      );
     }
     const statement = normalizeSql(raw);
     let match = /^CREATE TABLE\s+([a-z][a-z0-9_]*)\s*\(/i.exec(statement);
@@ -119,10 +123,26 @@ function validateDescriptor(descriptor, asset) {
   };
 }
 function validateAuthorityClaim(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.human_authorized !== true || typeof value.acting_role !== "string" || !value.acting_role.trim() || typeof value.authority_basis !== "string" || !value.authority_basis.trim()) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || value.human_authorized !== true
+    || typeof value.acting_role !== "string" || !value.acting_role.trim()
+    || typeof value.authority_basis !== "string" || !value.authority_basis.trim()) {
     throw new ConfigurationError("human_authority_claim_required", "Module installation and retirement require an explicit human authority claim.");
   }
-  return canonicalValue(value);
+  const claim = {
+    human_authorized: true,
+    acting_role: value.acting_role.trim(),
+    authority_basis: value.authority_basis.trim(),
+  };
+  for (const key of ["human_confirmation_reference", "causation", "correlation", "session"]) {
+    if (value[key] != null) {
+      if (typeof value[key] !== "string" || !value[key].trim()) {
+        throw new ConfigurationError("authority_claim_invalid", `${key} must be a non-empty string when present.`);
+      }
+      claim[key] = value[key].trim();
+    }
+  }
+  return claim;
 }
 function validateOperationId(value) {
   if (typeof value !== "string" || !value.trim() || value.length > 256) throw new ConfigurationError("operation_id_invalid", "operation_id must be a non-empty bounded string.");
