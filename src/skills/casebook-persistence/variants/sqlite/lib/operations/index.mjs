@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { invokeModuleOperation } from "./modules.mjs";
 import { copyFile, lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateAuthorityConfiguration, ConfigurationError } from "../../../../shared/config.mjs";
@@ -2272,7 +2273,7 @@ async function getStoreOperationReceipt(request) {
   // accepted exceptional operation kinds. Owner commit receipts are private
   // mechanical material and must be recovered only through a future typed
   // owner façade operation, not leaked through store-operation lookup.
-  if (!["initialize_store", "migration", "snapshot", "restore", "projection_rebuild", "export.finalize", "case_purge"].includes(receipt.operation_kind)
+  if (!["initialize_store", "migration", "snapshot", "restore", "projection_rebuild", "export.finalize", "case_purge", "module_install", "module_retire"].includes(receipt.operation_kind)
     && !receipt.operation_kind.startsWith("view_policy.")) {
     return success("get_store_operation_receipt", { status: "not_visible" });
   }
@@ -2285,6 +2286,7 @@ async function getStoreOperationReceipt(request) {
 
 export async function invokeExceptionalOperation(request) {
   try {
+    if (["module.diagnose", "module.install", "module.retire"].includes(request.operation)) return await invokeModuleOperation(request);
     if (request.operation === "initialize_store") return await initializeStore(request);
     if (request.operation === "migrate_store") return await migrateStore(request);
     if (request.operation === "snapshot_store") return await snapshotStore(request);

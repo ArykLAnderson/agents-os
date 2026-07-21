@@ -14,7 +14,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 test("manifest validates all canonical runtime asset bytes and compatibility identities", async () => {
   const check = await loadAndValidateManifest();
   assert.equal(check.ok, true, check.problems.join(", "));
-  assert.equal(check.manifest.assets.length, 29);
+  assert.equal(check.manifest.assets.length, 30);
   assert.deepEqual(check.manifest.supported_operations, [
     "diagnose",
     "initialize_store",
@@ -22,6 +22,9 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
     "snapshot_store",
     "restore_store",
     "get_store_operation_receipt",
+    "module.diagnose",
+    "module.install",
+    "module.retire",
     "view_policy.create",
     "view_policy.revise",
     "view_policy.activate",
@@ -85,7 +88,10 @@ test("manifest validates all canonical runtime asset bytes and compatibility ide
       "view_policy.retire",
       "export.finalize",
       "case_purge",
+      "module_install",
+      "module_retire",
     ],
+    optional_module_lifecycle: "versioned descriptor and exact digest-bound schema assets with non-mutating absent/healthy/incompatible/integrity-unsafe diagnosis, explicit atomic install, immutable idempotent receipts, and data-preserving logical retirement",
     migration_execution: "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     snapshot_execution: "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
     restore_execution: "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
