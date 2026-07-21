@@ -1,13 +1,19 @@
 ---
 name: to-tickets
-description: Break a spec, plan, or conversation into independently executable tracer-bullet tickets with explicit blocking relationships.
+description: Create ad hoc tracer-bullet tickets when no accepted Feature Atlas Map governs the work. Never use as a competing Feature/Map acceptance or publication path.
 user_invocable: true
 argument_hint: "[spec path, tracker reference, or current conversation]"
 ---
 
-# To Tickets: Spec → Tracer-Bullet Ticket Decomposition
+# To Tickets: Spec → Ad Hoc Tracer-Bullet Tickets
 
-Break a spec into independently executable tickets that can be worked by agents or humans. Use local one-file-per-ticket storage or the configured issue tracker.
+Break a spec into independently executable ad hoc tickets that can be worked by agents or humans.
+
+## Authority Boundary
+
+Before decomposition, determine whether an accepted Blueprint/Feature Atlas Map governs the work. If it does, stop and use ephemeral `route` (or `/shape-feature` as its compatibility entry point): only the exact trusted-human Map Decision may accept and publish the Map/Feature/Leg/Work Item package. This skill must not create a parallel keystone, Feature acceptance, Work Item graph, dependency authority, or tracker publication for governed work.
+
+Use this skill only when no accepted Atlas Map governs the bounded ad hoc outcome and the chosen local/tracker ticket representation is separately authorized. Its graph is operational input, not Atlas planning authority, and it grants no implementation/effect/PR/merge/deploy authority. Do not later describe these tickets as accepted Atlas records without a separately accepted reconciliation.
 
 ## Process
 
@@ -36,7 +42,7 @@ A broad spec may contain more than one feature, but parallel subsystems or works
 - Completion produces a coherent outcome recognizable in domain/product language.
 - The outcome can be accepted and shipped independently of other proposed features.
 - Its acceptance criteria require the integrated contribution of multiple child tickets.
-- A future end-to-end implementation coordinator should naturally produce one integration effort and one feature PR. No such coordinator is currently installed.
+- The generic installed `software-implementation` coordinator can own one separately authorized integration effort and feature PR; its existence does not make this ad hoc graph an accepted Atlas handoff.
 - If two proposed keystones must both finish before either creates a meaningful outcome, merge them into one keystone and represent their work as parallel tracks.
 
 Most bounded specs should produce one keystone; broad specs commonly produce two or three. More than three is a warning to justify every boundary explicitly. Never create a keystone merely because work can run in parallel, belongs to a subsystem, or has its own dependency chain.
