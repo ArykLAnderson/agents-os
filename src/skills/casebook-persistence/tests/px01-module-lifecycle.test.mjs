@@ -38,6 +38,24 @@ function descriptorForAsset(candidateAsset) {
   candidate.asset.sha256 = sha(candidateAsset);
   return candidate;
 }
+function moduleFixture(moduleId) {
+  const objectPrefix = moduleId.replaceAll("-", "_");
+  const candidateAsset = {
+    ...structuredClone(asset),
+    statements: asset.statements.map((statement) => statement.replaceAll("neutral_catalog__", `${objectPrefix}__`)),
+  };
+  const candidateDescriptor = descriptorForAsset(candidateAsset);
+  candidateDescriptor.module_id = moduleId;
+  candidateDescriptor.module_schema.id = `${moduleId}-sqlite`;
+  candidateDescriptor.module_protocol.id = `${moduleId}-json`;
+  return { asset: candidateAsset, descriptor: candidateDescriptor };
+}
+async function mutateFixtureStore(sqliteBinary, storePath, sql) {
+  await new Promise((resolve, reject) => {
+    const child = execFile(sqliteBinary, ["-batch", "-bail", storePath], (error, _stdout, stderr) => error ? reject(new Error(stderr || error.message)) : resolve());
+    child.stdin.end(sql);
+  });
+}
 async function receiptLookup(entrypoint, root, state, operationId) {
   return run(entrypoint, root, {
     protocol,
@@ -156,6 +174,59 @@ test("descriptor-driven module lifecycle is explicit, atomic, durable, fail-clos
     const refused = await run(sourceEntrypoint, root, moduleRequest(partial, "module.install", { operation_id: "operation:px01:partial", authority_claim: authorityClaim }));
     assert.equal(refused.code, 2); assert.equal(refused.json.failure.code, "module_partial_state");
   } finally { await rm(root, { recursive: true, force: true }); assert.equal(await stat(root).then(() => true).catch(() => false), false); }
+});
+
+test("corruption in one installed module closes diagnosis and lifecycle admission for every module", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "casebook-persistence-px01-subsystem-")); const sqliteBinary = await selectCompatibleSqliteBinary();
+  try {
+    const state = await initialize(sourceEntrypoint, root, sqliteBinary, "subsystem");
+    const moduleA = moduleFixture("neutral-alpha");
+    const moduleB = moduleFixture("neutral-beta");
+    const installA = await run(sourceEntrypoint, root, {
+      ...moduleRequest(state, "module.install"),
+      ...moduleA,
+      operation_id: "operation:px01:subsystem:install-alpha",
+      authority_claim: authorityClaim,
+    });
+    assert.equal(installA.code, 0, installA.stderr);
+    const acceptedFence = installA.json.result.receipt.operation_fence;
+
+    await mutateFixtureStore(sqliteBinary, state.storePath, "DROP TABLE neutral_alpha__entries;");
+
+    const diagnosisB = await run(sourceEntrypoint, root, { ...moduleRequest(state, "module.diagnose"), ...moduleB });
+    assert.equal(diagnosisB.code, 0, diagnosisB.stderr);
+    assert.equal(diagnosisB.json.result.status, "integrity_unsafe");
+    assert.equal(diagnosisB.json.result.classification, "partial_state");
+    assert.equal(diagnosisB.json.result.exposure, "disabled");
+
+    const installBOperation = "operation:px01:subsystem:install-beta";
+    const installB = await run(sourceEntrypoint, root, {
+      ...moduleRequest(state, "module.install"),
+      ...moduleB,
+      operation_id: installBOperation,
+      authority_claim: authorityClaim,
+    });
+    assert.equal(installB.code, 2);
+    assert.equal(installB.json.failure.class, "partial_state");
+
+    const retireAOperation = "operation:px01:subsystem:retire-alpha";
+    const retireA = await run(sourceEntrypoint, root, {
+      ...moduleRequest(state, "module.retire"),
+      ...moduleA,
+      operation_id: retireAOperation,
+      authority_claim: authorityClaim,
+    });
+    assert.equal(retireA.code, 2);
+    assert.equal(retireA.json.failure.class, "partial_state");
+
+    for (const operationId of [installBOperation, retireAOperation, "operation:px01:subsystem:diagnosis-sentinel"]) {
+      const receipt = await receiptLookup(sourceEntrypoint, root, state, operationId);
+      assert.equal(receipt.code, 0, receipt.stderr);
+      assert.equal(receipt.json.result.status, "absent_at_fence");
+      assert.equal(receipt.json.result.operation_fence, acceptedFence);
+    }
+    await ordinaryReads(sourceEntrypoint, root, state, "after cross-module corruption refusal");
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("generated Pi, Codex, and OpenCode copies execute module lifecycle from unrelated cwd without fallback", async () => {

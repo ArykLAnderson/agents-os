@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "4062dbda122b2a48c1169d3fb56d757a456eb552c07aec156ebc6b2f6f92839e"
+    "sha256": "ef343105a8e49d7c7f7faefa2d2ef2e568c155a1c4cf58ece4cb430c0d0cb8c0"
   },
   "entrypoints": [
     {
@@ -314,7 +314,7 @@
       "id": "optional-module-operations",
       "path": "variants/sqlite/lib/operations/modules.mjs",
       "kind": "module",
-      "sha256": "0fc98bfb55fda623b74879214b0c33dd9aeffa988f3e02ebf885841a9c1c419c"
+      "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
     },
     {
       "id": "sqlite-schema",
