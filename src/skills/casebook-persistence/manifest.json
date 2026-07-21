@@ -22,7 +22,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "50069e4d0e105cd03ae1176fbbc2695a2fca5e3d50ceda436810f5b6eb554faa"
+    "sha256": "15a1e87e6ab28e62c0416682a59b8e83fffca4c471003bfaaf79014ca79372ec"
   },
   "entrypoints": [
     {
@@ -43,6 +43,9 @@
     "snapshot_store",
     "restore_store",
     "get_store_operation_receipt",
+    "module.diagnose",
+    "module.install",
+    "module.retire",
     "view_policy.create",
     "view_policy.revise",
     "view_policy.activate",
@@ -104,8 +107,11 @@
       "view_policy.activate",
       "view_policy.retire",
       "export.finalize",
-      "case_purge"
+      "case_purge",
+      "module_install",
+      "module_retire"
     ],
+    "optional_module_lifecycle": "versioned descriptor and exact digest-bound schema assets with non-mutating absent/healthy/incompatible/integrity-unsafe diagnosis, explicit atomic install, immutable idempotent receipts, and data-preserving logical retirement",
     "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
     "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
     "restore_execution": "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
@@ -170,7 +176,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "96ee9047d34c1a02e929cea2abc9728b49de02a6c86d2c26943054d48fbb5efa"
+      "sha256": "a9c9d106a4e8a4da69d3afd46251624535c5b13037b875e98a4efd256c970442"
     },
     {
       "id": "shared-configuration",
@@ -302,7 +308,13 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "59d5a12f4a956ad40ba33ef1f71e749d5bf6da5a6f3e63138482fb540fb5b3ff"
+      "sha256": "924fb23a781cc583e3eee0c3c3cc414b1dca2a8b79659cece08e8a0a01beb196"
+    },
+    {
+      "id": "optional-module-operations",
+      "path": "variants/sqlite/lib/operations/modules.mjs",
+      "kind": "module",
+      "sha256": "a8a9b418514e48e2a0d76eca62b6f01fd8b7a6cf07695cc05d6274f8e3256635"
     },
     {
       "id": "sqlite-schema",
@@ -326,7 +338,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "091d5b4f2717a3ca201ccb1ccf269ac33568f5510cf2dbeb19628c3aa66198f6"
+      "sha256": "ccf6bd75ac3d8cf6e00d6c56604521cf41146f39a8ee9bef0aac6e0b4ece3173"
     }
   ]
 }

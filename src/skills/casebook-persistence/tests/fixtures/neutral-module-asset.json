@@ -1,0 +1,8 @@
+{
+  "asset_version": 1,
+  "format": "sqlite-schema-statements-v1",
+  "statements": [
+    "CREATE TABLE neutral_catalog__entries (entry_id TEXT PRIMARY KEY, label TEXT NOT NULL, recorded_at TEXT NOT NULL) STRICT",
+    "CREATE INDEX neutral_catalog__entries_by_label ON neutral_catalog__entries(label)"
+  ]
+}
