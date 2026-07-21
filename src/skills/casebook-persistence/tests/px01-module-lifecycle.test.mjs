@@ -33,6 +33,26 @@ async function initialize(entrypoint, root, sqliteBinary, label) {
   assert.equal(response.code, 0, response.stderr); return { storePath, config, initialization: response.json.result.initialization };
 }
 function moduleRequest(state, operation, extra = {}) { return { protocol, operation, store_id: state.initialization.store_id, descriptor, asset, configuration: state.config, ...extra }; }
+function descriptorForAsset(candidateAsset) {
+  const candidate = structuredClone(descriptor);
+  candidate.asset.sha256 = sha(candidateAsset);
+  return candidate;
+}
+async function receiptLookup(entrypoint, root, state, operationId) {
+  return run(entrypoint, root, {
+    protocol,
+    operation: "get_store_operation_receipt",
+    operation_id: operationId,
+    store_id: state.initialization.store_id,
+    authority_claim: authorityClaim,
+    context: {
+      view_id: state.initialization.view.id,
+      view_policy_revision_id: state.initialization.view.policy_revision_id,
+      purpose: "verify module lifecycle receipt binding",
+    },
+    configuration: state.config,
+  });
+}
 async function ordinaryReads(entrypoint, root, state, label) {
   const context = { view_id: state.initialization.view.id, view_policy_revision_id: state.initialization.view.policy_revision_id, purpose: `ordinary ${label}` };
   const requests = [
@@ -55,12 +75,55 @@ test("descriptor-driven module lifecycle is explicit, atomic, durable, fail-clos
     assert.equal(absent.code, 0); assert.equal(absent.json.result.status, "absent");
     assert.equal((await stat(state.storePath)).size > 0, true);
 
-    const installRequest = moduleRequest(state, "module.install", { operation_id: "operation:px01:module:install", authority_claim: authorityClaim });
+    const sensitiveClaim = {
+      ...authorityClaim,
+      acting_role: ` ${authorityClaim.acting_role} `,
+      authority_basis: ` ${authorityClaim.authority_basis} `,
+      api_token: "must-not-be-persisted",
+      arbitrary_nested: { secret: "must-not-be-persisted" },
+    };
+    const installRequest = moduleRequest(state, "module.install", { operation_id: "operation:px01:module:install", authority_claim: sensitiveClaim });
     const installed = await run(sourceEntrypoint, root, installRequest);
     assert.equal(installed.code, 0, installed.stderr); assert.equal(installed.json.result.module.exposure, "enabled");
-    assert.deepEqual((await run(sourceEntrypoint, root, installRequest)).json.result, installed.json.result);
+    const stableReplay = structuredClone(installRequest);
+    stableReplay.authority_claim.api_token = "different-ignored-value";
+    stableReplay.authority_claim.arbitrary_nested.secret = "different-ignored-value";
+    assert.deepEqual((await run(sourceEntrypoint, root, stableReplay)).json.result, installed.json.result);
+    const installReceipt = await receiptLookup(sourceEntrypoint, root, state, installRequest.operation_id);
+    assert.equal(installReceipt.code, 0, installReceipt.stderr);
+    assert.deepEqual(installReceipt.json.result.receipt.authority_claim, authorityClaim);
+    assert.equal(JSON.stringify(installReceipt.json.result).includes("must-not-be-persisted"), false);
     const healthy = await run(sourceEntrypoint, root, moduleRequest(state, "module.diagnose"));
     assert.equal(healthy.json.result.status, "healthy");
+
+    const unsafeAssets = [
+      {
+        asset_version: 1,
+        format: asset.format,
+        statements: ["CREATE TABLE neutral_catalog__core_link (entry_id TEXT PRIMARY KEY, owner_id TEXT REFERENCES owners(owner_id)) STRICT"],
+      },
+      {
+        asset_version: 1,
+        format: asset.format,
+        statements: ["CREATE TABLE neutral_catalog__module_link (entry_id TEXT PRIMARY KEY, target_id TEXT, FOREIGN KEY(target_id) REFERENCES other_module__entries(entry_id)) STRICT"],
+      },
+    ];
+    for (const [index, unsafeAsset] of unsafeAssets.entries()) {
+      const operationId = `operation:px01:unsafe-reference:${index}`;
+      const rejected = await run(sourceEntrypoint, root, {
+        ...moduleRequest(state, "module.install"),
+        operation_id: operationId,
+        authority_claim: authorityClaim,
+        asset: unsafeAsset,
+        descriptor: descriptorForAsset(unsafeAsset),
+      });
+      assert.equal(rejected.code, 2);
+      assert.equal(rejected.json.failure.code, "module_asset_unsafe");
+      const absentReceipt = await receiptLookup(sourceEntrypoint, root, state, operationId);
+      assert.equal(absentReceipt.json.result.status, "absent_at_fence");
+      assert.equal(absentReceipt.json.result.operation_fence, installed.json.result.receipt.operation_fence);
+    }
+    await ordinaryReads(sourceEntrypoint, root, state, "after unsafe reference rejection");
 
     const wrongDescriptor = structuredClone(descriptor); wrongDescriptor.module_schema.version = 2;
     const incompatible = await run(sourceEntrypoint, root, { ...moduleRequest(state, "module.diagnose"), descriptor: wrongDescriptor });
@@ -71,10 +134,17 @@ test("descriptor-driven module lifecycle is explicit, atomic, durable, fail-clos
     const digestInstall = await run(sourceEntrypoint, root, { ...installRequest, operation_id: "operation:px01:bad-digest", descriptor: wrongDigest });
     assert.equal(digestInstall.code, 2); assert.equal(digestInstall.json.failure.code, "module_asset_digest_mismatch");
 
-    const retireRequest = moduleRequest(state, "module.retire", { operation_id: "operation:px01:module:retire", authority_claim: authorityClaim });
+    const retireRequest = moduleRequest(state, "module.retire", {
+      operation_id: "operation:px01:module:retire",
+      authority_claim: { ...authorityClaim, private_note: "must-not-be-persisted" },
+    });
     const retired = await run(sourceEntrypoint, root, retireRequest);
     assert.equal(retired.code, 0, retired.stderr); assert.equal(retired.json.result.module.data_preservation, "all-module-objects-preserved");
-    assert.deepEqual((await run(sourceEntrypoint, root, retireRequest)).json.result, retired.json.result);
+    const retireReplay = structuredClone(retireRequest);
+    retireReplay.authority_claim.private_note = "different-ignored-value";
+    assert.deepEqual((await run(sourceEntrypoint, root, retireReplay)).json.result, retired.json.result);
+    const retireReceipt = await receiptLookup(sourceEntrypoint, root, state, retireRequest.operation_id);
+    assert.deepEqual(retireReceipt.json.result.receipt.authority_claim, authorityClaim);
     const retiredDiagnosis = await run(sourceEntrypoint, root, moduleRequest(state, "module.diagnose"));
     assert.equal(retiredDiagnosis.json.result.status, "retired"); assert.equal(retiredDiagnosis.json.result.exposure, "disabled");
     await ordinaryReads(sourceEntrypoint, root, state, "after retirement");
