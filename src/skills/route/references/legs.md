@@ -1,22 +1,28 @@
 # Legs
 
-A Leg is one coherent, integrated, independently verifiable behavioral movement toward the accepted Blueprint.
+A Leg is one Feature-contained, coherent, integrated, independently verifiable behavioral movement toward the accepted Blueprint. It is an accepted structure inside a Feature by default, not a required tracker Issue or global `L-*` identity.
 
 Each Leg records:
 
+- a label unique within its Feature and accepted Map snapshot;
 - behavioral movement and immediate consumer;
-- accepted Blueprint responsibilities/Contracts advanced;
-- starting and resulting coherent system state;
-- included Work Items and named prerequisites;
-- integration seam;
-- evidence that proves the movement;
-- risk or uncertainty retired;
-- compatibility, rollback, and abandonment behavior;
-- temporary mechanisms and their disposition;
-- findings that would invalidate the Leg or Route.
+- Blueprint responsibilities and Contracts advanced;
+- coherent before/after system state;
+- included Work Items and direct concrete prerequisites;
+- integration seam and convergence use;
+- evidence and intended independent integrated checker;
+- risk or uncertainty retired and the material reality contacted early;
+- compatibility, rollback/abandonment, temporary mechanisms, cleanup, and invalidators.
 
-A Leg need not be independently released, deployed, or feature-flagged. Those are tools when required by risk—not its definition.
+A Leg need not be independently released, deployed, or feature-flagged. Those are tools when required by the accepted risk profile—not its definition. A narrow enabling Work Item may be horizontal; the Leg must still close integrated behavior.
 
-Reject a Leg that is only a horizontal layer with no integrated consumer behavior, merely groups similar files, depends on any later Leg before its primary acceptance can be demonstrated, bypasses crossed seams through mocks, claims completion from unit seams alone, or defers all meaningful evidence to the Route's final Leg.
+Reject false Legs with an observable reason:
 
-Prefer the smallest movement that closes meaningful behavior and contacts material reality early. Platform, external-system, migration, and compatibility assumptions should receive early evidence rather than accumulating behind a large final integration Leg.
+- **Layer-only:** “add persistence types” groups a horizontal layer but no consumer can yet use persisted behavior.
+- **File-group:** “update all adapters” groups similar files while delaying target discovery or installation proof to a later Leg.
+- **Mock-closed:** “integrate provider” crosses a provider seam only through mocks and defers the first real-provider contact.
+- **Unit-only:** “finish authentication” proves helpers but no authenticated request crosses the intended trust boundary.
+- **Dependent for primary proof:** the Leg cannot demonstrate its claimed behavior until a later Leg supplies the essential consumer.
+- **Final-proof dump:** all meaningful joined evidence is deferred to a final convergence Leg.
+
+Prefer the smallest movement that closes meaningful behavior and contacts consequential platform, external-system, migration, compatibility, or trust-boundary reality early. Within one Feature, preserve a Leg label in a successor only when its behavior and owner are materially unchanged; otherwise use a new label and record the old disposition.
