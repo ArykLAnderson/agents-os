@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -70,6 +70,14 @@ async function generateAdapters(root) {
   const generatorRoot = path.join(root, "disposable-generator");
   await mkdir(path.join(generatorRoot, "src/skills"), { recursive: true });
   await cp(path.join(repositoryRoot, "config"), path.join(generatorRoot, "config"), { recursive: true });
+  const targetConfigPath = path.join(generatorRoot, "config/targets.json");
+  const targetConfig = JSON.parse(await readFile(targetConfigPath, "utf8"));
+  targetConfig.adapterSurfaces.pi.skills.path = path.join(await realpath(generatorRoot), "adapters/pi/generated/skills");
+  for (const target of targetNames) {
+    targetConfig.adapterSurfaces[target].generateAgents = false;
+    targetConfig.adapterSurfaces[target].agents = null;
+  }
+  await writeFile(targetConfigPath, `${JSON.stringify(targetConfig, null, 2)}\n`);
   await mkdir(path.join(generatorRoot, "scripts"), { recursive: true });
   await cp(path.join(repositoryRoot, "scripts/agents-os.mjs"), path.join(generatorRoot, "scripts/agents-os.mjs"));
   for (const skill of ["case", "frame", "casebook-persistence"]) {
@@ -79,7 +87,11 @@ async function generateAdapters(root) {
     cwd: generatorRoot,
     env: { PATH: process.env.PATH ?? "", HOME: path.join(root, "sandbox-home") },
   });
-  assert.deepEqual(generated.stdout.trim().split("\n"), ["synced pi", "synced codex", "synced opencode"]);
+  const syncLines = generated.stdout.trim().split("\n");
+  assert.equal(syncLines.length, targetNames.length);
+  for (const [index, target] of targetNames.entries()) {
+    assert.match(syncLines[index], new RegExp(`^synced ${target}; installed 3 skills and 0 agents; updated \\d+, removed 0 stale links$`));
+  }
   return { generatorRoot };
 }
 
@@ -118,7 +130,7 @@ async function validateGeneratedBytes(generatorRoot) {
     const packageRoot = path.join(skillsRoot, "casebook-persistence");
     const manifestBytes = await readFile(path.join(packageRoot, "manifest.json"));
     const manifest = JSON.parse(manifestBytes);
-    assert.equal(manifest.assets.length, 29, `${target} manifest asset count`);
+    assert.equal(manifest.assets.length, 30, `${target} manifest asset count`);
     for (const operation of requiredOperations) assert.ok(manifest.supported_operations.includes(operation), `${target} manifest ${operation}`);
     for (const asset of manifest.assets) {
       assert.equal(sha256(await readFile(path.join(packageRoot, asset.path))), asset.sha256, `${target} digest ${asset.path}`);
