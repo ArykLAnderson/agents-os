@@ -1,9 +1,28 @@
 {
-  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "metadata": {
+    "pinnedCommit": "1f2487554b9fd42118f9e99ee06eb558bbb2391f",
+    "liveValidated": false
+  },
   "expected": {
     "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml",
-    "integration": { "id": "pi", "schemaVersion": "5" },
-    "piSessionRef": "/Users/test/.pi/sessions/official.jsonl"
+    "integration": {
+      "id": "opencode",
+      "version": 9,
+      "minimumRestoreVersion": 5
+    },
+    "binding": {
+      "generation": 4,
+      "workspaceId": "workspace-1",
+      "tabId": "tab-1",
+      "paneId": "pane-1",
+      "terminalId": "terminal-1",
+      "officialAgentSession": {
+        "source": "herdr:opencode",
+        "agent": "opencode",
+        "kind": "id",
+        "value": "opencode-session-123"
+      }
+    }
   },
   "observation": {
     "environmentHints": {

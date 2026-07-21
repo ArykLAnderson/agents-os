@@ -1,46 +1,122 @@
 {
-  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "metadata": {
+    "pinnedCommit": "1f2487554b9fd42118f9e99ee06eb558bbb2391f",
+    "liveValidated": false
+  },
   "expected": {
     "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml",
-    "integration": { "id": "pi", "schemaVersion": "5" },
-    "piSessionRef": "/Users/test/.pi/sessions/official.jsonl",
-    "bindingGeneration": 4
+    "integration": {
+      "id": "opencode",
+      "version": 9,
+      "minimumRestoreVersion": 5
+    },
+    "binding": {
+      "generation": 4,
+      "workspaceId": "workspace-1",
+      "tabId": "tab-1",
+      "paneId": "pane-1",
+      "terminalId": "terminal-1",
+      "officialAgentSession": {
+        "source": "herdr:opencode",
+        "agent": "opencode",
+        "kind": "id",
+        "value": "opencode-session-123"
+      }
+    }
   },
   "observation": {
-    "executable": { "exists": true, "path": "/opt/herdr/bin/herdr" },
-    "trialName": "casebook-trial",
-    "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml",
-    "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock",
-    "currentPaneId": "pane-1",
-    "handshake": {
-      "ok": true,
+    "executable": {
+      "exists": true,
+      "path": "/opt/herdr/bin/herdr"
+    },
+    "invocation": {
       "sessionName": "casebook-trial",
-      "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock",
+      "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml",
+      "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock"
+    },
+    "ping": {
+      "version": "0.7.4",
       "protocol": 17,
-      "capabilities": { "live_handoff": true, "detached_server_daemon": true }
+      "capabilities": {
+        "live_handoff": true,
+        "detached_server_daemon": true
+      }
+    },
+    "integrationStatus": {
+      "type": "herdr-integration-status-adapter-observation",
+      "sourceCommand": "herdr integration status",
+      "id": "opencode",
+      "state": "current",
+      "installedVersion": 9,
+      "expectedVersion": 9
     },
     "snapshot": {
-      "version": "pinned-fixture",
+      "version": "0.7.4",
       "protocol": 17,
-      "sessionName": "casebook-trial",
-      "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock",
-      "panes": [{
-        "id": "pane-1", "workspaceId": "workspace-1", "tabId": "tab-1", "terminalId": "terminal-1",
-        "bindingGeneration": 4,
-        "integration": { "id": "pi", "schemaVersion": "5" },
-        "piSessionRef": "/Users/test/.pi/sessions/official.jsonl"
-      }],
-      "agents": [{
-        "name": "Steward · frame:stable", "paneId": "pane-1", "terminalId": "terminal-1",
-        "piSessionRef": "/Users/test/.pi/sessions/official.jsonl", "bindingGeneration": 4
-      }]
+      "focused_workspace_id": "workspace-1",
+      "focused_tab_id": "tab-1",
+      "focused_pane_id": "pane-1",
+      "workspaces": [],
+      "tabs": [],
+      "panes": [
+        {
+          "pane_id": "pane-1",
+          "terminal_id": "terminal-1",
+          "workspace_id": "workspace-1",
+          "tab_id": "tab-1",
+          "focused": true,
+          "agent_status": "idle",
+          "agent_session": {
+            "source": "herdr:opencode",
+            "agent": "opencode",
+            "kind": "id",
+            "value": "opencode-session-123"
+          },
+          "revision": 4
+        }
+      ],
+      "layouts": [],
+      "agents": [
+        {
+          "name": "Steward \u00b7 frame:stable",
+          "terminal_id": "terminal-1",
+          "agent_status": "idle",
+          "state_labels": {},
+          "tokens": {},
+          "agent_session": {
+            "source": "herdr:opencode",
+            "agent": "opencode",
+            "kind": "id",
+            "value": "opencode-session-123"
+          },
+          "workspace_id": "workspace-1",
+          "tab_id": "tab-1",
+          "pane_id": "pane-1",
+          "focused": true,
+          "state_change_seq": 4,
+          "revision": 4
+        }
+      ]
     }
   },
   "binding": {
-    "canonicalId": "frame:stable", "generation": 4, "backend": "herdr", "sessionName": "casebook-trial",
-    "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock", "protocol": 17,
-    "workspaceId": "workspace-1", "tabId": "tab-1", "paneId": "pane-1", "terminalId": "terminal-1",
-    "piSessionRef": "/Users/test/.pi/sessions/official.jsonl", "agentName": "Steward · frame:stable",
-    "reconciliationState": "current"
+    "canonicalId": "frame:stable",
+    "generation": 4,
+    "backend": "herdr",
+    "sessionName": "casebook-trial",
+    "socketPath": "/Users/test/.config/herdr/sessions/casebook-trial/herdr.sock",
+    "protocol": 17,
+    "workspaceId": "workspace-1",
+    "tabId": "tab-1",
+    "paneId": "pane-1",
+    "terminalId": "terminal-1",
+    "agentName": "Steward \u00b7 frame:stable",
+    "reconciliationState": "current",
+    "officialAgentSession": {
+      "source": "herdr:opencode",
+      "agent": "opencode",
+      "kind": "id",
+      "value": "opencode-session-123"
+    }
   }
 }

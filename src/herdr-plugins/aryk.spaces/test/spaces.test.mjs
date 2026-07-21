@@ -12,10 +12,10 @@ import { attestPlainBindings, discoverFolders, runPicker, zoxideFolders } from "
 const route = { sessionName: "casebook-trial", configPath: "/cfg/casebook.toml", socketPath: "/run/herdr.sock", protocol: 17 };
 const env = { HOME: "/home/a", XDG_CONFIG_HOME: "/cfg", XDG_STATE_HOME: "/state", HERDR_BIN_PATH: "/opt/herdr", HERDR_CONFIG_PATH: route.configPath, HERDR_SOCKET_PATH: route.socketPath };
 const workspace = (id="ws-a", overrides={}) => ({ workspace_id:id, number:1, label:id, focused:false, pane_count:1, tab_count:1, active_tab_id:`${id}:t1`, agent_status:"idle", ...overrides });
-const session = (overrides={}) => ({ canonicalId:"session:a", projectCanonicalId:"project:a", generation:1, reconciliationState:"current", role:"steward", officialPiSession:{source:"pi",agent:"pi",kind:"session_id",value:"official-a"}, binding:{workspaceId:"ws-a",tabId:"ws-a:t1",paneId:"pane-a",terminalId:"term-a"}, ...overrides });
+const session = (overrides={}) => ({ canonicalId:"session:a", projectCanonicalId:"project:a", generation:1, reconciliationState:"current", role:"steward", officialAgentSession:{source:"herdr:opencode",agent:"opencode",kind:"id",value:"official-a"}, binding:{workspaceId:"ws-a",tabId:"ws-a:t1",paneId:"pane-a",terminalId:"term-a"}, ...overrides });
 const project = (overrides={}) => ({ canonicalId:"project:a", generation:1, reconciliationState:"current", stewardSessionCanonicalId:"session:a", displayName:"Alpha", declaredRoot:"/work/a", ...overrides });
 const registry = (overrides={}) => ({ schemaVersion:1, route, projects:[project()], sessions:[session()], ...overrides });
-const agent = (overrides={}) => ({ terminal_id:"term-a", agent_status:"idle", workspace_id:"ws-a", tab_id:"ws-a:t1", pane_id:"pane-a", focused:false, agent_session:{source:"pi",agent:"pi",kind:"session_id",value:"official-a"}, ...overrides });
+const agent = (overrides={}) => ({ terminal_id:"term-a", agent_status:"idle", workspace_id:"ws-a", tab_id:"ws-a:t1", pane_id:"pane-a", focused:false, agent_session:{source:"herdr:opencode",agent:"opencode",kind:"id",value:"official-a"}, ...overrides });
 const pane = (overrides={}) => ({ pane_id:"pane-a",terminal_id:"term-a",workspace_id:"ws-a",tab_id:"ws-a:t1",focused:true,cwd:"/work/a",agent_status:"idle",revision:0, ...overrides });
 const receipt = (root="/work/a") => ({ workspace:workspace("new",{label:"plain:a",focused:true,active_tab_id:"new:t1"}), tab:{tab_id:"new:t1",workspace_id:"new",number:1,label:"1",focused:true,pane_count:1,agent_status:"idle"}, rootPane:pane({pane_id:"new:p1",terminal_id:"new-term",workspace_id:"new",tab_id:"new:t1",cwd:root}) });
 
@@ -32,9 +32,9 @@ test("semantic merge requires one exact official fresh agent attestation and ded
 test("semantic duplicate claims are ambiguous and project-workspace identity is injective", () => {
   const live=[workspace("ws-a"),workspace("ws-b")];
   assert.equal(buildRows({registry:registry({sessions:[session(),structuredClone(session())]}),liveWorkspaces:live,agents:[agent()]}).find(row=>row.canonicalId==="project:a").state,"ambiguous");
-  const duplicate=session({binding:{workspaceId:"ws-b",tabId:"ws-b:t1",paneId:"pane-b",terminalId:"term-b"},officialPiSession:{source:"pi",agent:"pi",kind:"session_id",value:"official-b"}});
+  const duplicate=session({binding:{workspaceId:"ws-b",tabId:"ws-b:t1",paneId:"pane-b",terminalId:"term-b"},officialAgentSession:{source:"herdr:opencode",agent:"opencode",kind:"id",value:"official-b"}});
   assert.equal(buildRows({registry:registry({sessions:[session(),duplicate]}),liveWorkspaces:live,agents:[agent()]}).find(row=>row.canonicalId==="project:a").state,"ambiguous");
-  const second=session({canonicalId:"session:b",binding:{workspaceId:"ws-b",tabId:"ws-b:t1",paneId:"pane-b",terminalId:"term-b"},officialPiSession:{source:"pi",agent:"pi",kind:"session_id",value:"official-b"}});
+  const second=session({canonicalId:"session:b",binding:{workspaceId:"ws-b",tabId:"ws-b:t1",paneId:"pane-b",terminalId:"term-b"},officialAgentSession:{source:"herdr:opencode",agent:"opencode",kind:"id",value:"official-b"}});
   assert.equal(buildRows({registry:registry({sessions:[session(),second]}),liveWorkspaces:live,agents:[agent()]}).find(row=>row.canonicalId==="project:a").state,"ambiguous");
   const crossProject={...second,projectCanonicalId:"project:b",binding:{...second.binding,workspaceId:"ws-a"}};
   const conflicting=registry({projects:[project(),project({canonicalId:"project:b",stewardSessionCanonicalId:"session:b"})],sessions:[session(),crossProject]});
@@ -44,10 +44,10 @@ test("semantic duplicate claims are ambiguous and project-workspace identity is 
 test("strict registry rejects coercion and cross-project workspace claims", () => {
   for(const bad of [
     registry({projects:[project({canonicalId:7})]}),
-    registry({sessions:[session({officialPiSession:{source:"pi",agent:"pi",kind:"session_id",value:{bad:true}}})]}),
+    registry({sessions:[session({officialAgentSession:{source:"herdr:opencode",agent:"opencode",kind:"id",value:{bad:true}}})]}),
     registry({sessions:[session({binding:{workspaceId:7,tabId:"t",paneId:"p",terminalId:"term"}})]}),
   ]) assert.throws(()=>validateRegistry(bad),/required|binding/);
-  const other=session({canonicalId:"session:b",projectCanonicalId:"project:b",officialPiSession:{source:"pi",agent:"pi",kind:"session_id",value:"official-b"},binding:{workspaceId:"ws-a",tabId:"ws-a:t2",paneId:"pane-b",terminalId:"term-b"}});
+  const other=session({canonicalId:"session:b",projectCanonicalId:"project:b",officialAgentSession:{source:"herdr:opencode",agent:"opencode",kind:"id",value:"official-b"},binding:{workspaceId:"ws-a",tabId:"ws-a:t2",paneId:"pane-b",terminalId:"term-b"}});
   assert.throws(()=>validateRegistry(registry({projects:[project(),project({canonicalId:"project:b",stewardSessionCanonicalId:"session:b"})],sessions:[session(),other]})),/cross-project workspace/);
 });
 

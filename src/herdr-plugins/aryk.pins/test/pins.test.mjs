@@ -12,7 +12,7 @@ import { atomicWriteJson, loadPins, savePins, transactionalPins } from "../lib/s
 const route = { sessionName: "casebook-trial", configPath: "/home/a/.config/herdr/trials/casebook/config.toml", socketPath: "/tmp/casebook.sock", protocol: 17 };
 const session = (canonicalId, projectCanonicalId, paneId, role = "interaction", generation = 1) => ({
   canonicalId, projectCanonicalId, generation, reconciliationState: "current", role,
-  officialPiSession: { source: "pi", agent: "pi", kind: "session_id", value: `${canonicalId}-official` },
+  officialAgentSession: { source:"herdr:pi", agent: "pi", kind: "id", value: `${canonicalId}-official` },
   binding: { workspaceId: `w-${projectCanonicalId}`, tabId: `t-${canonicalId}`, paneId, terminalId: `term-${canonicalId}` },
 });
 const registry = {
@@ -26,7 +26,7 @@ const registry = {
 const agentFor = (record, overrides = {}) => ({
   name: `agent-${record.canonicalId}`, terminal_id: record.binding.terminalId,
   workspace_id: record.binding.workspaceId, tab_id: record.binding.tabId, pane_id: record.binding.paneId,
-  agent_session: { ...record.officialPiSession }, ...overrides,
+  agent_session: { ...record.officialAgentSession }, ...overrides,
 });
 
 test("append is first-free, full-safe, and idempotent", () => {
@@ -48,14 +48,28 @@ test("pin and authoritative registry schemas fail closed", () => {
   assert.throws(() => parsePins({ schemaVersion: 2, slots: [] }), /schema/);
   assert.throws(() => parsePins({ schemaVersion: 1, slots: ["a"] }), /four/);
   assert.throws(() => validateRegistry({ ...registry, route: { ...route, sessionName: "wrong" } }), /casebook-trial/);
-  assert.throws(() => validateRegistry({ ...registry, sessions: [{ ...registry.sessions[0], officialPiSession: { source: "fake", agent: "pi", kind: "session_id", value: "x" } }] }), /official Pi/);
+  assert.throws(() => validateRegistry({ ...registry, sessions: [{ ...registry.sessions[0], officialAgentSession: { source: "fake", agent: "pi", kind: "id", value: "x" } }] }), /official agent/);
+});
+
+test("registry allowlists only exact Pi and OpenCode official tuples", () => {
+  const base = registry.sessions[0];
+  const withOfficial = officialAgentSession => ({ ...registry, sessions: [{ ...base, officialAgentSession }] });
+  assert.doesNotThrow(() => validateRegistry(withOfficial({ source: "herdr:pi", agent: "pi", kind: "path", value: "/tmp/pi.jsonl" })));
+  assert.doesNotThrow(() => validateRegistry(withOfficial({ source: "herdr:opencode", agent: "opencode", kind: "id", value: "oc-session" })));
+  for (const officialAgentSession of [
+    { source: "herdr:pi", agent: "opencode", kind: "id", value: "x" },
+    { source: "herdr:opencode", agent: "opencode", kind: "path", value: "/tmp/x" },
+    { source: "herdr:opencode", agent: "opencode", kind: "id", value: "" },
+    { source: "pi", agent: "pi", kind: "id", value: "x" },
+  ]) assert.throws(() => validateRegistry(withOfficial(officialAgentSession)), /official agent|required/);
+  assert.throws(() => validateRegistry({ ...registry, sessions: [{ ...base, officialPiSession: base.officialAgentSession }] }), /officialPiSession/);
 });
 
 test("registry rejects cross-canonical official-session and exact-binding collisions", () => {
   const original = registry.sessions[1];
   const alias = { ...structuredClone(original), canonicalId: "session-alias" };
-  assert.throws(() => validateRegistry({ ...registry, sessions: [...registry.sessions, alias] }), /collision.*official Pi/i);
-  const bindingAlias = { ...structuredClone(original), canonicalId: "session-binding-alias", officialPiSession: { ...original.officialPiSession, value: "different-official" } };
+  assert.throws(() => validateRegistry({ ...registry, sessions: [...registry.sessions, alias] }), /collision.*official agent/i);
+  const bindingAlias = { ...structuredClone(original), canonicalId: "session-binding-alias", officialAgentSession: { ...original.officialAgentSession, value: "different-official" } };
   assert.throws(() => validateRegistry({ ...registry, sessions: [...registry.sessions, bindingAlias] }), /collision.*live binding/i);
 });
 

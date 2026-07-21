@@ -1,8 +1,59 @@
 {
-  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
-  "destination": { "canonicalId": "frame:stable", "generation": 3 },
+  "metadata": {
+    "pinnedCommit": "1f2487554b9fd42118f9e99ee06eb558bbb2391f",
+    "liveValidated": false
+  },
+  "destination": {
+    "canonicalId": "frame:stable",
+    "generation": 3
+  },
   "bindings": [
-    { "canonicalId": "frame:stable", "generation": 2, "backend": "herdr", "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "protocol": 17, "workspaceId": "w1", "tabId": "t1", "paneId": "gone", "terminalId": "term1", "piSessionRef": "pi:1", "reconciliationState": "stale" }
+    {
+      "canonicalId": "frame:stable",
+      "generation": 2,
+      "backend": "herdr",
+      "sessionName": "casebook-trial",
+      "socketPath": "/tmp/herdr.sock",
+      "protocol": 17,
+      "workspaceId": "w1",
+      "tabId": "t1",
+      "paneId": "gone",
+      "terminalId": "term1",
+      "reconciliationState": "stale",
+      "officialAgentSession": {
+        "source": "herdr:pi",
+        "agent": "pi",
+        "kind": "id",
+        "value": "pi:1"
+      }
+    }
   ],
-  "snapshot": { "protocol": 17, "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "panes": [{ "id": "other", "workspaceId": "w1", "tabId": "t1", "terminalId": "term1", "piSessionRef": "pi:1", "bindingGeneration": 2 }] }
+  "snapshot": {
+    "version": "0.7.4",
+    "protocol": 17,
+    "focused_workspace_id": "workspace-1",
+    "focused_tab_id": "tab-1",
+    "focused_pane_id": "other",
+    "workspaces": [],
+    "tabs": [],
+    "panes": [
+      {
+        "pane_id": "other",
+        "terminal_id": "term1",
+        "workspace_id": "w1",
+        "tab_id": "t1",
+        "focused": true,
+        "agent_status": "idle",
+        "agent_session": {
+          "source": "herdr:pi",
+          "agent": "pi",
+          "kind": "id",
+          "value": "pi:1"
+        },
+        "revision": 4
+      }
+    ],
+    "layouts": [],
+    "agents": []
+  }
 }

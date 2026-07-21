@@ -4,7 +4,7 @@ id = "aryk.pins"
 name = "Aryk Pins"
 version = "0.1.0"
 min_herdr_version = "0.7.4"
-description = "Fail-closed canonical project and Pi session pins"
+description = "Fail-closed canonical project and official agent session pins"
 platforms = ["linux", "macos"]
 
 [[actions]]
@@ -24,7 +24,7 @@ command = ["node", "index.mjs", "action", "manage-projects"]
 [[actions]]
 id = "pin-local"
 title = "Pin current local thread"
-description = "Append the authoritative current Pi session to the first free local slot"
+description = "Append the authoritative current official agent session to the first free local slot"
 contexts = ["pane"]
 command = ["node", "index.mjs", "action", "pin-local"]
 

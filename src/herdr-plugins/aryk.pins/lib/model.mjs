@@ -18,6 +18,20 @@ function slotNumber(slot) {
   if (!Number.isInteger(slot) || slot < 1 || slot > SLOT_COUNT) throw new RangeError("slot must be 1..4");
   return slot - 1;
 }
+function validateOfficialAgentSession(value, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).sort().join(",") !== "agent,kind,source,value") {
+    throw new TypeError(`${field} must be an exact official agent session tuple`);
+  }
+  text(value.value, `${field}.value`);
+  const pi = value.source === "herdr:pi" && value.agent === "pi" && ["id", "path"].includes(value.kind);
+  const opencode = value.source === "herdr:opencode" && value.agent === "opencode" && value.kind === "id";
+  if (!pi && !opencode) throw new TypeError(`${field} is not a supported official agent session tuple`);
+  return value;
+}
+function sameOfficial(a, b) {
+  return a?.source === b?.source && a?.agent === b?.agent && a?.kind === b?.kind && a?.value === b?.value;
+}
 
 export function emptyPins() { return { schemaVersion: SCHEMA_VERSION, slots: Array(SLOT_COUNT).fill(null) }; }
 export function parsePins(value) {
@@ -49,10 +63,8 @@ function validateSession(record, index) {
   generation(record?.generation, `sessions[${index}].generation`);
   if (!["current", "stale"].includes(record?.reconciliationState)) throw new TypeError(`sessions[${index}].reconciliationState is invalid`);
   if (!["steward", "interaction"].includes(record?.role)) throw new TypeError(`sessions[${index}].role is invalid`);
-  const official = record.officialPiSession;
-  if (official?.source !== "pi" || official?.agent !== "pi" || !["session_id", "session_path"].includes(official?.kind) || !text(official?.value, `sessions[${index}].officialPiSession.value`)) {
-    throw new TypeError(`sessions[${index}] requires an official Pi session binding`);
-  }
+  if (Object.hasOwn(record, "officialPiSession")) throw new TypeError(`sessions[${index}].officialPiSession is unsupported; publish officialAgentSession`);
+  validateOfficialAgentSession(record.officialAgentSession, `sessions[${index}].officialAgentSession`);
   for (const key of ["workspaceId", "tabId", "paneId", "terminalId"]) text(record?.binding?.[key], `sessions[${index}].binding.${key}`);
 }
 export function validateRegistry(value) {
@@ -71,18 +83,17 @@ export function validateRegistry(value) {
   value.sessions.forEach(validateSession);
   const officialOwners = new Map(); const bindingOwners = new Map();
   for (const session of value.sessions) {
-    const officialKey = JSON.stringify([session.officialPiSession.source, session.officialPiSession.agent, session.officialPiSession.kind, session.officialPiSession.value]);
+    const officialKey = JSON.stringify([session.officialAgentSession.source, session.officialAgentSession.agent, session.officialAgentSession.kind, session.officialAgentSession.value]);
     const bindingKey = JSON.stringify([session.binding.workspaceId, session.binding.tabId, session.binding.paneId, session.binding.terminalId]);
     const officialOwner = officialOwners.get(officialKey); const bindingOwner = bindingOwners.get(bindingKey);
-    if (officialOwner && officialOwner !== session.canonicalId) throw new TypeError(`cross-canonical collision in official Pi session: ${officialOwner} and ${session.canonicalId}`);
+    if (officialOwner && officialOwner !== session.canonicalId) throw new TypeError(`cross-canonical collision in official agent session: ${officialOwner} and ${session.canonicalId}`);
     if (bindingOwner && bindingOwner !== session.canonicalId) throw new TypeError(`cross-canonical collision in live binding: ${bindingOwner} and ${session.canonicalId}`);
     officialOwners.set(officialKey, session.canonicalId); bindingOwners.set(bindingKey, session.canonicalId);
   }
   return structuredClone(value);
 }
-function sameOfficial(a, b) { return a?.source === b?.source && a?.agent === b?.agent && a?.kind === b?.kind && a?.value === b?.value; }
 function agentMatchesRecord(agent, record) {
-  return sameOfficial(agent?.agent_session, record.officialPiSession)
+  return sameOfficial(agent?.agent_session, record.officialAgentSession)
     && agent?.workspace_id === record.binding.workspaceId && agent?.tab_id === record.binding.tabId
     && agent?.pane_id === record.binding.paneId && agent?.terminal_id === record.binding.terminalId;
 }
@@ -97,13 +108,13 @@ export function resolveOfficialSession(canonicalId, registryValue, agents = []) 
       canonicalId: record.canonicalId, generation: record.generation, backend: "herdr",
       sessionName: registry.route.sessionName, socketPath: registry.route.socketPath, protocol: registry.route.protocol,
       workspaceId: record.binding.workspaceId, tabId: record.binding.tabId, paneId: record.binding.paneId,
-      terminalId: record.binding.terminalId, piSessionRef: record.officialPiSession.value,
+      terminalId: record.binding.terminalId, officialAgentSession: structuredClone(record.officialAgentSession),
       reconciliationState: record.reconciliationState,
     };
   });
   const panes = [];
   for (const record of claims) for (const agent of agents.filter((item) => agentMatchesRecord(item, record))) {
-    panes.push({ id: agent.pane_id, workspaceId: agent.workspace_id, tabId: agent.tab_id, terminalId: agent.terminal_id, piSessionRef: agent.agent_session.value, bindingGeneration: record.generation });
+    panes.push({ id: agent.pane_id, workspaceId: agent.workspace_id, tabId: agent.tab_id, terminalId: agent.terminal_id, officialAgentSession: structuredClone(agent.agent_session), bindingGeneration: record.generation });
   }
   const resolution = resolveDestination({ canonicalId }, bindings, { sessionName: registry.route.sessionName, socketPath: registry.route.socketPath, protocol: registry.route.protocol, panes });
   if (resolution.status !== "unique") return resolution;
