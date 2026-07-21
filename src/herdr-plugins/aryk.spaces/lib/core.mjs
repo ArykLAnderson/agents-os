@@ -17,6 +17,13 @@ function generation(value, field) {
   if (!Number.isSafeInteger(value) || value < 1) throw new TypeError(`${field} must be a positive integer`);
   return value;
 }
+function validateOfficialAgentSession(value,field){
+  if(!value||typeof value!=="object"||Array.isArray(value)||Object.keys(value).sort().join(",")!=="agent,kind,source,value")throw new TypeError(`${field} must be an exact official agent session tuple`);
+  text(value.value,`${field}.value`);
+  const pi=value.source==="herdr:pi"&&value.agent==="pi"&&["id","path"].includes(value.kind);
+  const opencode=value.source==="herdr:opencode"&&value.agent==="opencode"&&value.kind==="id";
+  if(!pi&&!opencode)throw new TypeError(`${field} is not a supported official agent session tuple`);
+}
 export function validateRegistry(value) {
   if (!value || value.schemaVersion !== 1) throw new TypeError("unsupported authoritative registry schemaVersion");
   const route=value.route;
@@ -36,17 +43,16 @@ export function validateRegistry(value) {
     text(record?.canonicalId,`sessions[${index}].canonicalId`);text(record?.projectCanonicalId,`sessions[${index}].projectCanonicalId`);generation(record?.generation,`sessions[${index}].generation`);
     if(!["current","stale"].includes(record?.reconciliationState))throw new TypeError(`sessions[${index}].reconciliationState is invalid`);
     if(!["steward","interaction"].includes(record?.role))throw new TypeError(`sessions[${index}].role is invalid`);
-    const official=record.officialPiSession;
-    if(official?.source!=="pi"||official?.agent!=="pi"||!["session_id","session_path"].includes(official?.kind))throw new TypeError(`sessions[${index}] requires an official Pi session binding`);
-    text(official.value,`sessions[${index}].officialPiSession.value`);
+    if(Object.hasOwn(record,"officialPiSession"))throw new TypeError(`sessions[${index}].officialPiSession is unsupported; publish officialAgentSession`);
+    validateOfficialAgentSession(record.officialAgentSession,`sessions[${index}].officialAgentSession`);
     for(const key of ["workspaceId","tabId","paneId","terminalId"])text(record?.binding?.[key],`sessions[${index}].binding.${key}`);
   });
   const officialOwners=new Map(),bindingOwners=new Map(),workspaceProjects=new Map();
   for(const record of value.sessions){
-    const officialKey=JSON.stringify([record.officialPiSession.source,record.officialPiSession.agent,record.officialPiSession.kind,record.officialPiSession.value]);
+    const officialKey=JSON.stringify([record.officialAgentSession.source,record.officialAgentSession.agent,record.officialAgentSession.kind,record.officialAgentSession.value]);
     const bindingKey=JSON.stringify([record.binding.workspaceId,record.binding.tabId,record.binding.paneId,record.binding.terminalId]);
     const officialOwner=officialOwners.get(officialKey),bindingOwner=bindingOwners.get(bindingKey),workspaceProject=workspaceProjects.get(record.binding.workspaceId);
-    if(officialOwner&&officialOwner!==record.canonicalId)throw new TypeError(`cross-canonical collision in official Pi session: ${officialOwner} and ${record.canonicalId}`);
+    if(officialOwner&&officialOwner!==record.canonicalId)throw new TypeError(`cross-canonical collision in official agent session: ${officialOwner} and ${record.canonicalId}`);
     if(bindingOwner&&bindingOwner!==record.canonicalId)throw new TypeError(`cross-canonical collision in live binding: ${bindingOwner} and ${record.canonicalId}`);
     if(workspaceProject&&workspaceProject!==record.projectCanonicalId)throw new TypeError(`cross-project workspace collision: ${workspaceProject} and ${record.projectCanonicalId}`);
     officialOwners.set(officialKey,record.canonicalId);bindingOwners.set(bindingKey,record.canonicalId);workspaceProjects.set(record.binding.workspaceId,record.projectCanonicalId);
@@ -54,7 +60,7 @@ export function validateRegistry(value) {
   return structuredClone(value);
 }
 function sameOfficial(a,b){return a?.source===b?.source&&a?.agent===b?.agent&&a?.kind===b?.kind&&a?.value===b?.value;}
-function agentMatches(agent,record){return sameOfficial(agent?.agent_session,record.officialPiSession)&&agent?.workspace_id===record.binding.workspaceId&&agent?.tab_id===record.binding.tabId&&agent?.pane_id===record.binding.paneId&&agent?.terminal_id===record.binding.terminalId;}
+function agentMatches(agent,record){return sameOfficial(agent?.agent_session,record.officialAgentSession)&&agent?.workspace_id===record.binding.workspaceId&&agent?.tab_id===record.binding.tabId&&agent?.pane_id===record.binding.paneId&&agent?.terminal_id===record.binding.terminalId;}
 function liveState(workspace){return workspace.agent_status==="working"?"working":"live";}
 function liveRoot(workspace,plainBindings){return workspace.verifiedRoot??workspace.worktree?.checkout_path??plainBindings?.[workspace.workspace_id]??null;}
 function projectResolution(project,projects,sessions,workspaces,agents){

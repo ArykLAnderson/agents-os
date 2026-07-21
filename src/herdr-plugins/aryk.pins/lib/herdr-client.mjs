@@ -20,7 +20,7 @@ export function parseFocusResponse(output, expectedRecord) {
   const response = jsonResponse(output, "agent focus");
   if (response?.result?.type !== "agent_info" || !response.result.agent) throw new Error("agent focus returned an unexpected response");
   const agent = response.result.agent; const binding = expectedRecord?.binding;
-  if (!sameOfficial(agent.agent_session, expectedRecord?.officialPiSession)
+  if (!sameOfficial(agent.agent_session, expectedRecord?.officialAgentSession)
     || agent.workspace_id !== binding?.workspaceId || agent.tab_id !== binding?.tabId
     || agent.pane_id !== binding?.paneId || agent.terminal_id !== binding?.terminalId
     || agent.focused !== true) throw new Error("agent focus response target mismatch");

@@ -7,10 +7,10 @@ const env = { HERDR_BIN_PATH: "/opt/herdr", HERDR_CONFIG_PATH: "/home/a/.config/
 const route = { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: 17 };
 const focusRecord = {
   canonicalId: "session-a", projectCanonicalId: "project-a", generation: 1, reconciliationState: "current", role: "interaction",
-  officialPiSession: { source: "pi", agent: "pi", kind: "session_id", value: "official-a" },
+  officialAgentSession: { source:"herdr:pi", agent: "pi", kind: "id", value: "official-a" },
   binding: { workspaceId: "workspace-a", tabId: "tab-a", paneId: "pane-a", terminalId: "terminal-a" },
 };
-const focusedAgent = (overrides = {}) => ({ name: "any-name", terminal_id: "terminal-a", workspace_id: "workspace-a", tab_id: "tab-a", pane_id: "pane-a", focused: true, agent_session: { ...focusRecord.officialPiSession }, ...overrides });
+const focusedAgent = (overrides = {}) => ({ name: "any-name", terminal_id: "terminal-a", workspace_id: "workspace-a", tab_id: "tab-a", pane_id: "pane-a", focused: true, agent_session: { ...focusRecord.officialAgentSession }, ...overrides });
 const focusBody = (agent = focusedAgent()) => JSON.stringify({ result: { type: "agent_info", agent } });
 
 test("client uses exact explicit session argv, inherited proof env, no shell, and no retry", async () => {
@@ -49,14 +49,14 @@ test("history changes only after successful human focus", () => {
   assert.equal(recordSuccessfulFocus(history, { projectCanonicalId: "p", canonicalSessionId: "new", cause: "human", success: true }).projects.p, "new");
 });
 
-test("local activation focuses one official canonical Pi session and records only that successful human focus", async () => {
+test("local activation focuses one official canonical agent session and records only that successful human focus", async () => {
   const record = structuredClone(focusRecord);
   const registry = {
     schemaVersion: 1, route,
     projects: [{ canonicalId: "project-a", generation: 1, reconciliationState: "current", stewardSessionCanonicalId: "session-a" }],
     sessions: [record],
   };
-  const agent = { name: "unique-agent", terminal_id: "terminal-a", workspace_id: "workspace-a", tab_id: "tab-a", pane_id: "pane-a", agent_session: { ...record.officialPiSession } };
+  const agent = { name: "unique-agent", terminal_id: "terminal-a", workspace_id: "workspace-a", tab_id: "tab-a", pane_id: "pane-a", agent_session: { ...record.officialAgentSession } };
   const focused = [], histories = [];
   const result = await invokeAction("activate-local-1", {
     env, readRegistry: async () => registry,
@@ -83,6 +83,20 @@ test("pane.focused event revalidates exact official pane and records history wit
   assert.equal(result.status, "recorded"); assert.equal(histories[0].projects["project-a"], "session-a"); assert.deepEqual(popups, []);
   const ignored = await handlePaneFocusedEvent({ ...{ env: eventEnv, readRegistry: async () => registry }, client: { listAgents: async () => [focusedAgent({ pane_id: "wrong" })] }, historyTransaction: async () => assert.fail("must not mutate") });
   assert.equal(ignored.status, "ignored");
+});
+
+test("OpenCode id focus response and pane.focused receipt revalidate the exact official tuple", async () => {
+  const record = structuredClone(focusRecord);
+  record.officialAgentSession = { source: "herdr:opencode", agent: "opencode", kind: "id", value: "oc-session-42" };
+  const ocAgent = { name: "OpenCode", terminal_id: "terminal-a", workspace_id: "workspace-a", tab_id: "tab-a", pane_id: "pane-a", focused: true, agent_status: "idle", agent_session: { ...record.officialAgentSession } };
+  assert.equal(parseFocusResponse(JSON.stringify({ result: { type: "agent_info", agent: ocAgent } }), record).agent_session.kind, "id");
+
+  const registry = { schemaVersion: 1, route, projects: [{ canonicalId: "project-a", generation: 1, reconciliationState: "current", stewardSessionCanonicalId: "session-a" }], sessions: [record] };
+  const eventEnv = { ...env, HERDR_PLUGIN_EVENT: "pane.focused", HERDR_PLUGIN_EVENT_JSON: JSON.stringify({ event: "pane_focused", data: { type: "pane_focused", pane_id: "pane-a", workspace_id: "workspace-a" } }) };
+  const writes = [];
+  const result = await handlePaneFocusedEvent({ env: eventEnv, readRegistry: async () => registry, client: { listAgents: async () => [ocAgent] }, historyTransaction: async (_file, mutate) => { const outcome = await mutate({ schemaVersion: 1, projects: {} }); writes.push(outcome.history); return outcome.result; } });
+  assert.equal(result.status, "recorded");
+  assert.equal(writes[0].projects["project-a"], "session-a");
 });
 
 test("exit-zero wrong focus target never updates history", async () => {

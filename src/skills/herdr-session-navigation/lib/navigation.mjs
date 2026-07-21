@@ -12,30 +12,35 @@ function positiveGeneration(value) {
   return Number.isSafeInteger(value) && value > 0;
 }
 
+function sameOfficialAgentSession(a, b) {
+  return a?.source === b?.source && a?.agent === b?.agent && a?.kind === b?.kind && a?.value === b?.value;
+}
+
 function bindingMatchesSnapshot(binding, snapshot) {
   if (!positiveGeneration(binding.generation)) return false;
-  if (!assertableText(binding.sessionName) || binding.sessionName !== snapshot?.sessionName) return false;
-  if (!assertableText(binding.socketPath) || binding.socketPath !== snapshot?.socketPath) return false;
-  if (!assertableText(binding.piSessionRef) || !assertableText(binding.terminalId)) return false;
+  if (!assertableText(binding.sessionName) || !assertableText(binding.socketPath)) return false;
+  if (!assertableText(binding.officialAgentSession?.value) || !assertableText(binding.terminalId)) return false;
   if (!Number.isSafeInteger(binding.protocol) || binding.protocol !== snapshot?.protocol) return false;
 
+  // Session/socket/config and generation come from explicit invocation/registry evidence.
+  // Pinned PaneInfo attests only its raw locators and official agent_session tuple.
   const panes = (snapshot?.panes ?? []).filter((pane) =>
-    pane.id === binding.paneId
-    && pane.workspaceId === binding.workspaceId
-    && pane.tabId === binding.tabId
-    && pane.terminalId === binding.terminalId
-    && pane.piSessionRef === binding.piSessionRef
-    && pane.bindingGeneration === binding.generation
+    pane.pane_id === binding.paneId
+    && pane.workspace_id === binding.workspaceId
+    && pane.tab_id === binding.tabId
+    && pane.terminal_id === binding.terminalId
+    && sameOfficialAgentSession(pane.agent_session, binding.officialAgentSession)
   );
   if (panes.length !== 1) return false;
 
   if (binding.agentName != null) {
     const agents = (snapshot?.agents ?? []).filter((agent) =>
       agent.name === binding.agentName
-      && agent.paneId === binding.paneId
-      && agent.terminalId === binding.terminalId
-      && agent.piSessionRef === binding.piSessionRef
-      && agent.bindingGeneration === binding.generation
+      && agent.pane_id === binding.paneId
+      && agent.terminal_id === binding.terminalId
+      && agent.workspace_id === binding.workspaceId
+      && agent.tab_id === binding.tabId
+      && sameOfficialAgentSession(agent.agent_session, binding.officialAgentSession)
     );
     if (agents.length !== 1) return false;
   }
@@ -81,7 +86,7 @@ function bindingEvidence(binding) {
     tabId: binding.tabId,
     paneId: binding.paneId,
     terminalId: binding.terminalId,
-    piSessionRef: binding.piSessionRef,
+    officialAgentSession: binding.officialAgentSession,
     protocol: binding.protocol,
     reconciliationState: binding.reconciliationState,
   };

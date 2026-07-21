@@ -23,13 +23,12 @@ test("canonical resolution distinguishes unique, missing, ambiguous, and stale",
   assert.equal(resolveDestination(stale.destination, stale.bindings, stale.snapshot).status, "stale");
 });
 
-test("resolution rejects pane-id collisions across session, socket, Pi ref, and generation", async () => {
+test("resolution rejects raw pane locator/official-tuple mismatch and invalid registry generation", async () => {
   const { data } = await validResolution();
   const alterations = [
-    { sessionName: "other-session" },
-    { socketPath: "/tmp/other.sock" },
-    { panes: data.observation.snapshot.panes.map((pane) => ({ ...pane, piSessionRef: "pi:other" })) },
-    { panes: data.observation.snapshot.panes.map((pane) => ({ ...pane, bindingGeneration: 99 })) },
+    { panes: data.observation.snapshot.panes.map((pane) => ({ ...pane, pane_id: "other" })) },
+    { panes: data.observation.snapshot.panes.map((pane) => ({ ...pane, terminal_id: "other" })) },
+    { panes: data.observation.snapshot.panes.map((pane) => ({ ...pane, agent_session: { ...pane.agent_session, value: "other" } })) },
   ];
   for (const alteration of alterations) {
     const snapshot = { ...data.observation.snapshot, ...alteration };

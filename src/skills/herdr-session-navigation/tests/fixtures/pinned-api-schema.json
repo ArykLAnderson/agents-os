@@ -1,5 +1,5 @@
 {
-  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "metadata": { "pinnedCommit": "1f2487554b9fd42118f9e99ee06eb558bbb2391f", "liveValidated": false },
   "protocol": 17,
   "serverCapabilities": { "live_handoff": true, "detached_server_daemon": true },
   "snapshotCommand": ["--session", "casebook-trial", "api", "snapshot"],

@@ -9,30 +9,55 @@
   },
   "projects": [
     {
-      "canonicalId": "casebook-project:example",
+      "canonicalId": "casebook-project:pi-example",
       "generation": 1,
       "reconciliationState": "current",
-      "stewardSessionCanonicalId": "pi-conversation:example-steward"
+      "stewardSessionCanonicalId": "agent-conversation:pi-example-steward"
+    },
+    {
+      "canonicalId": "casebook-project:opencode-example",
+      "generation": 1,
+      "reconciliationState": "current",
+      "stewardSessionCanonicalId": "agent-conversation:opencode-example-steward"
     }
   ],
   "sessions": [
     {
-      "canonicalId": "pi-conversation:example-steward",
-      "projectCanonicalId": "casebook-project:example",
+      "canonicalId": "agent-conversation:pi-example-steward",
+      "projectCanonicalId": "casebook-project:pi-example",
       "generation": 1,
       "reconciliationState": "current",
       "role": "steward",
-      "officialPiSession": {
-        "source": "pi",
+      "officialAgentSession": {
+        "source": "herdr:pi",
         "agent": "pi",
-        "kind": "session_id",
-        "value": "official-pi-session-reference"
+        "kind": "path",
+        "value": "/Users/example/.pi/agent/sessions/example.jsonl"
       },
       "binding": {
-        "workspaceId": "replaceable-herdr-workspace-id",
-        "tabId": "replaceable-herdr-tab-id",
-        "paneId": "replaceable-herdr-pane-id",
-        "terminalId": "replaceable-herdr-terminal-id"
+        "workspaceId": "replaceable-pi-workspace-id",
+        "tabId": "replaceable-pi-tab-id",
+        "paneId": "replaceable-pi-pane-id",
+        "terminalId": "replaceable-pi-terminal-id"
+      }
+    },
+    {
+      "canonicalId": "agent-conversation:opencode-example-steward",
+      "projectCanonicalId": "casebook-project:opencode-example",
+      "generation": 1,
+      "reconciliationState": "current",
+      "role": "steward",
+      "officialAgentSession": {
+        "source": "herdr:opencode",
+        "agent": "opencode",
+        "kind": "id",
+        "value": "official-opencode-session-id"
+      },
+      "binding": {
+        "workspaceId": "replaceable-opencode-workspace-id",
+        "tabId": "replaceable-opencode-tab-id",
+        "paneId": "replaceable-opencode-pane-id",
+        "terminalId": "replaceable-opencode-terminal-id"
       }
     }
   ]
