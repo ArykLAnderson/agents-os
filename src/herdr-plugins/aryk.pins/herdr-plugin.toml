@@ -1,0 +1,123 @@
+# Source-attested against ogulcancelik/herdr commit 1f2487554b9fd42118f9e99ee06eb558bbb2391f (Herdr 0.7.4).
+# No unsupported source metadata fields are added to the v1 manifest.
+id = "aryk.pins"
+name = "Aryk Pins"
+version = "0.1.0"
+min_herdr_version = "0.7.4"
+description = "Fail-closed canonical project and Pi session pins"
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "pin-project"
+title = "Pin current project"
+description = "Append the authoritative current project to the first free project slot"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "pin-project"]
+
+[[actions]]
+id = "manage-projects"
+title = "Manage project pins"
+description = "Open the project pin manager popup"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "manage-projects"]
+
+[[actions]]
+id = "pin-local"
+title = "Pin current local thread"
+description = "Append the authoritative current Pi session to the first free local slot"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "pin-local"]
+
+[[actions]]
+id = "manage-locals"
+title = "Manage local pins"
+description = "Open the local pin manager popup"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "manage-locals"]
+
+[[actions]]
+id = "activate-project-1"
+title = "Open project pin 1"
+description = "Focus canonical project pin slot 1 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-project-1"]
+
+[[actions]]
+id = "activate-project-2"
+title = "Open project pin 2"
+description = "Focus canonical project pin slot 2 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-project-2"]
+
+[[actions]]
+id = "activate-project-3"
+title = "Open project pin 3"
+description = "Focus canonical project pin slot 3 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-project-3"]
+
+[[actions]]
+id = "activate-project-4"
+title = "Open project pin 4"
+description = "Focus canonical project pin slot 4 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-project-4"]
+
+[[actions]]
+id = "activate-local-1"
+title = "Open local pin 1"
+description = "Focus canonical local pin slot 1 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-local-1"]
+
+[[actions]]
+id = "activate-local-2"
+title = "Open local pin 2"
+description = "Focus canonical local pin slot 2 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-local-2"]
+
+[[actions]]
+id = "activate-local-3"
+title = "Open local pin 3"
+description = "Focus canonical local pin slot 3 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-local-3"]
+
+[[actions]]
+id = "activate-local-4"
+title = "Open local pin 4"
+description = "Focus canonical local pin slot 4 or visibly refuse"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action", "activate-local-4"]
+
+[[events]]
+on = "pane.focused"
+command = ["node", "index.mjs", "event", "pane.focused"]
+
+[[panes]]
+id = "project-manager"
+title = "Project pins"
+description = "Inspect, reorder, and clear four project pin slots"
+placement = "popup"
+width = 84
+height = 14
+command = ["node", "index.mjs", "manager", "project"]
+
+[[panes]]
+id = "local-manager"
+title = "Local pins"
+description = "Inspect, reorder, and clear four local pin slots"
+placement = "popup"
+width = 84
+height = 14
+command = ["node", "index.mjs", "manager", "local"]
+
+[[panes]]
+id = "result"
+title = "Pin result"
+description = "Show a visible fail-closed pin result"
+placement = "popup"
+width = 72
+height = 9
+command = ["node", "index.mjs", "result"]

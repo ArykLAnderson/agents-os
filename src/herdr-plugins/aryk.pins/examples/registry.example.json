@@ -1,0 +1,39 @@
+{
+  "_notice": "NON-AUTHORITATIVE EXAMPLE ONLY. A trusted Casebook/Steward publisher must create the machine-local registry.",
+  "schemaVersion": 1,
+  "route": {
+    "sessionName": "casebook-trial",
+    "configPath": "/Users/example/.config/herdr/trials/casebook/config.toml",
+    "socketPath": "/Users/example/.config/herdr/sessions/casebook-trial/herdr.sock",
+    "protocol": 17
+  },
+  "projects": [
+    {
+      "canonicalId": "casebook-project:example",
+      "generation": 1,
+      "reconciliationState": "current",
+      "stewardSessionCanonicalId": "pi-conversation:example-steward"
+    }
+  ],
+  "sessions": [
+    {
+      "canonicalId": "pi-conversation:example-steward",
+      "projectCanonicalId": "casebook-project:example",
+      "generation": 1,
+      "reconciliationState": "current",
+      "role": "steward",
+      "officialPiSession": {
+        "source": "pi",
+        "agent": "pi",
+        "kind": "session_id",
+        "value": "official-pi-session-reference"
+      },
+      "binding": {
+        "workspaceId": "replaceable-herdr-workspace-id",
+        "tabId": "replaceable-herdr-tab-id",
+        "paneId": "replaceable-herdr-pane-id",
+        "terminalId": "replaceable-herdr-terminal-id"
+      }
+    }
+  ]
+}
