@@ -12,8 +12,8 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 
 - Broken, failing, intermittent, or slow behavior → `diagnosing-bugs`.
 - Ordinary in-progress merge/rebase conflicts → `resolving-merge-conflicts`.
-- Current accepted Feature Atlas execution handoff requiring coordinated implementation → `software-implementation` only with an explicit Delivery Contract that preserves its Map Decision, Feature/Leg/Work Item identities, prerequisites, convergence, proof profile, typed limitations, successor-currentness, and separate effect authority. The installed coordinator is generic and not yet a proven conforming handoff consumer; stop rather than flattening or silently upgrading the handoff.
-- Legacy accepted Route packages, ticket graphs, or keystones are evidence/fixtures, not current planning authority. Use `ad_hoc` mode only under separately explicit scope and authority; never present it as realization of an unreconciled Atlas plan.
+- Complete current `HandoffReady` or admissible `HandoffWithLimitations` from Feature Atlas requiring coordinated implementation → `software-implementation` in explicit `atlas` mode. Its Delivery Contract must preserve the exact Atlas/Map/current Decision and Blueprint/Feature/Leg/Work Item/local-label bindings, prerequisites, convergence, transition/cleanup, imported proof order, evidence/invalidators, typed limitations, publication integrity, and separate implementation/effect/PR/merge/deployment/landing authorities.
+- Summary-only, historical, conflicted, incomplete, unverifiable, `HandoffRefusal`, or authority-omitting Atlas input → stop fail-closed. Legacy Route packages, ticket graphs, or keystones are evidence/fixtures, not current planning authority; use `ad_hoc` only under separately explicit scope/authority and never present it as Atlas realization.
 - One clear bounded Task Contract with an assigned worktree → `coding-worker` directly.
 - Independent verification of one implemented task or integrated convergence boundary → `focused-validator` directly.
 - Idea needing one-session alignment → `grill`, invoking `domain-modeling` when language changes.
@@ -27,7 +27,7 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 
 ## Normal Flow
 
-`Frame → Blueprint → ephemeral Route → trusted Map Decision → Feature Atlas publication/handoff → separately authorized implementation → PR` is the full accepted-feature path. Route composes but persists no accepted plan; Atlas is the sole durable accepted planning authority. Shorter work enters at the smallest sufficient surface: a direct Coding Worker for one complete Task Contract, or Software Implementation for generic/ad hoc coordination when its explicit Contract is sufficient.
+`Frame → Blueprint → ephemeral Route → trusted Map Decision → Feature Atlas publication/current handoff → Software Implementation atlas mode under separate authority → PR` is the full accepted-feature path. Route composes but persists no accepted plan; Atlas is the sole durable accepted planning authority. Shorter work enters at the smallest sufficient surface: a direct Coding Worker for one complete Task Contract, or Software Implementation in `ad_hoc`/`prototype` mode when its explicit Contract is sufficient.
 
 Planning and evidence never imply implementation, external-effect, PR, or landing authority. The selected workflow must receive those authorities explicitly. Research produces evidence, not decisions. Improve Architecture produces candidates, not refactors.
 
