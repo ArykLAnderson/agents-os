@@ -1,0 +1,12 @@
+{
+  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "destination": { "canonicalId": "frame:stable" },
+  "bindings": [
+    { "canonicalId": "frame:stable", "generation": 2, "backend": "herdr", "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "protocol": 17, "workspaceId": "w1", "tabId": "t1", "paneId": "p1", "terminalId": "term1", "piSessionRef": "pi:1", "reconciliationState": "current" },
+    { "canonicalId": "frame:stable", "generation": 2, "backend": "herdr", "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "protocol": 17, "workspaceId": "w2", "tabId": "t2", "paneId": "p2", "terminalId": "term2", "piSessionRef": "pi:1", "reconciliationState": "current" }
+  ],
+  "snapshot": { "protocol": 17, "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "panes": [
+    { "id": "p1", "workspaceId": "w1", "tabId": "t1", "terminalId": "term1", "piSessionRef": "pi:1", "bindingGeneration": 2 },
+    { "id": "p2", "workspaceId": "w2", "tabId": "t2", "terminalId": "term2", "piSessionRef": "pi:1", "bindingGeneration": 2 }
+  ] }
+}

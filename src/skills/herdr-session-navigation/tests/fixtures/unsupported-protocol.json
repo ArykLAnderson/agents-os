@@ -1,0 +1,10 @@
+{
+  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "expected": { "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml", "integration": { "id": "pi", "schemaVersion": "5" }, "piSessionRef": "pi:official", "bindingGeneration": 1 },
+  "observation": {
+    "executable": { "exists": true, "path": "/opt/herdr/bin/herdr" }, "trialName": "casebook-trial",
+    "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml", "socketPath": "/tmp/herdr.sock", "currentPaneId": "pane-1",
+    "handshake": { "ok": true, "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "protocol": 99, "capabilities": { "live_handoff": true, "detached_server_daemon": true } },
+    "snapshot": { "protocol": 99, "sessionName": "casebook-trial", "socketPath": "/tmp/herdr.sock", "panes": [] }
+  }
+}

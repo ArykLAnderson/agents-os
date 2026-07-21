@@ -1,0 +1,5 @@
+{
+  "metadata": { "pinnedCommit": "02a6e874f67800891b5a549297219ed6f3ce0f2f", "liveValidated": false },
+  "expected": { "configPath": "/Users/test/.config/herdr/trials/casebook/config.toml", "integration": { "id": "pi", "schemaVersion": "5" }, "piSessionRef": "pi:official" },
+  "observation": { "executable": { "exists": true, "path": "/opt/herdr/bin/herdr" }, "trialName": "default" }
+}
