@@ -1,37 +1,47 @@
 # Configured Private GitHub Issues
 
-Use these instructions only when private GitHub Issues is the Feature Atlas's configured canonical tracker. Feature Atlas policy remains defined in domain language by [the canonical Issue representations](issue-representations.md).
+Use this adapter guidance only when private GitHub Issues is the configured canonical Feature Atlas. Domain identity, ownership, Decision authority, and projection semantics remain defined by [the canonical representations](issue-representations.md).
 
-## Required configuration and safety
+## Fail-Closed Capability And Destination Preflight
 
-Obtain the exact `<owner>/<repository>` locator before publishing. The repository must be the configured dedicated private Issues repository, separate from source repositories. Never infer it from the current Git remote, create it as a convenience, or treat its Git tree as canonical planning storage.
+Before any accepted publication, a separately authorized bounded provider prototype must already prove:
 
-Before every create or update session:
+- authenticated actor and bounded human-authority provenance can be retained and verified;
+- external accepted snapshots, when needed, are immutable/versioned, lifetime-retained, audience-compatible, and cryptographically content-bound;
+- open/closed Issue and comment identity searches can be exhaustive enough for find-before-create;
+- accepted Decision history and current projections can be reread without treating editable display text as authority;
+- uncertain create/edit/comment results can be recovered by exhaustive reread before retry.
+
+Until that evidence exists for the exact configured provider/account/repository, Map publication is unsupported. Stop; do not weaken trusted acceptance, infer provenance from comment prose, invent external storage, or fall back to Feature-first publication.
+
+Obtain the exact `<owner>/<repository>` and expected visibility. The repository must be the configured dedicated private Issues repository, separate from source repositories. Never infer it from the current Git remote, create it for convenience, broaden visibility, or substitute another account.
+
+Before every authorized mutation session:
 
 ```sh
 gh repo view <owner>/<repository> --json nameWithOwner,visibility,hasIssuesEnabled,url
 ```
 
-Proceed only when `nameWithOwner` is exact, `visibility` is `PRIVATE`, Issues are enabled, and access succeeds. Otherwise stop and ask for the missing setup or explicit destination correction. Use `--repo <owner>/<repository>` on Issue commands so the current working repository cannot redirect publication.
+Proceed only when identity is exact, visibility is `PRIVATE`, Issues are enabled, access succeeds, and the capability evidence above applies. Use `--repo <owner>/<repository>` on every Issue command.
 
-The existing request to create or shape an Atlas, Map, or Feature authorizes proposed/shaping Issue creation in this already configured tracker. A named human's acceptance of a Feature decomposition authorizes mechanical creation or update of its accepted Work Item Issues. Those mechanical actions need no second publication prompt. Ask separately before publishing elsewhere, transferring canonical authority, or changing an understood-private destination to public.
+Route composition and human discussion authorize no tracker mutation. Only a verified exact Map Acceptance Package authorizes the narrow Publisher's configured Atlas projection. That authority does not extend to another destination, visibility change, implementation dispatch, source mutation, PR, merge, or deployment.
 
-## Find before allocating or creating
+## Exhaustive Find Before Create
 
-Search open and closed Issues, including comments, for the exact Atlas-qualified ID and the candidate local ID. For example, inspect results for both `FA-001 / F-014` and `F-014`:
+Search open and closed Issues and comments for the Atlas-qualified stable ID, unqualified stable ID, Map Decision identity, and candidate-local label. For example:
 
 ```sh
 gh issue list --repo <owner>/<repository> --state all --limit 1000 --search '"FA-001 / F-014" in:title,body,comments'
 gh issue list --repo <owner>/<repository> --state all --limit 1000 --search '"F-014" in:title,body,comments'
 ```
 
-Do not assume an empty truncated result is exhaustive; narrow or continue the search as needed. Inspect plausible matches with `gh issue view --comments`. Reuse the one canonical Issue when identity and ownership match. Stop rather than allocating or updating when results collide, conflict, or remain ambiguous. Repeat the search immediately before creating a newly allocated ID.
+A truncated empty result is not exhaustive. Narrow/continue the search and inspect every plausible match with comments. Reuse exactly one record only when stable identity, owner, current Map Decision, and accepted local-label meaning agree. Stop on ambiguity, owner mismatch, duplicate identity, durable-binding conflict, or contradictory accepted content. Repeat search immediately before creation.
 
-Use readable titles beginning with the stable ID, such as `FM-002 — Feature Atlas v1 delivery`. Issue numbers and title text may change without changing identity.
+An allocated number remains tentative until successful create/reuse plus post-write reread establishes its binding. If another actor wins a race before binding, reread exhaustively and select a different collision-free value. Never recycle an established identity or silently remap an accepted label.
 
-## Create and maintain Issues
+## Narrow Recoverable Publisher
 
-Prepare the body from the applicable canonical template, then use ordinary GitHub operations with the repository explicit:
+Use prepared bodies/comments derived mechanically from the exact accepted Map Decision:
 
 ```sh
 gh issue create --repo <owner>/<repository> --title '<ID> — <name>' --body-file <prepared-body>
@@ -39,24 +49,27 @@ gh issue edit <issue-number> --repo <owner>/<repository> --body-file <prepared-b
 gh issue comment <issue-number> --repo <owner>/<repository> --body-file <prepared-comment>
 ```
 
-After creation, replace any pending self-locator with the returned canonical Issue URL. For every Map, Feature, and Work Item, verify that the body names both the stable owner ID and canonical owner Issue URL. A Work Item must name exactly one scope owner.
+For a new Map, create a minimum shell only if needed to host its Decision. It must say `no accepted candidate`, reveal no proposed semantics, and remain non-authoritative if Decision recording fails.
 
-When GitHub native parent/sub-Issue relationships are available, they may mirror Atlas → Map → Feature → Work Item ownership for navigation. They do not define identity or authority. Never place a Map under an Atlas Index Segment, and never place a Work Item under a dependency instead of its declared scope owner.
+Recoverable order:
 
-Labels are optional presentation aids except for `atlas-current`. Keep exactly one Index Segment for an Atlas marked `atlas-current`. To rotate:
+1. Reread destination, capability evidence, authority provenance, exact bindings, expected predecessor, provider Decisions, and collisions.
+2. Create/recover the minimum Map shell and record the immutable current `Decision — Map candidate` with verified authority provenance and required external content binding.
+3. Create/reuse Feature and Work Item identities from exact accepted local labels. Legs remain Feature-contained by default.
+4. Reread all created records; resolve every owner, self, dependency, Decision, and provider endpoint locator; update child projections in a second pass.
+5. Refresh Feature bodies and the Map body last, including current Decision, label mappings, graph/proof/history, publication state, limitations, and next action. Update Atlas/Index navigation only as needed.
+6. Reread rendered bodies and comments. Verify identity, exact owner, Decision/currentness, accepted meaning, edge direction, locator completeness, visibility, and one-current-Decision status.
 
-1. Create the next `AIS-<NNN>` Issue and identify the same Atlas in its body.
-2. Link the previous and next segments as useful; do not add hashes.
-3. Remove `atlas-current` from the old segment and add it to the new segment.
-4. Update both segment states and the Atlas root's current-segment locator.
-5. Confirm Maps still point to the Atlas root as owner and are not native children of either segment.
+Native sub-Issue relationships may mirror Atlas → Map → Feature → Work Item for navigation. They never define ownership or authority. A Leg need not become an Issue. Never put a Map under an Index Segment as semantic parent, or a Work Item under a dependency instead of its Feature owner.
 
-Choose rotation based on readability and context pressure, not a fixed count. Create the live Atlas hierarchy or rotate a real segment only when an authorized shaping invocation requires that publication in this configured tracker.
+Keep bodies current and concise. Preserve append-only semantic history through new Decision/correction/observation comments rather than silently rewriting accepted history. Do not persist a mutable reverse `Blocks` field; derived reverse views cite their source consumer and observation time.
 
-## Body and comment discipline
+## Partial Failure And Uncertain Results
 
-- Keep the Issue body current and concise; do not append dated history to it.
-- Post the named-human Decision or other material-history comment before editing accepted current state.
-- Do not describe an agent-authored comment, Issue creation, label, or body edit as acceptance.
-- Link to pull requests, branches, reports, and source repositories rather than copying their detailed evidence.
-- Re-read the rendered body and latest comments after mutation. Confirm stable identity, exact owner ID/URL, accepted-versus-proposed separation, current state, and next action are clear.
+GitHub mutations are non-transactional. If any operation fails or has an uncertain result, stop and return the Map Decision locator, successful record locators, exact failed operation, incomplete/pending projections, and safe resume action. Search/reread before retry.
+
+Do not repost the Decision, delete successful records, roll back/recycle IDs, create replacements to hide partial state, choose semantic conflict resolution, or follow a newer Decision silently. Resume from the exact Decision and established bindings. When possible, project `publication incomplete`; normal execution handoff remains refused until stable references and current projection are complete.
+
+## Observations And Source Links
+
+GitHub text does not make a source fact true. Retain an observation only when the owning workflow/source authority initiates the bounded operation and the adapter verifies identity, authorization, provenance, locator/environment, audience, and integrity. Unverifiable results are `unknown`. Link to Git, tests, PRs, reports, deployments, and runtime/provider evidence rather than copying detailed facts or secrets.

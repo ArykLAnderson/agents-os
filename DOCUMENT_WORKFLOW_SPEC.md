@@ -180,9 +180,11 @@ Stage and release each require explicit authorization. Fetch and compare existin
 
 ## Boundaries With Other Systems
 
-### Feature Atlas
+### Route and Feature Atlas
 
-Feature Atlas owns accepted delivery intent, Feature and Work Item identities, named Decisions, reconciliation, and canonical tracker representation. A Case or Frame may inform Feature shaping but does not replace Atlas authority.
+Route ephemerally composes complete Feature Map candidates from one or more exact accepted Blueprints and current terrain. It owns no durable accepted plan or stable planning identity. Exact trusted-human Map acceptance precedes publication.
+
+Feature Atlas is the sole durable accepted planning authority. It owns stable Map, Feature, and Work Item identities; immutable current/successor Map Decisions; Map-owned Blueprint coverage and cross-Feature/cross-Map planning; Feature-owned contained Legs and Work Item DAGs; and canonical tracker projection. A Case, Frame, Blueprint, Route session, reviewer, or execution map may inform or consume planning but does not replace Atlas authority. Map acceptance authorizes no implementation or external effect.
 
 ### Workflow Runtime
 
