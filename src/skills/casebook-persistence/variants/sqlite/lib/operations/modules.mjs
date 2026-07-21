@@ -19,6 +19,7 @@ const REGISTRY_STATEMENTS = Object.freeze([
     asset_sha256 TEXT NOT NULL,
     descriptor_sha256 TEXT NOT NULL,
     descriptor_json TEXT NOT NULL CHECK (json_valid(descriptor_json)),
+    asset_json TEXT NOT NULL CHECK (json_valid(asset_json)),
     installed_at TEXT NOT NULL,
     install_operation_id TEXT NOT NULL UNIQUE REFERENCES store_operation_receipts(operation_id)
   ) STRICT`,
@@ -173,9 +174,47 @@ function compatibilityClassification(validated, state) {
   if (validated.assetDigest !== validated.descriptor.asset.sha256) return { status: "incompatible", classification: "asset_incompatible", code: "module_asset_digest_mismatch", exposure: "disabled" };
   return null;
 }
+function integrityUnsafe(code = "module_subsystem_integrity_unsafe") {
+  return { status: "integrity_unsafe", classification: "partial_state", code, exposure: "disabled" };
+}
+async function inspectInstalledModules(binary, storePath) {
+  const orphanRetirements = await queryJson(binary, storePath, `SELECT r.module_id FROM optional_module_retirements r LEFT JOIN optional_module_installations i USING(module_id) WHERE i.module_id IS NULL LIMIT 1;`);
+  if (orphanRetirements.length) return integrityUnsafe("module_retirement_binding_missing");
+  const installations = await queryJson(binary, storePath, `SELECT i.*, r.retired_at, r.retirement_operation_id FROM optional_module_installations i LEFT JOIN optional_module_retirements r USING(module_id) ORDER BY i.module_id;`);
+  for (const installed of installations) {
+    let descriptor;
+    let asset;
+    let validated;
+    try {
+      descriptor = JSON.parse(installed.descriptor_json);
+      asset = JSON.parse(installed.asset_json);
+      validated = validateDescriptor(descriptor, asset);
+    } catch {
+      return integrityUnsafe("module_installed_descriptor_malformed");
+    }
+    if (canonicalJson(descriptor) !== installed.descriptor_json
+      || canonicalJson(asset) !== installed.asset_json
+      || digest(validated.descriptor) !== installed.descriptor_sha256
+      || validated.assetDigest !== installed.asset_sha256
+      || validated.descriptor.asset.sha256 !== validated.assetDigest
+      || installed.module_id !== validated.descriptor.module_id
+      || installed.module_schema_id !== validated.descriptor.module_schema.id
+      || installed.module_schema_version !== validated.descriptor.module_schema.version
+      || installed.module_protocol_id !== validated.descriptor.module_protocol.id
+      || installed.module_protocol_version !== validated.descriptor.module_protocol.version) {
+      return integrityUnsafe("module_installed_binding_mismatch");
+    }
+    const prefix = `${installed.module_id.replaceAll("-", "_")}__`;
+    const rows = await queryJson(binary, storePath, `SELECT type,name,sql FROM sqlite_schema WHERE name GLOB ${sqlText(`${prefix}*`)} ORDER BY name;`);
+    const expected = new Map(validated.objects.map((item) => [item.name, item]));
+    if (rows.length !== expected.size || rows.some((row) => {
+      const binding = expected.get(row.name);
+      return !binding || row.type !== binding.type || typeof row.sql !== "string" || digest(normalizeSql(row.sql)) !== binding.sql_sha256;
+    })) return integrityUnsafe("module_installed_objects_partial_or_corrupt");
+  }
+  return null;
+}
 async function inspectLifecycle(binary, storePath, validated, state) {
-  const incompatible = compatibilityClassification(validated, state);
-  if (incompatible) return incompatible;
   const expectedRegistry = REGISTRY_STATEMENTS.map((sql) => {
     const match = /^CREATE (TABLE|TRIGGER)\s+([a-z0-9_]+)/i.exec(sql);
     return { type: match[1].toLowerCase(), name: match[2], sql_sha256: digest(normalizeSql(sql)) };
@@ -184,15 +223,24 @@ async function inspectLifecycle(binary, storePath, validated, state) {
   const rows = await queryJson(binary, storePath, `SELECT type,name,sql FROM sqlite_schema WHERE name IN (${names}) ORDER BY name;`);
   const byName = new Map(rows.map((row) => [row.name, row]));
   const registryPresent = expectedRegistry.filter((item) => byName.has(item.name));
-  if (registryPresent.length && (registryPresent.length !== expectedRegistry.length || registryPresent.some((item) => byName.get(item.name).type !== item.type || digest(normalizeSql(byName.get(item.name).sql)) !== item.sql_sha256))) {
+  if (registryPresent.length && (registryPresent.length !== expectedRegistry.length || registryPresent.some((item) => byName.get(item.name).type !== item.type || typeof byName.get(item.name).sql !== "string" || digest(normalizeSql(byName.get(item.name).sql)) !== item.sql_sha256))) {
     return { status: "integrity_unsafe", classification: "partial_state", code: "module_registry_partial_or_corrupt", exposure: "disabled" };
   }
   const objectPresent = validated.objects.filter((item) => byName.has(item.name));
   if (!registryPresent.length) {
-    return objectPresent.length ? { status: "integrity_unsafe", classification: "partial_state", code: "module_partial_state", exposure: "disabled" } : { status: "absent", classification: "absent", code: "module_absent", exposure: "disabled", registry_present: false };
+    if (objectPresent.length) return { status: "integrity_unsafe", classification: "partial_state", code: "module_partial_state", exposure: "disabled" };
+    const incompatible = compatibilityClassification(validated, state);
+    return incompatible ?? { status: "absent", classification: "absent", code: "module_absent", exposure: "disabled", registry_present: false };
   }
+  const subsystemFailure = await inspectInstalledModules(binary, storePath);
+  if (subsystemFailure) return subsystemFailure;
+  const incompatible = compatibilityClassification(validated, state);
+  if (incompatible) return incompatible;
   const installs = await queryJson(binary, storePath, `SELECT i.*, r.retired_at, r.retirement_operation_id FROM optional_module_installations i LEFT JOIN optional_module_retirements r USING(module_id) WHERE i.module_id=${sqlText(validated.descriptor.module_id)};`);
-  if (!installs.length) return objectPresent.length ? { status: "integrity_unsafe", classification: "partial_state", code: "module_partial_state", exposure: "disabled" } : { status: "absent", classification: "absent", code: "module_absent", exposure: "disabled", registry_present: true };
+  if (!installs.length) {
+    if (objectPresent.length) return { status: "integrity_unsafe", classification: "partial_state", code: "module_partial_state", exposure: "disabled" };
+    return { status: "absent", classification: "absent", code: "module_absent", exposure: "disabled", registry_present: true };
+  }
   const installed = installs[0];
   const descriptorSha256 = digest(validated.descriptor);
   if (installed.descriptor_sha256 !== descriptorSha256 || installed.asset_sha256 !== validated.assetDigest || installed.descriptor_json !== canonicalJson(validated.descriptor)) {
@@ -236,7 +284,7 @@ async function installModule(request) {
   const outcome = { module_id: validated.descriptor.module_id, descriptor_sha256: digest(validated.descriptor), asset_sha256: validated.assetDigest, lifecycle: "active", exposure: "enabled", installed_at: settledAt };
   const result = { status: "settled", terminal: { outcome: "installed", code: "module_installed", failure_class: null, retry_disposition: "never", canonical_state_effect: "module-schema-addition" }, module: outcome, receipt: { operation_id: operationId, operation_kind: "module_install", store_id: prepared.state.metadata.store_id, request_digest: requestSha256, outcome: "installed", result_digest: digest(outcome), settled_at: settledAt, failure_class: null, retry_disposition: "never", operation_fence: nextFence } };
   const registrySql = diagnosis.registry_present ? "" : `${REGISTRY_STATEMENTS.join(";\n")};`;
-  const sql = `.bail on\nPRAGMA busy_timeout=5000;\nPRAGMA foreign_keys=ON;\nBEGIN IMMEDIATE;\n${registrySql}\n${validated.asset.statements.join(";\n")};\nINSERT INTO store_operation_receipts(operation_id,operation_kind,store_id,request_digest,outcome,result_json,result_digest,authority_claim_json,settled_at,failure_class,retry_disposition,operation_fence) VALUES(${sqlText(operationId)},'module_install',${sqlText(prepared.state.metadata.store_id)},${sqlText(requestSha256)},'installed',${sqlText(JSON.stringify(result))},${sqlText(digest(outcome))},${sqlText(JSON.stringify(authorityClaim))},${sqlText(settledAt)},NULL,'never',${nextFence});\nINSERT INTO optional_module_installations VALUES(${sqlText(validated.descriptor.module_id)},1,${sqlText(validated.descriptor.module_schema.id)},${validated.descriptor.module_schema.version},${sqlText(validated.descriptor.module_protocol.id)},${validated.descriptor.module_protocol.version},${sqlText(validated.assetDigest)},${sqlText(digest(validated.descriptor))},${sqlText(canonicalJson(validated.descriptor))},${sqlText(settledAt)},${sqlText(operationId)});\nCREATE TEMP TABLE module_guard(value INTEGER CHECK(value=1));\nUPDATE store_fence SET operation_fence=${nextFence} WHERE singleton=1 AND operation_fence=${prepared.state.operation_fence};\nINSERT INTO module_guard VALUES(changes());\nCOMMIT;`;
+  const sql = `.bail on\nPRAGMA busy_timeout=5000;\nPRAGMA foreign_keys=ON;\nBEGIN IMMEDIATE;\n${registrySql}\n${validated.asset.statements.join(";\n")};\nINSERT INTO store_operation_receipts(operation_id,operation_kind,store_id,request_digest,outcome,result_json,result_digest,authority_claim_json,settled_at,failure_class,retry_disposition,operation_fence) VALUES(${sqlText(operationId)},'module_install',${sqlText(prepared.state.metadata.store_id)},${sqlText(requestSha256)},'installed',${sqlText(JSON.stringify(result))},${sqlText(digest(outcome))},${sqlText(JSON.stringify(authorityClaim))},${sqlText(settledAt)},NULL,'never',${nextFence});\nINSERT INTO optional_module_installations VALUES(${sqlText(validated.descriptor.module_id)},1,${sqlText(validated.descriptor.module_schema.id)},${validated.descriptor.module_schema.version},${sqlText(validated.descriptor.module_protocol.id)},${validated.descriptor.module_protocol.version},${sqlText(validated.assetDigest)},${sqlText(digest(validated.descriptor))},${sqlText(canonicalJson(validated.descriptor))},${sqlText(canonicalJson(validated.asset))},${sqlText(settledAt)},${sqlText(operationId)});\nCREATE TEMP TABLE module_guard(value INTEGER CHECK(value=1));\nUPDATE store_fence SET operation_fence=${nextFence} WHERE singleton=1 AND operation_fence=${prepared.state.operation_fence};\nINSERT INTO module_guard VALUES(changes());\nCOMMIT;`;
   try { await sqlite(prepared.binary, prepared.storePath, sql, { args: ["-batch", "-bail"], timeout: 20_000, maxBuffer: 4 * 1024 * 1024 }); }
   catch { const uncertain = await readStoreOperationReceipt(prepared.binary, prepared.storePath, operationId); if (uncertain?.operation_kind === "module_install" && uncertain.request_digest === requestSha256) return success("module.install", uncertain.result); return failure("module_install_failed", "Atomic optional-module installation did not settle.", { failureClass: "module_integrity_unsafe", retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR }); }
   return success("module.install", result);
