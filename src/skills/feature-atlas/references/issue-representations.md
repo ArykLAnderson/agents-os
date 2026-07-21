@@ -1,226 +1,161 @@
-# Canonical Feature Atlas Issue Representations
+# Canonical Feature Atlas Representations
 
-These are concise Markdown representations for canonical tracker records. Keep the headings readable; they are not a machine schema.
+These are readable semantic representations, not a rigid Markdown schema. A configured adapter may use sections, linked records, or native navigation when a fresh consumer can recover the same authority, ownership, currentness, prerequisites, proof, and limitations without knowing mutation order or Route scratch state.
 
-## Identity and ownership
+## Identity And Ownership
 
-- Domain IDs are stable and independent of Issue numbers, titles, repositories, paths, branches, and chats.
-- Allocate separate readable sequences within one Feature Atlas: `FA-001` for an Atlas, `AIS-001` for an Atlas Index Segment, `FM-001` for a Map, `F-001` for a Feature, and `WI-001` for a Work Item. Numbers carry no meaning and do not encode an owner.
-- Before allocating an ID, search the canonical tracker across open and closed records and their comments. Select the next number above the highest observed value in that kind's Atlas-scoped sequence, then repeat the search immediately before creation. Stop on a collision, conflicting claim, or ambiguous search result. Never recycle an ID.
-- A cross-Atlas reference pairs the Atlas ID with the entity ID, for example `FA-001 / F-014`.
-- Rehoming preserves the entity ID. Record the previous owner, new owner, named-human Decision, and consequences in comments before updating the current owner in the body.
-- Every Map names exactly one Atlas owner. Every Feature names exactly one Map owner. Every Work Item names exactly one Atlas, Map, or Feature scope owner. Record both the stable owner ID and its canonical locator.
-- Dependencies and Index Segment entries never imply ownership. Native tracker parent relationships and locators are navigation aids only.
+- Domain IDs are stable and independent of issue numbers, titles, repositories, paths, branches, and chats.
+- Allocate Atlas-scoped readable sequences: `FA-*` Atlas, `AIS-*` Index Segment, `FM-*` Map, `F-*` Feature, and `WI-*` Work Item. Numbers carry no meaning and never encode ownership. Legs are Feature-contained accepted structures by default and have no global ID kind.
+- Search open/closed records and comments exhaustively before allocation and immediately before creation. Never recycle an ID. A tentative allocation becomes durable only after successful create/reuse plus reread binds `(Map Decision, candidate-local label)` to it.
+- Every Map has exactly one Atlas owner. Every Feature has exactly one Map owner. Every implementation Work Item has exactly one Feature owner and one owning Leg label. Dependencies and convergence never change ownership.
+- Rehoming preserves identity only through its own trusted named-human Atlas Decision. Record old/new owner, consequence, and current Map Decision before changing the current projection.
+- Cross-Atlas references pair Atlas and entity identity, such as `FA-001 / F-014`, plus canonical locator.
+- Native tracker parentage, labels, index membership, and locators are navigation only.
 
-## Progressive disclosure
+Ordinarily one governing Blueprint identity has one stable Map. Referenced provider Blueprints retain separate Maps. Same-Blueprint/same-destination successors preserve `FM-*`; a fundamentally changed governing Blueprint or destination through split/combination/replacement requires a separate human/Blueprint disposition and new Map.
 
-The Issue body is the current operable view. A fresh reader should find current authority, state, and next action without replaying the discussion.
+## Authority, History, And Current Projection
 
-Comments are the append-only historical view. Before a material body change, add the applicable Decision, clarification, or material-change comment, then refresh the body. Do not turn either surface into a session log or duplicate detailed evidence already owned by Git, a pull request, a report, or another source system; link to it.
+The Issue body is a current operable projection. Comments/history retain immutable Decisions, corrections, material changes, and consequential observations. A fresh reader should not replay the entire history, but the body never outranks the current Map Decision.
 
-Only a comment clearly headed `Decision`, naming the human decision-maker, grants semantic authority. Issue creation, body edits, labels, links, native relationships, agent summaries, and status changes do not imply acceptance. Keep proposals clearly outside sections headed `Accepted` until such a Decision exists.
+Only a clearly headed `Decision — Map candidate` whose configured trusted Atlas provenance verifies the accepting human's identity and bounded authority for the exact Blueprint/Map question grants accepted planning authority. Display names, prose, issue creation, edits, labels, links, native relationships, agent output, reviews, status, and silence do not.
 
-Use this Decision comment form:
+A Map Decision contains or losslessly references the complete accepted Map candidate; identifies the human/provenance/date, bounded question, exact choice/rationale, Map and exact Blueprint bindings, expected predecessor, current/superseding effect, consequences, and non-authority; and preserves the candidate-local labels used for mechanical stable-ID binding. Externally stored snapshots require a Decision-contained cryptographic binding over canonical bytes/content type and an immutable/versioned/durable/audience-compatible lifetime locator. Inline immutable Decision content needs no universal digest.
+
+Use this minimum semantic form:
 
 ```markdown
-## Decision — <subject>
+## Decision — Map candidate
 
-- **Decided by:** <named human>
+- **Accepted by / verified authority provenance:** <human and configured trusted provenance>
 - **Date:** <YYYY-MM-DD>
-- **Question:** <bounded question>
-- **Choice:** <chosen direction>
-- **Rationale:** <why>
-- **Affected scope:** <IDs and canonical locators>
-- **Consequences:** <what changes or remains unchanged>
-- **Next step:** <current next action>
+- **Question and exact choice:** <bounded question and unqualified accepted candidate>
+- **Map:** <proposed or stable FM identity and locator>
+- **Blueprint bindings:** <governing and referenced exact accepted revisions/locators>
+- **Predecessor / current effect:** <Decision locator or None; current/superseding statement>
+- **Accepted snapshot:** <inline package or immutable locator plus required external content binding>
+- **Rationale and consequences:** <including changed/preserved meaning for a successor>
+- **Authority boundary:** planning projection only; implementation/effects/PR/merge/deploy remain separate
+- **Next step:** <mechanical publication/recovery action>
 ```
 
-Use a concise `## Clarification — <subject>` or `## Material change — <subject>` comment for non-authoritative history. Name the author/date, what was learned or changed, why the body changes, and relevant locators. Correct historical mistakes with a new correction comment rather than silently rewriting history.
+Exactly one accepted Map Decision is current. A successor Decision itself names its exact predecessor, superseding reason, and current effect. Prior Decisions remain immutable and visible. During partial projection, the Decision remains semantic authority; bodies and children may truthfully report `publication incomplete` but must not contradict it.
 
-## Atlas root
+Before any material body change, append the applicable Decision, `Clarification`, `Material change`, or verified observation record, then mechanically refresh the body. Correct historical errors with a new correction; never silently rewrite accepted history. Reviewer output is advisory and cannot grant or change authority.
 
-Keep the Atlas root small and stable. Do not copy its Maps or history into it.
+## Atlas Root And Index
+
+Keep the Atlas root small: stable identity, configured private canonical destination, canonical locator, current Index Segment, enduring purpose, shared invariants, and direct Map ownership. Do not copy Map content/history into it.
+
+An `AIS-*` Index Segment is bounded navigation only. It names its Atlas, current/superseded state, adjacent segments, and Map links. Rotation is readability-driven; it never creates a new Atlas or changes Map ownership. Keep exactly one current segment under adapter policy.
+
+## Feature Map Current Projection
+
+A Map owns accepted Blueprint-to-delivery planning and supplies:
 
 ```markdown
-# FA-<NNN> — <Feature Atlas name>
+# FM-<NNN> — <Map name>
 
 | Field | Current value |
 |---|---|
-| **ID** | `FA-<NNN>` |
-| **Canonical source** | <configured tracker and private destination locator> |
-| **Canonical Issue** | <this Issue's canonical locator> |
-| **Current Index Segment** | `AIS-<NNN>` — <canonical locator> |
+| **ID / Atlas owner / canonical locator** | <stable IDs and locators> |
+| **Current Map Decision** | <immutable Decision locator> |
+| **Publication state** | Complete / Incomplete / Conflict |
+| **Lifecycle / attention** | <current attention only; not automatic completion authority> |
 
-## Purpose
-
-<Enduring product/domain portfolio purpose.>
-
-## Shared invariants
-
-- <Current shared invariant or link to its canonical statement.>
+## Destination, scope, exclusions, terrain basis, and current next action
+## Governing and referenced Blueprint bindings
+## Current accepted snapshot, predecessor/successor, and invalidation summary
+## Blueprint coverage, retained states, and deferrals
+## Selected strategy and rejected-decomposition rationale
+## Features and exact ownership navigation
+## Cross-Feature prerequisites and sequencing
+## Consumer-owned cross-Map prerequisites
+## Convergence and joint-proof obligations
+## Evidence profile and qualified reuse records
+## Contextual E2E and security guidance
+## Publication limitations, source-system locators, and authority block
 ```
 
-The Atlas owns Maps directly. Its current Index Segment is a bounded navigation pointer, not an ownership boundary.
+The Map does not copy every Feature Work Item edge. A Map-owned convergence/joint-proof obligation is not a Map-owned implementation Work Item; executable work remains in an identified Feature Leg. Work Item closure, passing evidence, observations, or body/status edits do not establish Map completion or abandonment; that lifecycle authority/workflow is separately undefined.
 
-## Atlas Index Segment
+## Feature Current Projection
 
-An Index Segment is a tracker navigation record for one Atlas. It may have a stable `AIS-<NNN>` ID so links survive rotation, but it is never a scope owner or a Map parent.
-
-```markdown
-# AIS-<NNN> — <Feature Atlas name> Index
-
-> **Navigation only.** Maps listed here remain owned directly by `FA-<NNN>`.
-
-| Field | Current value |
-|---|---|
-| **ID** | `AIS-<NNN>` |
-| **Canonical Issue** | <this Issue's canonical locator> |
-| **Atlas** | `FA-<NNN>` — <canonical Atlas locator> |
-| **Segment state** | Current / Superseded |
-| **Previous segment** | <ID and locator, or None> |
-| **Next segment** | <ID and locator, or None> |
-
-## Map navigation
-
-- `FM-<NNN>` — [<Map name>](<canonical Map locator>) — <current state>
-```
-
-Create the first segment with the Atlas and mark it current. Rotate only when the current list becomes difficult to read or use; there is no fixed Map count. On rotation, cross-link adjacent segments as useful, move the current marker, and update the Atlas root. Do not mint a new Atlas, use hashes, or make the segment a native or semantic parent of Maps.
-
-## Feature Map
-
-```markdown
-# FM-<NNN> — <Feature Map name>
-
-| Field | Current value |
-|---|---|
-| **ID** | `FM-<NNN>` |
-| **Atlas** | `FA-<NNN>` |
-| **Canonical owner** | Feature Atlas `FA-<NNN>` — <canonical Atlas locator> |
-| **Canonical Issue** | <this Issue's canonical locator> |
-| **Lifecycle / attention** | <current state> |
-
-## Destination
-
-<What completing this bounded initiative makes possible.>
-
-## Current state
-
-<Current operable summary, unresolved gate or question, and next action.>
-
-## Features
-
-- `F-<NNN>` — [<Feature name>](<canonical Feature locator>) — <current state>
-
-## Governing links
-
-- <Current accepted decisions, shared contracts, or other authoritative locators.>
-```
-
-The Feature list is current navigation, not a substitute for each canonical Feature Issue.
-
-## Feature
+A Feature is ordinarily one behaviorally coherent, independently mergeable PR/E2E boundary. Its body is a projection of the current Map Decision and receives no separate decomposition acceptance.
 
 ```markdown
 # F-<NNN> — <Feature name>
 
 | Field | Current value |
 |---|---|
-| **ID** | `F-<NNN>` |
-| **Atlas** | `FA-<NNN>` |
-| **Canonical owner** | Feature Map `FM-<NNN>` — <canonical Map locator> |
-| **Canonical Issue** | <this Issue's canonical locator> |
-| **Intent status** | Proposed / Accepted |
-| **Lifecycle / attention** | <current state> |
+| **ID / Atlas / Map owner / canonical locator** | <stable IDs and locators> |
+| **Accepted Map Decision / local-label binding** | <Decision and label> |
+| **Projection / lifecycle attention** | <current state> |
 
-## Current state
-
-<Current operable summary and next action or next human decision.>
-
-## Accepted intent
-
-<Current accepted outcome, or “None — shaping is in progress.”>
-
-### Boundaries
-
-- **In:** <accepted scope>
-- **Out:** <accepted non-goals>
-
-### Acceptance
-
-- [ ] <accepted outcome-level criterion>
-
-## Accepted Work Item graph
-
-- `WI-<NNN>` — [<Work Item name>](<canonical Work Item locator>) — <state; dependencies>
-
-<Or “None accepted.”>
-
-## Proposal — not accepted
-
-<Current proposed intent, decomposition, or amendment when one exists. Keep it visibly separate from accepted state and link the Decision question.>
-
-## Governing links
-
-- <Specification, Decisions, source repositories, pull request, report, or other current locator as applicable.>
+## Outcome, immediate consumer, and observable acceptance
+## In/out boundaries and ordinary PR/E2E boundary or justified exception
+## Starting and resulting coherent state
+## Contained Legs
+### <Leg label> — <integrated behavioral movement>
+- <consumer, Contracts, before/after, Work Items, prerequisites, convergence, evidence, risk, compatibility, temporary mechanism/cleanup, invalidators>
+## Accepted Work Item DAG
+## Feature-owned convergence and external prerequisites
+## Compatibility, rollback/abandonment, evidence, risks, and invalidators
+## Verification, contextual E2E, and security allocation
+## Current source-backed state, limitations, and next action
 ```
 
-After an applicable named-human acceptance Decision, preserve it in comments and mechanically refresh the accepted sections. Modification, investigation, deferral, and decline Decisions update only the proposal, lifecycle/attention, governing links, and current state; accepted sections remain unchanged. Never silently retarget accepted intent or an existing delivery candidate.
+Leg labels are stable only within one accepted snapshot. Preserve a label in a successor only when behavioral meaning and Feature ownership remain materially unchanged; otherwise use a new label and record the disposition. An adapter may add separate Leg navigation but cannot add authority or alter Feature ownership.
 
-## Work Item
+## Work Item Current Projection
 
 ```markdown
 # WI-<NNN> — <Work Item name>
 
 | Field | Current value |
 |---|---|
-| **ID** | `WI-<NNN>` |
-| **Atlas** | `FA-<NNN>` |
-| **Scope owner** | <Feature Atlas / Feature Map / Feature> `<owner ID>` — <canonical owner locator> |
-| **Canonical Issue** | <this Issue's canonical locator> |
-| **Acceptance status** | Proposed / Accepted |
-| **Lifecycle / attention** | <current state> |
-| **Role / type** | AFK / HITL |
-| **Track (optional)** | <parallel workstream, or None> |
-| **Complexity** | S / M / L |
+| **ID / Atlas / Feature owner / owning Leg** | <stable IDs, locators, Leg label> |
+| **Accepted Map Decision / local-label binding** | <Decision and label> |
+| **Projection / lifecycle attention** | <current state> |
 
-## Current behavior
-
-<What happens now, or “N/A — greenfield.”>
-
-## Desired result
-
-<One bounded result.>
-
-## Key interfaces
-
-- <Stable type, contract, route, or behavioral seam; use “None” when no interface is relevant.>
-
-## Scope boundaries
-
-- **In:** <included work>
-- **Out:** <explicit exclusions>
-
+## Responsibility, bounded context, immediate consumer, and Blueprint coverage
+## Current behavior and desired coherent result
+## Key interfaces and explicit in/out boundaries
 ## Dependencies
-
-- **Blocked by:** <IDs and canonical locators, or None>
-- **Blocks:** <IDs and canonical locators, or None>
-
-## Acceptance / verification
-
-- [ ] <observable or reviewable evidence required>
-
-## Implementation verification strategy
-
-<Tests at the deepest practical seam and any required manual checks; mark either part not applicable when it honestly is not.>
-
-## Current state
-
-<Current operable summary, evidence locators, and next action.>
-
-## Governing links
-
-- <Accepted decomposition Decision and other authoritative locators.>
+- **Blocked by:** <direct concrete IDs/endpoints and canonical locators, or None>
+## Convergence point and owner
+## Evidence output and authoritative source locator expectations
+## Focused proof and intended independent checker
+## Integrated/E2E/security allocation and honest independence limitations
+## Temporary-mechanism disposition, current source-backed state, and next action
 ```
 
-Implementation Work Items are Feature-owned. Atlas- or Map-owned Work Items remain valid for bounded work at those scopes. A dependency on another record never changes the declared scope owner.
+Do not store an independently mutable `Blocks` list. Reverse impact is a derived view citing its source consumer and observation time. A Work Item exporting a seam proves immediate-consumer sufficiency; activity and internal completion alone are insufficient.
+
+Reuse a stable `WI-*` in a successor only when owner, responsibility, boundaries, consumer, and acceptance meaning remain materially unchanged. Otherwise disposition the old item and allocate a new ID. Stable IDs are never recycled.
+
+## Dependency And Convergence Representation
+
+A prerequisite is canonical once at its blocked consumer. Work Items own direct implementation edges; Features/Maps own external and cross-boundary edges without duplicating internal graphs. A cross-Map prerequisite records consumer and Decision; provider Atlas/Map/Feature and exact endpoint; observed provider Decision; satisfaction test/source/time; freshness/compatibility/invalidators; unavailable impact; convergence use; and revalidation.
+
+Reverse `blocks`/impact views are derived and may be stale. Provider acceptance, completion, or broad proof is not consumer-specific endpoint satisfaction.
+
+Every convergence has one Map or Feature owner, input endpoints/source owners, compatibility assumptions, integration/observation boundary, joined evidence, intended independent checker, contextual E2E/security/cleanup, failure route, and downstream consumer.
+
+Graphs must be visibly acyclic over decision-visible nodes and concrete endpoints. Provider internals remain opaque. Unknown/inaccessible/ambiguous/unresolvable endpoints prevent acceptance; no global graph, locking protocol, or graph engine is implied. Runtime/domain feedback to a future planning run is labeled `behavioral feedback — not blocked by`, not encoded as a cycle.
+
+## Evidence, Observations, And Source Truth
+
+An Evidence Reference names source owner/locator, producer/time/kind, subject/question, revision/build/data/environment/baseline/configuration, method/result/limits, target obligation, invalidators/freshness, applicability/remaining gap, revalidation, and audience limits. Reuse is qualified input only; it never inherits acceptance, authority, independence, completion, or live-provider status.
+
+A retained factual observation is eligible only when an authenticated/scoped owning workflow or source authority initiated it and authentication, authorization, provenance, source locator/environment, audience, and integrity were verified. It records Map Decision/affected field, initiator/adapter, source owner/locator/revision/environment, time, method/result/limits/evidence, disclosure, and superseded-current-view relation. Failure remains `unknown`. Observations may apply an already accepted factual rule but cannot amend meaning, create a pass/readiness verdict, or establish lifecycle completion.
+
+Git, source repositories, tests, reports, PR providers, deployments, runtimes, and external providers remain authoritative for their facts. Atlas links minimum useful evidence and never copies credentials, secrets, sensitive payloads, or detailed source truth.
+
+## Projection And Recovery
+
+No proposed Map, Feature, Leg, or Work Item semantics are durably published before exact Map acceptance. The narrow Publisher may create only a minimum Map identity shell saying `no accepted candidate` when required to host the Decision. After Decision recording it projects identities and children in two passes, resolves all locators/edges, refreshes Feature then Map bodies, and rereads rendered history/state.
+
+A partial publication names the Decision, successful locators, failed operation, incomplete/pending records, and safe resume. Resume reuses durable bindings and never reposts the Decision, deletes successes, rolls IDs back, or overwrites semantic conflicts. Current body/child content remains projection, never a second accepted plan.
+
+No representation action authorizes implementation, credentials, external effects, PR creation/landing, merge, deployment, spending, or resource creation.
