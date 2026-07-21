@@ -20,6 +20,11 @@ focus_pane_up = "ctrl+k"
 focus_pane_right = "ctrl+l"
 split_vertical = "prefix+v"
 split_horizontal = "prefix+s"
+next_tab = "alt+n"
+previous_tab = "alt+p"
+next_workspace = "prefix+n"
+previous_workspace = "prefix+p"
+last_pane = ["alt+space", "prefix+space"]
 
 [theme]
 name = "terminal"
