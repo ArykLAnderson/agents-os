@@ -58,6 +58,7 @@ harness_config/pi/agent/settings.json.bak-*
 harness_config/pi/agent/*.bak
 harness_config/pi/web-search.json
 harness_config/pi/logs/
+harness_config/pi/cache/
 
 plugins/**/node_modules/
 plugins/**/dist/
