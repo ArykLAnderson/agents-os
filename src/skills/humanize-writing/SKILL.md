@@ -13,7 +13,7 @@ Rewrite or edit prose that sounds generic, frictionless, corporate, or obviously
 
 - **`/note`** — quick capture, not editorial refinement
 - **`/research`** — structured synthesis from a source
-- **`/rfc-write`** — formal design or architecture writing
+- **`document`** — formal, Case-backed document development
 - **`/humanize-writing`** (this) — improve voice, rhythm, specificity, and naturalness in existing prose
 
 ## Core Principle

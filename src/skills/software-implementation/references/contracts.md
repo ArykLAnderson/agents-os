@@ -13,23 +13,45 @@ Governing design: <exact Blueprint revisions/locators, other accepted design, or
 Repository: <identity>
 Integration base: <named authoritative starting ref>
 Execution map: <stable human-readable Markdown path>
-Authority:
-  implementation: <allowed boundary>
-  commit: <allowed boundary>
-  internal integration: <allowed boundary>
-  temporary/local effects: <allowed boundary>
-  external/live proof effects: <allowed boundary>
-  PR: <allowed boundary>
-  merge: <allowed boundary>
-  deployment: <allowed boundary>
-  landing: <allowed boundary>
+Delivery shape: single_pr | stacked_feature_prs
+Execution Authorization Envelope: <complete envelope below>
 Effect bindings: <locators or none>
 Constraints/exclusions: <project instructions, scope, compatibility>
 Proof allocation: <imported Atlas allocation and ordering | explicit ad hoc/prototype profile>
 Stopping conditions: <binding failures, authority blockers, limits>
 ```
 
-Git resolves exact source revisions transiently. The map retains the named baseline, not a revision ledger. Each authority is independent: implementation or Atlas planning authority does not imply credentials, effects, PR, merge, deployment, or landing.
+Git resolves exact source revisions transiently. The map retains the named baseline, not a revision ledger. Atlas planning authority does not imply execution authority. Once an explicit implementation request is normalized into an Execution Authorization Envelope, every operation inside that envelope proceeds without repeated confirmation until an invalidator fires. Unknown authority blocks only the operation that needs it; explicitly absent and not-applicable authorities do not block unrelated work.
+
+### Execution Authorization Envelope
+
+Record one cumulative scoped grant for the delivery. An authorized request to implement a named outcome supplies local implementation intent. An explicit request to implement it as stacked draft PRs also supplies the ordinary branch, commit, non-force push, and draft-PR mechanics below unless the requester limits them. Do not infer merge, deployment, release, force push, protected-branch mutation, ready-for-review conversion, or other live effects.
+
+```markdown
+Grant identity/source: <stable execution grant and exact user/workflow instruction>
+Bound outcome/Atlas Decision: <exact boundary>
+Repositories and paths: <exact allowed scope>
+Delivery shape: single_pr | stacked_feature_prs
+Integration base: <named base>
+Branch namespace: <task/feature branch namespace>
+Allowed mechanics:
+  persistent worktrees: <allowed | absent | not applicable>
+  local source/test/doc edits and verification: <allowed boundary>
+  task and Feature branches: <allowed boundary>
+  commits on owned branches: <allowed boundary>
+  integration of validated work into declared Feature branches: <allowed boundary>
+  non-force push of owned branches: <allowed boundary>
+  create/update matching draft PRs: <allowed boundary>
+Stack graph: <Feature -> repository/head/base/predecessor, or not applicable>
+Temporary/local effects: <allowed boundary | absent | not applicable>
+External/live proof effects: <Effect Binding locators | absent | not applicable>
+Explicitly absent: <force push, protected-base mutation, ready conversion, reviewer/label/project mutation, merge, deployment, release, landing, other effects>
+Invalidators/expiry: <Map successor, scope/topology/destination change, conflict, cancellation, or completion>
+```
+
+The envelope is inherited by Task, Integration, Workspace, and PR operation Contracts. Restate only the applicable derived boundary and envelope locator. Ask again only for a material expansion or changed review topology, destination, visibility, risk, or absent operation.
+
+In `stacked_feature_prs`, each accepted Feature ordinarily owns one durable integration branch and draft PR. The root Feature targets the named integration base; a dependent Feature targets its declared predecessor Feature branch. Retargeting outside the accepted stack graph requires a new grant. After a predecessor lands, updating a dependent PR to the declared integration base is permitted only when the envelope explicitly includes that transition.
 
 ### Atlas Delivery Binding
 
@@ -66,6 +88,8 @@ Storage adapter receipt: <configured adapter identity and domain reread receipt;
 ## Atlas Currentness Check
 
 Perform at admission, coordinator resume, before every dependency frontier, before every effectful gate, and before result. Invoke Feature Atlas domain read/verify operations through the configured storage adapter against the **bound Atlas/Map/Decision**, never against an unqualified `latest`, provider CLI, or path.
+
+Resolve Atlas storage independently from Case/Frame persistence. `CASEBOOK_DATABASE_URL` is irrelevant to Atlas selection. Prefer an explicit Atlas destination from the delivery binding; otherwise use the current project's `.casebook/atlas` local filesystem default. If no dedicated local adapter executable exists, the Feature Atlas skill may execute adapter-owned filesystem reads and return the typed operations; executable absence alone is not an unverifiable binding.
 
 ```markdown
 Checkpoint: admission | resume | dependency_frontier | effectful_gate | result
@@ -106,7 +130,7 @@ Proof responsibility: <exact imported or explicit ad hoc obligation>
 Effects: <none, or exact Effect Binding locator>
 Starting baseline: <named integration ref containing prerequisites>
 Repository/worktree/branch: <explicit persistent path and identities>
-Commit authority: <granted for integration | not granted>
+Execution envelope / derived commit authority: <locator and task-branch boundary | not granted>
 Repair context: <prior evidence/findings or none>
 Handoff: <required result schema>
 ```

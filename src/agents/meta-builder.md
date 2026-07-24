@@ -69,7 +69,7 @@ permissionMode: default        # Optional
 background: false              # Optional
 isolation: worktree            # Optional
 memory: user                   # Optional — persistent cross-session memory
-skills: quality-gates           # Optional — preload specific skills
+skills: verification            # Optional — preload specific skills
 ---
 ```
 

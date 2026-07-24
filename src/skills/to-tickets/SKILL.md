@@ -21,7 +21,7 @@ Use this skill only when no accepted Atlas Map governs the bounded ad hoc outcom
 
 If `$ARGUMENTS` names a path or tracker reference, load its complete body and discussion. Otherwise use the current conversation or the repository's most recent durable spec according to its existing conventions.
 
-Read the full spec. If it doesn't follow the spec template (problem, solution, user stories, implementation decisions), warn the user and suggest `/grill` first.
+Read the full spec. If it does not establish the problem, solution, user-visible behavior, and implementation decisions, warn the user and route unresolved framing through `frame` first.
 
 ### 2. Load Architecture Context
 
@@ -122,7 +122,7 @@ Assign both a **role** and a **state**:
 - **needs-info**: Missing context that blocks implementation. Note what's missing in the issue body.
 - **wontfix**: Identified during decomposition as unnecessary. Don't create the issue — note it in the review summary as descoped.
 
-Every issue starts as `ready` unless you flag it otherwise. If more than ~25% of issues are `needs-info`, the spec probably needs another `/grill` pass before decomposition.
+Every issue starts as `ready` unless you flag it otherwise. If more than ~25% of issues are `needs-info`, the outcome probably needs another `frame` pass before decomposition.
 
 ### 7. Present for Review
 

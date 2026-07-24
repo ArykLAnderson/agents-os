@@ -13,14 +13,15 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 - Broken, failing, intermittent, or slow behavior → `diagnosing-bugs`.
 - Ordinary in-progress merge/rebase conflicts → `resolving-merge-conflicts`.
 - Complete current `HandoffReady` or admissible `HandoffWithLimitations` from Feature Atlas requiring coordinated implementation → `software-implementation` in explicit `atlas` mode. Its Delivery Contract must preserve the exact Atlas/Map/current Decision and Blueprint/Feature/Leg/Work Item/local-label bindings, prerequisites, convergence, transition/cleanup, imported proof order, evidence/invalidators, typed limitations, publication integrity, and separate implementation/effect/PR/merge/deployment/landing authorities.
+- An authorized request to implement a named current Atlas handoff supplies bounded local implementation intent. If it explicitly requests stacked draft PRs, normalize that request once into an Execution Authorization Envelope covering scoped worktrees, owned branches, commits, non-force pushes, and matching draft PR upserts unless limited. Do not ask again for those mechanics; merge, deployment, release, landing, force push, protected-branch mutation, and changed stack topology remain separate.
 - Summary-only, historical, conflicted, incomplete, unverifiable, `HandoffRefusal`, or authority-omitting Atlas input → stop fail-closed. Legacy Route packages, ticket graphs, or keystones are evidence/fixtures, not current planning authority; use `ad_hoc` only under separately explicit scope/authority and never present it as Atlas realization.
 - One clear bounded Task Contract with an assigned worktree → `coding-worker` directly.
 - Independent verification of one implemented task or integrated convergence boundary → `focused-validator` directly.
-- Idea needing one-session alignment → `grill`, invoking `domain-modeling` when language changes.
+- Consequential or under-specified outcome → `frame`, invoking `domain-modeling` when language changes.
 - Design question requiring runnable evidence → `prototype` directly, or `software-implementation` in `prototype` mode when multiple writers/gates require coordination.
 - One bounded external question → `research`; multiple independent tracks → `research-sprint`; competing judgments → `deliberate`.
-- Huge effort whose route cannot fit in one session → `wayfinder`.
-- Settled conversation needing a durable specification → `to-spec`.
+- Huge or uncertain effort → `frame`, preserving durable state through Casebook.
+- Settled conversation needing a durable artifact → `document`.
 - Settled ad hoc spec with no governing accepted Atlas Map and separately authorized ticket publication → `to-tickets`. Accepted Blueprint/Map delivery instead enters ephemeral `route` (or `/shape-feature` compatibility entry) and exact Map-wide Atlas acceptance.
 - Architectural health survey → `improve-architecture`; selected module/interface design → `codebase-design`.
 - Coordinator trapped in repeated local fixes or incompatible intentions → `zoom-out`, then return to the owning workflow.
@@ -29,7 +30,7 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 
 `Frame → Blueprint → ephemeral Route → trusted Map Decision → Feature Atlas publication/current handoff → Software Implementation atlas mode under separate authority → PR` is the full accepted-feature path. Route composes but persists no accepted plan; Atlas is the sole durable accepted planning authority. Shorter work enters at the smallest sufficient surface: a direct Coding Worker for one complete Task Contract, or Software Implementation in `ad_hoc`/`prototype` mode when its explicit Contract is sufficient.
 
-Planning and evidence never imply implementation, external-effect, PR, or landing authority. The selected workflow must receive those authorities explicitly. Research produces evidence, not decisions. Improve Architecture produces candidates, not refactors.
+Planning and evidence never imply implementation, external-effect, PR, or landing authority. The selected workflow must receive those authorities explicitly, but one explicit implementation request may create a cumulative scoped grant for all mechanical consequences it visibly includes. Research produces evidence, not decisions. Improve Architecture produces candidates, not refactors.
 
 ## Routing Rules
 

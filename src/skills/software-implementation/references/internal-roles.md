@@ -26,7 +26,7 @@ The coordinator, not reviewer consensus or severity, owns classification routing
 
 ## PR Operator
 
-> Use only the supplied PR Effect Binding. Inspect the integration branch and current gate evidence; prepare a reader-oriented summary with tests, reviews, E2E, limitations, and non-blocking findings. Query the bound provider/account/repository for an open PR matching the same head and base. Return it if found; otherwise create one only when authorized. Return the prepared summary and verified branch if creation is unavailable or fails. Never merge or mutate a protected branch.
+> Use only the derived draft-PR operation binding from the supplied Execution Authorization Envelope. Inspect the global or Feature integration branch and current gate evidence; prepare a reader-oriented summary with tests, reviews, E2E, limitations, and non-blocking findings. Query the bound provider/account/repository for an open PR matching the same head and declared base. Return it if found; otherwise create a draft PR only when authorized. Update only the matching owned draft PR within the declared stack graph. Never mark ready, assign reviewers, mutate labels/projects, retarget outside the graph, force-push, merge, or mutate a protected branch.
 
 ## Bounded Stall Diagnostician
 

@@ -13,16 +13,15 @@
   },
   "schema": {
     "id": "casebook-persistence-sqlite",
-    "version": 1,
+    "version": 3,
     "compatible_versions": [
-      1,
-      2
+      3
     ],
     "store_initialization": "explicit_human_authorized"
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "ef343105a8e49d7c7f7faefa2d2ef2e568c155a1c4cf58ece4cb430c0d0cb8c0"
+    "sha256": "8af70e146676e53b964e9c6a5401fe99cbc2162e8363cc1abb14dcf9af9f3696"
   },
   "entrypoints": [
     {
@@ -46,49 +45,22 @@
     "module.diagnose",
     "module.install",
     "module.retire",
-    "view_policy.create",
-    "view_policy.revise",
-    "view_policy.activate",
-    "view_policy.retire",
+    "namespace.create",
+    "namespace.rename",
+    "namespace.retire",
+    "owner.rehome",
     "identity.discover",
-    "events.page",
-    "checkpoint.read",
-    "checkpoint.compare_and_set",
-    "reconciliation_snapshot.begin",
-    "reconciliation_snapshot.page",
-    "reconciliation_snapshot.finish",
-    "impact.project",
-    "integrity.observe",
-    "projection.rebuild",
-    "export.preflight",
-    "export.finalize",
-    "case.discovery.hydrate",
-    "frame.discovery.hydrate",
     "case.create",
     "case.commit_revision",
     "case.read",
     "case.resolve",
     "case.search",
     "case.traverse",
-    "case.tombstone.stage",
-    "case.tombstone.commit",
-    "case.purge.inspect",
-    "case.purge.plan",
-    "case.purge.execute",
-    "case.export.fragment",
-    "case.markdown.render",
-    "case.markdown.stage_reconciliation",
     "frame.create",
     "frame.commit_revision",
-    "frame.get_operation_receipt",
     "frame.resolve",
     "frame.read",
-    "frame.export.fragment",
-    "frame.discovery.read",
-    "frame.disposition.read",
-    "frame.history",
     "frame.list",
-    "frame.legacy.prepare_reconciliation",
     "common.resolve",
     "common.list",
     "common.search",
@@ -102,31 +74,18 @@
       "snapshot",
       "restore",
       "projection_rebuild",
-      "view_policy.create",
-      "view_policy.revise",
-      "view_policy.activate",
-      "view_policy.retire",
-      "export.finalize",
-      "case_purge",
       "module_install",
       "module_retire"
     ],
     "optional_module_lifecycle": "versioned descriptor and exact digest-bound schema assets with non-mutating absent/healthy/incompatible/integrity-unsafe diagnosis, explicit atomic install, immutable idempotent receipts, and data-preserving logical retirement",
-    "migration_execution": "L07-W02 verified snapshot-first schema 1 to 2 migration on explicitly authorized disposable stores",
-    "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
+    "migration_execution": "verified snapshot-first hard-cutover schema 1 to 3 migration on explicitly authorized disposable stores, or an explicitly human-confirmed live store",
+    "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store, or an explicitly human-confirmed live store, with durable receipt and explicit custody",
     "restore_execution": "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
-    "view_policy_lifecycle": "human-authorized immutable create/revise plus serialized activate/supersede/retire admission fences; exact-active structural disclosure only",
-    "mixed_owner_discovery": "identity-only Case/Frame candidates and bounded explicit links with store/policy/query/fence/revision/bounds/audience-bound opaque handoff; typed owner façade hydration only",
-    "consumer_observation": "at-least-once event paging, duplicate-safe store/event identity, exact-view checkpoint CAS with bounded pending events, and one-fence cursor-expiry/policy-transition snapshot reconciliation",
-    "current_first_impact": "disposable bounded direct reverse projection over explicit semantic dependencies with cycle-safe owner deduplication, descriptive lifecycle, truthful overflow, and no owner mutation or EA effects authority",
-    "integrity_observation": "read-only typed classification of canonical mechanical, disposable projection, semantic evidence, and asset/protocol anomalies with visible components, safety, evidence digest, allowed operations, and owner reconciliation handoff",
-    "projection_rebuild": "human-authorized replacement of disposable lexical, reverse-reference, staleness, and attention projections from immutable canonical revisions at one exact fence, verified before atomic selection with durable replay",
-    "logical_export_preflight": "deterministic current/historical Case+Frame fragment aggregation under one exact active-policy observation fence with required/optional admission, dependency classification, private temporary rendering, integrity manifest/bundle digests, and no finalization or publication authority",
-    "document_claim_trace": "Document-owned consequence classifications with mechanically verified claim text, trace, evidence-fragment membership, evidence and reader-locator digests; missing consequential evidence blocks preflight without semantic classification or Document mutation",
-    "export_finalization": "separately human-authorized exact binding of operation, active policy, observation fence, manifest, bundle, and destination digests; atomic directory rename when supported, explicit pre-effect non-atomic refusal, operation-bound marker, durable receipt-first recovery, and no publication or canonical-owner authority",
-    "typed_read_target": "stable_owner_id_under_exact_active_view",
+    "local_access": "ordinary Case, Frame, common, and identity access is workspace-wide by default with optional namespace_ids query narrowing; no view context or policy admission is used",
+    "retired_operations": "export/disclosure, observation/checkpoint, impact, integrity, projection, and purge operations fail closed and are not admitted capabilities",
+    "typed_read_target": "stable_owner_id without visibility gating",
     "case_revision_assembly": "complete canonical Case create and commit_revision",
-    "case_discovery": "exact ID/namespace alias resolve, cohesive historical read, bounded scan lexical search and explicit-link traversal",
+    "case_discovery": "exact ID or cross-namespace alias resolve, cohesive read, bounded scan lexical search and explicit-link traversal",
     "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
     "frame_statuses": [
       "active",
@@ -140,23 +99,19 @@
       "tombstoned"
     ],
     "discovery_dependencies": "typed stable references",
-    "frame_query": "exact receipt/resolve/current/history/discovery/disposition reads, active-only/all-selected Discovery and current/all-selected disposition projection, and selector-bound fenced paging",
+    "frame_query": "direct current/read/list queries with optional namespace_ids filtering and selector-bound fenced paging",
     "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
     "markdown_profile": "exclusive Markdown installation with full typed reduced common operations, digest-guarded atomic Case replacement, manifest-selected coherent Frame/Discovery/disposition generations, deterministic interchange, and explicit omitted SQLite guarantees",
     "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
-    "frame_authority_scope": "one-or-more granted namespaces including active home grant; hidden namespace IDs recursively masked",
-    "legacy_reconciliation": "disposition-aware immutable non-mutating preparation with absent/present evidence and exact/ambiguous/unmatched structural diffs; no writeback, rename, watcher, or view lifecycle creation",
-    "case_lifecycle_portability": "ordinary tombstone stage/commit, staged-only purge inspection, immutable audience-aware owner fragments and deterministic Markdown reconciliation proposals",
-    "purge_planning": "non-mutating synthetic-disposable Case payload plan binding exact store/schema/revision/fence, complete history scope, semantic-owner tombstone disposition, human confirmation, impact dependencies, verified snapshot and external-copy disclosure, exclusions, and retained non-payload audit evidence",
-    "purge_execution": "separately human-authorized exact still-current W01 plan execution against one named synthetic-disposable SQLite store; atomic payload-only deletion with retained identity/history/audit, durable receipt-first replay, truthful deleted/not_deleted outcomes, and no snapshot or external-authority effect"
+    "markdown_local_access": "v2 workspace marker without view; ordinary selected-workspace Case, Frame, and common operations do not require request context"
   },
   "unsupported_until_later_work_items": [
     "case purge publication",
     "case closed-list and broader include/filter/lifecycle-query breadth",
     "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
     "global-search",
-    "general-purpose and non-disposable migration",
-    "non-disposable snapshot",
+    "general-purpose migration beyond an explicitly human-confirmed live store",
+    "non-disposable snapshot beyond an explicitly human-confirmed live store",
     "non-disposable restore"
   ],
   "assets": [
@@ -164,19 +119,19 @@
       "id": "skill-guidance",
       "path": "SKILL.md",
       "kind": "model_guidance",
-      "sha256": "2cbf29e7db18d9e5c7bd3ba8c9cd31d58cefdb08ed492a69f27bf18a258cc5f2"
+      "sha256": "d7d093c36df3b565daef368292c86f50b23172293b393e1aecb29d45b9d734cf"
     },
     {
       "id": "human-install-guidance",
       "path": "INSTALL.md",
       "kind": "human_documentation",
-      "sha256": "fd88802a660fe0f398258fa5f48f6303d1afdcf000cec7604027b254f7ef8350"
+      "sha256": "a33856e6065033cf45fafb72e80c979aee304eecd5ac0eb6df652a9f54f583ee"
     },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "a9c9d106a4e8a4da69d3afd46251624535c5b13037b875e98a4efd256c970442"
+      "sha256": "23c152ff338ea635b0bdf220ea603a6a4a817cfa002f1571be1891acd0239a87"
     },
     {
       "id": "shared-configuration",
@@ -218,7 +173,7 @@
       "id": "markdown-workspace",
       "path": "variants/markdown/lib/workspace.mjs",
       "kind": "module",
-      "sha256": "f9bfe9b7840cd4c90253c4f58560f5c1eb067ee3502f2c1f51b84b49c82753c8"
+      "sha256": "2595b634b696c5e805949cb7f6c35267f9f5a9e237f1639255f229fc9adf4d80"
     },
     {
       "id": "markdown-interchange",
@@ -230,7 +185,7 @@
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "6625a79ca50c66b77f9b3851e7c78305df46c5903080bb27e112c0dfe5c08e9a"
+      "sha256": "d9383a5622713df294251549cd3fa2743cbcaa2abc3ab6bb13622ff14dc8f877"
     },
     {
       "id": "sqlite-diagnostics",
@@ -242,13 +197,13 @@
       "id": "sqlite-substrate",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
-      "sha256": "847646b45dd8cd7158ae2142fc34cb51b63a7e5e1177a25380b2a48a3fa0290b"
+      "sha256": "90adbfeb3ddc38016508766ad9f4ea3b598eaf672b9114abc017124141980599"
     },
     {
       "id": "sqlite-identity-discovery",
       "path": "variants/sqlite/lib/substrate/discovery.mjs",
       "kind": "module",
-      "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+      "sha256": "6f4ab58e6ff9e35474f0d3354e32bc85028236fe2a2da0bbb905d8f19259aca6"
     },
     {
       "id": "sqlite-observation",
@@ -278,25 +233,25 @@
       "id": "sqlite-mechanical-envelope",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "a002a0bf4c92835444f5f40b035de662e5ee5bc200399b8d0c24e34855428fac"
+      "sha256": "44acb921f76177d5c8147e9e73629cd48fee342da7a55d4f2ab897633c619682"
     },
     {
       "id": "case-facade",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "abd2b14eb2065b77b64d0415391422938e3763a76955d15afa3ff3f9b4319e89"
+      "sha256": "3f9bed53e1e71d2de665484d77a885794a19c60c5bfde4a0bcd98c6fd6c6e152"
     },
     {
       "id": "frame-facade",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "41fafe11fa282a8ca4d82179a9b63df024e56f78152d30ee3c8c2a7f46b7fce2"
+      "sha256": "1c9536dad3c164639c91041c3ce4a98c4f01209a03ec65e681ce4c1283db5a73"
     },
     {
       "id": "sqlite-common-subset",
       "path": "variants/sqlite/lib/common/index.mjs",
       "kind": "module",
-      "sha256": "168a37af89817efc622d9584f52396bf16ba13028daa6e4853b95af1529a9d1d"
+      "sha256": "9b8ef16747e44d5cfc22d36cc9248263b0d0d49f14cdca6cfad1207e1755a133"
     },
     {
       "id": "logical-export-preflight",
@@ -308,7 +263,7 @@
       "id": "exceptional-operations",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "924fb23a781cc583e3eee0c3c3cc414b1dca2a8b79659cece08e8a0a01beb196"
+      "sha256": "f508433b70e9ce2694f5cf0a34cd54778aa6b4b81d519648442743c530c1a3e0"
     },
     {
       "id": "optional-module-operations",
@@ -318,27 +273,33 @@
     },
     {
       "id": "sqlite-schema",
-      "path": "variants/sqlite/sql/schema-v1.sql",
+      "path": "variants/sqlite/sql/schema-v3.sql",
       "kind": "sql",
-      "sha256": "ff967013cb01d4df5f29a34ee32da2561cebeedb4cf7a2029fe81773b16c3343"
+      "sha256": "c3df3b4b20537c30900e474601ae9623d15aaac3565420542418acf72f523200"
     },
     {
-      "id": "sqlite-migration-v2",
-      "path": "variants/sqlite/migrations/0002-migration-snapshot-evidence.sql",
+      "id": "sqlite-legacy-schema-v1",
+      "path": "variants/sqlite/sql/schema-v1.sql",
       "kind": "sql",
-      "sha256": "d275a9d8ff63c34bce4bc3bed336d34d2a032976591b816fdd36887b35e2419a"
+      "sha256": "c718e43f576de0235df5ea23f023bef5e904af1c14844bfaa74dd16f4fece42d"
+    },
+    {
+      "id": "sqlite-migration-v3",
+      "path": "variants/sqlite/migrations/0003-namespace-foundation.sql",
+      "kind": "sql",
+      "sha256": "b1cdb2c367e968ab7318a054e44f0c11ffdcc16367fd5fe98082a6902973c4b2"
     },
     {
       "id": "sqlite-migrations",
       "path": "variants/sqlite/migrations/manifest.json",
       "kind": "migration_manifest",
-      "sha256": "05f93ed0aaf46586c7f9656a30409f843691243382ccf4defbcb1c9503b0a0dd"
+      "sha256": "4239edd8128c2ba1ebb98b94703e649e70489959a57b8a2b29d1d8b6a423f051"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "ccf6bd75ac3d8cf6e00d6c56604521cf41146f39a8ee9bef0aac6e0b4ece3173"
+      "sha256": "3b0afa716318c00a2b6077d570eeaf9fe1741049484f92b72d31e104f2ec87a0"
     }
   ]
 }

@@ -16,9 +16,13 @@ Adapter configuration binds:
 - identity search/allocation, expected-predecessor or CAS, reread, receipt, and uncertain-write recovery capabilities; and
 - disclosure policy for qualified evidence and observations.
 
+Atlas adapter selection is independent of Case/Frame persistence selection. `CASEBOOK_DATABASE_URL` has no Atlas meaning. An explicit Atlas destination wins; otherwise the configured local-machine default is the current project root's `.casebook/atlas` directory through the local filesystem adapter. Report destination ambiguity only when neither an explicit destination nor that project-local default resolves safely.
+
 `inspectStore()` returns adapter identity/version, exact destination, observed visibility/access, codec, capability evidence and freshness, and a receipt. Mismatch or unproven required capability fails closed. No caller may select a convenient fallback adapter, destination, account, repository, or root.
 
 ## Domain Operations
+
+A verified Acceptance Package supplies semantic authority for `recordMapDecision` and `projectAcceptedSnapshot`. The mutation authority passed to those operations is the configured Publisher/adapter's operational permission to perform the already-authorized projection, not a second human approval. If operational permission is missing or fails verification, return a typed publication failure without reinterpreting it as missing Map acceptance.
 
 The Feature Atlas domain exposes these operations to Route, Publisher, Software Implementation, and other semantic consumers:
 
@@ -65,6 +69,6 @@ The domain maps these facts to acceptance/publication stops and typed handoffs. 
 
 ## Consumer Boundary
 
-Route and Software Implementation call Feature Atlas domain operations. They do not run `gh`, enumerate provider issues, parse local directory layouts, select Git branches, or treat mutable files as currentness authority. Publisher may use domain mutation operations under exact authority; only the adapter implementation uses provider commands/APIs/files.
+Route and Software Implementation call Feature Atlas domain operations. They do not run `gh`, enumerate provider issues, parse an unselected provider layout, select Git branches, or treat mutable files as currentness authority. Publisher may use domain mutation operations under exact authority; only the adapter implementation uses provider commands/APIs/files. When the selected local filesystem adapter has no dedicated executable, the Feature Atlas skill itself may execute these adapter-owned reads with filesystem tools under the rules in [the configured local filesystem adapter](configured-local-filesystem.md); this is adapter execution, not consumer-side path inference.
 
 Switching adapters changes storage mechanics and locators, not Atlas vocabulary or semantic authority. Migration between adapters is separately accepted and authorized work with exact source/destination Decisions and integrity proof; it is never an implicit fallback.

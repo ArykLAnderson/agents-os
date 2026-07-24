@@ -24,7 +24,7 @@ Grounded in project artifacts. They read domain docs, business goals, architectu
 - Include a "Before Starting" section listing specific project docs to read
 - Examples: Domain Expert, Product Strategist, Compliance Advocate
 
-**Feedback loop:** Stateful perspectives naturally evolve with the project. They read project docs → participate in deliberation → outcomes update project docs (via doc-sync or decisions) → next invocation reads the updated state.
+**Feedback loop:** Stateful perspectives naturally evolve with the project. They read project docs → participate in deliberation → accepted outcomes update the relevant Casebook or project authority → next invocation reads the updated state.
 
 ## Process
 

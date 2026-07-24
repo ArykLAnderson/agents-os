@@ -15,7 +15,7 @@ Admit work only when:
 - current terrain names source, observation time, scope, access limits, and material uncertainty;
 - the requested destination and Maps to compose or coordinate are explicit;
 - missing behavior returns to Frame/human authority and missing responsibility, Contract, compatibility assumption, or invalidator returns to Blueprint;
-- implementation, effects, PR, merge, and deployment remain unauthorized unless separately granted to their owning workflow.
+- before Map acceptance, Route is read-only planning; a later valid Map acceptance authorizes recording and configured mechanical Atlas projection of that exact candidate, while implementation, source/runtime effects, PR, merge, and deployment remain unauthorized unless separately granted to their owning workflow.
 
 One Blueprint ordinarily has one stable Feature Map. A session may coordinate several accepted Blueprints and their separate Maps, but it does not combine their architecture, ownership, or acceptance. Referenced provider Blueprints remain bound to their own Maps.
 
@@ -42,7 +42,7 @@ Each candidate is exact and complete enough that a future Atlas consumer needs n
 - transition, identity/migration, compatibility, temporary-mechanism, cleanup, recovery, publication, and retirement consequences where material;
 - evidence-reuse assessments and proportional verification, contextual E2E, and security allocation;
 - successor/invalidation consequences when replanning;
-- unresolved limitations and an explicit implementation/effect non-authority block.
+- unresolved limitations and an authority block stating that acceptance records the Map Decision and starts configured mechanical Atlas publication, while implementation, source/runtime effects, PR, merge, and deployment remain unauthorized.
 
 Use unique candidate-local labels for proposed Features, Legs, and Work Items that lack stable Atlas identities. Every Work Item names its owning Feature, owning Leg, immediate consumer, direct prerequisites, convergence use, evidence output, and proof responsibility. Candidate-local labels are presentation anchors, not durable IDs.
 
@@ -62,9 +62,13 @@ Present the whole fixed candidate and bounded question. Linked sections are acce
 
 ## Acceptance And Publication
 
-Follow [Map acceptance and publication](references/acceptance-publication.md). Only an unqualified response to the exact complete presentation from a human whose identity and bounded Map/Blueprint decision authority are verified through configured trusted Atlas provenance can become a Map Decision. Names, affirmative text, Issue creation, body edits, labels, reviews, comments without the required Decision heading, or silence are not acceptance.
+Follow [Map acceptance and publication](references/acceptance-publication.md). A verified human's unqualified affirmative response to the bounded question for the exact complete presentation becomes Map acceptance when Route can bind that response to the fixed candidate, exact Blueprint/Map scope, configured Atlas destination, and trusted Atlas provenance. An isolated name, handle, affirmative statement, Issue action, body edit, label, review, comment, or silence is insufficient when it cannot establish those bindings.
 
 Human acceptance precedes durable semantic publication. The immutable Atlas Map Decision is the sole planning authority; bodies and child records are mechanical current projections. The narrow Publisher performs destination preflight, Decision recording, stable-ID binding, two-pass projection, reread, receipts, and partial recovery. It never shapes, accepts, amends, judges semantic equivalence, chooses a successor, dispatches work, or performs implementation effects.
+
+**Default acceptance flow:** after valid exact acceptance, Route forms the Acceptance Package and immediately invokes the configured Publisher for that same Atlas destination. The acceptance is sufficient planning authority for Decision recording and mechanical projection; do not ask for a second publication confirmation. A preflight or write failure returns a typed recoverable publication result under the same grant. Ask again only when resolution requires changed meaning, destination, visibility, expected predecessor, or another boundary absent from the accepted question.
+
+**Authority matrix:** Route composition is read-only. Verified Map acceptance authorizes accepted planning meaning and the configured Publisher's mechanical Atlas projection of that exact Decision. The Publisher's configured operational credentials authorize only those adapter writes. Implementation, source/runtime effects, provider behavior outside Atlas storage, visibility changes, spending, PR/merge/deploy actions, and lifecycle decisions remain separately authorized.
 
 ## Successors And Execution Handoff
 
@@ -76,4 +80,4 @@ Export only a typed, bounded projection of the current accepted Atlas plan: read
 
 Stop on a behavior/architecture contradiction, unverified acceptance authority, unresolved identity/owner, ambiguous endpoint, failed bounded acyclicity, stale expected predecessor, visibility mismatch, or Publisher semantic conflict. Do not invent migration of legacy Route/Atlas records, Map completion/abandonment authority, a graph service, locking, rigid Markdown, or execution orchestration.
 
-Map acceptance and publication authorize accepted planning meaning and its configured mechanical Atlas projection only. They do not authorize implementation, credentials, network/provider effects, spending, PR creation or landing, merge, deployment, or resource mutation. Those remain separate explicit authorities of their owning systems and workflows.
+Map acceptance authorizes accepted planning meaning and the configured Publisher's exact Atlas projection. That projection may perform the adapter writes required for Decision recording, stable-ID binding, current child/navigation projections, reread, receipts, and recovery. It does not authorize implementation, credentials outside the configured Publisher, source/runtime changes, provider effects outside Atlas storage, spending, visibility changes, PR creation or landing, merge, or deployment. Those remain separate authorities of their owning systems and workflows.

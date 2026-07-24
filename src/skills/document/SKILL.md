@@ -1,6 +1,6 @@
 ---
 name: document
-description: Develops a persistent reader-facing artifact from Case-backed or supplied evidence. Use when an RFC, PRD, report, brief, explanation, or publication needs a reusable session, traceable claims, representation work, or release verification.
+description: Develops and governs a persistent reader-facing artifact from Case-backed or supplied evidence. Use when creating an RFC, PRD, report, brief, explanation, or publication, and when major editorial feedback, restructuring, compression, new claims, visuals, appendices, or publication changes materially revise an artifact already in progress.
 ---
 
 # Document
@@ -25,6 +25,14 @@ Progress iteratively rather than treating these as mandatory one-pass phases:
 6. [Publish](references/publish.md) only when publication is requested and authorized.
 
 Maintain one authoritative semantic draft. A target issue that changes meaning returns to that draft and invalidates affected representations, review conclusions, and acceptance.
+
+## Govern Material Edits
+
+Treat Document as the continuing editorial authority for the artifact, not a one-time generation step. When the user requests a material edit during review or after publication, resume the same Document session before editing the target representation.
+
+A material edit changes meaning, reader action, claim strength, scope, structure, evidence, risk treatment, visual semantics, appendix boundaries, or publication state. Apply the edit to the authoritative semantic draft, record the resulting invalidation, rerun the affected Shape, Trace, Review, Format, and Publish work, and inspect the updated representation in its real medium. Small copyedits that preserve all of those may remain ordinary model behavior.
+
+The material-edit loop completes when the semantic draft and every affected representation agree, stale review or trace conclusions have been refreshed, publication state reflects the observed target, and the user can review one current revision rather than a series of ungoverned target edits.
 
 Continue independent work when knowledge gaps do not block it. Record consolidated missing, ambiguous, unsupported, or conflicting Case knowledge and its effect as declarative state, then use Frame at the next natural boundary when new judgment or discovery is required.
 

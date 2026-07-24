@@ -66,6 +66,6 @@ An inter-Work-Item bounded-live proof runs after its accepted upstream item and 
 
 ## PR Gate
 
-PR preparation begins only after every gate due before PR under the admitted graph has current passing evidence and external effects have an accepted terminal disposition. A PR operation requires its own Effect Binding. It looks up the same provider/account/repository/head/base before creation and returns a matching open PR if one exists.
+PR preparation begins only after every gate due before PR under the admitted graph has current passing evidence and external effects have an accepted terminal disposition. A draft-PR operation uses the derived operation binding from the active Execution Authorization Envelope; it does not require a second human confirmation. It looks up the same provider/account/repository/head/base before creation and returns a matching open PR if one exists. In stacked mode, each Feature PR uses its declared predecessor/base and lower layers are created first.
 
-PR creation does not merge or authorize landing. If authority is absent or creation fails, return the prepared reader-oriented summary and verified integration branch.
+Draft PR creation does not authorize ready conversion, merge, deployment, or landing. If authority is absent or creation fails, return the prepared reader-oriented summary and verified integration branch.

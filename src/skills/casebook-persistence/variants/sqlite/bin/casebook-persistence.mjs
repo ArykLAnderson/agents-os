@@ -14,6 +14,7 @@ import { ConfigurationError, validateAuthorityConfiguration } from "../../../sha
 import { failure, PROTOCOL_ID, PROTOCOL_VERSION, RETRY_DISPOSITIONS } from "../../../shared/protocol.mjs";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
+const RETIRED_OPERATIONS = new Set(["events.page", "checkpoint.read", "checkpoint.compare_and_set", "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish", "impact.project", "integrity.observe", "projection.rebuild", "export.preflight", "export.finalize", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.purge.inspect", "case.purge.plan", "case.purge.execute", "frame.export.fragment", "view_policy.create", "view_policy.revise", "view_policy.activate", "view_policy.retire"]);
 
 async function readRequest() {
   const chunks = [];
@@ -44,7 +45,10 @@ async function authorityAdmission(request) {
     if (error instanceof ConfigurationError) return failure(error.code, error.message, { evidence: error.evidence });
     throw error;
   }
-  let state = await inspectStore(binary, configuration.sqlite.store_path);
+  // Only snapshot and migration can inspect a healthy v1 source. All ordinary
+  // operations retain the migration-required boundary at the public entrypoint.
+  const allowMigrationSource = request.operation === "snapshot_store" || request.operation === "migrate_store";
+  let state = await inspectStore(binary, configuration.sqlite.store_path, { allowMigrationSource });
   if (state.status !== "available" && state.code === "store_partial_initialization") {
     const bound = await bindStoreAuthorityIfAuthorized(binary, configuration.sqlite.store_path, configuration, request);
     if (bound) state = await inspectStore(binary, configuration.sqlite.store_path);
@@ -75,6 +79,13 @@ try {
       failureClass: "asset_incompatible",
       evidence: { expected: { id: PROTOCOL_ID, version: PROTOCOL_VERSION }, received: request?.protocol ?? null },
     });
+  } else if (RETIRED_OPERATIONS.has(request.operation)) {
+    result = failure("operation_unsupported", "This operation is retired for schema-v3 local access.", {
+      failureClass: "operation_unsupported",
+      retryDisposition: RETRY_DISPOSITIONS.NEVER,
+      correctiveGuidance: "Use an explicitly supported ordinary local access operation.",
+      evidence: { requested_operation: request.operation },
+    });
   } else if ((admission = await authorityAdmission(request)) != null) {
     result = admission;
   } else if (request.operation === "diagnose") {
@@ -82,22 +93,14 @@ try {
     if (result.ok && result.result?.bounded_runtime_probe) {
       result.result.bounded_runtime_probe.configured_store_accessed = authorityStoreAccessed;
     }
+  } else if (["case.create", "case.commit_revision", "case.read", "case.resolve", "case.search", "case.traverse", "case.discovery.hydrate"].includes(request.operation)) {
+    const configuration = validateAuthorityConfiguration(request.configuration);
+    const state = await inspectStore((await selectSqliteBinary(configuration.sqlite.sqlite_bin)).path, configuration.sqlite.store_path);
+    result = state.status === "migration_required" ? failure("schema_migration_required", "The configured store requires an explicit compatible migration.", { failureClass: "schema_migration_required", retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR, evidence: state.evidence }) : await invokeCaseOperation(request);
+  } else if (["frame.create", "frame.commit_revision", "frame.resolve", "frame.read", "frame.list"].includes(request.operation)) {
+    result = await invokeFrameOperation(request);
   } else if (request.operation === "identity.discover") {
     result = await invokeIdentityOperation(request);
-  } else if (["events.page", "checkpoint.read", "checkpoint.compare_and_set", "reconciliation_snapshot.begin", "reconciliation_snapshot.page", "reconciliation_snapshot.finish"].includes(request.operation)) {
-    result = await invokeObservationOperation(request);
-  } else if (request.operation === "impact.project") {
-    result = await invokeImpactOperation(request);
-  } else if (request.operation === "integrity.observe") {
-    result = await invokeIntegrityOperation(request);
-  } else if (request.operation === "projection.rebuild") {
-    result = await invokeProjectionOperation(request);
-  } else if (["export.preflight", "export.finalize"].includes(request.operation)) {
-    result = await invokeExportOperation(request);
-  } else if (["case.create", "case.commit_revision", "case.tombstone.stage", "case.tombstone.commit", "case.purge.inspect", "case.purge.plan", "case.purge.execute", "case.export.fragment", "case.markdown.render", "case.markdown.stage_reconciliation", "case.read", "case.resolve", "case.search", "case.traverse", "case.discovery.hydrate"].includes(request.operation)) {
-    result = await invokeCaseOperation(request);
-  } else if (["frame.create", "frame.commit_revision", "frame.get_operation_receipt", "frame.resolve", "frame.read", "frame.export.fragment", "frame.discovery.read", "frame.discovery.hydrate", "frame.disposition.read", "frame.history", "frame.list", "frame.legacy.prepare_reconciliation"].includes(request.operation)) {
-    result = await invokeFrameOperation(request);
   } else if (["common.resolve", "common.list", "common.search", "interchange.export"].includes(request.operation)) {
     result = await invokeCommonOperation(request);
   } else {

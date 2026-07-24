@@ -31,6 +31,8 @@ If no accepted authority requires the mechanism, do not make it governing. Revie
 
 Architect acceptance is invalid and must be blocked unless an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition. Use a reviewer who did not author or coordinate the candidate, and give that reviewer a bounded mandate and the evidence needed to test the actual claims, risks, affected parties, evidence quality, and acceptance conditions rather than inherited working context. Require concrete Findings with severity, evidence, affected claims, and suggested corrections.
 
+When the current candidate is coherent, immediately launch that reviewer as the next Blueprint operation. Reviewer independence is a work assignment, not a reason to pause for the human to request review. Supply the persisted candidate, accepted behavioral authority, terrain evidence locators, and a bounded completion-review mandate; do not rely on the reviewer's inherited conversation context.
+
 Persist the reviewer identity or role, independence and fresh-context basis, bounded mandate and supplied evidence, completed review output locator, and every resulting Finding and disposition in the Blueprint state and acceptance provenance. Resolve blocking Findings before acceptance; record the reason and acceptance effect for every other disposition. Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint.
 
 A final review checks semantic readiness against the accepted completion contract, including:

@@ -47,4 +47,4 @@ A lens may expose tension another lens resolves: a slightly larger Contract can 
 - Give each material state, mutation, Contract, and schema one canonical owner and definition. Mark mirrors, caches, adapters, and projections as derived and state how they reconcile.
 - When the correct shape is unclear, design the Contract at least twice and compare the diagnostic lenses plus migration cost.
 
-This skill owns the vocabulary. Workflow skills such as `improve-architecture`, `diagnosing-bugs`, `to-spec`, `coding-worker`, and `software-implementation` decide when and how to apply it.
+This skill owns the vocabulary. Workflow skills such as `frame`, `blueprint`, `improve-architecture`, `diagnosing-bugs`, `coding-worker`, and `software-implementation` decide when and how to apply it.

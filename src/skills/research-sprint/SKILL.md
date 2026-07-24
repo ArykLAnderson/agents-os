@@ -9,7 +9,7 @@ argument-hint: <research question or topic>
 
 Use Pi subagents to investigate different dimensions of a question in parallel, then synthesize the findings. This skill is for the parent orchestrator. Do not ask child subagents to run subagents or use AgentOS team/task/message APIs.
 
-Model routing intent: track researchers should usually run at `normal` (or `fast` for narrow/mechanical tracks). For broad, ill-defined exploration, the final coordinator/synthesis pass should use the `deep` tier: it is responsible for integrating contradictions, making minor judgment calls, and surfacing important architectural/product decisions instead of burying them.
+Model routing intent: track researchers should run at the `research` alias, which is optimized for fast information trawling and evidence surfacing with GPT-5.6 Luna. Their job is collection, provenance, and concise handoff rather than final judgment. For broad, ill-defined exploration, the final coordinator/synthesis pass should use the `deep` tier: it is responsible for integrating contradictions, making minor judgment calls, and surfacing important architectural/product decisions instead of burying them.
 
 ## Process
 
@@ -50,13 +50,13 @@ For each track, determine the right subagent using this priority order:
 
 ### 4. Run First-Round Research
 
-Launch one parallel `subagent` task per track. Use `context: "fresh"` unless the track depends heavily on the current conversation. Prefer the built-in `researcher` for external evidence, `scout` for local codebase discovery, and perspective agents for viewpoint-driven analysis.
+Launch one parallel `subagent` task per track. Use `context: "fresh"` unless the track depends heavily on the current conversation. Use the installed `researcher` agent by default for external evidence and general information trawling; it is bound to the `research` model alias. Use `scout` for local codebase discovery and perspective agents only for viewpoint-driven analysis.
 
 ```typescript
 subagent({
   tasks: [
     {
-      agent: "<agent-name>",
+      agent: "researcher",
       task: `Research track: <track focus>
 
 Overall question: <research question and why it matters>

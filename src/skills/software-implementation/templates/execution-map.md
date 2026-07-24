@@ -9,8 +9,9 @@
 - **Mode/outcome:** `<atlas | ad_hoc | prototype — result>`
 - **Repository:** `<identity>`
 - **Named integration base:** `<branch/ref name>`
+- **Delivery shape:** `<single_pr | stacked_feature_prs>`
 - **Integration worktree/branch:** `<path — branch>`
-- **Authority summary:** `<implementation | commit | integration | temporary effects | live effects | PR | merge | deployment | landing>`
+- **Execution Authorization Envelope:** `<stable grant locator and concise allowed/absent boundary>`
 - **Effect Bindings:** `<locators or none>`
 - **Proof allocation:** `<imported Atlas allocation | explicit ad hoc/prototype profile>`
 
@@ -49,6 +50,14 @@ States: `todo | working | verify | repair | ready_to_integrate | integrated | bl
 | Task | Atlas WI / local label / Feature / Leg | Outcome | Depends on | Starting baseline | Module/files | Wave | Role/session | Worktree/branch | State | Evidence/findings |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `<T-01>` | `<WI-* / label / F-* / leg, or n/a>` | `<observable result>` | `<accepted direct prerequisites>` | `<base name>` | `<owned boundary>` | `<1>` | `<worker/id>` | `<path/branch>` | `todo` | `<locators>` |
+
+## Feature / PR Stack
+
+Use `not applicable` in `single_pr` mode.
+
+| Feature | Repository | Integration worktree/branch | Declared base/predecessor | Draft PR | Pre-PR gates | State |
+|---|---|---|---|---|---|---|
+| `<F-*>` | `<repo>` | `<path/branch>` | `<integration base or predecessor Feature branch>` | `<URL or pending>` | `<gate identities>` | `<pending | integrating | verified | draft_open | blocked>` |
 
 ## Imported / Admitted Proof Gates
 

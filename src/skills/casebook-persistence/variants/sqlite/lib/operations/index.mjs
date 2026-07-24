@@ -21,7 +21,7 @@ import {
   sqlite,
 } from "../substrate/diagnostics.mjs";
 import {
-  applyMigrationV2,
+  applyMigrationV3,
   createInitializedStore,
   createVerifiedMigrationSnapshot,
   createVerifiedStoreSnapshot,
@@ -141,8 +141,7 @@ function initializationRequestDigest(storeId, operationId, authorityClaim, autho
     store_id: storeId,
     schema: { id: SCHEMA_ID, version: SCHEMA_VERSION },
     protocol: { id: PROTOCOL_ID, version: PROTOCOL_VERSION },
-    initial_namespace: { key: "personal", lifecycle: "active" },
-    initial_view: { audience_ceiling: "private", lifecycle: "active", namespace_grant: "personal" },
+    initial_namespace: { key: "casebook", lifecycle: "active" },
     authority_claim: authorityClaim,
     authority_binding: authorityBinding,
   });
@@ -181,6 +180,17 @@ function validateAssetCondition(value, field) {
   return { ...value };
 }
 
+function validateSnapshotOrMigrationSafety(value, operation) {
+  exactObject(value, ["store_class", "authorization_reference"], "disposable_store_authorization_required", "safety");
+  if (!new Set(["disposable", "live"]).has(value.store_class) || !nonEmpty(value.authorization_reference)) {
+    throw new ConfigurationError(
+      "disposable_store_authorization_required",
+      `This delivery slice permits ${operation} only for an explicitly authorized disposable or human-confirmed live store.`,
+    );
+  }
+  return { store_class: value.store_class, authorization_reference: value.authorization_reference.trim() };
+}
+
 function validateMigrationEnvelope(request) {
   if (request.operation_kind !== "migration") {
     throw new ConfigurationError("operation_kind_invalid", "migrate_store requires operation_kind migration.");
@@ -191,10 +201,7 @@ function validateMigrationEnvelope(request) {
   if (!nonEmpty(request.store_id)) {
     throw new ConfigurationError("store_id_invalid", "migrate_store requires the exact affected store_id.");
   }
-  exactObject(request.safety, ["store_class", "authorization_reference"], "disposable_store_authorization_required", "safety");
-  if (request.safety.store_class !== "disposable" || !nonEmpty(request.safety.authorization_reference)) {
-    throw new ConfigurationError("disposable_store_authorization_required", "This delivery slice permits migration only for an explicitly authorized disposable store.");
-  }
+  const safety = validateSnapshotOrMigrationSafety(request.safety, "migration");
   exactObject(request.expected, ["store_id", "schema", "protocol", "assets", "operation_fence"], "migration_preconditions_invalid", "expected");
   if (!nonEmpty(request.expected.store_id)
     || !Number.isInteger(request.expected.operation_fence)
@@ -238,7 +245,7 @@ function validateMigrationEnvelope(request) {
     operation_kind: "migration",
     purpose: request.purpose.trim(),
     store_id: request.store_id.trim(),
-    safety: { store_class: "disposable", authorization_reference: request.safety.authorization_reference.trim() },
+    safety,
     expected: {
       store_id: request.expected.store_id.trim(),
       schema: expectedSchema,
@@ -278,10 +285,7 @@ function validateSnapshotEnvelope(request) {
   if (!nonEmpty(request.store_id)) {
     throw new ConfigurationError("store_id_invalid", "snapshot_store requires the exact affected store_id.");
   }
-  exactObject(request.safety, ["store_class", "authorization_reference"], "disposable_store_authorization_required", "safety");
-  if (request.safety.store_class !== "disposable" || !nonEmpty(request.safety.authorization_reference)) {
-    throw new ConfigurationError("disposable_store_authorization_required", "This delivery slice permits snapshots only for an explicitly authorized disposable store.");
-  }
+  const safety = validateSnapshotOrMigrationSafety(request.safety, "snapshots");
   exactObject(request.expected, ["store_id", "schema", "protocol", "operation_fence"], "snapshot_preconditions_invalid", "expected");
   if (!nonEmpty(request.expected.store_id)
     || !Number.isInteger(request.expected.operation_fence)
@@ -307,7 +311,7 @@ function validateSnapshotEnvelope(request) {
     operation_kind: "snapshot",
     purpose: request.purpose.trim(),
     store_id: request.store_id.trim(),
-    safety: { store_class: "disposable", authorization_reference: request.safety.authorization_reference.trim() },
+    safety,
     expected: {
       store_id: request.expected.store_id.trim(),
       schema: validateSchemaCondition(request.expected.schema, "expected.schema"),
@@ -830,6 +834,76 @@ function assetDigest(manifest, assetId) {
   return manifest.assets.find((asset) => asset.id === assetId)?.sha256 ?? null;
 }
 
+const NAMESPACE_KEY = /^[a-z][a-z0-9-]{0,62}$/;
+
+function namespaceOperationPayload(request) {
+  validateRequestVersion(request);
+  const operationId = validateOperationId(request.operation_id);
+  const authorityClaim = validateAuthorityClaim(request.authority_claim);
+  const storeId = validateUuidId(request.store_id, "store_id", "store");
+  if (!Number.isInteger(request.expected_operation_fence) || request.expected_operation_fence < 1) {
+    throw new ConfigurationError("operation_fence_invalid", "expected_operation_fence must be a positive integer.");
+  }
+  return { operationId, authorityClaim, storeId, expectedFence: request.expected_operation_fence };
+}
+
+function namespaceKey(value, field) {
+  if (typeof value !== "string" || !NAMESPACE_KEY.test(value)) {
+    throw new ConfigurationError("namespace_key_invalid", `${field} must be a bounded lower-case project slug.`);
+  }
+  return value;
+}
+
+async function namespaceMutation(request) {
+  const prepared = await prepare(request);
+  if (prepared.failure) return prepared.failure;
+  const payload = namespaceOperationPayload(request);
+  const state = await inspectStore(prepared.sqliteBinary, prepared.configuration.sqlite.store_path);
+  if (state.status !== "available") return storeStateFailure(state);
+  if (state.metadata.store_id !== payload.storeId) return failure("expected_store_mismatch", "The configured store is not the exact requested store.", { failureClass: "conflict" });
+  const operation = request.operation;
+  let mutation;
+  if (operation === "namespace.create") {
+    mutation = { namespace_id: validateUuidId(request.namespace_id, "namespace_id", "namespace"), namespace_key: namespaceKey(request.namespace_key, "namespace_key") };
+  } else if (operation === "namespace.rename") {
+    mutation = { namespace_id: validateUuidId(request.namespace_id, "namespace_id", "namespace"), expected_namespace_key: namespaceKey(request.expected_namespace_key, "expected_namespace_key"), namespace_key: namespaceKey(request.namespace_key, "namespace_key") };
+  } else if (operation === "namespace.retire") {
+    mutation = { namespace_id: validateUuidId(request.namespace_id, "namespace_id", "namespace"), expected_namespace_key: namespaceKey(request.expected_namespace_key, "expected_namespace_key") };
+  } else {
+    mutation = { owner_id: validateUuidId(request.owner_id, "owner_id"), expected_namespace_id: validateUuidId(request.expected_namespace_id, "expected_namespace_id", "namespace"), namespace_id: validateUuidId(request.namespace_id, "namespace_id", "namespace") };
+  }
+  const requestDigest = digest({ operation, operation_id: payload.operationId, store_id: payload.storeId, expected_operation_fence: payload.expectedFence, mutation, authority_claim: payload.authorityClaim });
+  const existing = await readStoreOperationReceipt(prepared.sqliteBinary, prepared.configuration.sqlite.store_path, payload.operationId);
+  if (existing) {
+    if (existing.operation_kind !== operation || existing.request_digest !== requestDigest) return failure("idempotency_mismatch", "operation_id is already settled for a different canonical request.", { failureClass: "idempotency_mismatch" });
+    return success(operation, { ...existing.result, idempotent_replay: true });
+  }
+  if (state.operation_fence !== payload.expectedFence) return failure("operation_fence_conflict", "The expected store operation fence is no longer current.", { failureClass: "conflict", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
+  const now = new Date().toISOString();
+  const nextFence = state.operation_fence + 1;
+  const result = { status: "settled", mutation, operation_fence: nextFence, idempotent_replay: false };
+  const receipt = `INSERT INTO store_operation_receipts (operation_id,operation_kind,store_id,request_digest,outcome,result_json,result_digest,authority_claim_json,settled_at,failure_class,retry_disposition,operation_fence,owner_id,owner_home_namespace_id) VALUES (${sqlText(payload.operationId)},${sqlText(operation)},${sqlText(payload.storeId)},${sqlText(requestDigest)},'settled',${sqlText(JSON.stringify(result))},${sqlText(digest(result))},${sqlText(JSON.stringify(payload.authorityClaim))},${sqlText(now)},NULL,'never',${nextFence},${operation === "owner.rehome" ? sqlText(mutation.owner_id) : "NULL"},${operation === "owner.rehome" ? sqlText(mutation.namespace_id) : "NULL"});`;
+  let statements;
+  if (operation === "namespace.create") statements = `INSERT INTO namespaces VALUES(${sqlText(mutation.namespace_id)},${sqlText(mutation.namespace_key)},'active',${sqlText(now)});`;
+  else if (operation === "namespace.rename") statements = `UPDATE namespaces SET namespace_key=${sqlText(mutation.namespace_key)} WHERE namespace_id=${sqlText(mutation.namespace_id)} AND namespace_key=${sqlText(mutation.expected_namespace_key)} AND lifecycle='active'; INSERT INTO mutation_guard VALUES(changes());`;
+  else if (operation === "namespace.retire") statements = `UPDATE namespaces SET lifecycle='retired' WHERE namespace_id=${sqlText(mutation.namespace_id)} AND namespace_key=${sqlText(mutation.expected_namespace_key)} AND lifecycle='active' AND NOT EXISTS(SELECT 1 FROM owners WHERE home_namespace_id=${sqlText(mutation.namespace_id)}); INSERT INTO mutation_guard VALUES(changes());`;
+  else statements = `UPDATE owners SET home_namespace_id=${sqlText(mutation.namespace_id)} WHERE owner_id=${sqlText(mutation.owner_id)} AND home_namespace_id=${sqlText(mutation.expected_namespace_id)} AND EXISTS(SELECT 1 FROM namespaces WHERE namespace_id=${sqlText(mutation.namespace_id)} AND lifecycle='active'); INSERT INTO mutation_guard VALUES(changes()); INSERT INTO owner_placement_events SELECT 'placement-event:' || lower(hex(randomblob(16))),${sqlText(mutation.owner_id)},${sqlText(mutation.expected_namespace_id)},${sqlText(mutation.namespace_id)},${sqlText(payload.operationId)},${nextFence},${sqlText(JSON.stringify(payload.authorityClaim))},${sqlText(now)}; INSERT INTO mutation_guard VALUES(changes());`;
+  try {
+    await sqlite(prepared.sqliteBinary, prepared.configuration.sqlite.store_path, `.bail on
+      PRAGMA foreign_keys=ON; BEGIN IMMEDIATE;
+      CREATE TEMP TABLE mutation_guard (valid INTEGER NOT NULL CHECK(valid=1));
+      INSERT INTO mutation_guard SELECT CASE WHEN (SELECT operation_fence FROM store_fence WHERE singleton=1)=${payload.expectedFence} THEN 1 ELSE 0 END;
+      ${statements}
+      UPDATE store_fence SET operation_fence=${nextFence} WHERE singleton=1;
+      ${receipt}
+      DROP TABLE mutation_guard;
+      COMMIT;`, { args: ["-batch", "-bail"], timeout: 20_000, maxBuffer: 4 * 1024 * 1024 });
+  } catch (error) {
+    return failure(operation === "namespace.retire" ? "namespace_retirement_conflict" : "namespace_conflict", "The requested namespace placement is no longer valid.", { failureClass: "conflict", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE, evidence: { sqlite: error?.stderr ?? error?.message ?? "unknown" } });
+  }
+  return success(operation, result);
+}
+
 async function initializeStore(request) {
   const operationId = validateOperationId(request.operation_id);
   const authorityClaim = validateAuthorityClaim(request.authority_claim);
@@ -876,8 +950,6 @@ async function initializeStore(request) {
   const identities = {
     storeId: `store:${randomUUID()}`,
     namespaceId: `namespace:${randomUUID()}`,
-    viewId: `view:${randomUUID()}`,
-    viewPolicyRevisionId: `view-policy:${randomUUID()}`,
   };
   const authorityBinding = { source: configuration.source, authority_mode: "sqlite", store_id: identities.storeId };
   const requestDigest = initializationRequestDigest(identities.storeId, operationId, authorityClaim, authorityBinding);
@@ -888,15 +960,7 @@ async function initializeStore(request) {
   };
   const initialization = {
     store_id: identities.storeId,
-    namespace: { id: identities.namespaceId, key: "personal", lifecycle: "active" },
-    view: {
-      id: identities.viewId,
-      policy_revision_id: identities.viewPolicyRevisionId,
-      policy_revision: 1,
-      lifecycle: "active",
-      audience_ceiling: "private",
-      namespace_ids: [identities.namespaceId],
-    },
+    namespace: { id: identities.namespaceId, key: "casebook", lifecycle: "active" },
     schema: {
       id: SCHEMA_ID,
       version: SCHEMA_VERSION,
@@ -1092,7 +1156,7 @@ async function migrateStore(request) {
     );
   }
 
-  const state = await inspectStore(sqliteBinary, storePath);
+  const state = await inspectStore(sqliteBinary, storePath, { allowMigrationSource: true });
   if (state.status !== "available") return storeStateFailure(state);
   if (envelope.store_id !== state.metadata.store_id) {
     return migrationPreconditionFailure(
@@ -1139,14 +1203,18 @@ async function migrateStore(request) {
     && canonicalJson(envelope.target.protocol) === canonicalJson({ id: PROTOCOL_ID, version: PROTOCOL_VERSION });
   const sourceAssetsMatch = canonicalJson(envelope.expected.assets) === canonicalJson(observed.assets);
   const fenceMatches = envelope.expected.operation_fence === observed.operation_fence;
-  const migrationMatches = envelope.migration.id === "0002-migration-snapshot-evidence"
-    && envelope.migration.from_version === 1
-    && envelope.migration.to_version === 2
+  const migrationAssetId = envelope.migration.from_version === 1
+    && envelope.migration.to_version === 3
+    && envelope.migration.id === "0003-namespace-foundation"
+    ? "sqlite-migration-v3"
+    : null;
+  const migrationMatches = migrationAssetId != null
     && envelope.target.schema.id === SCHEMA_ID
-    && envelope.target.schema.version === 2
+    && envelope.target.schema.version === envelope.migration.to_version
     && envelope.expected.schema.id === SCHEMA_ID
-    && envelope.expected.schema.version === 1;
-  const targetAssetsMatch = envelope.migration.schema_asset_sha256 === assetDigest(manifestCheck.manifest, "sqlite-migration-v2")
+    && envelope.expected.schema.version === envelope.migration.from_version;
+  const targetAssetsMatch = migrationAssetId != null
+    && envelope.migration.schema_asset_sha256 === assetDigest(manifestCheck.manifest, migrationAssetId)
     && envelope.migration.manifest_sha256 === assetDigest(manifestCheck.manifest, "sqlite-migrations");
   const requiredEvidence = ["asset_identity", "healthy_exposure", "integrity", "protocol_identity", "schema_identity"];
   const evidenceMatches = [...envelope.requested_postcondition_evidence].sort().join("\0") === requiredEvidence.join("\0");
@@ -1244,7 +1312,7 @@ async function migrateStore(request) {
 
   let executionError = null;
   try {
-    await applyMigrationV2(sqliteBinary, storePath, {
+    await applyMigrationV3(sqliteBinary, storePath, {
       receipt,
       authorityClaim,
       result: successResult,
@@ -1253,9 +1321,9 @@ async function migrateStore(request) {
       snapshot,
     });
     controlledMigrationBoundary("migration_after_commit_before_health_verification");
-    const exposed = await inspectStore(sqliteBinary, storePath);
+    const exposed = await inspectStore(sqliteBinary, storePath, { allowMigrationSource: true });
     if (exposed.status !== "available"
-      || exposed.metadata.schema_version !== 2
+      || exposed.metadata.schema_version !== envelope.target.schema.version
       || exposed.metadata.protocol_id !== PROTOCOL_ID
       || exposed.metadata.protocol_version !== PROTOCOL_VERSION
       || exposed.operation_fence !== state.operation_fence + 1) {
@@ -1270,15 +1338,15 @@ async function migrateStore(request) {
     return success("migrate_store", successResult);
   }
 
-  let current = await inspectStore(sqliteBinary, storePath);
+  let current = await inspectStore(sqliteBinary, storePath, { allowMigrationSource: true });
   let recovery;
-  if (current.status === "available" && current.metadata.schema_version === 1) {
+  if (current.status === "available" && current.metadata.schema_version === envelope.expected.schema.version) {
     recovery = { disposition: "prior_health_retained", quarantine_path: null };
   } else {
     recovery = await restoreVerifiedMigrationSnapshot(sqliteBinary, storePath, envelope.snapshot.path, operationId);
     current = recovery.restored ?? { status: "unavailable" };
   }
-  if (current.status !== "available" || current.metadata.schema_version !== 1) {
+  if (current.status !== "available" || current.metadata.schema_version !== envelope.expected.schema.version) {
     return failure("migration_failed_store_quarantined", "Migration failed and prior health could not be restored; the named store is unavailable and quarantined.", {
       failureClass: "migration_execution_failure",
       retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,
@@ -1451,7 +1519,8 @@ async function snapshotStore(request) {
     );
   }
 
-  const state = await inspectStore(sqliteBinary, storePath);
+  // The exact disposable snapshot envelope is the sole non-migration v1 path.
+  const state = await inspectStore(sqliteBinary, storePath, { allowMigrationSource: true });
   if (state.status !== "available") return storeStateFailure(state);
   if (envelope.store_id !== state.metadata.store_id) {
     return migrationPreconditionFailure(
@@ -2292,10 +2361,7 @@ export async function invokeExceptionalOperation(request) {
     if (request.operation === "snapshot_store") return await snapshotStore(request);
     if (request.operation === "restore_store") return await restoreStore(request);
     if (request.operation === "get_store_operation_receipt") return await getStoreOperationReceipt(request);
-    if (request.operation === "view_policy.create") return await createViewPolicy(request);
-    if (request.operation === "view_policy.revise") return await reviseViewPolicy(request);
-    if (request.operation === "view_policy.activate") return await activateViewPolicy(request);
-    if (request.operation === "view_policy.retire") return await retireViewPolicy(request);
+    if (["namespace.create", "namespace.rename", "namespace.retire", "owner.rehome"].includes(request.operation)) return await namespaceMutation(request);
     return unsupported(request.operation);
   } catch (error) {
     if (error instanceof ConfigurationError) {

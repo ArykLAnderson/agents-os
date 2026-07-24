@@ -12,8 +12,6 @@ const sourceCaseRoot = new URL("../../case/", import.meta.url).pathname;
 const generatedHeader = "<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->";
 const ids = Object.freeze({
   markdownStore: "store:bf242b15-1563-464d-8a77-97677bfde314",
-  markdownView: "view:d78136a5-553b-4921-9374-5a74e944dabb",
-  markdownPolicy: "view-policy:12481d99-efcb-4f90-abd6-2dccec0f5063",
   namespace: "namespace:feca08cb-e1c2-4a15-af90-411712fb0702",
   case: "case:e8d623cc-5287-4ad6-bbef-bed2dd53292a",
   knowledge: "knowledge:f3d3c3b1-d2be-49c5-b863-879f3d6fa549",
@@ -85,15 +83,10 @@ function caseRecord(namespaceId, title = "Selected authority Case") {
 
 function markdownMarker() {
   return {
-    configuration_version: 1,
+    configuration_version: 2,
     authority_mode: "markdown",
     profile: "file-authoritative-markdown-v1",
     workspace_id: ids.markdownStore,
-    view: {
-      id: ids.markdownView,
-      policy_revision_id: ids.markdownPolicy,
-      audience_ceiling: "private",
-    },
   };
 }
 
@@ -105,15 +98,6 @@ function markdownConfiguration(workspace, target) {
   };
 }
 
-function context(viewId, policyId, purpose) {
-  return {
-    view_id: viewId,
-    view_policy_revision_id: policyId,
-    purpose,
-    requested_audience_ceiling: "private",
-  };
-}
-
 function markdownRequest(workspace, target, operation, extra = {}) {
   const marker = markdownMarker();
   return {
@@ -121,7 +105,6 @@ function markdownRequest(workspace, target, operation, extra = {}) {
     operation,
     request_version: 1,
     store_id: marker.workspace_id,
-    context: context(marker.view.id, marker.view.policy_revision_id, `L11-W01 ${operation}`),
     configuration: markdownConfiguration(workspace, target),
     ...extra,
   };
@@ -141,7 +124,6 @@ function sqliteRequest(state, operation, extra = {}) {
     operation,
     request_version: 1,
     store_id: state.initialized.store_id,
-    context: context(state.initialized.view.id, state.initialized.view.policy_revision_id, `L11-W01 ${operation}`),
     configuration: state.configuration,
     ...extra,
   };

@@ -15,6 +15,6 @@ Survey architectural health and produce ranked improvement candidates. This skil
 4. Look for shallow pass-throughs, duplicated rules, leaky interfaces, speculative seams, change scattered across callers, poor test surfaces, and knowledge living in the wrong module.
 5. Apply the deletion test and assess depth, leverage, locality, blast radius, migration risk, and expected payoff.
 6. Present a short ranked set of deepening opportunities. For each, identify the current seam, proposed seam, behavior hidden, callers simplified, tests enabled, and major risks.
-7. Let the user select a candidate. Route it through `grill`, `to-spec`, or direct implementation according to its uncertainty and size.
+7. Let the user select a candidate. Route it through `frame`, `blueprint`, or direct implementation according to its uncertainty and size.
 
 Invoke `domain-modeling` only when the survey actively changes or challenges domain language. Respect accepted ADRs or explicitly identify the decision that would need reconsideration.

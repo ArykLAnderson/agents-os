@@ -31,7 +31,7 @@ A `material_contradiction` requires concrete evidence. Route it to accepted desi
 
 ## Integrate A Wave
 
-After every task in a writer wave passes, delegate one Integration Worker as the sole integration-worktree writer. Supply validated branches, accepted dependency order, accepted seam behavior, convergence checks, and permitted repairs.
+After every task in a writer wave passes, delegate one Integration Worker as the sole writer for the applicable integration destination. In `single_pr`, this is the global integration worktree. In `stacked_feature_prs`, integrate each Work Item into its owning Feature worktree/branch; a Feature branch starts from the declared base or predecessor Feature branch and is the candidate for that Feature's draft PR. Supply validated branches, accepted dependency order, accepted seam behavior, convergence checks, permitted repairs, and the inherited envelope boundary.
 
 Then launch Focused Validator in `convergence` scope when the admitted allocation requires it at this point. Route:
 
@@ -39,7 +39,7 @@ Then launch Focused Validator in `convergence` scope when the admitted allocatio
 - cross-module seam finding to an Integration Worker using coding-worker discipline;
 - concrete design or Atlas-plan contradiction to governing authority.
 
-Re-run the affected accepted convergence validation after repair. Only its passing result advances the named integration baseline.
+Re-run the affected accepted convergence validation after repair. Only its passing result advances the named integration baseline or owning Feature branch. Cross-Feature Map convergence remains Map-owned proof; any code needed for it stays on the accepted owning Feature branch.
 
 ## Execute Imported Proof Gates
 
@@ -61,6 +61,8 @@ After integration or a passing imported gate:
 2. ask Workspace Operator to create or refresh newly ready dependent worktrees from the advanced named baseline;
 3. run the currentness check and recompute the safe frontier; and
 4. repeat until no tasks/gates remain outside terminal state or a real authority blocker is recorded.
+
+In stacked mode, once a Feature's gates due before PR pass, non-force push its owned branch and upsert its matching draft PR under the inherited envelope. Create lower stack layers before dependent layers. Do not silently retarget, flatten the stack onto the integration base, or create a duplicate PR.
 
 ## Interruption
 

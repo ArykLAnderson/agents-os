@@ -6,9 +6,9 @@ This document is for a human operator. It is intentionally outside model-loaded 
 
 - Node.js 22 or newer, invoked explicitly.
 - SQLite 3.37 or newer with JSON, `STRICT`, `RETURNING`, FTS5, foreign-key enforcement, and WAL support.
-- One explicitly selected workspace authority: `sqlite` or `markdown`, never both.
+- Authority selection: if `CASEBOOK_DATABASE_URL` is set, SQLite is used at that path; otherwise Markdown is used at the project's `.casebook/` workspace. The two modes are mutually exclusive.
 
-A SQLite database must resolve to an absolute local path or local `file:` URL. `CASEBOOK_DATABASE_URL` may provide the configured value; no current-working-directory fallback exists. `CASEBOOK_SQLITE_BIN` may select an absolute SQLite executable, otherwise a capability-checked `PATH` candidate is used. A Markdown authority must name an absolute workspace root with an exact authority marker and private selected view.
+A SQLite database path in `CASEBOOK_DATABASE_URL` must resolve to an absolute local path or local `file:` URL. `CASEBOOK_SQLITE_BIN` may select an absolute SQLite executable; otherwise a capability-checked `PATH` candidate is used. A Markdown authority must name an absolute workspace root with an exact `.casebook-authority.json` marker.
 
 ## Authority binding and initialization
 
@@ -16,7 +16,7 @@ A SQLite database must resolve to an absolute local path or local `file:` URL. `
 
 The source locator, authority mode, and store identity form one immutable authority binding. Every SQLite request must reproduce it. Locator, mode, dual-configuration, and store substitution fail closed. Ordinary configuration cannot hot-switch authority; switching remains separately authorized migration work. A compatible unbound store may acquire its first binding only through an operation with an explicit human authority claim under the trusted-local boundary.
 
-Retain the returned store ID, view ID, exact view-policy revision ID, and operation ID. After uncertain exceptional-operation delivery, query `get_store_operation_receipt` before retrying.
+Retain the returned operation ID. The store ID, view ID, and policy-revision ID are read from the database by the connector during normal operation; they do not need to be supplied externally. After uncertain exceptional-operation delivery, query `get_store_operation_receipt` before retrying.
 
 ## Implemented surface
 
