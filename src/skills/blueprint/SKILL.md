@@ -37,6 +37,10 @@ Choose the smallest operation that advances the current design condition:
 
 These are condition-selected operations, not a fixed one-pass pipeline. New evidence may return to terrain, candidates, Contracts, Frame, or Prototype.
 
+Before completion review, run the [Requirement-Killer Pass](references/requirement-killer.md). This is an adversarial simplification operation, not another assurance ratchet. Challenge every requirement, mechanism, new abstraction, consumer-visible failure, and proof obligation introduced after admission; remove what lacks accepted behavioral authority or concrete evidence of necessity. A Blueprint cannot become eligible for acceptance while this pass has unresolved human decisions.
+
+Do not create prose-presence tests for Blueprint guidance or artifacts. Tests that merely read Markdown and assert required wording, headings, or regex matches do not verify design behavior. Validate Blueprint changes through review, consumer walkthroughs, generated-output inspection, or executable behavioral checks where a real runtime exists.
+
 An unmet completion condition is the next operation, not a stopping point. Once the candidate is coherent enough to review, launch the independent fresh-context reviewer in the same run; after disposition, create or repair the Document projection and verify it. If the candidate is not coherent enough to review, perform the smallest prior operation that makes it reviewable; lack of coherence is not a return condition. Return control only when the next unmet condition requires human authority or another stop named below. Never end merely by listing review, projection, or evidence as future gates that local tools can perform.
 
 ## Question Classification And Handoffs
@@ -51,6 +55,10 @@ Classify a question by the authority its answer would change, not by whether it 
 - **Acceptance:** `Do you accept Blueprint revision B7 and its stated trade-offs?` This is explicit Architect authority and must bind the verified RFC Document revision.
 
 Blueprint may resolve design-local choices directly when accepted behavior is stable. Use `deliberate` when credible architecture alternatives need human-visible comparison. Supporting alternatives, evidence, and dispositions belong in Casework; the accepted Blueprint links to them and resolves exactly one architecture.
+
+Do not bury a consequential delta inside final Blueprint acceptance. Before incorporating any proposed change that introduces or materially expands a consumer-visible failure, core interface or seam, mandatory configuration invariant, security/trust mechanism, migration burden, compatibility restriction, or proof protocol, present that delta separately through `decision-card`. State the prior design, proposed design, concrete motivating evidence or threat model, consumer and operational consequences, simpler alternatives, and what accepting the delta changes. General acceptance of a later bundled Blueprint does not retroactively authorize a delta that was never separately surfaced.
+
+For a security-motivated delta, require a concrete security case naming the actor, controlled input, protected asset, attack path, and consequence. If that chain is absent, do not promote the proposal as a security requirement. Prefer structural removal of unsafe capability over request-time preflight, manifests, snapshots, or fail-closed behavior, and treat unsupported optional behavior as local non-applicability unless accepted product behavior requires a request failure.
 
 Use `prototype` when an uncertain proposition materially determines authority, state ownership, external mutation, migration, compatibility, failure recovery, or another consequential boundary. Test the smallest discriminating failure condition and retain evidence and limitations.
 
@@ -73,6 +81,7 @@ Confirm before:
 - changing the accepted behavioral boundary;
 - promoting a reviewer recommendation into the authoritative candidate package, package-membership rules, acceptance criteria, or proof protocol unless accepted authority already requires it;
 - accepting a consequential architecture or trade-off on the Architect's behalf;
+- adding or expanding a consumer-visible failure, core interface or seam, mandatory configuration prerequisite, security/trust mechanism, compatibility restriction, migration burden, or proof protocol, even when proposed as a reviewer correctness or security repair;
 - materially expanding scope;
 - performing credentialed, shared-resource, costly, destructive, deployed, or externally mutating work;
 - authorizing implementation, migration, publication, or delivery; or
@@ -87,6 +96,8 @@ The Blueprint is eligible for acceptance only when:
 - the pinned behavioral boundary remains current and continuous Casework reconciliation has no material unsettled contradiction;
 - relevant terrain was inspected deeply enough that the design has no material unchecked architectural assumption;
 - consequential alternatives were compared and linked in Casework;
+- every consequential post-admission delta was separately surfaced and explicitly dispositioned by the Architect before entering the candidate;
+- the Requirement-Killer Pass challenged and minimized post-admission requirements, mechanisms, abstractions, failure modes, configuration prerequisites, and proof obligations;
 - the candidate resolves exactly one coherent new architecture with explicit old-to-new change;
 - every material module has a unified responsibility, useful Secrets, and sufficient change/runtime lifecycle Ownership;
 - selected Contracts, states, failures, and schemas are consumer-sufficient without requiring implementation Secrets;

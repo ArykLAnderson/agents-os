@@ -17,6 +17,8 @@ Use only the proposed Contract and declared context. For each walkthrough record
 
 Cover consumer classes with meaningfully different authority, lifecycle, failure, or deployment needs rather than every caller. A happy-path example is not sufficient when the design depends on failure-boundary behavior. Do not multiply walkthroughs that exercise the same material Contract semantics.
 
+For every new consumer-visible failure or mandatory configuration prerequisite, add an actionability walkthrough: identify what the consumer observes, whether the consumer caused it, what information they possess, and what corrective action they can take. Also walk an otherwise valid request while unrelated internal configuration is incompatible. Internal state the consumer neither controls nor executes must not become an integration failure without an explicitly accepted product or security reason.
+
 Missing semantics return to Contract or candidate shaping. Ambiguous ownership or competing definitions return to canonization. Behavioral ambiguity that would materially change the accepted boundary returns to Frame/Case reconciliation; design-local ambiguity stays in Blueprint. Realization ordering becomes a Route question. Claims that prose cannot discriminate return to Prototype.
 
 Retain failed walkthroughs as design evidence rather than rewriting history. Walkthrough sufficiency means every materially distinct consumer can complete accepted behavior and relevant recovery without undeclared implementation knowledge; it is evidence, not a ritual count.

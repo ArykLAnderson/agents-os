@@ -16,6 +16,8 @@ Every reviewer conclusion begins as an advisory Finding. Classify it before chan
 
 A recommendation labeled `blocker`, `must-fix`, or `not ready` remains advisory. Repeated reviewers agreeing with an unaccepted proposal do not confer authority. Never ask a later reviewer to validate a newly introduced mechanism without also asking whether that mechanism had authority to enter the package.
 
+Reviewer findings cannot be classified as correctness repairs merely because they use security, safety, privacy, or fail-closed language. A proposed consumer-visible failure, core interface or seam, mandatory configuration state, compatibility restriction, security mechanism, or proof obligation is a consequential delta unless exact accepted authority already specifies it. Surface that delta separately to the Architect before changing the candidate.
+
 ## Authority-Delta Check
 
 Before applying review feedback, state:
@@ -32,6 +34,8 @@ If no accepted authority requires the mechanism, do not make it governing. Revie
 Architect acceptance is invalid and must be blocked unless an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition. Use a reviewer who did not author or coordinate the candidate, and give that reviewer a bounded mandate and the evidence needed to test the actual claims, risks, affected parties, evidence quality, and acceptance conditions rather than inherited working context. Require concrete Findings with severity, evidence, affected claims, and suggested corrections.
 
 When the current candidate is coherent, immediately launch that reviewer as the next Blueprint operation. Reviewer independence is a work assignment, not a reason to pause for the human to request review. Supply the persisted candidate, accepted behavioral authority, terrain evidence locators, and a bounded completion-review mandate; do not rely on the reviewer's inherited conversation context.
+
+Completion review must include an independent simplification challenge from [Requirement-Killer Pass](requirement-killer.md), either as a separately assigned perspective or an explicitly independent section with an opposing mandate. Correctness review asks what is missing; simplification review asks what should be deleted. Do not let one reviewer silently optimize both objectives or let a correctness finding automatically ratchet the design toward more machinery.
 
 Persist the reviewer identity or role, independence and fresh-context basis, bounded mandate and supplied evidence, completed review output locator, and every resulting Finding and disposition in the Blueprint state and acceptance provenance. Resolve blocking Findings before acceptance; record the reason and acceptance effect for every other disposition. Reviewers advise: they have no semantic authority, and neither their labels nor consensus can accept or redefine the Blueprint.
 

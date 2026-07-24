@@ -128,6 +128,10 @@ If an artifact already exists, prefer modifying it instead of creating a competi
 Write the artifact in the proper `src/` location.
 Follow existing naming and formatting conventions already present in Agent OS.
 
+Do not create tests that read Markdown, skill, agent, command, or configuration source and assert that prescribed words, headings, regexes, or passages are present. These tests only duplicate prose, resist legitimate editing, and do not verify model behavior. Verify prose changes through focused source review and generated-output inspection.
+
+Add an automated test only when it exercises executable behavior, a parser or schema, generation semantics, an adapter transformation, a runtime contract, or an observable end-to-end outcome. If deleting or rephrasing prose is the only way to make a proposed test fail, do not write that test.
+
 ### 4. Regenerate adapters
 
 Run the Agent OS sync flow from a repo that has `scripts/agents-os.mjs`, or otherwise use the local project script that owns generation.
@@ -172,6 +176,8 @@ Verify at least:
 - target-specific shape looks correct for that harness
 - model/tool conversions look reasonable
 - any supporting files were copied across
+
+Generated source equality or copy-integrity checks are acceptable when they test generator behavior. Do not turn guidance content itself into a unit-tested list of required phrases.
 
 ### 7. Fix at the source if verification fails
 
