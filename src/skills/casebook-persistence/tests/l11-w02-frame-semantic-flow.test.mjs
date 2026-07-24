@@ -12,8 +12,6 @@ const sourceFrameRoot = new URL("../../frame/", import.meta.url).pathname;
 const generatedHeader = "<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->";
 const ids = Object.freeze({
   markdownStore: "store:ed29996b-907f-4994-94be-17984a788ebc",
-  markdownView: "view:24b6d682-7003-43a5-a228-f034928ebcc4",
-  markdownPolicy: "view-policy:2ddacbdc-efbf-4c7e-b433-860e0eaa7a6b",
   namespace: "namespace:b73ece88-7a12-4004-9dd4-0f53364c1f54",
   frame: "frame:50a005b1-a35a-4bff-8f9b-e67be88f56dc",
   discovery: "discovery:ad6f04f2-5d94-4cc2-9c95-52c941826ffd",
@@ -48,26 +46,12 @@ function invoke(entrypoint, cwd, request) {
   });
 }
 
-function context(viewId, policyId, purpose) {
-  return {
-    view_id: viewId,
-    view_policy_revision_id: policyId,
-    purpose,
-    requested_audience_ceiling: "private",
-  };
-}
-
 function marker() {
   return {
-    configuration_version: 1,
+    configuration_version: 2,
     authority_mode: "markdown",
     profile: "file-authoritative-markdown-v1",
     workspace_id: ids.markdownStore,
-    view: {
-      id: ids.markdownView,
-      policy_revision_id: ids.markdownPolicy,
-      audience_ceiling: "private",
-    },
   };
 }
 
@@ -86,7 +70,6 @@ function markdownRequest(workspace, target, operation, extra = {}) {
     operation,
     request_version: 1,
     store_id: selected.workspace_id,
-    context: context(selected.view.id, selected.view.policy_revision_id, `L11-W02 ${operation}`),
     configuration: markdownConfiguration(workspace, target),
     ...extra,
   };
@@ -106,7 +89,6 @@ function sqliteRequest(state, operation, extra = {}) {
     operation,
     request_version: 1,
     store_id: state.initialization.store_id,
-    context: context(state.initialization.view.id, state.initialization.view.policy_revision_id, `L11-W02 ${operation}`),
     configuration: state.configuration,
     ...extra,
   };

@@ -31,8 +31,9 @@ const assetDefinitions = [
   ["logical-export-preflight", "variants/sqlite/lib/export/index.mjs", "module"],
   ["exceptional-operations", "variants/sqlite/lib/operations/index.mjs", "module"],
   ["optional-module-operations", "variants/sqlite/lib/operations/modules.mjs", "module"],
-  ["sqlite-schema", "variants/sqlite/sql/schema-v1.sql", "sql"],
-  ["sqlite-migration-v2", "variants/sqlite/migrations/0002-migration-snapshot-evidence.sql", "sql"],
+  ["sqlite-schema", "variants/sqlite/sql/schema-v3.sql", "sql"],
+  ["sqlite-legacy-schema-v1", "variants/sqlite/sql/schema-v1.sql", "sql"],
+  ["sqlite-migration-v3", "variants/sqlite/migrations/0003-namespace-foundation.sql", "sql"],
   ["sqlite-migrations", "variants/sqlite/migrations/manifest.json", "migration_manifest"],
   ["sqlite-runtime", "variants/sqlite/manifests/runtime.json", "runtime_manifest"],
 ];

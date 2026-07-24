@@ -9,7 +9,7 @@ Own one resumable engineering-design session and its current authoritative candi
 
 ## Start Or Resume
 
-Use an explicit Casebook workspace root when present; otherwise use `.casebook/` in the current project. Create or resume `blueprints/<blueprint-id>/blueprint.md`. Bind the completed source Frame and every governing Case by stable identity and exact examined revision. Read the full persisted state and its bound authority before continuing.
+Use an explicit Casebook workspace root when present; otherwise use `.casebook/` in the current project for Blueprint artifact placement. Before reading, creating, or declaring governing Casework unavailable, invoke `case` to resolve configured persistence authority. Project-local Blueprint placement does not select Case persistence authority. Preserve the exact selected-connector or identity-selection failure; never convert missing local Markdown state into a SQLite-unavailable exception. Create or resume `blueprints/<blueprint-id>/blueprint.md`. Bind the completed source Frame and every governing Case by stable identity and exact examined revision. Read the full persisted state and its bound authority before continuing.
 
 Admit the subject only when its behavioral boundary is accepted and current enough to design. Separate the admission ledger into:
 
@@ -36,6 +36,8 @@ Choose the smallest operation that advances the current design condition:
 7. [Artifact](references/artifact.md) — persist the current package at a natural boundary and maintain its verified RFC Document projection.
 
 These are condition-selected operations, not a fixed one-pass pipeline. New evidence may return to terrain, candidates, Contracts, Frame, or Prototype.
+
+An unmet completion condition is the next operation, not a stopping point. Once the candidate is coherent enough to review, launch the independent fresh-context reviewer in the same run; after disposition, create or repair the Document projection and verify it. If the candidate is not coherent enough to review, perform the smallest prior operation that makes it reviewable; lack of coherence is not a return condition. Return control only when the next unmet condition requires human authority or another stop named below. Never end merely by listing review, projection, or evidence as future gates that local tools can perform.
 
 ## Question Classification And Handoffs
 
@@ -98,5 +100,7 @@ The Blueprint is eligible for acceptance only when:
 - persisted state records the current revision, independent review evidence and Findings dispositions, and all other required acceptance evidence.
 
 Architect acceptance is invalid and must not be given effect or used to set `accepted` unless that independent fresh-context challenge is complete, its Findings are dispositioned, and the persisted Blueprint state and acceptance provenance identify the independent review evidence. The Architect then explicitly accepts the current Blueprint revision, its consequential trade-offs, and the bound verified Document revision. Record all acceptance provenance before setting `accepted`. A Blueprint may instead end `rejected`, `abandoned`, or `superseded`.
+
+Before returning from an active Blueprint run, inspect every unmet completion condition. For each condition, either complete it now or record the specific human/external stop that prevents it. “Independent review not performed,” “projection not verified,” and “evidence still needed” are invalid return states when the required work is locally available. If an independent reviewer cannot be launched, identify the concrete unavailable capability or external constraint and persist it as the blocking stop; the Blueprint cannot be accepted meanwhile. If only explicit Architect acceptance remains, present the reviewed, dispositioned, projection-verified revision for acceptance rather than reporting that acceptance is a future gate.
 
 Acceptance authorizes Route design only. It does not authorize implementation, migration, publication, deployment, external mutation, or execution. Blueprint does not author Legs, Work Items, implementation plans, or execution state.

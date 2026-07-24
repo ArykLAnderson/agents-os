@@ -16,11 +16,19 @@ node variants/markdown/bin/casebook-persistence.mjs < request.json
 
 Requests use protocol version `1`, explicit configuration provenance, exactly one authority mode, and operation-specific exact fields. Results are versioned JSON on stdout; stderr is diagnostic text only. Never probe one connector and fall back to the other.
 
-## Authority rules
+## Authority selection
 
-SQLite initialization atomically binds the canonical configuration source locator, `authority_mode: sqlite`, and store identity. Every later request must reproduce that binding. Reject dual configuration and locator, mode, or store substitution. An unbound compatible store may be bound only by an explicitly human-authorized operation under the trusted-local boundary. Authority switching is migration work, never an ordinary configuration toggle.
+Authority is determined by the environment: if `CASEBOOK_DATABASE_URL` is set, use the SQLite connector at that path; otherwise use the Markdown connector at the project's `.casebook/` workspace. The two modes are mutually exclusive. Apply this selection before reporting missing or ambiguous Case/Frame persistence configuration.
 
-Markdown uses an absolute root and exact authority marker. It is not a SQLite mirror, watcher, fallback, or writable cache. Its selected workspace, view, file digests, and Frame generation selector establish authority.
+Apply that rule before inspecting project-local Casebook files. A missing `.casebook-authority.json` affects only a selected Markdown workspace; it says nothing about configured SQLite availability. Likewise, a project `.casebook/` directory is not a SQLite fallback, mirror, or authority probe.
+
+This selection governs Case and Frame persistence only. It does not configure, override, conflict with, or provide a fallback for Feature Atlas storage, even when Atlas records also live beneath a directory named `.casebook`.
+
+Begin ordinary work with the selected connector's `diagnose` operation. SQLite diagnosis requires `probe_directory`: an existing absolute disposable-work parent approved for temporary files. Treat the versioned result as authoritative for the facts it actually returns, including binding, schema compatibility, and capabilities; diagnosis may validate without disclosing the store/view/policy identity bundle needed by later operations. Obtain undisclosed identities only from explicit configuration or a supported typed connector result, never directory inspection or direct SQL. If required identities remain unavailable, report that the selected authority diagnosed successfully but the typed operation lacks an identity selection. If diagnose reports a compatibility or capability problem, report that exact condition; never collapse either case into “persistence is not configured” or try the other connector.
+
+SQLite initialization atomically binds the configuration source locator, `authority_mode: sqlite`, and store identity. During normal operation the connector validates database-owned identity and schema facts required by each operation; callers still supply every identity required by that operation unless a typed connector result explicitly provides it. Reject dual configuration and locator, mode, or store substitution. An unbound compatible store may be bound only by an explicitly human-authorized operation under the trusted-local boundary. Authority switching is migration work, never an ordinary configuration toggle.
+
+Markdown uses an absolute root and exact `.casebook-authority.json` marker. It is not a SQLite mirror, watcher, fallback, or writable cache. Its selected workspace, view, file digests, and Frame generation selector establish authority.
 
 After uncertain exceptional-operation delivery, look up the exact durable receipt before retrying. After uncertain export post-rename verification, preserve both temporary and final paths, do not publish or delete either path, and require operator recovery.
 

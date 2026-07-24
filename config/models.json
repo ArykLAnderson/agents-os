@@ -9,7 +9,7 @@
     "quick": "cheap",
     "aggregation": "smart",
     "coordination": "deep",
-    "research": "deep"
+    "research": "cheap"
   },
   "adapters": {
     "pi": {

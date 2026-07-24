@@ -25,6 +25,8 @@ If the user did not say where to save the article, ask once and remember the pat
 5. **Append as you go.** Write each agreed block immediately.
 6. **Loop until done.** The user decides when the article is complete.
 
+For a guided journey rather than an opening-led argument, use **beat mode**: offer 2–3 genuinely different reachable next beats, state what each grounds and unlocks, let the user choose one, and write only that beat. Re-read the article, update the grounded set, and repeat until the journey reaches a natural end.
+
 ## Grounding
 
 A concept is grounded when the reader brings it as a prerequisite or an earlier block has introduced it. Track the grounded set. If the next move requires an ungrounded concept, ground it first or change the move. The central trade-off is how much knowledge to require up front versus teach inside the article.

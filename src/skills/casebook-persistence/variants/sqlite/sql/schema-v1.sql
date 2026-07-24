@@ -79,52 +79,11 @@ CREATE TABLE view_policy_revisions (
   UNIQUE (view_id, revision_number)
 ) STRICT;
 
-CREATE TRIGGER view_policy_meaning_immutable
-BEFORE UPDATE OF view_policy_revision_id, view_id, revision_number, audience_ceiling,
-  authority_claim_json, object_kinds_json, store_operation_receipts_visible,
-  predecessor_revision_id, created_at, limits_json
-ON view_policy_revisions
-BEGIN
-  SELECT RAISE(ABORT, 'view policy meaning is immutable');
-END;
-
-CREATE TRIGGER view_policy_revisions_immutable_delete
-BEFORE DELETE ON view_policy_revisions
-BEGIN
-  SELECT RAISE(ABORT, 'view policy revisions are immutable');
-END;
-
-CREATE UNIQUE INDEX one_active_policy_per_view
-ON view_policy_revisions(view_id)
-WHERE lifecycle = 'active';
-
 CREATE TABLE view_policy_namespace_grants (
   view_policy_revision_id TEXT NOT NULL REFERENCES view_policy_revisions(view_policy_revision_id),
   namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
   PRIMARY KEY (view_policy_revision_id, namespace_id)
 ) STRICT, WITHOUT ROWID;
-
-CREATE TRIGGER view_policy_grants_only_while_created
-BEFORE INSERT ON view_policy_namespace_grants
-WHEN NOT EXISTS (
-  SELECT 1 FROM view_policy_revisions
-  WHERE view_policy_revision_id = NEW.view_policy_revision_id AND lifecycle = 'created'
-)
-BEGIN
-  SELECT RAISE(ABORT, 'view policy grants are immutable after activation');
-END;
-
-CREATE TRIGGER view_policy_grants_immutable_update
-BEFORE UPDATE ON view_policy_namespace_grants
-BEGIN
-  SELECT RAISE(ABORT, 'view policy grants are immutable');
-END;
-
-CREATE TRIGGER view_policy_grants_immutable_delete
-BEFORE DELETE ON view_policy_namespace_grants
-BEGIN
-  SELECT RAISE(ABORT, 'view policy grants are immutable');
-END;
 
 CREATE TABLE store_fence (
   singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -160,6 +119,17 @@ CREATE TABLE owners (
   home_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
   created_at TEXT NOT NULL,
   UNIQUE (owner_id, owner_kind)
+) STRICT;
+
+CREATE TABLE owner_placement_events (
+  placement_event_id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES owners(owner_id),
+  from_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
+  to_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),
+  operation_id TEXT NOT NULL UNIQUE,
+  operation_fence INTEGER NOT NULL UNIQUE CHECK (operation_fence > 0),
+  authority_claim_json TEXT NOT NULL CHECK (json_valid(authority_claim_json)),
+  committed_at TEXT NOT NULL
 ) STRICT;
 
 CREATE TABLE owner_family_bindings (
@@ -257,14 +227,8 @@ CREATE TABLE consumer_checkpoints (
   PRIMARY KEY (view_id, consumer_id)
 ) STRICT, WITHOUT ROWID;
 
-CREATE TRIGGER consumer_checkpoint_identity_immutable
-BEFORE UPDATE OF view_id, consumer_id ON consumer_checkpoints
-BEGIN SELECT RAISE(ABORT, 'consumer checkpoint identity is immutable'); END;
-CREATE TRIGGER consumer_checkpoints_immutable_delete BEFORE DELETE ON consumer_checkpoints
-BEGIN SELECT RAISE(ABORT, 'consumer checkpoints cannot be deleted implicitly'); END;
-
 CREATE TRIGGER owners_identity_immutable
-BEFORE UPDATE OF owner_id, owner_kind, home_namespace_id ON owners
+BEFORE UPDATE OF owner_id, owner_kind ON owners
 BEGIN
   SELECT RAISE(ABORT, 'owner identity is immutable');
 END;
@@ -289,6 +253,10 @@ CREATE TRIGGER owner_events_immutable_update BEFORE UPDATE ON owner_events
 BEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END;
 CREATE TRIGGER owner_events_immutable_delete BEFORE DELETE ON owner_events
 BEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END;
+CREATE TRIGGER owner_placement_events_immutable_update BEFORE UPDATE ON owner_placement_events
+BEGIN SELECT RAISE(ABORT, 'owner placement events are immutable'); END;
+CREATE TRIGGER owner_placement_events_immutable_delete BEFORE DELETE ON owner_placement_events
+BEGIN SELECT RAISE(ABORT, 'owner placement events are immutable'); END;
 CREATE TRIGGER owner_outbox_immutable_update BEFORE UPDATE ON owner_outbox
 BEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END;
 CREATE TRIGGER owner_outbox_immutable_delete BEFORE DELETE ON owner_outbox
@@ -315,6 +283,14 @@ CREATE TABLE schema_migrations (
   migration_manifest_digest TEXT NOT NULL,
   operation_id TEXT NOT NULL REFERENCES store_operation_receipts(operation_id),
   applied_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE migration_archives (
+  archive_id TEXT PRIMARY KEY,
+  migration_id TEXT NOT NULL,
+  archive_json TEXT NOT NULL CHECK (json_valid(archive_json)),
+  archived_at TEXT NOT NULL,
+  operation_id TEXT NOT NULL UNIQUE
 ) STRICT;
 
 CREATE TRIGGER schema_migrations_immutable_update

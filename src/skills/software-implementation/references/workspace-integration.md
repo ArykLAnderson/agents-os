@@ -7,9 +7,9 @@ The Workspace Operator performs repository administration, not product implement
 ### Operations
 
 - discover repository topology, project instructions, named integration base, and cleanliness;
-- allocate an integration worktree and one explicit persistent writer worktree/branch per ready task from its current integrated prerequisite baseline;
+- allocate a global integration worktree in `single_pr` mode or one Feature integration worktree/branch per accepted Feature in `stacked_feature_prs`, plus one explicit persistent writer worktree/branch per ready task from its current integrated prerequisite baseline;
 - bootstrap required dependencies without modifying product source, or report any unavoidable source mutation;
-- verify that coordinated writer branches support the granted commit-and-integration handoff;
+- verify that coordinated writer and Feature branches stay inside the inherited Execution Authorization Envelope and declared stack graph;
 - create dedicated/disposable validator checkouts and report `filesystem_enforced | tool_restricted_shell_mutable | instruction_only`;
 - report worktree/branch paths and setup evidence;
 - inspect whether an existing worktree is safe to reuse;
@@ -22,7 +22,7 @@ Candidate B may later implement this exact port as a portable Node worktree CLI.
 
 ## Integration Worker
 
-The Integration Worker is the sole writer in the integration worktree for one validated wave.
+The Integration Worker is the sole writer in the applicable global or Feature integration worktree for one validated wave.
 
 ### Input
 
@@ -42,4 +42,4 @@ A conflict requiring new product meaning, architecture, effects, or changed depe
 
 Report included branches, integrated behavior, conflicts and repairs, commands/results, assumptions, and the integration branch/worktree ready for independent convergence validation.
 
-The Integration Worker does not select tasks, independently validate its own result, change accepted design, open the final PR, or land an authoritative branch.
+The Integration Worker does not select tasks, independently validate its own result, change accepted design, open a PR, change stack topology, or land an authoritative branch.

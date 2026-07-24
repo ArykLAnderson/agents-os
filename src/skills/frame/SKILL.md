@@ -9,7 +9,7 @@ Guide one natural-language outcome from uncertainty to human acceptance. Own nav
 
 ## Start Or Resume
 
-Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Resolve it to an absolute locator and treat it as private and Git-ignored. Before every ordinary create, resume, discovery, lifecycle, or natural-boundary persistence operation, read and follow [references/persistence.md](references/persistence.md). Resolve exactly one explicit authority and invoke its typed Frame surface. Fail closed when authority or active-view identity is missing or ambiguous; never probe, fall back, dual-write, or directly edit Frame or Discovery files.
+Resolve authority through the environment: if `CASEBOOK_DATABASE_URL` is set, use SQLite at that path; otherwise use Markdown at the project's `.casebook/` workspace (or an explicit user-provided root). Resolve locators to absolute paths and treat workspace state as private and Git-ignored. Before every ordinary create, resume, discovery, lifecycle, or natural-boundary persistence operation, read and follow [references/persistence.md](references/persistence.md). Invoke the matching connector's typed Frame surface. Fail closed when the resolved database or workspace is missing or invalid; never probe both connectors, fall back, dual-write, or directly edit Frame or Discovery files.
 
 Discover an existing Frame through the selected connector, establish its stable identity, and resume only the complete aggregate returned by `frame.read`. Otherwise create one complete typed aggregate through `frame.create` using [references/state.md](references/state.md). Reuse relevant Cases as condensed priors, not unquestionable truth.
 

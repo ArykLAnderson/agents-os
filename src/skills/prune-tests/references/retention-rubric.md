@@ -9,6 +9,8 @@
 
 Prefer one scenario that crosses several internal layers over one test per internal function.
 
+For acceptance-level specifications, apply the portability test: could a sound implementation in a different language, framework, storage system, or internal architecture satisfy the same specification? Flag names that unnecessarily expose tables, columns, internal functions, module paths, queues, cache keys, environment variables, or framework names. Domain vocabulary and user-visible behavior are correct; API contract tests may name the public protocol, and focused unit tests may name the implementation they isolate.
+
 ## Retain a focused test when
 
 The code is both critical and cheaper or clearer to isolate than to drive through the full seam. Typical exceptions:

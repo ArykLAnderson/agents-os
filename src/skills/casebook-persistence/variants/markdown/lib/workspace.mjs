@@ -67,7 +67,7 @@ const CATEGORY = Object.freeze({
   "Out of Scope": "out_of_scope",
   "Settled": "settled",
 });
-const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
+const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "configuration"]);
 const DIGEST = /^[0-9a-f]{64}$/;
 const CURRENT_CASE_VERSION_EVIDENCE_NAMESPACE = Buffer.from("46532d2ab6af44c296d514c9ed9f64eb", "hex");
 const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope", "provenance", "aliases", "facets", "entries", "sources", "relationships", "references"]);
@@ -123,6 +123,15 @@ function ownerKinds(value) {
     throw new MarkdownError("markdown.invalid_request", "owner_kinds", "owner_kinds_invalid", "Only unique case/frame owner kinds are supported.");
   }
   return unique.sort();
+}
+
+function namespaceFilter(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 64) {
+    throw new MarkdownError("markdown.invalid_request", "namespace_ids", "bounded_namespace_ids_required", "namespace_ids must contain one to 64 namespace IDs.");
+  }
+  const ids = value.map((item, index) => requiredId(item, `namespace_ids[${index}]`, "namespace"));
+  if (new Set(ids).size !== ids.length) throw new MarkdownError("markdown.invalid_request", "namespace_ids", "namespace_filter_duplicate", "namespace_ids must be unique.");
+  return ids.sort();
 }
 
 function assertChild(root, candidate, label) {
@@ -498,7 +507,7 @@ async function loadAuthorityWorkspace(request) {
   const markerBytes = await readFile(markerPath, "utf8");
   let marker;
   try { marker = JSON.parse(markerBytes); } catch { throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_invalid", "The authority marker is invalid."); }
-  exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "view", "interchange_manifest_sha256"]), "workspace_marker");
+  exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "interchange_manifest_sha256"]), "workspace_marker");
   if (marker.authority_mode == null) {
     throw new MarkdownError("authority_state_missing", `${WORKSPACE_MARKER}.authority_mode`, "installed_authority_required", "The workspace has no explicit installed authority; no fallback is attempted.");
   }
@@ -508,31 +517,17 @@ async function loadAuthorityWorkspace(request) {
   if (marker.authority_mode !== "markdown") {
     throw new MarkdownError("authority_state_ambiguous", `${WORKSPACE_MARKER}.authority_mode`, "one_installed_authority_required", "The workspace authority marker must select exactly one Markdown authority.");
   }
-  if (marker.configuration_version !== 1) {
+  if (marker.configuration_version !== 2) {
     throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "workspace_profile_incompatible", "The Markdown authority workspace profile is incompatible.");
   }
   requiredId(marker.workspace_id, "workspace_marker.workspace_id", "store");
   if (request.store_id !== marker.workspace_id) throw new MarkdownError("markdown.not_visible", "store_id", "workspace_identity_mismatch", "The requested workspace is not visible.");
-  if (!object(marker.view)) throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view", "view_marker_required", "A private workspace view marker is required.");
-  exactKeys(marker.view, new Set(["id", "policy_revision_id", "audience_ceiling"]), "workspace_marker.view");
-  const viewId = requiredId(marker.view.id, "workspace_marker.view.id", "view");
-  const policyId = requiredId(marker.view.policy_revision_id, "workspace_marker.view.policy_revision_id", "view-policy");
-  if (marker.view.audience_ceiling !== "private") throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view.audience_ceiling", "private_view_required", "Only a private view is supported.");
-  if (!object(request.context)) {
-    throw new MarkdownError("markdown.not_visible", "context", "exact_active_view_required", "The exact selected private view is required.");
-  }
-  exactKeys(request.context, new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]), "context");
-  if (request.context.view_id !== viewId || request.context.view_policy_revision_id !== policyId
-    || request.context.requested_audience_ceiling !== "private" || typeof request.context.purpose !== "string"
-    || !request.context.purpose.trim() || request.context.purpose.length > 512) {
-    throw new MarkdownError("markdown.not_visible", "context", "exact_active_view_required", "The exact selected private view is required.");
-  }
-  return { configuration, root, marker, markerPath, appliedView: { view_id: viewId, view_policy_revision_id: policyId } };
+  return { configuration, root, marker, markerPath };
 }
 
 async function loadWorkspace(request, { allowEmpty = false } = {}) {
   const authority = await loadAuthorityWorkspace(request);
-  const { configuration, root, marker, markerPath, appliedView } = authority;
+  const { configuration, root, marker, markerPath } = authority;
   if (marker.profile !== L01_WORKSPACE_PROFILE) {
     throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "synthetic_profile_required", "This operation requires the explicitly selected L-01 synthetic Markdown profile.");
   }
@@ -555,7 +550,7 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
     || manifest.records.length > MAX_RECORDS) {
     throw new MarkdownError("markdown.manifest_incompatible", INTERCHANGE_MANIFEST, "manifest_schema_incompatible", "The L-01 identity manifest is incompatible.");
   }
-  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath, appliedView };
+  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath };
 }
 
 async function parseRecords(workspace) {
@@ -1113,7 +1108,7 @@ function match(item, tokens) {
   return { ...item, matched_fields: matchedFields.sort(), lexical_score: score };
 }
 
-function commonResult(workspace, items, stableSort, completeness = "complete_within_bounds") {
+function commonResult(workspace, items, stableSort, completeness = "complete_within_bounds", namespaceIds = []) {
   return {
     status: "found",
     items,
@@ -1122,7 +1117,7 @@ function commonResult(workspace, items, stableSort, completeness = "complete_wit
     stable_sort: stableSort,
     snapshot_query_fence: `markdown:${sha256(workspace.manifestBytes)}`,
     capabilities: capabilities(),
-    applied_view: workspace.appliedView,
+    ...(namespaceIds.length ? { applied_namespace_filter: namespaceIds } : {}),
   };
 }
 
@@ -1814,11 +1809,12 @@ async function commonWorkspace(request, kinds = ["case", "frame"]) {
 }
 
 async function frameList(request) {
-  validateBase(request, []);
+  validateBase(request, ["namespace_ids"]);
+  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
   const workspace = await commonWorkspace(request, ["frame"]);
-  const records = workspace.records.filter((item) => item.owner_kind === "frame");
+  const records = workspace.records.filter((item) => item.owner_kind === "frame" && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id)));
   return success("frame.list", {
-    ...commonResult(workspace, records.map((item) => ({ id: item.id, ...item.record })), "owner_id_asc"),
+    ...commonResult(workspace, records.map((item) => ({ id: item.id, ...item.record })), "owner_id_asc", "complete_within_bounds", namespaceIds),
     applied_lifecycle_scope: "active_only", capabilities: capabilities(),
   });
 }
@@ -1834,26 +1830,28 @@ async function commonResolve(request) {
 }
 
 async function commonList(request) {
-  validateBase(request, ["owner_kinds"]);
+  validateBase(request, ["owner_kinds", "namespace_ids"]);
   const kinds = ownerKinds(request.owner_kinds);
+  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
   const workspace = await commonWorkspace(request, kinds);
-  const records = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map(publicItem);
-  return success("common.list", commonResult(workspace, records, "owner_kind_asc_id_asc"));
+  const records = workspace.records.filter((item) => kinds.includes(item.owner_kind) && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id))).map(publicItem);
+  return success("common.list", commonResult(workspace, records, "owner_kind_asc_id_asc", "complete_within_bounds", namespaceIds));
 }
 
 async function commonSearch(request) {
-  validateBase(request, ["owner_kinds", "query", "limit"]);
+  validateBase(request, ["owner_kinds", "query", "limit", "namespace_ids"]);
   const kinds = ownerKinds(request.owner_kinds);
+  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
   const tokens = queryTokens(request.query);
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > MAX_SEARCH_LIMIT) {
     throw new MarkdownError("markdown.invalid_request", "limit", "bounded_search_limit_required", "Search limit must be 1 through 50.");
   }
   const workspace = await commonWorkspace(request, kinds);
-  const matches = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map((item) => match(publicItem(item), tokens)).filter(Boolean);
+  const matches = workspace.records.filter((item) => kinds.includes(item.owner_kind) && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id))).map((item) => match(publicItem(item), tokens)).filter(Boolean);
   matches.sort((left, right) => right.lexical_score - left.lexical_score || left.owner_kind.localeCompare(right.owner_kind) || left.id.localeCompare(right.id));
   const completeness = matches.length > request.limit ? "truncated" : "complete_within_bounds";
   return success("common.search", {
-    ...commonResult(workspace, matches.slice(0, request.limit), "lexical_score_desc_owner_kind_asc_id_asc", completeness),
+    ...commonResult(workspace, matches.slice(0, request.limit), "lexical_score_desc_owner_kind_asc_id_asc", completeness, namespaceIds),
     normalized_query_tokens: tokens,
     applied_limit: request.limit,
   });

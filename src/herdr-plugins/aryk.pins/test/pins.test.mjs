@@ -7,6 +7,7 @@ import {
   appendPin, clearPin, emptyPins, parsePins, reorderPins, validateRegistry,
   resolveOfficialSession, planProjectActivation, reduceManagerState, renderManager,
 } from "../lib/model.mjs";
+import { parseNvimPins } from "../lib/ui.mjs";
 import { atomicWriteJson, loadPins, savePins, transactionalPins } from "../lib/storage.mjs";
 
 const route = { sessionName: "casebook-trial", configPath: "/home/a/.config/herdr/trials/casebook/config.toml", socketPath: "/tmp/casebook.sock", protocol: 17 };
@@ -98,6 +99,13 @@ test("manager renders four states, reorders, clears, and exits", () => {
   state = reduceManagerState(state, "move-up"); assert.deepEqual(state.pins.slots.slice(0, 2), ["gone", "session-a-local"]);
   state = reduceManagerState(state, "clear"); assert.equal(state.pins.slots[0], null);
   assert.equal(reduceManagerState(state, "exit").exit, true);
+});
+
+test("nvim pin manager accepts only a reorder or clearing of existing opaque pins", () => {
+  const original={schemaVersion:1,slots:["a","b",null,"c"]};
+  assert.deepEqual(parseNvimPins("b\na\nempty\nc\n",original),{schemaVersion:1,slots:["b","a",null,"c"]});
+  assert.throws(()=>parseNvimPins("a\na\nempty\nc\n",original),/duplicate/);
+  assert.throws(()=>parseNvimPins("a\nb\nnew\nc\n",original),/unknown/);
 });
 
 test("atomic persistence round-trips and leaves no temp file", async () => {

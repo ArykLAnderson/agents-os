@@ -2,11 +2,11 @@ import { failure, RETRY_DISPOSITIONS, success, unsupported } from "../../../../s
 import { invokeSubstrateOperation } from "./index.mjs";
 
 const REQUEST_FIELDS = new Set([
-  "protocol", "operation", "request_version", "store_id", "context", "owner_kinds",
-  "query", "limit", "max_depth", "cursor", "configuration",
+  "protocol", "operation", "request_version", "store_id", "owner_kinds",
+  "query", "limit", "max_depth", "cursor", "namespace_ids", "configuration",
 ]);
 
-function invalid(message = "The constrained identity discovery request is invalid or widens its active policy.") {
+function invalid(message = "The bounded identity discovery request is invalid.") {
   return failure("identity.discovery_invalid", message, {
     failureClass: "identity.discovery_invalid",
     retryDisposition: RETRY_DISPOSITIONS.NEVER,
@@ -20,20 +20,13 @@ export async function invokeIdentityOperation(request) {
   const mechanical = await invokeSubstrateOperation({ ...request, operation: "discover_identities" });
   if (mechanical?.ok) return success("identity.discover", mechanical.result);
   if (mechanical?.failure?.code === "representation_invalid" || mechanical?.failure?.code === "identity_invalid") return invalid();
-  if (mechanical?.failure?.code === "view_invalid") {
-    return failure("identity.view_invalid_or_unavailable", "The exact active view-policy revision is invalid or unavailable.", {
-      failureClass: "identity.view_invalid_or_unavailable",
-      retryDisposition: mechanical.failure.retry_disposition,
-      evidence: {},
-    });
-  }
   if (mechanical?.failure?.code === "not_visible") {
     return success("identity.discover", {
       status: "found", candidates: [], links: [], query_digest: null,
       snapshot_query_fence: null, result_completeness: "complete_within_bounds",
       stable_sort: "depth_asc_owner_kind_asc_stable_id_asc", next_cursor: null,
       handoff_token: null, applied_bounds: { result_limit: request.limit, max_depth: request.max_depth },
-      audience_ceiling: "private", applied_view: { view_id: request.context?.view_id ?? null, view_policy_revision_id: request.context?.view_policy_revision_id ?? null },
+      applied_namespace_filter: request.namespace_ids?.slice().sort() ?? null,
     });
   }
   return failure("identity.discovery_unavailable", "Constrained identity discovery is unavailable without exposing owner state.", {

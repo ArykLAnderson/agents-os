@@ -67,13 +67,12 @@ export async function deriveInternalCursorSigningKey(configuration, storeId) {
 }
 
 
-export function canonicalCommitRequestDigest(storeId, context, envelope) {
+export function canonicalCommitRequestDigest(storeId, _context, envelope) {
   const canonicalEnvelope = { ...envelope };
   delete canonicalEnvelope.request_digest;
   return mechanicalDigest({
     operation: "commit_owner_revision",
     resolved_store_id: storeId,
-    context,
     envelope: canonicalEnvelope,
   });
 }
@@ -115,16 +114,11 @@ function requireDigest(value, field) {
 }
 
 function contextShape(value) {
+  // View context was retired in schema v3. Tolerate it only at this substrate
+  // seam so legacy callers cannot affect persistence semantics or digests.
+  if (value == null) return null;
   requireObject(value, "context");
-  const context = {
-    view_id: requireUuidId(value.view_id, "context.view_id", "view"),
-    view_policy_revision_id: requireUuidId(value.view_policy_revision_id, "context.view_policy_revision_id", "view-policy"),
-    purpose: requireString(value.purpose, "context.purpose"),
-  };
-  if (value.requested_audience_ceiling != null) {
-    context.requested_audience_ceiling = requireString(value.requested_audience_ceiling, "context.requested_audience_ceiling", 64);
-  }
-  return context;
+  return null;
 }
 
 function provenanceShape(value) {
@@ -328,52 +322,9 @@ async function prepare(request) {
   return { binary: selected.path, storePath: configuration.sqlite.store_path, state };
 }
 
-async function validateActiveView(binary, storePath, state, context, owner = null) {
-  if (context.requested_audience_ceiling != null && context.requested_audience_ceiling !== "private") {
-    return { failure: failure("view_invalid", "The requested view context cannot widen the active policy.", {
-      failureClass: "view_invalid",
-      retryDisposition: RETRY_DISPOSITIONS.NEVER,
-    }) };
-  }
-  const rows = await queryJson(binary, storePath, `
-    SELECT vf.view_id, vpr.view_policy_revision_id, vpr.audience_ceiling,
-      vpr.object_kinds_json, vpr.limits_json, vf.home_namespace_id
-    FROM view_families vf
-    JOIN view_policy_revisions vpr ON vpr.view_id = vf.view_id
-    WHERE vf.view_id = ${sqlText(context.view_id)}
-      AND vpr.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-      AND vpr.lifecycle = 'active'
-      AND vpr.audience_ceiling = 'private'
-    LIMIT 1;
-  `);
-  if (!rows.length) {
-    return { failure: failure("view_invalid", "The exact active view-policy revision is invalid or unavailable.", {
-      failureClass: "view_invalid",
-      retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE,
-      evidence: {},
-    }) };
-  }
-  if (!owner) return { policy: rows[0] };
-  const visibility = await queryJson(binary, storePath, `
-    SELECT EXISTS(
-      SELECT 1
-      FROM view_policy_namespace_grants grant
-      JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'
-      JOIN view_policy_revisions vpr ON vpr.view_policy_revision_id = grant.view_policy_revision_id
-      JOIN json_each(vpr.object_kinds_json) kind
-      WHERE grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-        AND grant.namespace_id = ${sqlText(owner.home_namespace_id)}
-        AND kind.value = ${sqlText(owner.kind)}
-    ) AS visible;
-  `);
-  if (visibility[0]?.visible !== 1) {
-    return { failure: failure("not_visible", "The requested owner target is unknown or not visible under the active policy.", {
-      failureClass: "not_visible",
-      retryDisposition: RETRY_DISPOSITIONS.NEVER,
-      evidence: {},
-    }) };
-  }
-  return { policy: rows[0] };
+async function validateActiveView(_binary, _storePath, _state, _context, _owner = null) {
+  // Kept as a no-op while the mechanical callers converge on the v3 API.
+  return {};
 }
 
 function publicReceipt(receipt) {
@@ -522,15 +473,7 @@ function buildCommitSql(state, context, envelope, coreResult, now) {
     "BEGIN IMMEDIATE;",
     "CREATE TEMP TABLE commit_guard (valid INTEGER CHECK (valid = 1));",
     `INSERT INTO commit_guard VALUES (CASE WHEN NOT EXISTS(SELECT 1 FROM store_operation_receipts WHERE operation_id = ${sqlText(envelope.operation_id)}) THEN 1 ELSE 0 END);`,
-    `INSERT INTO commit_guard VALUES (CASE WHEN EXISTS(
-      SELECT 1 FROM view_policy_revisions vpr
-      JOIN view_policy_namespace_grants grant ON grant.view_policy_revision_id = vpr.view_policy_revision_id
-      JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'
-      JOIN json_each(vpr.object_kinds_json) kind
-      WHERE vpr.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-        AND vpr.view_id = ${sqlText(context.view_id)} AND vpr.lifecycle = 'active'
-        AND grant.namespace_id = ${sqlText(owner.home_namespace_id)} AND kind.value = ${sqlText(owner.kind)}
-    ) THEN 1 ELSE 0 END);`,
+    "INSERT INTO commit_guard VALUES (1);",
     `INSERT INTO commit_guard VALUES (CASE WHEN NOT EXISTS(
       SELECT 1 FROM owner_revisions WHERE revision_id = ${sqlText(revision.id)}
     ) THEN 1 ELSE 0 END);`,
@@ -637,7 +580,7 @@ function buildCommitSql(state, context, envelope, coreResult, now) {
   statements.push(`INSERT INTO store_operation_receipts (
     operation_id, operation_kind, store_id, request_digest, outcome, result_json,
     result_digest, authority_claim_json, settled_at, failure_class, retry_disposition,
-    operation_fence, owner_id, owner_kind, owner_home_namespace_id, view_policy_revision_id,
+    operation_fence, owner_id, owner_kind, owner_home_namespace_id,
     expected_revision, observed_revision, committed_revision, event_id
   ) VALUES (
     ${sqlText(envelope.operation_id)}, 'commit_owner_revision', ${sqlText(state.metadata.store_id)},
@@ -645,7 +588,7 @@ function buildCommitSql(state, context, envelope, coreResult, now) {
     ${sqlText(mechanicalDigest(coreResult))}, ${sqlText(JSON.stringify(envelope.provenance))}, ${sqlText(now)},
     NULL, 'never', (SELECT operation_fence FROM store_fence WHERE singleton = 1),
     ${sqlText(owner.id)}, ${sqlText(owner.kind)}, ${sqlText(owner.home_namespace_id)},
-    ${sqlText(context.view_policy_revision_id)}, ${envelope.expected_revision}, ${envelope.expected_revision},
+    ${envelope.expected_revision}, ${envelope.expected_revision},
     ${revision.number}, ${sqlText(envelope.event.id)}
   );`);
   statements.push("COMMIT;");
@@ -727,7 +670,6 @@ async function commitOwnerRevision(request) {
       outbox_ids: envelope.outbox.map((item) => item.id),
     },
     request_digest: envelope.request_digest,
-    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
   };
   const now = new Date().toISOString();
   try {
@@ -886,13 +828,6 @@ async function readOwnerCurrent(request) {
     FROM owners o
     JOIN owner_current c ON c.owner_id = o.owner_id
     JOIN owner_revisions r ON r.revision_id = c.revision_id
-    JOIN view_policy_namespace_grants grant
-      ON grant.namespace_id = o.home_namespace_id
-      AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-    JOIN view_policy_revisions vpr
-      ON vpr.view_policy_revision_id = grant.view_policy_revision_id
-      AND vpr.view_id = ${sqlText(context.view_id)} AND vpr.lifecycle = 'active'
-    JOIN json_each(vpr.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
     WHERE o.owner_id = ${sqlText(target.id)} AND o.owner_kind = ${sqlText(target.kind)}
       ${namespaceConstraint}
     LIMIT 1;
@@ -933,7 +868,6 @@ async function readOwnerCurrent(request) {
       committed_at: row.committed_at,
     },
     current_projection: JSON.parse(row.projection_json),
-    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
   });
 }
 
@@ -958,15 +892,12 @@ async function readOwnerRevision(request) {
     SELECT o.owner_id,o.owner_kind,o.home_namespace_id,r.revision_id,r.revision_number,
       r.normalized_json,r.representation_id,r.representation_version,r.committed_at
     FROM owners o JOIN owner_revisions r ON r.owner_id=o.owner_id
-    JOIN view_policy_namespace_grants g ON g.namespace_id=o.home_namespace_id AND g.view_policy_revision_id=${sqlText(context.view_policy_revision_id)}
-    JOIN view_policy_revisions p ON p.view_policy_revision_id=g.view_policy_revision_id AND p.view_id=${sqlText(context.view_id)} AND p.lifecycle='active'
-    JOIN json_each(p.object_kinds_json) k ON k.value=o.owner_kind
     WHERE o.owner_id=${sqlText(target.id)} AND o.owner_kind=${sqlText(target.kind)} AND ${selector} LIMIT 1;`);
   if (!rows.length) return failure("not_visible", "The requested owner is unknown or not visible.", { failureClass: "not_visible", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: {} });
   const row=rows[0];
   const selected=await queryJson(binary,storePath,`SELECT s.family_id,v.version_id,v.content_json,v.content_digest FROM owner_revision_selections s JOIN owner_versions v ON v.version_id=s.version_id WHERE s.revision_id=${sqlText(row.revision_id)} ORDER BY s.family_id LIMIT ${MAX_SELECTIONS+1};`);
   if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","The owner revision exceeds the bounded read shape.",{failureClass:"representation_invalid",evidence:{}});
-  return success("read_owner_revision",{status:"found",owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest})),committed_at:row.committed_at},applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id},operation_fence:state.operation_fence});
+  return success("read_owner_revision",{status:"found",owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},revision:{id:row.revision_id,number:row.revision_number,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest})),committed_at:row.committed_at},operation_fence:state.operation_fence});
 }
 
 async function readOwnerCurrentCorpus(request) {
@@ -997,10 +928,7 @@ async function readOwnerCurrentCorpus(request) {
             FROM owner_revision_selections s JOIN owner_versions v ON v.version_id=s.version_id
             WHERE s.revision_id=r.revision_id ORDER BY s.family_id LIMIT ${MAX_SELECTIONS + 1}) selected),'[]') selected_json
       FROM owners o JOIN owner_current c ON c.owner_id=o.owner_id
-      JOIN owner_revisions r ON r.revision_id=c.revision_id
-      JOIN view_policy_namespace_grants g ON g.namespace_id=o.home_namespace_id AND g.view_policy_revision_id=${sqlText(context.view_policy_revision_id)}
-      JOIN view_policy_revisions p ON p.view_policy_revision_id=g.view_policy_revision_id AND p.view_id=${sqlText(context.view_id)} AND p.lifecycle='active'
-      JOIN json_each(p.object_kinds_json) k ON k.value=o.owner_kind
+       JOIN owner_revisions r ON r.revision_id=c.revision_id
       WHERE o.owner_kind=${sqlText(kind)}
       ORDER BY o.owner_id LIMIT ${MAX_LIST_SCAN + 1}
     ) corpus ON 1=1
@@ -1013,7 +941,7 @@ async function readOwnerCurrentCorpus(request) {
     if(selected.length>MAX_SELECTIONS)return failure("representation_invalid","A current owner revision exceeds the bounded corpus read shape.",{failureClass:"representation_invalid",retryDisposition:RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR,evidence:{}});
     items.push({owner:{id:row.owner_id,kind:row.owner_kind,home_namespace_id:row.home_namespace_id},current_projection:JSON.parse(row.projection_json),revision:{id:row.revision_id,number:row.revision_number,operation_fence:row.revision_operation_fence,normalized:JSON.parse(row.normalized_json),representation:{id:row.representation_id,version:row.representation_version},committed_at:row.committed_at,selected_versions:selected.map(x=>({family_id:x.family_id,version_id:x.version_id,content:JSON.parse(x.content_json),content_digest:x.content_digest}))}});
   }
-  return success("read_owner_current_corpus",{status:"found",items,store:{id:state.metadata.store_id,schema:{id:state.metadata.schema_id,version:state.metadata.schema_version},protocol:{id:state.metadata.protocol_id,version:state.metadata.protocol_version}},operation_fence:rows[0].operation_fence,applied_view:{view_id:context.view_id,view_policy_revision_id:context.view_policy_revision_id}});
+  return success("read_owner_current_corpus",{status:"found",items,store:{id:state.metadata.store_id,schema:{id:state.metadata.schema_id,version:state.metadata.schema_version},protocol:{id:state.metadata.protocol_id,version:state.metadata.protocol_version}},operation_fence:rows[0].operation_fence});
 }
 
 async function pageOwnerCurrent(request) {
@@ -1050,12 +978,7 @@ async function pageOwnerCurrent(request) {
         r.revision_number, r.committed_at, c.updated_at, c.projection_json
       FROM owners o
       JOIN owner_current c ON c.owner_id = o.owner_id
-      JOIN owner_revisions r ON r.revision_id = c.revision_id
-      JOIN view_policy_namespace_grants grant ON grant.namespace_id = o.home_namespace_id
-        AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-      JOIN view_policy_revisions vpr ON vpr.view_policy_revision_id = grant.view_policy_revision_id
-        AND vpr.view_id = ${sqlText(context.view_id)} AND vpr.lifecycle = 'active'
-      JOIN json_each(vpr.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
+       JOIN owner_revisions r ON r.revision_id = c.revision_id
       WHERE o.owner_kind = ${sqlText(kind)} ${after}
       ORDER BY c.updated_at DESC, o.owner_id ASC LIMIT ${limit + 1}
     )
@@ -1087,7 +1010,6 @@ async function pageOwnerCurrent(request) {
     operation_fence: fence,
     has_more: hasMore,
     next_after_key: hasMore ? [page.at(-1).updated_at, page.at(-1).owner_id] : null,
-    applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id },
   });
 }
 
@@ -1097,17 +1019,15 @@ async function listOwnerCurrent(request) {
   const items = [];
   let afterKey = null;
   let fence = null;
-  let appliedView = null;
   do {
     const page = await pageOwnerCurrent({ ...request, limit: MAX_CURRENT_PAGE, ...(afterKey == null ? {} : { after_key: afterKey }), ...(fence == null ? {} : { expected_fence: fence }) });
     if (!page.ok) return page;
     fence ??= page.result.operation_fence;
-    appliedView = page.result.applied_view;
     items.push(...page.result.items);
     if (items.length > 256) return failure("capability_unavailable", "The bounded common owner list scan limit was exceeded.", { failureClass: "capability_unavailable", retryDisposition: RETRY_DISPOSITIONS.NEVER, evidence: { maximum_owner_scan: 256 } });
     afterKey = page.result.next_after_key;
   } while (afterKey != null);
-  return success("list_owner_current", { status: "found", items, operation_fence: fence, applied_view: appliedView });
+  return success("list_owner_current", { status: "found", items, operation_fence: fence });
 }
 
 function identitySigningKey(state) {
@@ -1193,7 +1113,6 @@ function identityCodepointCompare(left, right) {
 }
 
 async function discoverIdentities(request) {
-  const context = contextShape(request.context);
   const storeId = requireUuidId(request.store_id, "store_id", "store");
   if (!Array.isArray(request.owner_kinds) || request.owner_kinds.length < 1 || request.owner_kinds.length > 2) throw new RequestError("representation_invalid", "owner_kinds must select Case and/or Frame.");
   const ownerKinds = [...new Set(request.owner_kinds.map((kind) => requireString(kind, "owner_kinds[]", 64)))].sort();
@@ -1201,14 +1120,12 @@ async function discoverIdentities(request) {
   const query = normalizedIdentityQuery(request.query);
   if (!Number.isInteger(request.limit) || request.limit < 1) throw new RequestError("representation_invalid", "limit must be a positive integer.");
   if (!Number.isInteger(request.max_depth) || request.max_depth < 0) throw new RequestError("representation_invalid", "max_depth must be a non-negative integer.");
+  const namespaceIds = request.namespace_ids == null ? [] : request.namespace_ids.map((value) => requireUuidId(value, "namespace_ids[]", "namespace"));
+  if (!namespaceIds.length && request.namespace_ids != null || namespaceIds.length > 64 || new Set(namespaceIds).size !== namespaceIds.length) throw new RequestError("representation_invalid", "namespace_ids must be one to 64 unique namespace IDs when supplied.");
   const prepared = await prepare(request);
   if (prepared.failure) return prepared.failure;
   const { binary, storePath, state } = prepared;
   if (storeId !== state.metadata.store_id) return failure("not_visible", "The requested identity is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
-  const active = await validateActiveView(binary, storePath, state, context);
-  if (active.failure) return active.failure;
-  const limits = JSON.parse(active.policy.limits_json);
-  if (request.limit > limits.max_results || request.max_depth > limits.max_traversal_depth) throw new RequestError("representation_invalid", "The requested bounds widen the exact active policy.");
   const kindsSql = ownerKinds.map(sqlText).join(",");
   const rows = await queryJson(binary, storePath, `
     SELECT visible.*, fence.operation_fence
@@ -1216,13 +1133,8 @@ async function discoverIdentities(request) {
       SELECT o.owner_id, o.owner_kind, o.home_namespace_id, r.revision_id, r.revision_number,
         c.projection_json
       FROM owners o JOIN owner_current c ON c.owner_id = o.owner_id
-      JOIN owner_revisions r ON r.revision_id = c.revision_id
-      JOIN view_policy_namespace_grants grant ON grant.namespace_id = o.home_namespace_id
-        AND grant.view_policy_revision_id = ${sqlText(context.view_policy_revision_id)}
-      JOIN view_policy_revisions policy ON policy.view_policy_revision_id = grant.view_policy_revision_id
-        AND policy.view_id = ${sqlText(context.view_id)} AND policy.lifecycle = 'active'
-      JOIN json_each(policy.object_kinds_json) object_kind ON object_kind.value = o.owner_kind
-      WHERE o.owner_kind IN (${kindsSql})
+       JOIN owner_revisions r ON r.revision_id = c.revision_id
+       WHERE o.owner_kind IN (${kindsSql}) ${namespaceIds.length ? `AND o.home_namespace_id IN (${namespaceIds.map(sqlText).join(",")})` : ""}
       ORDER BY o.owner_kind, o.owner_id LIMIT ${MAX_IDENTITY_CORPUS + 1}
     ) visible ON 1 = 1 ORDER BY visible.owner_kind, visible.owner_id;
   `);
@@ -1272,12 +1184,12 @@ async function discoverIdentities(request) {
     }
   }
   const ordered = [...selected.values()].sort((left, right) => left.depth - right.depth || identityCodepointCompare(left.row.owner_kind, right.row.owner_kind) || identityCodepointCompare(left.row.owner_id, right.row.owner_id));
-  const queryDigest = mechanicalDigest({ domain: "identity-discovery-query@1", store_id: storeId, view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id, audience_ceiling: "private", owner_kinds: ownerKinds, query, bounds: { result_limit: request.limit, max_depth: request.max_depth } });
+  const queryDigest = mechanicalDigest({ domain: "identity-discovery-query@2", store_id: storeId, namespace_ids: namespaceIds.sort(), owner_kinds: ownerKinds, query, bounds: { result_limit: request.limit, max_depth: request.max_depth } });
   const fence = rows[0].operation_fence;
   let offset = 0;
   if (request.cursor != null) {
     const cursor = parseSignedIdentityState(state, request.cursor);
-    if (cursor.domain !== "identity-discovery-cursor@1" || cursor.store_id !== storeId || cursor.view_policy_revision_id !== context.view_policy_revision_id || cursor.query_digest !== queryDigest || cursor.fence !== fence || !Number.isInteger(cursor.offset) || cursor.offset < 0) throw new RequestError("representation_invalid", "The opaque cursor is invalid or belongs to another query.");
+    if (cursor.domain !== "identity-discovery-cursor@2" || cursor.store_id !== storeId || cursor.query_digest !== queryDigest || cursor.fence !== fence || !Number.isInteger(cursor.offset) || cursor.offset < 0) throw new RequestError("representation_invalid", "The opaque cursor is invalid or belongs to another query.");
     offset = cursor.offset;
   }
   if (offset > ordered.length) throw new RequestError("representation_invalid", "The opaque cursor is stale.");
@@ -1285,12 +1197,11 @@ async function discoverIdentities(request) {
   const more = offset + page.length < ordered.length;
   const candidates = page.map(({ row }) => ({ stable_id: row.owner_id, owner_kind: row.owner_kind, home_namespace_id: row.home_namespace_id, current_owner_revision: { id: identityRevisionId(row.owner_kind, row.revision_id), number: row.revision_number } }));
   const links = retainedLinks.filter((link) => pageKeys.has(`${link.from.kind}\0${link.from.id}`) && pageKeys.has(`${link.to.kind}\0${link.to.id}`)).map((link) => ({ from: link.from, to: link.to, predicate: link.predicate, direction: link.direction, ...(link.observed_revision_id == null ? {} : { observed_revision_id: link.observed_revision_id }), ...(link.pinned_revision_id == null ? {} : { pinned_revision_id: link.pinned_revision_id }), depth: link.depth }));
-  const handoff = { domain: "identity-discovery-handoff@1", store_id: storeId, view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id, query_digest: queryDigest, fence, audience_ceiling: "private", bounds: { result_limit: request.limit, max_depth: request.max_depth }, candidates: page.map(({ row }) => ({ id: row.owner_id, kind: row.owner_kind, home_namespace_id: row.home_namespace_id, revision_id: row.revision_id, revision_number: row.revision_number })) };
-  return success("discover_identities", { status: "found", candidates, links, query_digest: queryDigest, snapshot_query_fence: `sqlite:${fence}`, result_completeness: more ? "truncated" : "complete_within_bounds", stable_sort: "depth_asc_owner_kind_asc_stable_id_asc", next_cursor: more ? signedIdentityState(state, { domain: "identity-discovery-cursor@1", store_id: storeId, view_policy_revision_id: context.view_policy_revision_id, query_digest: queryDigest, fence, offset: offset + page.length }) : null, handoff_token: signedIdentityState(state, handoff), applied_bounds: handoff.bounds, audience_ceiling: "private", applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id } });
+  const handoff = { domain: "identity-discovery-handoff@2", store_id: storeId, namespace_ids: namespaceIds.sort(), query_digest: queryDigest, fence, bounds: { result_limit: request.limit, max_depth: request.max_depth }, candidates: page.map(({ row }) => ({ id: row.owner_id, kind: row.owner_kind, home_namespace_id: row.home_namespace_id, revision_id: row.revision_id, revision_number: row.revision_number })) };
+  return success("discover_identities", { status: "found", candidates, links, query_digest: queryDigest, snapshot_query_fence: `sqlite:${fence}`, result_completeness: more ? "truncated" : "complete_within_bounds", stable_sort: "depth_asc_owner_kind_asc_stable_id_asc", next_cursor: more ? signedIdentityState(state, { domain: "identity-discovery-cursor@2", store_id: storeId, query_digest: queryDigest, fence, offset: offset + page.length }) : null, handoff_token: signedIdentityState(state, handoff), applied_bounds: handoff.bounds, applied_namespace_filter: namespaceIds.length ? namespaceIds.sort() : null });
 }
 
 async function validateIdentityHandoff(request) {
-  const context = contextShape(request.context);
   const storeId = requireUuidId(request.store_id, "store_id", "store");
   const ownerKind = requireString(request.owner_kind, "owner_kind", 64);
   if (!["case", "frame"].includes(ownerKind)) throw new RequestError("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
@@ -1302,33 +1213,11 @@ async function validateIdentityHandoff(request) {
   if (prepared.failure) return prepared.failure;
   const { binary, storePath, state } = prepared;
   if (storeId !== state.metadata.store_id) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
-  const active = await validateActiveView(binary, storePath, state, context);
-  if (active.failure) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
   const handoff = parseSignedIdentityState(state, request.handoff_token);
-  if (handoff.domain !== "identity-discovery-handoff@1" || handoff.store_id !== storeId || handoff.view_id !== context.view_id || handoff.view_policy_revision_id !== context.view_policy_revision_id || handoff.query_digest !== request.query_digest || handoff.audience_ceiling !== "private" || !Array.isArray(handoff.candidates)) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
+  if (handoff.domain !== "identity-discovery-handoff@2" || handoff.store_id !== storeId || handoff.query_digest !== request.query_digest || !Array.isArray(handoff.candidates)) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
   const bound = new Map(handoff.candidates.filter((item) => item.kind === ownerKind).map((item) => [item.id, item]));
   if (candidateIds.some((candidateId) => !bound.has(candidateId))) return failure("not_visible", "The identity handoff is unknown or not visible.", { failureClass: "not_visible", evidence: {} });
-  return success("validate_identity_handoff", { status: "validated", candidates: candidateIds.map((candidateId) => bound.get(candidateId)), query_digest: handoff.query_digest, snapshot_query_fence: `sqlite:${handoff.fence}`, audience_ceiling: handoff.audience_ceiling, applied_bounds: handoff.bounds, applied_view: { view_id: context.view_id, view_policy_revision_id: context.view_policy_revision_id } });
-}
-
-async function readActiveViewScope(request) {
-  const available = await prepare(request);
-  if (available.failure) return available.failure;
-  const { binary, storePath, state } = available;
-  const active = await validateActiveView(binary, storePath, state, request.context);
-  if (active.failure) return active.failure;
-  const rows = await queryJson(binary, storePath, `
-    SELECT grant.namespace_id
-    FROM view_policy_namespace_grants grant
-    JOIN namespaces ns ON ns.namespace_id = grant.namespace_id AND ns.lifecycle = 'active'
-    WHERE grant.view_policy_revision_id = ${sqlText(request.context.view_policy_revision_id)}
-    ORDER BY grant.namespace_id;
-  `);
-  return success("read_active_view_scope", {
-    status: "found",
-    namespace_ids: rows.map((row) => row.namespace_id),
-    applied_view: { id: request.context.view_id, policy_revision_id: request.context.view_policy_revision_id },
-  });
+  return success("validate_identity_handoff", { status: "validated", candidates: candidateIds.map((candidateId) => bound.get(candidateId)), query_digest: handoff.query_digest, snapshot_query_fence: `sqlite:${handoff.fence}`, applied_bounds: handoff.bounds, applied_namespace_filter: handoff.namespace_ids.length ? handoff.namespace_ids : null });
 }
 
 function canonicalCaseRevisionId(value) {
@@ -1505,7 +1394,6 @@ async function readStoreOperationReceiptForFacade(request) {
 
 export async function invokeMechanicalOperation(request) {
   try {
-    if (request.operation === "read_active_view_scope") return await readActiveViewScope(request);
     if (request.operation === "commit_owner_revision") return await commitOwnerRevision(request);
     if (request.operation === "get_owner_operation_receipt") return await getOwnerOperationReceipt(request);
     if (request.operation === "read_store_operation_receipt_for_facade") return await readStoreOperationReceiptForFacade(request);

@@ -1,14 +1,14 @@
-# Map Acceptance And Recoverable Publication
+# Map Acceptance, Decision Recording, And Recoverable Publication
 
 ## Exact Trusted Human Decision
 
-Only an unqualified confirmation of the exact complete candidate whose latest inspection passed can produce an Acceptance Package. Verify the human's identity and bounded authority for this exact Blueprint/Map decision through the configured trusted Atlas authority context/provenance. A name, handle, affirmative sentence, reviewer consensus, Issue state, or agent-written `Decision` text is insufficient.
+A verified human's unqualified affirmative response to the bounded question for the exact complete candidate whose latest inspection passed produces an Acceptance Package. Verify the human's identity and bounded authority for this exact Blueprint/Map decision through configured trusted Atlas provenance. The Package binds the response to the candidate and question; an isolated affirmative, name, handle, reviewer consensus, Issue state, or agent-written `Decision` is insufficient by itself.
 
 The Acceptance Package contains the fixed complete presentation or an immutable lossless locator, candidate-local identifier/revision, verified human/provenance/date, bounded question and choice, rationale, affected proposed/existing Map, exact Blueprint bindings, expected predecessor Decision, and explicit implementation/effect non-authority.
 
 Externally stored snapshots require a Decision-contained cryptographic binding over canonically defined bytes and content type. The locator must be immutable, versioned, durable, audience-compatible, and recoverable for accepted-history lifetime. Recording, recovery, and handoff retrieve and verify the binding. Inline immutable Decision content needs no universal digest.
 
-Any qualification, change, unresolved question, unknown acyclicity, failed authority verification, stale predecessor, visibility mismatch, or material drift is a disposition—not acceptance. If acceptance was spoken but not durably recorded, recover fixed bytes only as input, recheck staleness, re-present the complete bounded question, and obtain fresh attributable unqualified confirmation in the recording interaction.
+Any qualification, change, unresolved question, unknown acyclicity, failed authority verification, stale predecessor, visibility mismatch, or material drift is a disposition—not acceptance. If Route cannot reconstruct a complete Acceptance Package binding the exact candidate, question, verified authority, destination, and unqualified response, or preflight detects material change, recover fixed bytes only as input, re-inspect, re-present, and obtain fresh acceptance. Otherwise the Publisher records the existing accepted package without a second confirmation.
 
 ## Sole Durable Planning Authority
 
@@ -19,6 +19,8 @@ For a new Map, the Publisher may create the minimum identity shell needed to hos
 Exactly one accepted Map Decision is current. Prior Decisions remain immutable and visible with successor/invalidation reason. Current bodies and child records are readable mechanical projections; during partial publication they may be incomplete or stale but must not contradict the Decision.
 
 ## Narrow Publisher Boundary
+
+Valid exact acceptance immediately invokes the configured Publisher. Acceptance authorizes only the configured adapter writes required to record and mechanically project the accepted Decision; the Publisher's mutation authority is operational permission for those writes, not a second human decision.
 
 The Publisher receives one exact Acceptance Package and a configured private Atlas. It owns only:
 
@@ -34,6 +36,8 @@ The Publisher does not shape, review, accept, amend, infer semantic equivalence,
 A raced ID remains tentative until a successful create/reuse plus reread establishes its binding; on collision, reread exhaustively and select another unused ID. Once established, a binding is durable and every retry reuses it. Semantic/owner conflict or duplicate durable binding stops; never overwrite, merge, recycle, or silently remap.
 
 Publication order is Decision → identities/children → locator/dependency completion → Feature projections → Map projection/index navigation → reread. Non-transactional failure returns a truthful partial receipt naming the Decision, successful locators, failed operation, stale/pending projections, and safe resume action. Do not repost the Decision, delete successful records, roll IDs back, or create replacements to conceal partial state. After uncertain mutation, search/reread before retry.
+
+Capability, destination, access, retention, or configured Publisher-permission failure is a publication-operability failure, not a defect in otherwise valid acceptance. Preserve the Acceptance Package and return the typed failure. Request a new human decision only when remediation changes the candidate, Atlas destination, visibility, predecessor, or another accepted semantic boundary.
 
 A merely newer Blueprint/provider revision does not silently rebind exact accepted meaning; expose impact and suppress affected readiness until evaluated. Changed/unresolvable exact authority, changed expected predecessor before Decision, owner/identity conflict, contradictory accepted content, or unverifiable external snapshot stops recording/projection. The Publisher never chooses the semantic repair.
 

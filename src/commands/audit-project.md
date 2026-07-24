@@ -31,10 +31,10 @@ $ARGUMENTS
    - If yes: does `testing.md` exist with runner config, patterns, conventions?
    - Assess by looking for: test directories, test runner config (vitest.config, jest.config, etc.), existing test files
 
-   ### Quality Gates Configuration (`.agents-os/src/docs/quality-gates.md`)
-   - Does the project have enough tests to warrant quality gate tooling?
-   - If yes: does `quality-gates.md` exist with coverage commands, complexity tools, mutation testing setup?
-   - Assess by looking for: coverage config, existing quality tooling, CI quality checks
+   ### Quality Policy
+   - Does the project define repository-owned coverage, complexity, mutation, lint, or other quality requirements?
+   - Are the required commands and thresholds documented in project instructions or CI configuration?
+   - Do not introduce universal thresholds when the repository does not own them.
 
    ### Project-Specific Agents (`.agents-os/src/agents/`)
    - Would the project benefit from specialized agents beyond the global builder/validator?

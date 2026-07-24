@@ -1,6 +1,6 @@
 # Configured Local Filesystem / Git-Backed Adapter
 
-Use this adapter only when a local filesystem root is the configured canonical Feature Atlas destination. It conforms to [the storage adapter contract](storage-adapters.md) and preserves [canonical representation semantics](issue-representations.md). A Git repository may retain and transport the records; Git does not accept Maps, select the current Decision, establish ownership, or satisfy prerequisites.
+Use this adapter when a local filesystem root is the explicitly configured canonical Feature Atlas destination or when no explicit Atlas destination exists and the current project's `.casebook/atlas` default resolves safely. It conforms to [the storage adapter contract](storage-adapters.md) and preserves [canonical representation semantics](issue-representations.md). A Git repository may retain and transport the records; Git does not accept Maps, select the current Decision, establish ownership, or satisfy prerequisites.
 
 ## Configuration And Preflight
 
@@ -12,9 +12,17 @@ Bind outside the Atlas records:
 - trusted human authority/provenance verifier; and
 - concurrency/serialization mechanism, hash algorithm/content-type rules, and receipt location.
 
+Atlas selection is separate from Case and Frame persistence. Ignore `CASEBOOK_DATABASE_URL` when selecting this adapter. An explicit Atlas root or exact Atlas Map/Decision/receipt locator confirms the named destination; otherwise derive the root from the current project root as `<project>/.casebook/atlas`. Do not require the Case/Frame `.casebook-authority.json` marker unless the selected Atlas codec independently defines it. Stop for configuration ambiguity only if the explicit destination conflicts or the project-local root cannot be resolved safely.
+
 Before reads or mutations, resolve the configured root without symlink/path escape, verify it is the expected destination, verify access and audience/permissions, and verify immutable Decision retention plus write-recovery capability. A Unix username, file author, Git author/signature, commit, or file ownership alone does not prove bounded Map acceptance authority. If private records are Git-backed, also verify configured remote visibility/access before any authorized publication; a local commit does not authorize a push.
 
-Do not infer the root from the current source repository or create a nearby `.atlas` directory as fallback. Source repositories and Atlas storage may be separate even when both use Git.
+Do not infer a different root from a nested source repository or create a nearby `.atlas` directory as fallback. Resolve the current project root first, then use its `.casebook/atlas` default. Source repositories and Atlas storage may be separate even when both use Git.
+
+## Local Read Execution
+
+When no dedicated Feature Atlas adapter executable is installed, the Feature Atlas skill may implement the adapter's read-only domain operations with ordinary filesystem tools against the already selected root. It must read the exact Map, immutable Decision, Feature, Work Item, and receipt records required by the operation; verify declared content digests and cross-record identity, owner, edge, currentness, and projection consistency; and return the same typed domain result described by the storage adapter contract.
+
+This fallback does not permit callers to choose a provider layout, scan unrelated `.casebook` roots, follow an unqualified `latest`, reinterpret mutable projections as authority, or bypass integrity checks. A missing executable alone is not `unverifiable` when the selected filesystem records contain enough information to execute and verify the domain operation.
 
 ## Representation Without A Universal Schema
 
@@ -79,4 +87,4 @@ If exact state cannot be distinguished, return `write_uncertain` or `publication
 
 ## Consumer Boundary
 
-Only this adapter reads paths or invokes Git. Route and Software Implementation consume `readCurrentMap`, `verifyPublication`, and `exportExecutionHandoff` domain results. They receive adapter-qualified locators/receipts but do not parse the directory, inspect `HEAD`, or treat a commit as the current Map Decision.
+Only this adapter reads paths or invokes Git. Route and Software Implementation consume `readCurrentMap`, `verifyPublication`, and `exportExecutionHandoff` domain results. When the Feature Atlas skill performs the local read fallback above, it is acting as this adapter and returns those domain results before Route or Software Implementation consumes them. Consumers do not independently parse the directory, inspect `HEAD`, or treat a commit as the current Map Decision.

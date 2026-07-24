@@ -30,7 +30,7 @@ test("software implementation exposes Atlas as a distinct fail-closed admission 
     /Features:.*candidate-local label -> stable F-\*/,
     /Work Items:.*candidate-local label -> stable WI-\*/,
     /Proof allocation:.*focused, independent convergence,[\s\S]*security, cleanup, ordering/,
-    /PR: <allowed boundary>[\s\S]*merge: <allowed boundary>[\s\S]*deployment: <allowed boundary>[\s\S]*landing: <allowed boundary>/,
+    /create\/update matching draft PRs: <allowed boundary>[\s\S]*Explicitly absent:.*merge, deployment, release, landing/,
     /Disposition: clear \| exact_admitted_limitation \| stop/,
   ], "Atlas Delivery Contract");
 });

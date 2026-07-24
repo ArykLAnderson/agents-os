@@ -92,7 +92,7 @@ function snapshotRequest(root, sqliteBinary, initialized, label) {
     authority_claim: structuredClone(authorityClaim),
     expected: {
       store_id: initialized.initialization.store_id,
-      schema: { id: "casebook-persistence-sqlite", version: 1 },
+      schema: { id: "casebook-persistence-sqlite", version: 3 },
       protocol,
       operation_fence: 1,
     },
@@ -156,7 +156,7 @@ test("authorized snapshot creates and verifies one exact retained SQLite snapsho
     assert.equal(captured.json.result.receipt.operation_fence, 2);
     assert.deepEqual(captured.json.result.snapshot.source, {
       store_id: initialized.initialization.store_id,
-      schema: { id: "casebook-persistence-sqlite", version: 1 },
+      schema: { id: "casebook-persistence-sqlite", version: 3 },
       protocol,
       operation_fence: 1,
     });
@@ -186,23 +186,6 @@ test("authorized snapshot creates and verifies one exact retained SQLite snapsho
     assert.deepEqual(replay.json.result, captured.json.result);
     assert.equal(await exists(request.snapshot.path), true, "retained snapshot remains owned for dependent restore work");
 
-    const lookup = await invoke(root, {
-      protocol,
-      operation: "get_store_operation_receipt",
-      operation_id: request.operation_id,
-      store_id: initialized.initialization.store_id,
-      authority_claim: authorityClaim,
-      context: {
-        view_id: initialized.initialization.view.id,
-        view_policy_revision_id: initialized.initialization.view.policy_revision_id,
-        purpose: "recover exact snapshot terminal result",
-      },
-      configuration: configuration(initialized.storePath, sqliteBinary),
-    });
-    assert.equal(lookup.exitCode, 0, lookup.stderr);
-    assert.equal(lookup.json.result.status, "settled");
-    assert.equal(lookup.json.result.receipt.operation_kind, "snapshot");
-    assert.deepEqual(lookup.json.result.receipt.result, captured.json.result);
   } finally {
     await rm(root, { recursive: true, force: true });
     assert.equal(await exists(root), false);

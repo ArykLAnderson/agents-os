@@ -28,10 +28,8 @@ const MAX_SEARCH_LIMIT = 50;
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const OWNER_ID = new RegExp(`^(case|frame):${UUID}$`);
 const STORE_ID = new RegExp(`^store:${UUID}$`);
-const VIEW_ID = new RegExp(`^view:${UUID}$`);
-const POLICY_ID = new RegExp(`^view-policy:${UUID}$`);
 const KINDS = new Set(["case", "frame"]);
-const COMMON = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
+const COMMON = new Set(["protocol", "operation", "request_version", "store_id", "configuration"]);
 
 function renderInterchange(records) {
   const files = [];
@@ -109,20 +107,6 @@ function validateBase(request, extra) {
   if (typeof request.store_id !== "string" || !STORE_ID.test(request.store_id)) {
     throw new CommonRequestError("store_id", "uuid_identity_required");
   }
-  if (!request.context || typeof request.context !== "object" || Array.isArray(request.context)) {
-    throw new CommonRequestError("context", "view_context_required");
-  }
-  const contextFields = new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]);
-  for (const key of Object.keys(request.context)) {
-    if (!contextFields.has(key)) throw new CommonRequestError(`context.${key}`, "field_unsupported");
-  }
-  if (!VIEW_ID.test(request.context.view_id ?? "") || !POLICY_ID.test(request.context.view_policy_revision_id ?? "")) {
-    throw new CommonRequestError("context", "exact_active_view_required");
-  }
-  if (typeof request.context.purpose !== "string" || !request.context.purpose.trim() || request.context.purpose.length > 512
-    || request.context.requested_audience_ceiling !== "private") {
-    throw new CommonRequestError("context", "private_view_context_required");
-  }
 }
 
 function ownerKinds(value) {
@@ -143,6 +127,21 @@ function ownerId(value) {
   return value;
 }
 
+function namespaceIds(value) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length < 1 || value.length > 64) {
+    throw new CommonRequestError("namespace_ids", "namespace_filter_invalid");
+  }
+  const ids = value.map((namespaceId, index) => {
+    if (typeof namespaceId !== "string" || !new RegExp(`^namespace:${UUID}$`).test(namespaceId)) {
+      throw new CommonRequestError(`namespace_ids[${index}]`, "uuid_identity_required");
+    }
+    return namespaceId;
+  });
+  if (new Set(ids).size !== ids.length) throw new CommonRequestError("namespace_ids", "namespace_filter_invalid");
+  return ids.sort();
+}
+
 function normalizedFrame(frame) {
   return {
     ...frame,
@@ -155,7 +154,6 @@ async function hydrate(request, id) {
     protocol: request.protocol,
     request_version: 1,
     store_id: request.store_id,
-    context: request.context,
     configuration: request.configuration,
   };
   const kind = id.slice(0, id.indexOf(":"));
@@ -172,7 +170,7 @@ async function hydrate(request, id) {
     return { failure: typed };
   }
   const record = kind === "case" ? typed.result.case : normalizedFrame(typed.result.frame);
-  return { item: { owner_kind: kind, id, record }, applied_view: typed.result.applied_view };
+  return { item: { owner_kind: kind, id, record } };
 }
 
 async function identityList(request, kinds) {
@@ -184,7 +182,6 @@ async function identityList(request, kinds) {
       operation: "list_owner_current",
       configuration: request.configuration,
       store_id: request.store_id,
-      context: request.context,
       owner_kind: kind,
     });
     if (!result?.ok) return { failure: result };
@@ -197,7 +194,6 @@ async function identityList(request, kinds) {
       }) };
     }
     fence = result.result.operation_fence;
-    appliedView = result.result.applied_view;
     for (const row of result.result.items) rows.push({ kind, id: row.owner.id });
   }
   if (rows.length > MAX_SCAN) {
@@ -207,7 +203,7 @@ async function identityList(request, kinds) {
     }) };
   }
   rows.sort((left, right) => left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id));
-  return { rows, fence, appliedView };
+  return { rows, fence };
 }
 
 async function loadAll(request, kinds) {
@@ -232,7 +228,7 @@ async function loadAll(request, kinds) {
       evidence: {},
     }) };
   }
-  return { items, fence: listed.fence, appliedView: listed.appliedView };
+  return { items, fence: listed.fence };
 }
 
 function lexicalFields(item) {
@@ -276,7 +272,7 @@ function lexicalMatch(item, queryTokens) {
   return { ...item, matched_fields: matches.sort(), lexical_score: score };
 }
 
-function queryResult(items, loaded, stableSort, completeness = "complete_within_bounds") {
+function queryResult(items, loaded, stableSort, completeness = "complete_within_bounds", selectedNamespaces = []) {
   return {
     status: "found",
     items,
@@ -284,7 +280,7 @@ function queryResult(items, loaded, stableSort, completeness = "complete_within_
     result_completeness: completeness,
     stable_sort: stableSort,
     snapshot_query_fence: `sqlite:${loaded.fence}`,
-    applied_view: loaded.appliedView,
+    ...(selectedNamespaces.length ? { applied_namespace_filter: selectedNamespaces } : {}),
   };
 }
 
@@ -297,32 +293,36 @@ async function resolve(request) {
     item: resolved.item,
     index_state: "current",
     result_completeness: "complete_within_bounds",
-    applied_view: resolved.applied_view,
   });
 }
 
 async function list(request) {
-  validateBase(request, ["owner_kinds"]);
+  validateBase(request, ["owner_kinds", "namespace_ids"]);
+  const selectedNamespaces = namespaceIds(request.namespace_ids);
   const loaded = await loadAll(request, ownerKinds(request.owner_kinds));
   if (loaded.failure) return loaded.failure;
-  return success("common.list", queryResult(loaded.items, loaded, "owner_kind_asc_id_asc"));
+  const items = loaded.items.filter((item) => !selectedNamespaces.length || selectedNamespaces.includes(item.record.home_namespace_id));
+  return success("common.list", queryResult(items, loaded, "owner_kind_asc_id_asc", "complete_within_bounds", selectedNamespaces));
 }
 
 async function search(request) {
-  validateBase(request, ["owner_kinds", "query", "limit"]);
+  validateBase(request, ["owner_kinds", "query", "limit", "namespace_ids"]);
   const kinds = ownerKinds(request.owner_kinds);
+  const selectedNamespaces = namespaceIds(request.namespace_ids);
   const queryTokens = tokens(request.query);
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > MAX_SEARCH_LIMIT) {
     throw new CommonRequestError("limit", "bounded_search_limit_required");
   }
   const loaded = await loadAll(request, kinds);
   if (loaded.failure) return loaded.failure;
-  const matches = loaded.items.map((item) => lexicalMatch(item, queryTokens)).filter(Boolean);
+  const matches = loaded.items
+    .filter((item) => !selectedNamespaces.length || selectedNamespaces.includes(item.record.home_namespace_id))
+    .map((item) => lexicalMatch(item, queryTokens)).filter(Boolean);
   matches.sort((left, right) => right.lexical_score - left.lexical_score
     || left.owner_kind.localeCompare(right.owner_kind) || left.id.localeCompare(right.id));
   const completeness = matches.length > request.limit ? "truncated" : "complete_within_bounds";
   return success("common.search", {
-    ...queryResult(matches.slice(0, request.limit), loaded, "lexical_score_desc_owner_kind_asc_id_asc", completeness),
+    ...queryResult(matches.slice(0, request.limit), loaded, "lexical_score_desc_owner_kind_asc_id_asc", completeness, selectedNamespaces),
     normalized_query_tokens: queryTokens,
     applied_limit: request.limit,
   });
@@ -348,7 +348,6 @@ async function exportInterchange(request) {
     status: "rendered",
     ...interchange,
     authority_selected: false,
-    applied_view: appliedView,
     limitations: [
       "l01_synthetic_interchange_only",
       "not_l05_markdown_authority_format",

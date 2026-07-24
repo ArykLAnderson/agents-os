@@ -130,7 +130,7 @@ async function validateGeneratedBytes(generatorRoot) {
     const packageRoot = path.join(skillsRoot, "casebook-persistence");
     const manifestBytes = await readFile(path.join(packageRoot, "manifest.json"));
     const manifest = JSON.parse(manifestBytes);
-    assert.equal(manifest.assets.length, 30, `${target} manifest asset count`);
+    assert.equal(manifest.assets.length, 31, `${target} manifest asset count`);
     for (const operation of requiredOperations) assert.ok(manifest.supported_operations.includes(operation), `${target} manifest ${operation}`);
     for (const asset of manifest.assets) {
       assert.equal(sha256(await readFile(path.join(packageRoot, asset.path))), asset.sha256, `${target} digest ${asset.path}`);
@@ -145,11 +145,10 @@ async function validateGeneratedBytes(generatorRoot) {
 
 function marker() {
   return {
-    configuration_version: 1,
+    configuration_version: 2,
     authority_mode: "markdown",
     profile: "file-authoritative-markdown-v1",
     workspace_id: ids.markdownStore,
-    view: { id: ids.markdownView, policy_revision_id: ids.markdownPolicy, audience_ceiling: "private" },
   };
 }
 
@@ -174,7 +173,6 @@ function request(state, operation, extra = {}) {
     operation,
     request_version: 1,
     store_id: state.storeId,
-    context: context(state.viewId, state.policyId, operation),
     configuration: state.configuration,
     ...extra,
   };
@@ -277,8 +275,6 @@ async function initializeAuthority(mode, root, target, sqliteBinary, entrypoint)
       mode,
       locator: workspace,
       storeId: selected.workspace_id,
-      viewId: selected.view.id,
-      policyId: selected.view.policy_revision_id,
       namespaceId: ids.namespace,
       configuration: configuration(mode, workspace, target, sqliteBinary),
     };
@@ -298,8 +294,6 @@ async function initializeAuthority(mode, root, target, sqliteBinary, entrypoint)
     mode,
     locator: database,
     storeId: selection.store_id,
-    viewId: selection.view.id,
-    policyId: selection.view.policy_revision_id,
     namespaceId: selection.namespace.id,
     configuration: selectedConfiguration,
   };

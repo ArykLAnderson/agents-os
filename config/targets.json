@@ -26,7 +26,8 @@
         "path": "~/.pi/agent/agents/agents-os",
         "mode": "copy",
         "files": [
-          "focused-validator.md"
+          "focused-validator.md",
+          "researcher.md"
         ]
       },
       "dependencies": [
@@ -51,7 +52,8 @@
       "agents": {
         "path": "~/.config/opencode/agent",
         "files": [
-          "focused-validator.md"
+          "focused-validator.md",
+          "researcher.md"
         ]
       },
       "dependencies": []
