@@ -34,7 +34,7 @@ Open the stable execution-map locator, then reconcile:
 - effects against their bound external systems and cleanup records; and
 - PR state against the bound provider/repository.
 
-Correct stale map text rather than treating it as authority. Do not use provider CLI/path discovery as a substitute for the configured Atlas domain adapter. Concurrent coordinator ownership is unsupported.
+Correct stale map text rather than treating it as authority. Do not use ad hoc provider CLI/path discovery as a substitute for the configured Atlas domain adapter. Direct provider reads are allowed only when the configured executable adapter instructions prescribe them as mechanics of a complete named domain operation with fail-closed classification and receipt. Concurrent coordinator ownership is unsupported.
 
 ## Atlas Successor, Invalidator, Or Integrity Stop
 

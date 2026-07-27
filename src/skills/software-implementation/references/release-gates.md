@@ -13,6 +13,10 @@ Choose/admit before dispatch:
 
 Capability limitations do not silently lower a declared gate. Generic release-gate defaults do not overwrite Atlas allocation.
 
+## Model Routing
+
+Use the `normal` tier for Coding Workers, task-scope Focused Validators, convergence-scope Focused Validators, and focused repair validation. Use the `smart` tier for each independent specialist in an admitted whole-deliverable deep review suite, including architecture, security, code-quality, performance, and design-fidelity review when applicable. A targeted review remains at the tier declared by its owning Contract; absent an explicit declaration, use `normal` unless it exercises whole-deliverable judgment comparable to the full suite. Use `deep` only for exceptional architecture, diagnosis, or reconciliation. A stronger model does not gain authority to redesign, expand scope, alter accepted proof allocation, or convert advisory findings into blockers.
+
 ## Atlas Gate Preservation
 
 Treat every imported gate as an accepted graph node, not as a final checklist category. Preserve its owner, prerequisites, ordering, evaluator/independence, environment, effects, observations, cleanup, pass claim, invalidators, evidence qualification, and downstream blockers.
@@ -29,7 +33,7 @@ If execution discovers a risk that makes the accepted allocation materially insu
 
 ## Whole-Deliverable Review
 
-Run only the specializations and timing admitted by the Delivery Contract. When a full suite is admitted, launch independent architecture, security, code-quality, and design-fidelity reviewers against the same integrated state, accepted design, and current evidence. When only a targeted security or other review is admitted, run only that exact review at its accepted graph position.
+Run only the specializations and timing admitted by the Delivery Contract. When a full suite is admitted, launch each independent architecture, security, code-quality, performance, and design-fidelity reviewer at the `smart` tier against the same integrated state, accepted design, and current evidence, omitting any specialization not admitted by the Contract. When only a targeted security or other review is admitted, run only that exact review at its accepted graph position and apply the Model Routing rule above.
 
 Classify each finding:
 
@@ -66,6 +70,6 @@ An inter-Work-Item bounded-live proof runs after its accepted upstream item and 
 
 ## PR Gate
 
-PR preparation begins only after every gate due before PR under the admitted graph has current passing evidence and external effects have an accepted terminal disposition. A draft-PR operation uses the derived operation binding from the active Execution Authorization Envelope; it does not require a second human confirmation. It looks up the same provider/account/repository/head/base before creation and returns a matching open PR if one exists. In stacked mode, each Feature PR uses its declared predecessor/base and lower layers are created first.
+PR preparation begins only after every gate due before PR under the admitted graph has current passing evidence and external effects have an accepted terminal disposition. PR delivery is the default for an explicit implementation request. A draft-PR operation uses the exact derived operation binding from the active Execution Authorization Envelope; it does not require a second human confirmation. Do not ask for redundant permission for its authorized non-force push or matching draft-PR operation. Push only the bound non-protected head with a non-force update, then look up the same provider/account/repository/head/base and return a matching open PR if one exists before creating another. In stacked mode, each Feature PR uses its declared predecessor/base and lower layers are created first.
 
-Draft PR creation does not authorize ready conversion, merge, deployment, or landing. If authority is absent or creation fails, return the prepared reader-oriented summary and verified integration branch.
+Draft PR creation does not merge, mutate a protected branch, authorize landing, deploy, configure production, grant credentials, or authorize external/live effects. It also does not authorize ready conversion. If PR delivery was explicitly excluded, the binding is ambiguous or unverifiable, or push/creation fails, return the prepared reader-oriented summary and verified integration branch.

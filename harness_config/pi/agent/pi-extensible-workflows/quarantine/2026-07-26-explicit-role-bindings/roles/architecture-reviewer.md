@@ -1,11 +1,8 @@
 ---
-name: architecture-reviewer
-description: Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files.
-model: smart
-disallowedTools: Write, Edit, NotebookEdit
-permissionMode: plan
-maxTurns: 40
-color: Purple
+description: "Reviews code for architectural concerns — coupling, abstraction quality, SOLID principles, named patterns, scalability, testability, and migration safety. Read-only — cannot modify files."
+model: "openai-codex/gpt-5.6-sol"
+thinking: medium
+tools: ["read", "bash"]
 ---
 
 # Architecture Reviewer

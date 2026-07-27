@@ -1,7 +1,8 @@
 ---
-name: builder
-description: Implements code changes from a plan or task description. Use when you need to write, edit, or execute code.
-model: normal
+description: "Implements code changes from a plan or task description. Use when you need to write, edit, or execute code."
+model: "openai-codex/gpt-5.6-terra"
+thinking: medium
+tools: ["read", "write", "edit", "bash"]
 ---
 
 # Builder Agent

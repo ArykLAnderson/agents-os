@@ -2,7 +2,6 @@
   "packages": [
     "npm:pi-vim",
     "~/.agents-os/plugins/pi-keysmith/packages/pi-keysmith",
-    "npm:pi-subagents",
     "npm:pi-web-access",
     "npm:@pi-lab/permissions",
     "npm:pi-schedule-prompt",
@@ -14,12 +13,13 @@
     "npm:pi-prompt-template-model",
     "npm:pi-mcp-adapter",
     "npm:pi-imagegen",
-    "git:github.com/nicobailon/pi-intercom@35e28733437f5fcb197c5fde045b15882bb616a2"
+    "git:github.com/nicobailon/pi-intercom@35e28733437f5fcb197c5fde045b15882bb616a2",
+    "npm:pi-extensible-workflows@3.2.0"
   ],
   "skills": [
     "~/.agents-os/adapters/pi/generated/skills"
   ],
-  "lastChangelogVersion": "0.80.6",
+  "lastChangelogVersion": "0.82.1",
   "theme": "nord",
   "piVim": {
     "modeIndicatorPosition": "right",

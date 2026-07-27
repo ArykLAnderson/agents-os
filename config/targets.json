@@ -6,7 +6,11 @@
   ],
   "skillExcludes": {
     "codex": [
-      "coach"
+      "coach",
+      "pi-workflow-orchestration"
+    ],
+    "opencode": [
+      "pi-workflow-orchestration"
     ]
   },
   "generatedHeader": "<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->",
@@ -17,22 +21,13 @@
   },
   "adapterSurfaces": {
     "pi": {
-      "generateAgents": true,
+      "generateAgents": false,
       "skills": {
         "path": "~/.agents-os/adapters/pi/generated/skills",
         "mode": "configured"
       },
-      "agents": {
-        "path": "~/.pi/agent/agents/agents-os",
-        "mode": "copy",
-        "files": [
-          "focused-validator.md",
-          "researcher.md"
-        ]
-      },
-      "dependencies": [
-        "~/.pi/agent/npm/node_modules/pi-subagents/package.json"
-      ]
+      "agents": null,
+      "dependencies": []
     },
     "codex": {
       "generateAgents": false,

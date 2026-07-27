@@ -25,7 +25,7 @@ Git resolves exact source revisions transiently. The map retains the named basel
 
 ### Execution Authorization Envelope
 
-Record one cumulative scoped grant for the delivery. An authorized request to implement a named outcome supplies local implementation intent. An explicit request to implement it as stacked draft PRs also supplies the ordinary branch, commit, non-force push, and draft-PR mechanics below unless the requester limits them. Do not infer merge, deployment, release, force push, protected-branch mutation, ready-for-review conversion, or other live effects.
+Record one cumulative scoped grant for the delivery. An implementation request does include ordinary commit, exact feature-branch push, and PR lookup/creation authority, plus scoped worktree and owned-branch mechanics, for a verified non-protected `single_pr` delivery unless the requester excludes PR delivery or requests local-only work. An explicit `stacked_feature_prs` request supplies those mechanics across the declared stack graph. Do not infer merge, deployment, release, force push, protected-branch mutation, ready-for-review conversion, credentials, external/live effects, landing, Atlas closure, or unrelated effects.
 
 ```markdown
 Grant identity/source: <stable execution grant and exact user/workflow instruction>
@@ -87,7 +87,7 @@ Storage adapter receipt: <configured adapter identity and domain reread receipt;
 
 ## Atlas Currentness Check
 
-Perform at admission, coordinator resume, before every dependency frontier, before every effectful gate, and before result. Invoke Feature Atlas domain read/verify operations through the configured storage adapter against the **bound Atlas/Map/Decision**, never against an unqualified `latest`, provider CLI, or path.
+Perform at admission, coordinator resume, before every dependency frontier, before every effectful gate, and before result. Invoke Feature Atlas domain read/verify operations through the configured storage adapter against the **bound Atlas/Map/Decision**, never against an unqualified `latest` or provider path. If the configured adapter is an executable instruction resource rather than a runtime wrapper, its documented provider CLI reads are permitted only as mechanics of the complete named semantic operation; preserve the operation's checks, classification, and receipt, and never treat raw CLI output as the result.
 
 Resolve Atlas storage independently from Case/Frame persistence. `CASEBOOK_DATABASE_URL` is irrelevant to Atlas selection. Prefer an explicit Atlas destination from the delivery binding; otherwise use the current project's `.casebook/atlas` local filesystem default. If no dedicated local adapter executable exists, the Feature Atlas skill may execute adapter-owned filesystem reads and return the typed operations; executable absence alone is not an unverifiable binding.
 
@@ -170,7 +170,7 @@ Ceilings: <spend, duration, resources, risk>
 Cleanup owner/disposition: <owner and terminal state>
 ```
 
-Never fall back to ambient credentials, substitute a provider/account/model, or broaden a binding during repair. Provider/PR discovery does not itself grant mutation authority. PR lookup/create and E2E setup/run/cleanup consume their own declared bindings. An Atlas proof obligation does not supply its missing Effect Binding.
+Never fall back to unverified credentials, substitute a provider/account/model, or broaden a binding during repair. Provider/PR discovery does not itself grant mutation authority. For an explicit implementation request, the verified repository remote, authenticated provider account, exact non-protected head, and verified base form the default PR Delivery Binding for exact branch push plus PR lookup/create. E2E setup/run/cleanup and all external/live effects still consume separately declared Effect Bindings. An Atlas proof obligation does not supply a missing live-effect, merge, deployment, landing, or protected-branch binding.
 
 ## Result Contracts
 

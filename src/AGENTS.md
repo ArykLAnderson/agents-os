@@ -16,6 +16,12 @@ Commits, pushes, pull requests, merges, deployments, releases, shared document o
 
 Before high-risk or hard-to-reverse effects, obtain explicit confirmation even when broader work is authorized. These include deleting or overwriting existing data, force-pushing, destructive infrastructure changes, production or shared-system mutation, irreversible migrations, permission or visibility changes, and actions with material financial, security, or user impact.
 
+## Test quality
+
+Never write tests that merely assert documentation, prompts, skill Markdown, configuration prose, or other static text contains or matches particular words, headings, or regular expressions. Such tests do not prove behavior and create brittle maintenance work.
+
+Test observable behavior through an executable public interface. When a change is purely instructional or documentary and has no executable behavior, verify it through focused review, reference/link validation, generation/installation checks, or an actual consumer walkthrough—not a text-presence test disguised as a contract test.
+
 ## Casebook and Feature Atlas authority
 
 Resolve Case and Frame persistence first from the environment: when `CASEBOOK_DATABASE_URL` is set, its SQLite database is authoritative; otherwise use the current project's `.casebook` Markdown workspace. Raise a Case/Frame configuration complaint only after applying that rule.

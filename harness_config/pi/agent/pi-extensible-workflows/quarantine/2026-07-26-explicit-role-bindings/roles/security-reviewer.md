@@ -1,12 +1,8 @@
 ---
-name: security-reviewer
-description: Reviews code for security vulnerabilities using a systematic OWASP-based checklist. Use when reviewing PRs, after implementation, or when security concerns are raised. Read-only — cannot modify files.
-model: smart
-disallowedTools: Write, Edit, NotebookEdit
-permissionMode: plan
-maxTurns: 40
-memory: user
-color: Red
+description: "Reviews code for security vulnerabilities using a systematic OWASP-based checklist. Use when reviewing PRs, after implementation, or when security concerns are raised. Read-only — cannot modify files."
+model: "openai-codex/gpt-5.6-sol"
+thinking: medium
+tools: ["read", "bash"]
 ---
 
 # Security Reviewer

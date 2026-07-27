@@ -2,7 +2,7 @@
 
 Use this adapter only when private GitHub Issues is the configured canonical Feature Atlas. It conforms to [the storage adapter contract](storage-adapters.md); domain identity, ownership, Decision authority, currentness, handoff, and projection semantics remain defined by [the canonical representations](issue-representations.md).
 
-`gh` examples below are adapter-owned mechanics. Blueprint, Software Implementation, and other domain consumers never invoke them or parse Issue records directly; they consume exact Feature Atlas domain operations and adapter receipts.
+`gh` examples below are adapter-owned mechanics, and this instruction resource is itself the executable configured adapter when no separate runtime wrapper is exposed. Blueprint, Software Implementation, and other domain consumers may invoke these direct reads only while performing an exact named Feature Atlas domain operation. They must execute the operation's complete identity/currentness/integrity checks and return its semantic classification and adapter receipt; raw Issue records or `gh` output never become the semantic interface or authority by themselves.
 
 ## Fail-Closed Capability And Destination Preflight
 
@@ -16,7 +16,9 @@ Before any accepted publication, a separately authorized bounded provider protot
 
 Until that evidence exists for the exact configured provider/account/repository, Map publication is unsupported. Stop; do not weaken trusted acceptance, infer provenance from comment prose, invent external storage, or fall back to Feature-first publication.
 
-Obtain the exact `<owner>/<repository>` and expected visibility. The repository must be the configured dedicated private Issues repository, separate from source repositories. Never infer it from the current Git remote, create it for convenience, broaden visibility, or substitute another account.
+Obtain the exact `<owner>/<repository>` and expected visibility from explicit adapter configuration. Never infer the Atlas destination from the current Git remote, working directory, existing Issues, or convenience; do not create or substitute a destination, broaden visibility, or substitute another account. The configured repository must be `PRIVATE` with Issues enabled. It may be a dedicated Atlas repository or, when a trusted human/destination decision explicitly selects it, a private source repository hosting its own Atlas. Repository separation is an optional blast-radius and visibility choice, not a semantic requirement. A cross-product or shared Atlas destination still requires an explicit ownership and destination decision.
+
+Same-repository placement changes only the storage location. It does not make source branches, code Issues, pull requests, or other repository state Atlas authority. Use an adapter-owned dedicated namespace, branch where applicable, labels, and records, and preserve Atlas identity, ownership, Decision, currentness, and handoff boundaries without ambiguity with source-work records.
 
 Inside the configured adapter, before every authorized mutation session:
 
