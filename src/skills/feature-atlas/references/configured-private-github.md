@@ -2,7 +2,7 @@
 
 Use this adapter only when private GitHub Issues is the configured canonical Feature Atlas. It conforms to [the storage adapter contract](storage-adapters.md); domain identity, ownership, Decision authority, currentness, handoff, and projection semantics remain defined by [the canonical representations](issue-representations.md).
 
-`gh` examples below are adapter-owned mechanics. Route, Software Implementation, and other domain consumers never invoke them or parse Issue records directly; they consume exact Feature Atlas domain operations and adapter receipts.
+`gh` examples below are adapter-owned mechanics. Blueprint, Software Implementation, and other domain consumers never invoke them or parse Issue records directly; they consume exact Feature Atlas domain operations and adapter receipts.
 
 ## Fail-Closed Capability And Destination Preflight
 
@@ -26,7 +26,7 @@ gh repo view <owner>/<repository> --json nameWithOwner,visibility,hasIssuesEnabl
 
 Proceed only when identity is exact, visibility is `PRIVATE`, Issues are enabled, access succeeds, and the capability evidence above applies. Use `--repo <owner>/<repository>` on every Issue command.
 
-Route composition and human discussion authorize no tracker mutation. Only a verified exact Map Acceptance Package authorizes the narrow Publisher's configured Atlas projection. That authority does not extend to another destination, visibility change, implementation dispatch, source mutation, PR, merge, or deployment.
+Blueprint composition and human discussion authorize no tracker mutation. Only a verified exact Map Acceptance Package authorizes the narrow Publisher's configured Atlas projection. That authority does not extend to another destination, visibility change, implementation dispatch, source mutation, PR, merge, or deployment.
 
 ## Exhaustive Find Before Create
 
@@ -76,4 +76,4 @@ Do not repost the Decision, delete successful records, roll back/recycle IDs, cr
 
 GitHub text does not make a source fact true. Retain an observation only when the owning workflow/source authority initiates the bounded operation and the adapter verifies identity, authorization, provenance, locator/environment, audience, and integrity. Unverifiable results are `unknown`. Link to Git, tests, PRs, reports, deployments, and runtime/provider evidence rather than copying detailed facts or secrets.
 
-The adapter returns exact domain identities, immutable Decision comment/snapshot locators, rendered reread results, and receipts. Issue numbers, labels, native parentage, editable bodies, and `gh` output remain provider mechanics and never become the interface consumed by Route or Software Implementation.
+The adapter returns exact domain identities, immutable Decision comment/snapshot locators, rendered reread results, and receipts. Issue numbers, labels, native parentage, editable bodies, and `gh` output remain provider mechanics and never become the interface consumed by Blueprint or Software Implementation.

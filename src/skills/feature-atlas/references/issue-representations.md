@@ -1,6 +1,6 @@
 # Canonical Feature Atlas Representations
 
-These are readable provider-neutral semantic representations, not a rigid Markdown schema. A configured storage adapter may use tracker sections, linked records, local files, or native navigation when Feature Atlas domain operations let a fresh consumer recover the same authority, ownership, currentness, prerequisites, proof, and limitations without knowing provider mechanics, mutation order, or Route scratch state.
+These are readable provider-neutral semantic representations, not a rigid Markdown schema. A configured storage adapter may use tracker sections, linked records, local files, or native navigation when Feature Atlas domain operations let a fresh consumer recover the same authority, ownership, currentness, prerequisites, proof, and limitations without knowing provider mechanics, mutation order, or Blueprint scratch state.
 
 ## Identity And Ownership
 

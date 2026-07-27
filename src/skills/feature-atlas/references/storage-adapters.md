@@ -1,6 +1,6 @@
 # Feature Atlas Storage Adapter Contract
 
-Feature Atlas semantics, identities, Decisions, currentness, and typed handoffs are canonical. Storage is a configurable port. One configured adapter realizes the exact Atlas destination without exposing provider mechanics to Route or Software Implementation.
+Feature Atlas semantics, identities, Decisions, currentness, and typed handoffs are canonical. Storage is a configurable port. One configured adapter realizes the exact Atlas destination without exposing provider mechanics to Blueprint or Software Implementation.
 
 This is a semantic port, not a mandatory runtime API or universal record schema. An implementation may choose different function names and representations only if it preserves the operations, inputs, outcomes, and failure behavior below.
 
@@ -24,14 +24,14 @@ Atlas adapter selection is independent of Case/Frame persistence selection. `CAS
 
 A verified Acceptance Package supplies semantic authority for `recordMapDecision` and `projectAcceptedSnapshot`. The mutation authority passed to those operations is the configured Publisher/adapter's operational permission to perform the already-authorized projection, not a second human approval. If operational permission is missing or fails verification, return a typed publication failure without reinterpreting it as missing Map acceptance.
 
-The Feature Atlas domain exposes these operations to Route, Publisher, Software Implementation, and other semantic consumers:
+The Feature Atlas domain exposes these operations to Blueprint, Publisher, Software Implementation, and other semantic consumers:
 
 - `readEntity(exact Atlas identity, entity identity)` — resolve stable domain identity, owner, canonical locator, accepted local-label binding, current Decision, and projection state.
 - `readMapDecision(exact Atlas/Map/Decision)` — retrieve and verify immutable Decision content or its lossless content-bound snapshot, predecessor/current effect, acceptance provenance, Blueprint bindings, and authority boundary.
 - `readCurrentMap(exact Atlas/Map)` — return the sole current Decision identity plus complete current projection/publication state; ambiguity or multiple current Decisions is conflict, not a chosen winner.
 - `inspectDependency(exact consumer edge/endpoint)` — return the accepted consumer-owned edge, observed provider Decision, satisfaction-source/freshness/invalidator information, and resolvability.
 - `verifyPublication(exact Atlas/Map/Decision)` — reread Decision and projections and classify `complete_consistent | incomplete | conflict | unverifiable`, with immutable evidence/receipt.
-- `exportExecutionHandoff(exact Atlas/Map/Decision)` — only after the above reads, return Route's typed `HandoffReady | HandoffWithLimitations | HandoffRefusal` with all canonical identities, bindings, proof allocation, evidence qualification, limitations, invalidators, publication/currentness, and absent authorities. This is the only Atlas admission surface for Software Implementation.
+- `exportExecutionHandoff(exact Atlas/Map/Decision)` — only after the above reads, return the typed `HandoffReady | HandoffWithLimitations | HandoffRefusal` with all canonical identities, bindings, proof allocation, evidence qualification, limitations, invalidators, publication/currentness, and absent authorities. This is the only Atlas admission surface for Software Implementation.
 - `recordMapDecision(acceptance package, expected predecessor, mutation authority)` — atomically with respect to the adapter's concurrency boundary verify expected predecessor and append one immutable Decision, or return a typed stale/conflict/uncertain failure. It never chooses meaning.
 - `projectAcceptedSnapshot(exact Decision, durable label bindings, expected projection predecessor, mutation authority)` — mechanically create/reuse identities, project children/edges then Feature/Map current views, and return complete or truthful partial receipts.
 - `appendQualifiedObservation(exact affected Decision/field, source authority package, mutation authority)` — verify source/initiator/provenance/integrity and append only the minimum accepted observation form; unverifiable facts remain `unknown`.
@@ -69,6 +69,6 @@ The domain maps these facts to acceptance/publication stops and typed handoffs. 
 
 ## Consumer Boundary
 
-Route and Software Implementation call Feature Atlas domain operations. They do not run `gh`, enumerate provider issues, parse an unselected provider layout, select Git branches, or treat mutable files as currentness authority. Publisher may use domain mutation operations under exact authority; only the adapter implementation uses provider commands/APIs/files. When the selected local filesystem adapter has no dedicated executable, the Feature Atlas skill itself may execute these adapter-owned reads with filesystem tools under the rules in [the configured local filesystem adapter](configured-local-filesystem.md); this is adapter execution, not consumer-side path inference.
+Blueprint and Software Implementation call Feature Atlas domain operations. They do not run `gh`, enumerate provider issues, parse an unselected provider layout, select Git branches, or treat mutable files as currentness authority. Publisher may use domain mutation operations under exact authority; only the adapter implementation uses provider commands/APIs/files. When the selected local filesystem adapter has no dedicated executable, the Feature Atlas skill itself may execute these adapter-owned reads with filesystem tools under the rules in [the configured local filesystem adapter](configured-local-filesystem.md); this is adapter execution, not consumer-side path inference.
 
 Switching adapters changes storage mechanics and locators, not Atlas vocabulary or semantic authority. Migration between adapters is separately accepted and authorized work with exact source/destination Decisions and integrity proof; it is never an implicit fallback.

@@ -1,117 +1,66 @@
 ---
 name: blueprint
-description: Designs a coherent, consumer-sufficient engineering architecture from an accepted behavioral boundary. Use when module responsibilities, seams, ownership, interfaces, state placement, or failure boundaries require deliberate design before delivery planning.
+description: Designs a coherent, consumer-sufficient engineering architecture and vertical delivery route from an accepted external boundary.
 ---
+# Design: Blueprint <-> Route, not stages
 
-# Blueprint
+Admit an accepted/current Frame boundary. Preserve the distinction:
 
-Own one resumable engineering-design session and its current authoritative candidate package. Turn accepted behavior into a Route-ready responsibility and Contract model without silently redefining behavior or planning delivery. Read [Artifact And RFC Projection](references/artifact.md) before creating, resuming, projecting, or accepting Blueprint state.
+- **External technical boundary:** consumer-visible guarantees and constraints inherited from Frame.
+- **Internal machinery:** responsibilities, contracts, state placement, algorithms, schemas, implementation sequence, and tooling. Design selects only machinery required by the boundary and observed terrain.
 
-## Start Or Resume
+## Work the two lenses together
 
-Use an explicit Casebook workspace root when present; otherwise use `.casebook/` in the current project for Blueprint artifact placement. Before reading, creating, or declaring governing Casework unavailable, invoke `case` to resolve configured persistence authority. Project-local Blueprint placement does not select Case persistence authority. Preserve the exact selected-connector or identity-selection failure; never convert missing local Markdown state into a SQLite-unavailable exception. Create or resume `blueprints/<blueprint-id>/blueprint.md`. Bind the completed source Frame and every governing Case by stable identity and exact examined revision. Read the full persisted state and its bound authority before continuing.
+**Blueprint lens:** inspect current terrain and select one coherent responsibility/contract/state design. Name canonical owner for material state, mutation, contracts/schemas, and recovery/operation where relevant. Walk the immediate consumer and representative failure paths.
 
-Admit the subject only when its behavioral boundary is accepted and current enough to design. Separate the admission ledger into:
+**Route lens:** ask whether one vertical route can produce a recognizable outcome without a worker choosing missing behavior, ownership, contract, schema, or architecture. Define only the necessary delivery movements, direct prerequisites at their consumers, convergence owner, and proof. Test routeability primarily through an analytical fresh-worker walkthrough of the Frame, prototype evidence, atomic Design/RFC Case claims, owners, failure semantics, and route—not by implementing the route again or drafting prose prematurely. A routeability gap returns to Blueprint; a behavior gap returns to Frame; only an evidence-dependent architecture unknown commissions another narrow probe.
 
-1. accepted behavior and qualities;
-2. inherited accepted architecture;
-3. Findings, contradictions, limitations, and deferrals.
+Use a prototype when a proposition materially determines authority, persistence, an external process/API, restart/recovery, compatibility, or the chosen route. Do not treat passing component checks as a substitute for the immediate consumer exercising the callable seam.
 
-Do not promote provisional or superseded Case knowledge. Reconcile the Blueprint continuously with its completed Frame Casework: after each natural boundary, compare new evidence and design consequences with the pinned Frame and Case revisions, reconcile reusable meaning into Cases when appropriate, and refresh bindings. The completed Frame need not be reopened for terrain facts, isolated architecture choices, Contract detail implied by accepted behavior, or realization questions. Return to or reopen Frame only when the proposed resolution would materially change, add, remove, or contradict the accepted behavioral boundary or qualities.
+## Surface consequential choices
 
-Admission does not authorize implementation, migration, or Route planning.
+Design may autonomously explore and recommend candidates. Before one becomes accepted or implementation-authoritative, surface a bounded human decision when it selects/replaces durable state or authority ownership, changes an accepted RFC/Atlas dependency, chooses among credible architectures with materially different cost/operability/constraints, fixes a hard-to-reverse interface/persistence/compatibility contract, or decides salvage after invalidation. Include the recommended choice, material alternative(s), trade-off, and exact consequence of acceptance.
 
-## Relentless Loop
+Do not interrupt for a conformance repair forced by accepted design, a disposable prototype direction, or reversible local mechanics that change no responsibility, authority, contract, or interface. Keep such work autonomous and record only decision-changing evidence.
 
-Continue model-resolvable work across operation boundaries. Do not ask permission merely to advance to the next Blueprint operation. Pause only for human knowledge, authority, preference, consequential judgment, external authorization, material scope expansion, or explicit acceptance.
+## Design/RFC Case and document gate
 
-Choose the smallest operation that advances the current design condition:
+During exploration, curate one Design/RFC Case using `templates/design-rfc-case.md`; do not maintain a parallel prose RFC draft. The Case stores atomic semantic claims only: responsibility/state/authority owners, consumer contracts, invariants, failure/recovery semantics, evidence and limits, rejected alternatives, unresolved questions, and route implications. Mark each claim `selected`, `provisional`, `blocked`, `refuted`, or `deferred` and retain provenance from Frame authority, human decision, prototype evidence, accepted architecture, or terrain.
 
-1. [Terrain](references/terrain.md) — inspect relevant existing responsibilities, consumers, state, authority, Contracts/schemas, dependencies, failure boundaries, and friction before adding modules.
-2. [Candidates](references/candidates.md) — materialize compact module candidates using the shared `Secrets`, `Contract`, `Depth`, `Unity`, and `Ownership` diagnostic lenses; compare consequential alternatives.
-3. [Contracts](references/contracts.md) — refine selected interfaces, states, failures, and schemas only to the depth required by real consumers and material risks.
-4. [Walkthroughs](references/walkthroughs.md) — trace each materially different consumer through declared Contracts, including relevant failure and recovery paths.
-5. [Coverage](references/coverage.md) — map every accepted behavior and material quality to responsible modules, Contracts, evidence, or explicit Findings.
-6. [Review](references/review.md) the coherent package against accepted behavior, applicable architecture guidance, unresolved Findings, canonization, and Route readiness.
-7. [Artifact](references/artifact.md) — persist the current package at a natural boundary and maintain its verified RFC Document projection.
+Track readiness on the Case:
 
-These are condition-selected operations, not a fixed one-pass pipeline. New evidence may return to terrain, candidates, Contracts, Frame, or Prototype.
+- **Route-selected:** the current semantic design and route are inspectable, but named evidence, ownership, authority, or no-invention claims remain provisional/blocked.
+- **Fresh-worker executable candidate:** every consequential claim is selected, evidence-dependent claims are supported, owners/consumers/failures are closed, and a fresh worker walkthrough finds no architecture invention.
 
-Before completion review, run the [Requirement-Killer Pass](references/requirement-killer.md). This is an adversarial simplification operation, not another assurance ratchet. Challenge every requirement, mechanism, new abstraction, consumer-visible failure, and proof obligation introduced after admission; remove what lacks accepted behavioral authority or concrete evidence of necessity. A Blueprint cannot become eligible for acceptance while this pass has unresolved human decisions.
+Only after routeability, invoke `../document/SKILL.md` to materialize `templates/production-design-rfc.md` as a **lossless reader-facing projection** from one fixed Design/RFC Case revision. In this bounded invocation, the Case remains the sole semantic design authority: Document may govern editorial organization, prose, trace, review, and representation, but may not add, select, reinterpret, or change a semantic design claim. Any semantic discrepancy or requested semantic change returns to the Case first; fix and re-reconcile its claims, fix a new revision, then rematerialize. Review findings reconcile into Case claims, never directly into the RFC. Only an accepted fresh-worker-executable RFC projection may proceed to Atlas.
 
-Do not create prose-presence tests for Blueprint guidance or artifacts. Tests that merely read Markdown and assert required wording, headings, or regex matches do not verify design behavior. Validate Blueprint changes through review, consumer walkthroughs, generated-output inspection, or executable behavioral checks where a real runtime exists.
+## Hard production transition
 
-An unmet completion condition is the next operation, not a stopping point. Once the candidate is coherent enough to review, launch the independent fresh-context reviewer in the same run; after disposition, create or repair the Document projection and verify it. If the candidate is not coherent enough to review, perform the smallest prior operation that makes it reviewable; lack of coherence is not a return condition. Return control only when the next unmet condition requires human authority or another stop named below. Never end merely by listing review, projection, or evidence as future gates that local tools can perform.
+A **route-selected Design/RFC Case forbids production source edits**. Existing implementation authority, Atlas work items, old handoff verbs, passing component tests, integration branches, and sunk code do not override this. Treat all prior dispatch language as suspended terrain while Frame/Design reconciliation is active.
 
-## Question Classification And Handoffs
+Before changing production source, require all of:
 
-Classify a question by the authority its answer would change, not by whether it sounds technical:
+1. when decision-changing consequential uncertainty remains, the smallest disposable evidence that can resolve it (a thin recognizable outcome across those uncertain seams when that is the discriminating shape), reusing prior evidence or skeletal fixtures for settled seams; when no such uncertainty remains, no prototype or tracer is required;
+2. targeted stress evidence only where the selected real seam and accepted boundary make it decision-relevant;
+3. analytical immediate-consumer and representative applicable failure walkthroughs, plus closed contracts, owners, failures, and route with no worker invention;
+4. applicable advisory findings reconciled and resulting current blockers resolved;
+5. a fixed routeable Case revision is materialized as an RFC and accepted as `fresh-worker executable`;
+6. an exact current accepted and configured-adapter-published Atlas Map Decision bound to that RFC/Case, and an explicit current production dispatch naming that Decision and production movement.
 
-- **Terrain/evidence:** `Does the current API retry after a revision conflict?` Inspect or prototype; no human choice is implied.
-- **Blueprint architecture:** `Which module owns retry policy and the canonical attempt state?` Resolve through candidates, evidence, and Architect judgment when consequential.
-- **Behavioral boundary:** `Must a caller be able to cancel after a retry begins?` If the accepted Cases do not answer it and the answer materially changes behavior, return to or reopen Frame and reconcile Cases before resuming.
-- **Realization:** `Which Leg migrates existing attempt rows, and in what order?` Record as a realization question for Route; do not design the Leg in Blueprint.
-- **External authorization:** `May the prototype exercise the shared production queue?` Ask before the external effect; architectural acceptance does not grant it.
-- **Acceptance:** `Do you accept Blueprint revision B7 and its stated trade-offs?` This is explicit Architect authority and must bind the verified RFC Document revision.
+Until then, decision-seeking code must live in an explicitly disposable location with a stop condition and cleanup. Code expected to survive is implementation and cannot be relabeled as a prototype after creation. Never issue an implementation subagent prompt to discover architecture.
 
-Blueprint may resolve design-local choices directly when accepted behavior is stable. Use `deliberate` when credible architecture alternatives need human-visible comparison. Supporting alternatives, evidence, and dispositions belong in Casework; the accepted Blueprint links to them and resolves exactly one architecture.
+Default working artifact budget: update the effort's one boundary/evidence notebook and one Design/RFC Case. Fold contract-delta checks, terrain conclusions, prototype verdicts, review dispositions, and invalidations into those artifacts. Do not hand-maintain RFC prose during exploration; materialized previews are disposable until acceptance. Keep raw reports temporary unless independently required by authority, non-repeatable evidence, interruption recovery, or a named downstream consumer. Preserve enough for lossy resumability, not a perfect reasoning trace.
 
-Do not bury a consequential delta inside final Blueprint acceptance. Before incorporating any proposed change that introduces or materially expands a consumer-visible failure, core interface or seam, mandatory configuration invariant, security/trust mechanism, migration burden, compatibility restriction, or proof protocol, present that delta separately through `decision-card`. State the prior design, proposed design, concrete motivating evidence or threat model, consumer and operational consequences, simpler alternatives, and what accepting the delta changes. General acceptance of a later bundled Blueprint does not retroactively authorize a delta that was never separately surfaced.
+It is ready to accept only when it provides:
 
-For a security-motivated delta, require a concrete security case naming the actor, controlled input, protected asset, attack path, and consequence. If that chain is absent, do not promote the proposal as a security requirement. Prefer structural removal of unsafe capability over request-time preflight, manifests, snapshots, or fail-closed behavior, and treat unsupported optional behavior as local non-applicability unless accepted product behavior requires a request failure.
+- analytical immediate-consumer and representative applicable failure walkthroughs for the accepted boundary;
+- disposable evidence for each decision-changing consequential uncertainty, while settled seams are explicitly bounded by prior evidence or fixed fixtures;
+- clear state and authority ownership;
+- one selected design with material alternatives/rejections and limitations visible; and
+- a vertical route that a fresh worker can follow without architecture invention.
 
-Use `prototype` when an uncertain proposition materially determines authority, state ownership, external mutation, migration, compatibility, failure recovery, or another consequential boundary. Test the smallest discriminating failure condition and retain evidence and limitations.
+Apply the proportional review ladder in `README.md`. Early prototypes default to self-check or one `review-mandates/prototype-light.md` generalist; add a focused specialist only for a named material seam. At RFC readiness use `review-mandates/rfc-design.md`; add `boundary-envelope.md` only when the selected route crosses external process/API, persistence/restart, security/privilege, or comparable material boundary. When security review is concretely warranted, use an exhaustive finder only with `review-mandates/security-disposition.md` or an equivalent contextual disposition step. Do not make the final-RFC review set the default for earlier prototype rungs.
 
-## Persistence Cadence
+Reviewers report advisory findings; they do not accept, reject, or set readiness. After all applicable reviews, Design must run one explicit reconciliation against the accepted Frame, current goals, phase, threat model, evidence, selected architecture, and prototype proposition. For every consequential finding, record one disposition: immediate boundary violation/conformance repair; seam required now; evidence required now; deferred enforcement/hardening; design or behavior proposal; or irrelevant/invented requirement. State the resulting Case-claim consequence or `none`. Only this reconciliation—and human authority where the disposition changes a consequential guarantee or design choice—may alter Case meaning, route, readiness, or acceptance. Rematerialize any RFC projection after Case meaning changes; never patch the projection as a competing authority. Preserve unresolved evidence conflicts without allowing reviewer preference to become a requirement.
 
-Persist working reality at natural boundaries, not after every answer or graph edit. Follow the state content, proportional-depth, justified-`N/A`, authority, and projection rules in [Artifact And RFC Projection](references/artifact.md). A checkpoint is not completion and does not by itself require returning control.
-
-When a bounded Frame handoff is required, Frame owns its interview and attention state. Accumulate related answers until a coherent checkpoint, reconcile durable meaning into Cases as one cohesive batch, then resume Blueprint against the completed Frame and exact accepted Case revisions. Do not edit governing Contracts or the candidate after every answer, and do not use Frame as a substitute for architecture work Blueprint owns.
-
-## Human Decision Card
-
-Apply `decision-card` to every context-bearing human question. Keep detailed alternatives, walkthroughs, evidence, and rationale in Blueprint/Casework rather than inflating the prompt.
-
-## Authority And Stops
-
-Proceed autonomously through research, repository inspection, modeling, candidate comparison, Contract drafting, walkthroughs, coverage, review, persistence, and Document projection work when those actions are local and non-destructive.
-
-Confirm before:
-
-- changing the accepted behavioral boundary;
-- promoting a reviewer recommendation into the authoritative candidate package, package-membership rules, acceptance criteria, or proof protocol unless accepted authority already requires it;
-- accepting a consequential architecture or trade-off on the Architect's behalf;
-- adding or expanding a consumer-visible failure, core interface or seam, mandatory configuration prerequisite, security/trust mechanism, compatibility restriction, migration burden, or proof protocol, even when proposed as a reviewer correctness or security repair;
-- materially expanding scope;
-- performing credentialed, shared-resource, costly, destructive, deployed, or externally mutating work;
-- authorizing implementation, migration, publication, or delivery; or
-- marking the Blueprint or RFC Document accepted.
-
-Local read-only inspection and disposable local prototypes may proceed under ordinary tool authority unless project guidance says otherwise.
-
-## Completion
-
-The Blueprint is eligible for acceptance only when:
-
-- the pinned behavioral boundary remains current and continuous Casework reconciliation has no material unsettled contradiction;
-- relevant terrain was inspected deeply enough that the design has no material unchecked architectural assumption;
-- consequential alternatives were compared and linked in Casework;
-- every consequential post-admission delta was separately surfaced and explicitly dispositioned by the Architect before entering the candidate;
-- the Requirement-Killer Pass challenged and minimized post-admission requirements, mechanisms, abstractions, failure modes, configuration prerequisites, and proof obligations;
-- the candidate resolves exactly one coherent new architecture with explicit old-to-new change;
-- every material module has a unified responsibility, useful Secrets, and sufficient change/runtime lifecycle Ownership;
-- selected Contracts, states, failures, and schemas are consumer-sufficient without requiring implementation Secrets;
-- material state, mutation, Contract, and schema definitions have one canonical owner and derived views have reconciliation rules;
-- every changed boundary passed materially distinct consumer walkthroughs;
-- behavior and quality coverage is complete or unresolved items are explicitly presented for disposition;
-- blocking Findings are resolved and limitations, justified deferrals, realization questions, and review dispositions remain visible;
-- an independent fresh-context challenge of the coherent current candidate has completed and every resulting Finding has a recorded disposition;
-- the current Blueprint and supporting Case revisions are faithfully bound to a verified RFC Document projection;
-- Route can design realization without inventing behavior, module, ownership, Contract, schema, or architecture acceptance decisions; and
-- persisted state records the current revision, independent review evidence and Findings dispositions, and all other required acceptance evidence.
-
-Architect acceptance is invalid and must not be given effect or used to set `accepted` unless that independent fresh-context challenge is complete, its Findings are dispositioned, and the persisted Blueprint state and acceptance provenance identify the independent review evidence. The Architect then explicitly accepts the current Blueprint revision, its consequential trade-offs, and the bound verified Document revision. Record all acceptance provenance before setting `accepted`. A Blueprint may instead end `rejected`, `abandoned`, or `superseded`.
-
-Before returning from an active Blueprint run, inspect every unmet completion condition. For each condition, either complete it now or record the specific human/external stop that prevents it. “Independent review not performed,” “projection not verified,” and “evidence still needed” are invalid return states when the required work is locally available. If an independent reviewer cannot be launched, identify the concrete unavailable capability or external constraint and persist it as the blocking stop; the Blueprint cannot be accepted meanwhile. If only explicit Architect acceptance remains, present the reviewed, dispositioned, projection-verified revision for acceptance rather than reporting that acceptance is a future gate.
-
-Acceptance authorizes Route design only. It does not authorize implementation, migration, publication, deployment, external mutation, or execution. Blueprint does not author Legs, Work Items, implementation plans, or execution state.
+Before acceptance, use `contracts/atlas-handoff.md` only to form a non-authoritative draft handoff candidate from the fixed Case revision and expose blockers. At the Atlas boundary, load and use `../feature-atlas/SKILL.md`: Blueprint supplies the exact source-bound Map candidate, while Feature Atlas verifies exact Map acceptance, predecessor/current binding, and configured-adapter publication. On routeability, materialize the RFC projection through the document system; after exact Map acceptance, publish the exact current delivery plan through that adapter. Atlas is authoritative thereafter for the accepted delivery plan; it is not a parallel design authority. The accepted RFC is the pinned reader-facing architecture projection, and its Design/RFC Case remains the semantic provenance source.

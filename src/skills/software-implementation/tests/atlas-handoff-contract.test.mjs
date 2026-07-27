@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -33,6 +33,32 @@ test("software implementation exposes Atlas as a distinct fail-closed admission 
     /create\/update matching draft PRs: <allowed boundary>[\s\S]*Explicitly absent:.*merge, deployment, release, landing/,
     /Disposition: clear \| exact_admitted_limitation \| stop/,
   ], "Atlas Delivery Contract");
+});
+
+test("Blueprint handoff requires exact accepted publication and a current dispatch", async () => {
+  const [blueprint, handoff, invalidation] = await Promise.all([
+    read("skills/blueprint/SKILL.md"),
+    read("skills/blueprint/contracts/atlas-handoff.md"),
+    read("skills/implementation-invalidation/SKILL.md"),
+  ]);
+
+  required(blueprint, [
+    /load and use `\.\.\/feature-atlas\/SKILL\.md`/,
+    /exact current accepted and configured-adapter-published Atlas Map Decision/,
+    /explicit current production dispatch naming that Decision and production movement/,
+  ], "Blueprint admission");
+  required(handoff, [
+    /load and use `\.\.\/\.\.\/feature-atlas\/SKILL\.md`/,
+    /exact complete current Map candidate/,
+    /expected predecessor, and current\/superseding effect/,
+    /configured Feature Atlas Publisher\/adapter must atomically record it/,
+    /project the exact accepted snapshot, reread\/verify the current Decision/,
+  ], "Blueprint Atlas handoff");
+  assert.match(invalidation, /without the exact current accepted, configured-adapter-published Atlas Map Decision; or without an explicit current production dispatch/);
+
+  const contractPath = path.join(src, "skills/blueprint/contracts/atlas-handoff.md");
+  const invalidationLink = "../../implementation-invalidation/SKILL.md";
+  await access(path.resolve(path.dirname(contractPath), invalidationLink));
 });
 
 test("imported Atlas proof remains ordered and can gate between Work Items", async () => {
@@ -73,7 +99,7 @@ test("Feature Atlas storage seam supports GitHub and local filesystem without gr
     /verifyPublication\(exact Atlas\/Map\/Decision\)/,
     /exportExecutionHandoff\(exact Atlas\/Map\/Decision\)/,
     /recordMapDecision\(acceptance package, expected predecessor, mutation authority\)/,
-    /Route and Software Implementation call Feature Atlas domain operations/,
+    /Blueprint and Software Implementation call Feature Atlas domain operations/,
   ], "storage adapter seam");
   assert.match(github, /`gh` examples below are adapter-owned mechanics/);
   required(local, [
@@ -86,20 +112,19 @@ test("Feature Atlas storage seam supports GitHub and local filesystem without gr
   ], "local filesystem adapter");
 });
 
-test("Route and engineering router admit only complete current typed Atlas handoffs", async () => {
-  const [route, handoff, router] = await Promise.all([
-    read("skills/route/SKILL.md"),
-    read("skills/route/references/successors-handoff.md"),
+test("Blueprint and engineering router admit only complete current typed Atlas handoffs", async () => {
+  const [blueprint, router] = await Promise.all([
+    read("skills/blueprint/SKILL.md"),
     read("skills/engineering-workflow/SKILL.md"),
   ]);
 
-  required(route, [/explicit `atlas` mode/, /Summaries, historical\/conflicted\/incomplete handoffs, legacy Route packages/], "Route handoff");
-  required(handoff, [
-    /revalidates the bound Decision at admission, resume, each dependency frontier, effectful gates, and result/,
-    /summary, local Route candidate, historical Decision, conflicted\/incomplete projection, legacy Route package/,
-  ], "typed handoff");
+  required(blueprint, [
+    /non-authoritative draft handoff candidate/,
+    /Atlas is authoritative thereafter for the accepted delivery plan/,
+  ], "Blueprint handoff boundary");
   required(router, [
     /HandoffReady.*HandoffWithLimitations.*`software-implementation` in explicit `atlas` mode/,
     /Summary-only, historical, conflicted, incomplete, unverifiable, `HandoffRefusal`, or authority-omitting Atlas input/,
   ], "engineering router");
+  assert.doesNotMatch(router, /ephemeral `route`/);
 });
