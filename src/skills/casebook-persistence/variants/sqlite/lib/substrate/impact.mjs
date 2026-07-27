@@ -88,7 +88,7 @@ async function prepare(request) {
   if (configuration.authority_mode !== "sqlite") {
     return { failure: failure("sqlite_authority_required", "This operation requires explicitly selected sqlite authority.", { failureClass: "configuration_or_store_unavailable" }) };
   }
-  const selected = await selectSqliteBinary(configuration.sqlite.sqlite_bin);
+  const selected = await selectSqliteBinary();
   const probe = await probeSqlite(selected.path, path.dirname(configuration.sqlite.store_path));
   if (!probe.ok) return { failure: failure("sqlite_feature_unsupported", "Selected SQLite runtime is incompatible.", { failureClass: "sqlite_feature_unsupported", retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR }) };
   const state = await inspectStore(selected.path, configuration.sqlite.store_path);

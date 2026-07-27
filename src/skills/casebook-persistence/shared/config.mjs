@@ -73,16 +73,13 @@ export function validateAuthorityConfiguration(configuration) {
     if (!configuration.sqlite || typeof configuration.sqlite !== "object") {
       throw new ConfigurationError("configuration_missing", "sqlite authority requires sqlite configuration.");
     }
-    exactObjectKeys(configuration.sqlite, new Set(["database_url", "sqlite_bin"]), "configuration.sqlite");
+    exactObjectKeys(configuration.sqlite, new Set(["database_url"]), "configuration.sqlite");
     return {
       source: canonicalSource,
       authority_mode: authorityMode,
       sqlite: {
         database_url: configuration.sqlite.database_url,
         store_path: resolveDatabaseLocation(configuration.sqlite.database_url),
-        sqlite_bin: configuration.sqlite.sqlite_bin == null
-          ? null
-          : absoluteLocalPath(configuration.sqlite.sqlite_bin, "sqlite.sqlite_bin"),
       },
     };
   }
