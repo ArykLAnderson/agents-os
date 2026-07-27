@@ -180,11 +180,11 @@ Stage and release each require explicit authorization. Fetch and compare existin
 
 ## Boundaries With Other Systems
 
-### Route and Feature Atlas
+### Blueprint and Feature Atlas
 
-Route ephemerally composes complete Feature Map candidates from one or more exact accepted Blueprints and current terrain. It owns no durable accepted plan or stable planning identity. Exact trusted-human Map acceptance precedes publication.
+Blueprint ephemerally composes the exact source-bound Feature Map candidate from accepted design and current terrain. It owns no durable accepted plan or stable planning identity. Exact trusted-human Map acceptance, with predecessor/current binding, precedes configured-adapter publication.
 
-Feature Atlas is the sole durable accepted planning authority. It owns stable Map, Feature, and Work Item identities; immutable current/successor Map Decisions; Map-owned Blueprint coverage and cross-Feature/cross-Map planning; Feature-owned contained Legs and Work Item DAGs; and canonical tracker projection. A Case, Frame, Blueprint, Route session, reviewer, or execution map may inform or consume planning but does not replace Atlas authority. Map acceptance authorizes no implementation or external effect.
+Feature Atlas is the sole durable accepted planning authority. It owns stable Map, Feature, and Work Item identities; immutable current/successor Map Decisions; Map-owned Blueprint coverage and cross-Feature/cross-Map planning; Feature-owned contained Legs and Work Item DAGs; and canonical tracker projection. A Case, Frame, Blueprint, reviewer, or execution map may inform or consume planning but does not replace Atlas authority. Map acceptance authorizes no implementation or external effect.
 
 ### Workflow Runtime
 

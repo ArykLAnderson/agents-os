@@ -11,7 +11,7 @@ Break a spec into independently executable ad hoc tickets that can be worked by 
 
 ## Authority Boundary
 
-Before decomposition, determine whether an accepted Blueprint/Feature Atlas Map governs the work. If it does, stop and use ephemeral `route` (or `/shape-feature` as its compatibility entry point): only the exact trusted-human Map Decision may accept and publish the Map/Feature/Leg/Work Item package. This skill must not create a parallel keystone, Feature acceptance, Work Item graph, dependency authority, or tracker publication for governed work.
+Before decomposition, determine whether an accepted Blueprint/Feature Atlas Map governs the work. If it does, stop and return to `blueprint` for coupled architecture/routeability and delivery-plan reconciliation: only the current accepted Atlas plan may govern its implementation. This skill must not create a parallel keystone, Feature acceptance, Work Item graph, dependency authority, or tracker publication for governed work.
 
 Use this skill only when no accepted Atlas Map governs the bounded ad hoc outcome and the chosen local/tracker ticket representation is separately authorized. Its graph is operational input, not Atlas planning authority, and it grants no implementation/effect/PR/merge/deploy authority. Do not later describe these tickets as accepted Atlas records without a separately accepted reconciliation.
 

@@ -1,0 +1,7 @@
+# Boundary-envelope review mandate
+
+**Use:** focused/full RFCs crossing durable state/restart, external process/API, privilege/security, material compatibility, or meaningful cleanup/recovery.
+
+Challenge one representative ordinary path and one meaningful boundary failure: authority crossing, identity/state survival across restart where promised, timeout/error/partial-effect behavior, observation/reconciliation, and cleanup/absence where effectful. For an irreversible external mutation, require a compact durable checkpoint table naming the persisted state before the call, exact crash intervals, restart disposition, whether another call is permitted, and observable status. Check that fault injection targets those intervals, proof matches the real seam—not mocks alone—and claims do not exceed environment/evidence limits. Do not require exhaustive fault matrices or security enforcement unrelated to the accepted current trust boundary and phase.
+
+Report advisory findings, evidence, confidence, and affected claims; do not accept or reject the design. Separate an immediate contradiction of a current guarantee from a seam needed for future hardening, deferred enforcement, a design proposal, and an irrelevant or invented requirement. Missing final-product isolation or hostile-environment controls do not block a trusted-local prototype when the architecture exposes a credible future enforcement seam. Design reconciliation owns disposition and readiness consequence.

@@ -87,4 +87,4 @@ If exact state cannot be distinguished, return `write_uncertain` or `publication
 
 ## Consumer Boundary
 
-Only this adapter reads paths or invokes Git. Route and Software Implementation consume `readCurrentMap`, `verifyPublication`, and `exportExecutionHandoff` domain results. When the Feature Atlas skill performs the local read fallback above, it is acting as this adapter and returns those domain results before Route or Software Implementation consumes them. Consumers do not independently parse the directory, inspect `HEAD`, or treat a commit as the current Map Decision.
+Only this adapter reads paths or invokes Git. Blueprint and Software Implementation consume `readCurrentMap`, `verifyPublication`, and `exportExecutionHandoff` domain results. When the Feature Atlas skill performs the local read fallback above, it is acting as this adapter and returns those domain results before Blueprint or Software Implementation consumes them. Consumers do not independently parse the directory, inspect `HEAD`, or treat a commit as the current Map Decision.

@@ -1,98 +1,58 @@
 ---
 name: prototype
-description: Builds the smallest disposable artifact that answers one explicit question with observable evidence. Use when testing a design assumption, state model, interaction, or UI direction before production implementation.
+description: Builds the smallest disposable artifact that answers one explicit software-design question with observable evidence.
 ---
+# Prototype: evidence with no preservation pressure
 
-# Prototype
+A prototype answers **one** question. It is not an early production branch, foundation, or deliverable.
 
-A prototype is disposable evidence for one explicit question. The question and evaluator determine its form.
+## Bound before building
 
-## Execution Context
+Write: question; proposition; evaluator; observable discriminator; smallest rung; disposable location; permitted effects; stop condition. Split independent questions. Use synthetic/local resources unless separately authorized.
 
-When a Frame or another coordinating workflow needs a prototype, keep the coordinator as the control plane and delegate the prototype to one fresh-context worker. The coordinator bounds the question, evaluator, authorization, constraints, and evidence contract; the worker owns building, iterative debugging, execution, evaluation, and authorized disposal. Return a compact result with the artifact locator, exact evidence or verification commands, limitations, and residual state. Keep detailed logs and scratch output in the prototype artifact rather than the coordinator's conversation.
+Choose only the needed evidence shape:
 
-An agent explicitly delegated the prototype is already the worker and does not delegate it again. Execute in the coordinating thread only when the discriminator is a single-pass operation requiring no iterative build or debugging and no substantial logs or scratch artifacts, or when the user explicitly requests inline execution. If fresh-context workers are unavailable, return the bounded prototype plan and the delegation limitation to the coordinator rather than silently running iterative work inline.
+- **Question probe:** prove/refute one API, state, process, or failure assumption.
+- **Consequential seam probe:** exercise the smallest real ownership/process/state boundary whose interaction remains uncertain.
+- **Thin recognizable tracer:** connect enough seams for the immediate consumer to recognize the outcome. Make uncertain seams real; represent already-settled seams with fixed fixtures, skeletal façades, or cited prior evidence.
+- **Targeted stress probe:** add one representative restart, interruption, authority, external-system, or meaningful failure to the seam whose failure semantics can change the design.
+- **Routeability walkthrough:** not prototype implementation or prose drafting. A fresh worker analyzes the Frame, evidence, atomic Design/RFC Case claims, owners, failures, and route and identifies any architecture it would still have to invent.
 
-## Authorization Boundary
+Do not advance merely to look thorough. A later shape does not imply greater production completeness. Persistence, tests, and fidelity are allowed only when they are necessary to distinguish the proposition. Reuse prior evidence rather than rebuilding settled seams.
 
-Proceed without asking when the prototype is isolated, local, incurs no incremental charge, and all mutable runtime and data targets are prototype-owned. Standing local authority includes creating, starting, stopping, rebooting, fault-injecting, and deleting disposable VMs or containers; loopback listeners; synthetic data; temporary prototype-owned processes; and cleanup of prototype-owned files and runtime. It also includes ordinary public downloads and dependency resolution when dependencies are installed in a prototype-owned, unprivileged environment.
+When the proposed architecture joins consequential seams, Design needs one thin recognizable outcome across the uncertain seams and the smallest decision-relevant stress evidence before fresh-worker execution. The tracer must represent the intended public responsibility boundaries closely enough to reveal missing ownership or contract decisions, but it need not implement every final grammar variant, refusal, hardening control, or ordinary conformance rule. Known contract obligations belong as atomic claims in the Design/RFC Case and later implementation tests; prose is materialized only after routeability.
 
-Ask only when the prototype would incur charges through external infrastructure or API usage without an existing bounded authorization; access production or shared credentials or resources; modify or delete pre-existing user data or unrelated processes; install or reconfigure privileged system-wide infrastructure; make consequential external writes; or risk destructive effects escaping the disposable boundary. Deleting prototype-owned resources is authorized cleanup, not a new destructive action.
+Stop prototype coding when further changes would merely implement an already-selected design. Promote the observation, limits, and exposed contract obligations; do not polish a disposable copy into shadow production. If a routeability walkthrough finds a genuine evidence-dependent architecture unknown, commission one narrower question or seam probe rather than extending the tracer by default.
 
-When permission is required, present one grouped authorization batch covering objective, environment, credentials, data, effects, persistence, blast radius, and expected cost. Do not interrupt merely because an isolated local prototype creates or deletes disposable VMs or containers, reboots or fault-injects them, or terminates prototype-owned processes.
-
-## 1. Bound The Question
-
-State one answerable question before building. If the request contains several independent uncertainties, ask the user to choose one or split the work into separate prototypes.
-
-Identify:
-
-- the question;
-- the evaluator: model, human, or joint;
-- the observation that would support or reject the proposition;
-- constraints needed to keep the artifact small.
-
-Do not begin until the question can produce an observable result.
-
-Proceed when the question, evaluator, proposition, observable discriminator, and scope constraint are explicit.
-
-## 2. Select The Evidence Form
-
-Choose the smallest form the evaluator can assess:
-
-- **Model-evaluated:** prefer a minimal executable harness with inspectable output.
-- **Human-evaluated:** use an interactive artifact by default; use a static form only when interaction cannot add relevant evidence.
-- **Jointly evaluated:** combine human interaction with model-verifiable state or instrumentation.
-
-For logic, state-machine, or business-rule questions, read [LOGIC_STATE.md](LOGIC_STATE.md).
-
-For open-ended interface exploration, read [UI_VARIANTS.md](UI_VARIANTS.md).
-
-Improvise another form when it answers the question more directly. Do not force a terminal or web interface onto evidence that needs neither.
-
-Proceed when the chosen form lets the identified evaluator observe the discriminator directly.
-
-## 3. Build For Disposal
-
-Place the prototype in a clearly marked, prototype-owned location adjacent to the code it informs when that location is local and unshared; otherwise use a separate isolated workspace. Keep it uncommitted by default. Colocation never authorizes mutation of the codebase, production system, shared environment, or other pre-existing resources it informs.
-
-Implement only enough fidelity, instrumentation, and error handling to make the observation trustworthy. There is no test-suite, production architecture, persistence, or polish obligation unless one is itself necessary to answer the question.
-
-Make the relevant state and outcomes visible. Prefer one obvious command or action to run the prototype.
-
-Proceed when the artifact has a runnable or presentable entry point and exposes the state or outcome needed for evaluation.
-
-## 4. Evaluate
-
-Run or present the artifact to its evaluator. Record observations rather than inferring success from the artifact merely running.
-
-Use exactly one verdict:
-
-- `supported`: observed evidence supports the proposition within stated limits;
-- `rejected`: observed evidence contradicts the proposition;
-- `inconclusive`: the prototype did not discriminate reliably.
-
-Report:
+## Result record
 
 ```markdown
-## Prototype Result
-
-**Question:** <one question>
-**Evaluator:** <model | human | joint>
-**Verdict:** <supported | rejected | inconclusive>
-
-### Observed Evidence
-<what was actually observed>
-
-### Limitations
-<what the prototype did not establish>
-
-### Disposition
-- <artifact or output>: <deleted as authorized cleanup | retained as evidence | cleanup blocked because it exceeds the prototype-owned boundary | explicitly approved for promotion>
+Question: ...
+Proposition: ...
+Rung / evaluator: ...
+Observation: ...
+Verdict: supported | rejected | inconclusive
+Limits: ...
+Decision consequence: ...
+Artifacts: deleted | retained as evidence at <locator> | cleanup blocked because ...
 ```
 
-## 5. Dispose Or Promote
+A successful prototype supports only its stated proposition in its stated environment. It cannot promote its code, create a production commitment, satisfy unrelated proof, or substitute for design/implementation review. Promote only the question, observation, verdict, limits, and design consequence into the effort's boundary/evidence notebook. Keep a separate result file only when evidence is non-repeatable, costly to reconstruct, or consumed directly downstream. Delete prototype-owned code/data and redundant raw reports by default. Promotion copies named learned decisions/evidence into Design—not code by implication.
 
-After capturing the result, delete prototype-owned disposable resources by default under the standing authorization boundary unless the user requested retention. Ask before deletion only when ownership is uncertain or deletion could affect pre-existing, shared, production, or otherwise out-of-boundary resources. Inventory every created artifact, including scratch state and instrumentation output, and record its disposition and any residual state. If the user deliberately chooses promotion, carry the learned design into the normal engineering workflow and add appropriate architecture, tests, failure handling, security, and maintainability. Prototype code is not production-ready merely because its verdict was `supported`.
+A prototype direction is normally autonomous because it is disposable. If choosing which proposition to test would itself commit the effort to a consequential architecture or exclude a human-owned alternative, surface that bounded decision first.
 
-An `inconclusive` result may justify a new, separately bounded prototype. It does not justify leaving the current artifact indefinitely.
+Use an explicitly disposable root/branch and declare that no code is promotable. A production branch, production package path, or code intended for retention is not a prototype location. If production edits begin before readiness, stop, quarantine those commits as implementation terrain, and restart the unanswered experiment disposably rather than continuing to earn confidence through preservation-bound code.
+
+## Proportional review
+
+Review depth follows the claim:
+
+- **Question probe:** self-check the discriminator. Add one light generalist only when the result changes a meaningful decision; add a specialist only for privilege/credentials, irreversible or external effects, surprising evidence, or a consequential architecture choice.
+- **Consequential seam probe:** one `../blueprint/review-mandates/prototype-light.md` generalist pass. Add one focused specialist only for the named uncertain seam.
+- **Thin recognizable tracer:** one independent generalist reruns the outcome. Add one focused specialist for the primary material seam.
+- **Targeted stress probe:** one evidence validator for the selected failure interval; add another specialist only when the stress crosses a distinct consequential boundary. Security review is not automatic.
+- **Routeability/final RFC:** perform analytical fresh-worker and immediate-consumer walkthroughs rather than building more prototype code by default; focused specialists remain trigger-driven.
+
+Use `../blueprint/review-mandates/prototype-evidence.md` when evidence quality itself is consequential or disputed, not automatically for every assembly. Do not launch an architecture/security/recovery panel merely because code is called a prototype. Early review seeks a false discriminator, boundary escape, obvious big mistake, or seam that later hardening would require—not production completeness.
+
+Keep the prototype and bounded evidence available until required independent reviewers finish. Cleanup remains owned by the coordinating workflow or parent after evidence disposition, not by a writer whose output still requires review.
