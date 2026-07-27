@@ -64,6 +64,8 @@ After integration or a passing imported gate:
 
 In stacked mode, once a Feature's gates due before PR pass, non-force push its owned branch and upsert its matching draft PR under the inherited envelope. Create lower stack layers before dependent layers. Do not silently retarget, flatten the stack onto the integration base, or create a duplicate PR.
 
+An ordinary completed Work Item, writer wave, validation, or integration; an advanced baseline; a newly ready frontier; and an allocated worktree are coordination checkpoints, not stopping conditions. For admitted multi-Work-Item delivery, continue in the same invocation/session unless incremental reporting was explicitly requested, until the authorized boundary is exhausted or an explicit stop applies. `next_task_ready` is not a valid return reason.
+
 ## Interruption
 
 On coordinator replacement, begin from the stable map locator, reconcile it with Git/worktree/effect state and returned role evidence, then run the resume Currentness Check before dispatch. Source systems and the exact current Atlas Decision win over stale map text. One coordinator owns a map at a time.

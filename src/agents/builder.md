@@ -1,7 +1,7 @@
 ---
 name: builder
 description: Implements code changes from a plan or task description. Use when you need to write, edit, or execute code.
-model: smart
+model: normal
 ---
 
 # Builder Agent

@@ -2,22 +2,28 @@
 
 ## Binding
 
-Use Pi's installed child/subagent facility from the parent coordinator for single or bounded parallel launch, correlated await/results, status, continuation, and cancellation where supported. Pass the portable role prompt, complete Contract, and explicit persistent `cwd` on every assignment.
+Load `pi-workflow-orchestration` before dispatch. Use Pi's workflow runtime for bounded parallel launch, explicit result flow, model routing, checkpoints, and named persistent worktrees.
 
-Do not use temporary patch-return `worktree:true` as the delivery worktree. Workspace Operator creates ordinary persistent Git worktrees first; assignments bind those paths.
+Do not depend on installed role files. Define each writer, reviewer, or validator responsibility in its task contract and independently select call-level `model`, `thinking`, and `tools`.
 
-## Roles
+Do not use temporary patch-return worktrees as delivery worktrees. Workspace Operator creates or binds ordinary persistent Git worktrees first; workflow assignments use canonical `withWorktree(name, callback)` scopes and retain returned paths.
 
-Generated custom agents may preload the public Coding Worker or Focused Validator skill and can carry narrow tool policy. They are policy/discovery optimizations, not the semantic source. An inline portable role binding is valid when a named profile is unavailable.
+## Execution policy
 
-The parent is the coordinator. Ordinary child roles never launch or coordinate other workers.
+- Ordinary implementation uses the `execution` model alias.
+- Independent validation normally uses `review` with read and Bash/project-command capability.
+- Architecture-level planning or reconciliation uses `planning` only when the task actually needs it.
+- Research collection uses `research`; synthesis is a separate owner using `aggregation` when needed.
+- Writers own fixes. Reviewers and validators return findings and never repair or finalize their candidate.
 
 ## Validation
 
-A useful validator needs file inspection and Bash/project-command capability while excluding direct edit/write tools where Pi policy allows. Because Bash can mutate, tool restriction alone is `tool_restricted_shell_mutable`, not filesystem enforcement. Use a dedicated verification checkout, repeat the no-mutation instruction, and ask Workspace Operator to inspect candidate state afterward.
+A validator receives the accepted Contract, candidate worktree, writer evidence, and exact public proof commands. It excludes direct edit/write tools. Because Bash can mutate, this is `tool_restricted_shell_mutable`, not filesystem enforcement. Use a dedicated verification checkout when stronger isolation is required and inspect candidate state afterward.
 
 Claim `filesystem_enforced` only when an actual filesystem boundary was prepared and observed.
 
 ## Continuity
 
-Resume the original child when status and exclusive worktree ownership are safe. Otherwise cancel/confirm cessation or quarantine uncertain state, then launch a fresh child with compact handoff. Never infer worktree restoration from session revival.
+Use the workflow run ID and named worktree scope for continuity. Resume only through the runtime's supported resume/retry operations and their exact source run IDs. A new launch with `parentRunId` may reuse matching named worktrees but never replays or resumes the old run.
+
+If worker state is uncertain, stop or quarantine it and launch a fresh task-defined agent with a compact handoff. Never infer worktree restoration from session continuity.

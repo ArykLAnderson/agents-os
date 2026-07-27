@@ -1,6 +1,6 @@
 ---
 name: software-implementation
-description: Coordinate a bounded software delivery from a current Feature Atlas handoff or explicit ad hoc/prototype Contract through persistent worktrees, independent validation, integration, authoritative proof gates, and authorized PR preparation.
+description: Coordinate a bounded software delivery from a current Feature Atlas handoff or explicit ad hoc/prototype Contract through persistent worktrees, independent validation, integration, authoritative proof gates, and a PR handoff by default for implementation requests.
 user-invocable: true
 argument-hint: "<current Atlas execution handoff, bounded software outcome, or prototype question>"
 ---
@@ -11,6 +11,8 @@ Turn one Delivery Contract into completed software evidence. You coordinate writ
 
 The portable role semantics in this skill and its references are authoritative. Select target syntax only through [Harness Adapters](references/harness-adapters.md).
 
+Route ordinary coding work and focused task/convergence validation through the `normal` model tier. Reserve the `smart` tier for an admitted whole-deliverable deep review suite and other explicitly deep evaluative work; model capability never broadens a role's authority. Use `deep` only for exceptional architecture, diagnosis, or reconciliation rather than routine implementation or validation. Detailed review routing lives in [Release Gates](references/release-gates.md).
+
 ## 1. Admit A Delivery Contract
 
 Choose one mode:
@@ -19,11 +21,13 @@ Choose one mode:
 - `ad_hoc`: form a lightweight acyclic task graph from a bounded software outcome without manufacturing product or architecture authority; or
 - `prototype`: answer one explicit question with the smallest adequate evidence and honest limitations.
 
-There is no generic `route` admission mode. A legacy Route package, candidate, ticket graph, summary, or hand-written imitation cannot acquire Atlas authority here. Admit accepted feature delivery only from the current immutable Atlas Map Decision through the [Feature Atlas storage/domain seam](../feature-atlas/references/storage-adapters.md); never call `gh`, infer a tracker, or read provider file paths as the semantic interface. Feature Atlas selects its adapter independently of Case/Frame persistence: `CASEBOOK_DATABASE_URL` must not displace an explicit Atlas destination or the current project's `.casebook/atlas` default. When the selected filesystem adapter has no executable, invoke the Feature Atlas skill's adapter-owned local read path rather than refusing solely because a CLI is absent.
+There is no generic `route` admission mode. A legacy Route package, candidate, ticket graph, summary, or hand-written imitation cannot acquire Atlas authority here. Admit accepted feature delivery only from the current immutable Atlas Map Decision through the [Feature Atlas storage/domain seam](../feature-atlas/references/storage-adapters.md). Feature Atlas selects its adapter independently of Case/Frame persistence: `CASEBOOK_DATABASE_URL` must not displace an explicit Atlas destination or the current project's `.casebook/atlas` default. When a configured adapter has no separate executable, invoke its documented adapter-owned provider or filesystem reads as the complete named semantic operation rather than refusing solely because a CLI wrapper is absent. Never infer a tracker or destination, use ad hoc provider discovery, or treat raw provider output or paths as semantic authority.
 
 For `atlas`, persist the exact Delivery Binding defined in [Portable Contracts](references/contracts.md): Atlas, Map, current Decision and accepted snapshot integrity; Blueprint revisions; Feature/Leg/Work Item identities and local-label bindings; ownership; direct prerequisites and convergence; transition/compatibility/cleanup; imported proof/E2E/security allocation; invalidators; qualified evidence; typed limitations; publication integrity; and explicit absent/present authorities. Refuse a summary, historical Decision, `HandoffRefusal`, incomplete/conflicted projection, omitted authority, or unverifiable binding. A `HandoffWithLimitations` is admissible only to the exact boundary its typed limitations and separately explicit implementation authority allow; affected work remains blocked.
 
-For every mode, bind the repository, named integration base, stable execution-map locator, delivery shape, one Execution Authorization Envelope, constraints, proof profile, and external Effect Bindings. Normalize the requester's explicit implementation intent once rather than asking again for every routine mechanic. A request to implement authorizes bounded local edits and verification; an explicit request for stacked draft PR implementation also authorizes scoped worktrees, owned branches, commits, non-force pushes, and matching draft PR creation/update unless limited. Merge, deployment, release, landing, force push, protected-branch mutation, ready conversion, and unrelated effects remain absent unless separately granted. Omission of Atlas in `ad_hoc`/`prototype` does not reduce fidelity; those modes must not claim Atlas realization.
+For every mode, bind the repository, named integration base, stable execution-map locator, delivery shape, one Execution Authorization Envelope, constraints, proof profile, and external Effect Bindings. Normalize the requester's explicit implementation intent once rather than asking again for every routine mechanic. A request to implement authorizes bounded local edits and verification plus ordinary scoped worktrees, owned branches, commits, non-force push, and matching draft PR creation/update for a verified non-protected single-PR delivery unless the requester excludes PR delivery or requests local-only work. An explicit stacked draft-PR request authorizes those same mechanics across the declared stack graph. Prototype and read-only requests do not inherit implementation or PR authority. Omission of Atlas in `ad_hoc`/`prototype` does not reduce fidelity; those modes must not claim Atlas realization.
+
+An explicit human request to **implement** grants the ordinary delivery authority needed to commit the bounded change, push its exact non-protected feature branch, and open a PR against the verified base; do not ask again merely to push that exact branch and open its PR. This default does **not** grant merge, protected-branch mutation, deployment, production configuration, credentials, external/live effects, landing, or Work Item/Atlas closure. Force push, ready conversion, reviewer/label/project mutation, release, and unrelated effects likewise remain absent unless separately granted.
 
 At Atlas admission, perform the Currentness Check in [Portable Contracts](references/contracts.md). Repeat it on coordinator resume, before selecting every dependency frontier, before every effectful gate, and before returning a result. A successor, triggered invalidator, Decision/projection conflict, or unverifiable binding stops unless the exact admitted typed limitation explicitly defines the bounded consequence; never follow `latest`, infer equivalence, or silently upgrade a limitation.
 
@@ -72,12 +76,13 @@ Proceed only when every gate currently due under the admitted graph has current 
 
 ## 5. Prepare The Handoff Or PR
 
-Perform the result Currentness Check before claiming completion. Delegate PR lookup/preparation/creation to the PR Operator in [Internal Roles](references/internal-roles.md) under the exact derived draft-PR operation binding from the Execution Authorization Envelope. It must return an existing matching open PR for the same provider/account/repository/head/base rather than create a duplicate. In stacked mode, create or refresh each Feature draft PR only after its admitted pre-PR gates pass and preserve the declared base graph. Draft-PR authority never implies ready conversion, merge, deployment, or landing authority.
+Perform the result Currentness Check before claiming completion. Delegate push plus PR lookup/preparation/creation to the PR Operator in [Internal Roles](references/internal-roles.md) under the exact derived draft-PR operation binding from the Execution Authorization Envelope. It must return an existing matching open PR for the same provider/account/repository/head/base rather than create a duplicate. In stacked mode, create or refresh each Feature draft PR only after its admitted pre-PR gates pass and preserve the declared base graph. Ask again only when PR delivery was excluded, the binding is ambiguous or unverifiable, the operation would mutate a protected branch, or scope would broaden. Draft-PR authority never implies ready conversion, merge, deployment, landing, credentials, or external/live-effect authority.
 
 Return:
 
 ```markdown
 Mode/outcome: <atlas | ad_hoc | prototype — delivered result>
+Return reason: <authorized_boundary_reached | graph_complete | authority_blocker | technical_blocker | human_decision_required | user_requested_checkpoint>
 Atlas binding/currentness: <exact Decision and result check, or not applicable>
 Execution map: <stable locator>
 Task waves: <completed waves and remaining non-blocking findings>
@@ -87,5 +92,7 @@ Handoff: <PR link | verified integration branch | exact blocker>
 Merge/deployment: <separately authorized and performed elsewhere | not authorized>
 Landing: <separately authorized and performed elsewhere | not authorized>
 ```
+
+Terminal-return only for one of the enumerated return reasons: when the authorized boundary is reached, the admitted graph is complete, a real authority or technical blocker prevents progress, a human decision is required, or the user explicitly requested an incremental checkpoint. A completed Work Item/wave/validation/integration, an advanced baseline, a newly ready frontier, or an allocated worktree is a coordination checkpoint, not a terminal condition; `next_task_ready` is invalid and admitted multi-Work-Item delivery continues in the same invocation/session until an allowed terminal reason applies.
 
 Completion never claims Map completion or authoritative landing. A result cites the exact Atlas Decision consumed and its verified currentness; it never treats source completion as permission to mutate Atlas.

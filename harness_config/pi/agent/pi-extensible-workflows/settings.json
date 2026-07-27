@@ -1,0 +1,12 @@
+{
+  "concurrency": 8,
+  "modelAliases": {
+    "research": "openai-codex/gpt-5.6-luna:medium",
+    "fast": "openai-codex/gpt-5.6-terra:low",
+    "execution": "openai-codex/gpt-5.6-terra:medium",
+    "review": "openai-codex/gpt-5.6-terra:medium",
+    "planning": "openai-codex/gpt-5.6-sol:medium",
+    "aggregation": "openai-codex/gpt-5.6-sol:medium",
+    "coordination": "openai-codex/gpt-5.6-sol:high"
+  }
+}

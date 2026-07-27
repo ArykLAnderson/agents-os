@@ -1,127 +1,92 @@
 ---
 name: research-sprint
-description: Parallel team investigation with cross-pollination. Spawns researchers who explore different angles of a question, share findings via messaging, and produce a synthesized research report. Use for open-ended exploration, technology evaluation, or multi-dimensional analysis.
+description: Parallel team investigation with cross-pollination. Use for open-ended exploration, technology evaluation, or a bounded question requiring several independent evidence tracks.
 user-invocable: true
 argument-hint: <research question or topic>
 ---
 
-# Research Sprint: Parallel Pi Investigation
+# Research Sprint
 
-Use Pi subagents to investigate different dimensions of a question in parallel, then synthesize the findings. This skill is for the parent orchestrator. Do not ask child subagents to run subagents or use AgentOS team/task/message APIs.
+Investigate one bounded question through independent evidence tracks, targeted cross-pollination, and owner-led synthesis. Agent behavior is task-defined; do not depend on generic scout or researcher personas.
 
-Model routing intent: track researchers should run at the `research` alias, which is optimized for fast information trawling and evidence surfacing with GPT-5.6 Luna. Their job is collection, provenance, and concise handoff rather than final judgment. For broad, ill-defined exploration, the final coordinator/synthesis pass should use the `deep` tier: it is responsible for integrating contradictions, making minor judgment calls, and surfacing important architectural/product decisions instead of burying them.
+## 1. Bound The Question
 
-## Process
+Establish:
 
-### 1. Understand the Question
+- the question and decision it informs;
+- two to four genuinely distinct evidence dimensions;
+- scope, source-quality expectations, and time sensitivity;
+- what remains human judgment.
 
-Read the research question. Gather context:
-- What is being researched and why?
-- What dimensions or angles need investigation?
-- What decisions will this research inform?
+Use one ordinary research pass when dimensions are not independent. Completion criterion: each proposed track can produce useful evidence without another track's result.
 
-### 2. Decompose into Tracks
+## 2. Define Track Contracts
 
-Break the question into 2-4 independent research tracks. Each should explore a distinct dimension.
+For each track provide:
 
-Example: "Should we use Supabase or build our own backend?"
-- Track 1: Feature comparison and capability gaps
-- Track 2: Operational cost and scaling characteristics
-- Track 3: Developer experience and migration path
+```markdown
+## Objective
+The evidence question owned by this track.
 
-### 3. Select Subagents
+## Shared context
+The overall question, constraints, and sibling track names.
 
-For each track, determine the right subagent using this priority order:
+## Evidence standard
+Preferred primary sources, local terrain, freshness, and provenance requirements.
 
-**1. Check existing perspective agents** — glob `perspective-*.md` from both `~/.agents-os/src/agents/` (global) and `.agents-os/src/agents/` (project-scoped). Prefer project-scoped stateful perspectives when they fit — they bring richer domain context.
+## Deliverable
+- findings with citations or file references
+- confidence and limitations
+- contradictions or missing evidence
+- implications for the overall question
 
-**2. Ad-hoc domain roles** — if the track needs specific domain expertise (e.g., "React performance specialist") that no existing perspective covers, define the role directly in the spawn prompt. No permanent agent needed for one-off roles.
-
-**3. Create a permanent perspective** — invoke the `/create-perspective` skill when ALL of these are true:
-   - The perspective would be repeatedly useful for this project's ongoing work
-   - It represents a genuine, distinct viewpoint — not just a topic expert
-   - There's a clear recurring decision pattern it serves ("business case")
-
-   Placement is determined by the create-perspective skill:
-   - **Global** (`~/.agents-os/src/agents/perspective-<name>.md`) — universally useful across projects
-   - **Project-scoped** (`.agents-os/src/agents/perspective-<name>.md`) — domain-specific or stateful
-
-**Stateful perspectives** have a "Before Starting" section that reads project docs (domain models, business goals, architecture decisions). When spawning a stateful perspective, ensure it has time to read its project context before starting research.
-
-### 4. Run First-Round Research
-
-Launch one parallel `subagent` task per track. Use `context: "fresh"` unless the track depends heavily on the current conversation. Use the installed `researcher` agent by default for external evidence and general information trawling; it is bound to the `research` model alias. Use `scout` for local codebase discovery and perspective agents only for viewpoint-driven analysis.
-
-```typescript
-subagent({
-  tasks: [
-    {
-      agent: "researcher",
-      task: `Research track: <track focus>
-
-Overall question: <research question and why it matters>
-Sibling tracks: <list sibling tracks>
-
-Deliver:
-- key findings
-- evidence and source/file references
-- confidence level for each major claim
-- implications for the overall decision
-- findings that should be shared with sibling tracks`
-    }
-  ],
-  context: "fresh"
-})
+## Stop conditions
+Material ambiguity, inaccessible authority, or a decision the researcher cannot make.
 ```
 
-### 5. Parent-Mediated Cross-Pollination
+Define domain expertise directly in the task contract. Create a durable perspective only when a genuinely recurring decision lens needs persistent doctrine; topic expertise alone does not justify an agent specification.
 
-After first-round results return, identify cross-cutting findings and contradictions. If a finding materially changes another track, run a second parallel `subagent` pass with the relevant first-round excerpts injected into each task.
+Completion criterion: every track has a distinct evidence owner and common handoff format.
 
-Second-round prompt shape:
+## 3. Execute Independently
 
-```typescript
-subagent({
-  tasks: [
-    {
-      agent: "<same-or-new-agent>",
-      task: `Revisit your track using these findings from sibling tracks:
+On Pi, load `pi-workflow-orchestration` and use a named workflow with parallel unroled agents. Select the `research` model alias for evidence collection and appropriate tools per track. Other harnesses use their native bounded parallel facility; do not copy Pi workflow syntax where unsupported.
 
-<selected first-round findings>
+Agents collect evidence and expose uncertainty. They do not make the final consequential recommendation.
 
-Original track: <track focus>
+Completion criterion: every track returns provenance-bearing findings, limitations, and implications.
 
-Update your conclusion, call out contradictions, and state what changed.`
-    }
-  ],
-  context: "fresh"
-})
-```
+## 4. Cross-Pollinate Only Materially
 
-### 6. Synthesize
+Compare first-round outputs for:
 
-After all tracks complete:
+- contradictory claims;
+- shared assumptions;
+- evidence that changes another track's conclusion;
+- gaps that block synthesis.
+
+Run one targeted second pass only for affected tracks, injecting the exact conflicting evidence or changed premise. Do not run ceremonial debate rounds.
+
+Completion criterion: every consequential contradiction is either resolved by evidence or preserved for synthesis.
+
+## 5. Synthesize With A Stronger Owner
+
+On Pi, use the `aggregation` alias for ordinary synthesis and `coordination` only for genuinely difficult cross-system judgment. The synthesizer receives all track outputs and owns integration, not source collection.
+
+Produce:
 
 ```markdown
 ## Research Report: <topic>
 
-### Question
-<what was investigated and why>
-
-### Findings by Track
-
-**<Track 1>**:
-<key findings, evidence, confidence levels, sources>
-
-**<Track 2>**:
-<key findings, evidence, confidence levels, sources>
-
-### Cross-Cutting Insights
-<discoveries that emerged from cross-pollination between tracks — findings one researcher shared that changed another's analysis>
-
-### Recommendations
-<actionable recommendations based on the combined findings>
-
-### Open Questions
-<what wasn't resolved and needs further investigation>
+### Question And Scope
+### Findings By Track
+### Cross-Cutting Evidence
+### Contradictions And Limitations
+### Recommendation
+### Remaining Human Judgment
+### Sources
 ```
+
+Distinguish evidence from inference. Preserve consequential disagreement rather than averaging confidence or voting.
+
+Completion criterion: every recommendation traces to evidence, every unresolved conflict is visible, and no agent-written recommendation is mistaken for human authority.

@@ -1,0 +1,82 @@
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { basename, join } from "node:path";
+
+const sourceDir = "/Users/aryk/.agents-os/adapters/pi/generated/agents";
+const targetDir = "/Users/aryk/.pi/agent/pi-extensible-workflows/roles";
+const names = [
+  "architecture-reviewer",
+  "builder",
+  "focused-validator",
+  "hook-engineer",
+  "meta-builder",
+  "performance-reviewer",
+  "perspective-adversary",
+  "perspective-pragmatist",
+  "perspective-systems-thinker",
+  "perspective-user-advocate",
+  "researcher",
+  "security-reviewer",
+  "validator",
+];
+const allowedTools = new Set([
+  "read", "bash", "write", "edit", "web_search", "fetch_content", "get_search_content", "intercom",
+]);
+const extraTools = {
+  researcher: ["web_search", "fetch_content", "get_search_content"],
+};
+
+function parse(file) {
+  const raw = readFileSync(file, "utf8").replace(/\r\n?/g, "\n");
+  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(raw);
+  if (!match) throw new Error(`Missing frontmatter: ${file}`);
+  const frontmatter = Object.fromEntries(match[1].split("\n").flatMap((line) => {
+    const colon = line.indexOf(":");
+    if (colon < 0) return [];
+    const key = line.slice(0, colon).trim();
+    let value = line.slice(colon + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
+    return [[key, value]];
+  }));
+  return { frontmatter, body: match[2] };
+}
+
+function normalizeModel(value = "") {
+  const levels = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
+  const index = value.lastIndexOf(":");
+  if (index > 0 && levels.has(value.slice(index + 1))) return { model: value.slice(0, index), thinking: value.slice(index + 1) };
+  return value ? { model: value } : {};
+}
+
+function toolsFor(name, value = "") {
+  const requested = value.replace(/^\[|\]$/g, "").split(",").map((item) => item.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+  const normalized = requested.map((tool) => ["grep", "find", "ls", "glob"].includes(tool) ? "bash" : tool).filter((tool) => allowedTools.has(tool));
+  normalized.push(...(extraTools[name] ?? []));
+  return [...new Set(normalized)];
+}
+
+function cleanBody(body) {
+  return body
+    .replace(/^<!-- Generated from Agent OS[^\n]*\n\n/m, "")
+    .replace(/^## Adapter Runtime Context\n\n[\s\S]*?(?=^# )/m, "")
+    .trim();
+}
+
+mkdirSync(targetDir, { recursive: true });
+for (const name of names) {
+  const source = join(sourceDir, `${name}.md`);
+  const { frontmatter, body } = parse(source);
+  const model = normalizeModel(frontmatter.model);
+  const role = [
+    "---",
+    `description: ${JSON.stringify(frontmatter.description)}`,
+    ...(model.model ? [`model: ${JSON.stringify(model.model)}`] : []),
+    ...(model.thinking ? [`thinking: ${model.thinking}`] : []),
+    `tools: [${toolsFor(name, frontmatter.tools).map(JSON.stringify).join(", ")}]`,
+    "---",
+    "",
+    cleanBody(body),
+    "",
+  ].join("\n");
+  writeFileSync(join(targetDir, basename(source)), role, { mode: 0o600 });
+}
+console.log(JSON.stringify({ targetDir, roles: names }, null, 2));

@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: Reviews code for security vulnerabilities using a systematic OWASP-based checklist. Use when reviewing PRs, after implementation, or when security concerns are raised. Read-only — cannot modify files.
-model: normal
+model: smart
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: plan
 maxTurns: 40

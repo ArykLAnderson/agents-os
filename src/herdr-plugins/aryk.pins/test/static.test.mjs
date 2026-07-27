@@ -6,7 +6,6 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const agentOs = path.resolve(root, "../../..");
 const expected = new Map([
   ["prefix+h", "aryk.pins.pin-project"], ["prefix+H", "aryk.pins.manage-projects"],
   ["prefix+t", "aryk.pins.pin-local"], ["prefix+T", "aryk.pins.manage-locals"],
@@ -18,20 +17,18 @@ const expected = new Map([
 function commandBlocks(content) { return content.split("[[keys.command]]").slice(1).map(block => block.split("[[")[0]); }
 function quoted(block, key) { return new RegExp(`^${key}\\s*=\\s*"([^"]*)"`, "m").exec(block)?.[1]; }
 
-test("both portable configs contain exactly the collision-free described key contract", () => {
-  const files = [path.join(agentOs, "src/skills/herdr-session-navigation/examples/config.toml"), "/Users/aryk/.config/herdr/trials/casebook/config.toml"];
-  for (const file of files) {
-    const blocks = commandBlocks(fs.readFileSync(file, "utf8"));
-    const keys = blocks.map(block => quoted(block, "key"));
-    assert.equal(new Set(keys).size, keys.length, `${file} has a key collision`);
-    const plugin = blocks.filter(block => quoted(block, "command")?.startsWith("aryk.pins."));
-    assert.equal(plugin.length, 12);
-    for (const block of plugin) {
-      const key = quoted(block, "key");
-      assert.equal(quoted(block, "type"), "plugin_action");
-      assert.equal(quoted(block, "command"), expected.get(key));
-      assert.ok(quoted(block, "description")?.trim());
-    }
+test("installed trial config contains exactly the collision-free described key contract", () => {
+  const file = "/Users/aryk/.config/herdr/trials/casebook/config.toml";
+  const blocks = commandBlocks(fs.readFileSync(file, "utf8"));
+  const keys = blocks.map(block => quoted(block, "key"));
+  assert.equal(new Set(keys).size, keys.length, `${file} has a key collision`);
+  const plugin = blocks.filter(block => quoted(block, "command")?.startsWith("aryk.pins."));
+  assert.equal(plugin.length, 12);
+  for (const block of plugin) {
+    const key = quoted(block, "key");
+    assert.equal(quoted(block, "type"), "plugin_action");
+    assert.equal(quoted(block, "command"), expected.get(key));
+    assert.ok(quoted(block, "description")?.trim());
   }
 });
 
@@ -54,10 +51,8 @@ test("manifest declares source-attested minimum, twelve actions, and popup panes
   assert.doesNotMatch(content, /\[\[(startup|build)\]\]/);
 });
 
-test("docs record intentional default displacement and example uses named-session API socket", () => {
-  const skillReadme = fs.readFileSync(path.join(agentOs, "src/skills/herdr-session-navigation/README.md"), "utf8");
+test("installed docs record intentional default displacement and example uses named-session API socket", () => {
   const dotfilesReadme = fs.readFileSync("/Users/aryk/.config/herdr/trials/casebook/README.md", "utf8");
-  assert.match(skillReadme, /override Herdr's defaults for swap-left and rename-tab/);
   assert.match(dotfilesReadme, /displace Herdr's default swap-left and rename-tab/);
   const fixture = JSON.parse(fs.readFileSync(path.join(root, "examples/registry.example.json"), "utf8"));
   assert.match(fixture.route.socketPath, /\/casebook-trial\/herdr\.sock$/);

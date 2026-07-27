@@ -15,16 +15,16 @@
     "pi": {
       "default": "normal",
       "cheap": "openai-codex/gpt-5.6-luna:medium",
-      "fast": "openai-codex/gpt-5.6-terra:medium",
+      "fast": "openai-codex/gpt-5.6-terra:low",
       "normal": "openai-codex/gpt-5.6-terra:medium",
-      "smart": "openai-codex/gpt-5.6-sol:high",
+      "smart": "openai-codex/gpt-5.6-sol:medium",
       "deep": "openai-codex/gpt-5.6-sol:high"
     },
     "codex": {
       "default": "normal",
       "cheap": "gpt-5.6-luna",
       "fast": "gpt-5.6-terra",
-      "normal": "gpt-5.6-sol",
+      "normal": "gpt-5.6-terra",
       "smart": "gpt-5.6-sol",
       "deep": "gpt-5.6-sol"
     },
