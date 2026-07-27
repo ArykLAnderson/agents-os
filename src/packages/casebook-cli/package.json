@@ -1,0 +1,12 @@
+{
+  "name": "@agents-os/casebook-cli",
+  "version": "0.7.0",
+  "description": "Trusted-local standalone Casebook operator CLI",
+  "type": "module",
+  "private": true,
+  "bin": { "casebook": "bin/casebook.mjs" },
+  "files": ["bin", "bridge", "lib", "schemas"],
+  "scripts": { "test": "node --test test/*.test.mjs", "check": "node --check bin/casebook.mjs && node --check lib/wi033.mjs && node --check bridge/persistence-bridge.mjs" },
+  "engines": { "node": ">=22" },
+  "casebookCli": { "result_schema": "casebook-cli-result@2", "bridge": "bridge/persistence-bridge.mjs", "operations": ["target.describe", "case.create", "case.read", "case.commit_revision", "frame.create", "frame.read", "frame.commit_revision", "query.search", "substrate.get_receipt", "operation.recent"] }
+}

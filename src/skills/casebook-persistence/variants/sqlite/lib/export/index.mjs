@@ -664,7 +664,7 @@ async function prepareFinalizationStore(request) {
   if (configuration.authority_mode !== "sqlite") {
     throw new ExportError("export.store_unavailable", "Finalization requires explicitly selected SQLite authority.");
   }
-  const selected = await selectSqliteBinary(configuration.sqlite.sqlite_bin);
+  const selected = await selectSqliteBinary();
   const state = await inspectStore(selected.path, configuration.sqlite.store_path);
   if (state.status !== "available" || state.metadata.store_id !== request.store_id) {
     throw new ExportError("export.store_unavailable", "The exact export store is unavailable.");
