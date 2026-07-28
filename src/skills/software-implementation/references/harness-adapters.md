@@ -7,10 +7,10 @@ The portable coordinator calls this semantic port; target references own concret
 - `prepare(role, tool_policy, cwd)` → effective capability and limitations;
 - `launch(role_contract, task_contract, cwd, context_policy)` → correlated child identity;
 - `launch_parallel(assignments)` → one identity per assignment, or explicit failure when required parallelism is unavailable;
-- `await(children)` → correlated compact results;
+- `await(children)` → correlated compact results with candidate identity and Evidence Receipt references, selected output, or attestation;
 - `inspect(child)` → current status/evidence;
 - `resume(child, message)` and `cancel(child)` → `supported | unsupported | uncertain`;
-- `collect(child, result_contract)` → normalized role result without discarding native evidence.
+- `collect(child, result_contract)` → normalized role result without discarding native evidence or retention limitations.
 
 Fresh replacement with role Contract, task Contract, compact prior evidence, and explicit cwd is mandatory. Resume/cancel are optimizations.
 
@@ -23,6 +23,7 @@ Every adapter must:
 - report validator enforcement as `filesystem_enforced | tool_restricted_shell_mutable | instruction_only`;
 - discover provider/PR capability without treating discovery as authority; and
 - preserve operation-specific Effect Bindings.
+- preserve receipt references, copied selected output, and explicit attestations without automatically publishing retained artifacts.
 
 It must not change task meaning, coordination policy, source authority, required proof, or external authority. Capability limitations are evidence, not permission to weaken a gate.
 

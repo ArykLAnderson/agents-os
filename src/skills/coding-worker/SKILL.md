@@ -25,6 +25,8 @@ Require one execution boundary containing:
 - commit authority, stated explicitly; and
 - prior implementation evidence and validator findings when this is a repair.
 
+The boundary also identifies the candidate as repository plus worktree/branch/ref and requires Evidence Receipts for claimed checks. Prefer an authoritative provider artifact, then a low-cost sanitized private artifact, copied selected output, or explicit execution attestation. When practical, retain artifacts in the coordinator-provided private untracked `evidence/` directory and update its compact `INDEX.md`. Do not commit, attach, upload, or otherwise publish evidence without separate authority.
+
 Read the supplied sources and current worktree. Treat the supplied Task Contract as authoritative: never ask for ordinary clarification or reopen architecture. Choose the most locally reasonable interpretation for residual decisions and record material assumptions in the result. When an external effect lacks an exact Effect Binding, do not invent or perform it; continue every executable implementation part and report the limitation.
 
 ## Execute
@@ -53,6 +55,8 @@ Proceed when the task is coherent at its deep boundary and every in-scope observ
 
 Run the task-specific behavioral tests plus ordinary applicable build, lint, typecheck, and test commands required by the repository. Use focused checks first, then the normal affected-project checks. Inspect outputs; never report a command as run when it was not.
 
+For each material claim, return an Evidence Receipt reference at the smallest task boundary, selected sanitized output, or an explicit execution attestation. Failed artifact capture is a bounded retention limitation, not a reason to report a passing command as blocked. Redact credentials, personal data, and sensitive output before retention.
+
 Do not coordinate another worker, independently certify your own result, mutate a coordinator execution map, integrate unrelated branches, open a PR, or land an authoritative branch.
 
 ### 5. Commit according to invocation mode
@@ -69,10 +73,12 @@ Return exactly one status.
 Status: complete
 Task: <identity and outcome delivered>
 Worktree/branch: <identity; no persisted commit hash required>
+Candidate: <repository + worktree/branch/ref evaluated>
 Deep module/interface: <what changed and why this boundary is coherent>
 Assumptions/refactoring: <material local decisions or none>
 Behavioral tests: <added/changed tests and observable behaviors>
 Commands: <command — result, for every command actually run>
+Evidence Receipts: <ER-* references, selected sanitized output, or explicit execution attestation; limitations>
 Focused validation: <exact interface, scenarios, and commands to rerun>
 Residual limitations: <bounded limitations or none>
 Commit disposition: <committed under granted authority | left uncommitted>
@@ -86,7 +92,9 @@ Use only when execution as a whole is technically impossible, not merely for amb
 Status: technically_blocked
 Task: <identity>
 Exact blocker: <what makes execution impossible>
+Candidate: <repository + worktree/branch/ref evaluated>
 Attempts and evidence: <commands/observations>
+Evidence Receipts: <ER-* references, selected sanitized output, or attestation; retention limitations>
 Remaining discriminating question: <smallest answer that permits execution>
 Authority needed: <if an accepted design, effect, or landing decision is required>
 Worktree/branch: <identity and coherent current-state disposition>

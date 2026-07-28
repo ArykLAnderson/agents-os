@@ -14,6 +14,8 @@
 - **Execution Authorization Envelope:** `<stable grant locator and concise allowed/absent boundary>`
 - **Effect Bindings:** `<locators or none>`
 - **Proof allocation:** `<imported Atlas allocation | explicit ad hoc/prototype profile>`
+- **Private evidence directory:** `<execution-map-parent/evidence/ — untracked; retain until explicit cleanup/archive>`
+- **Evidence index:** `<evidence/INDEX.md>`
 
 ## Atlas Delivery Binding
 
@@ -45,11 +47,11 @@ Store the latest check and material stop only; do not mirror Atlas history.
 
 ## Tasks
 
-States: `todo | working | verify | repair | ready_to_integrate | integrated | blocked | done`.
+States: `todo | working | verify | repair | ready_to_integrate | integrated | blocked | done`. Evidence status is `current | stale | limited | explicitly_untested` and does not alter a passed proof solely because retention failed.
 
-| Task | Atlas WI / local label / Feature / Leg | Outcome | Depends on | Starting baseline | Module/files | Wave | Role/session | Worktree/branch | State | Evidence/findings |
+| Task | Atlas WI / local label / Feature / Leg | Outcome | Depends on | Starting baseline | Module/files | Wave | Role/session | Worktree/branch | State | Evidence status / receipt refs / findings |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `<T-01>` | `<WI-* / label / F-* / leg, or n/a>` | `<observable result>` | `<accepted direct prerequisites>` | `<base name>` | `<owned boundary>` | `<1>` | `<worker/id>` | `<path/branch>` | `todo` | `<locators>` |
+| `<T-01>` | `<WI-* / label / F-* / leg, or n/a>` | `<observable result>` | `<accepted direct prerequisites>` | `<base name>` | `<owned boundary>` | `<1>` | `<worker/id>` | `<path/branch>` | `todo` | `<current | stale | limited | explicitly_untested — ER-*; short limitation>` |
 
 ## Feature / PR Stack
 
@@ -63,11 +65,19 @@ Use `not applicable` in `single_pr` mode.
 
 States: `pending | ready | running | passed | limited | blocked`.
 
-| Gate | Accepted owner/claim | Depends on | Downstream blockers | Evaluator/effects/cleanup | State | Qualified evidence/limitation |
+| Gate | Accepted owner/claim | Depends on | Downstream blockers | Evaluator/effects/cleanup | State | Evidence status / receipt refs / limitation |
 |---|---|---|---|---|---|---|
-| `<G-01>` | `<Map/Feature/WI owner — exact proof claim>` | `<tasks/gates>` | `<tasks/gates>` | `<independence, Effect Binding, cleanup>` | `pending` | `<locators>` |
+| `<G-01>` | `<Map/Feature/WI owner — exact proof claim>` | `<tasks/gates>` | `<tasks/gates>` | `<independence, Effect Binding, cleanup>` | `pending` | `<current | stale | limited | explicitly_untested — ER-*; short limitation>` |
 
 A bounded-live proof between two Work Items is represented as an ordinary gate node between them, not moved to final release.
+
+## Evidence Receipts
+
+Registry entries name the exact claim and its smallest owning task/gate/final boundary. Keep receipt detail in the private index/artifact; do not paste transcripts here.
+
+| Receipt | Claim / owning boundary | Candidate tuple | Status / evidence form | Freshness / limitation |
+|---|---|---|---|---|
+| `<ER-01>` | `<exact claim — T-01/G-01/final>` | `<repo + branch/ref/worktree or external target>` | `<pass/fail/limited/attested — provider/private artifact/copied output/attestation>` | `<current/stale plus invalidator or retention limit>` |
 
 ## Current Frontier
 
@@ -92,19 +102,27 @@ A bounded-live proof between two Work Items is represented as an ordinary gate n
 ## Remaining Proof / Effect / PR Gates
 
 - [ ] Imported gates complete in accepted order `<state/locators>`
-- [ ] Added operational evidence detail `<commands/locators; no changed claims>`
+- [ ] Added operational evidence detail `<receipt refs/selected output; no changed claims>`
 - [ ] External cleanup `<terminal disposition>`
 - [ ] PR preparation `<authorized/result | not authorized>`
 - [ ] Merge `<separate authority/result | not authorized>`
 - [ ] Deployment `<separate authority/result | not authorized>`
 - [ ] Landing `<separate authority/result | not authorized>`
 
+## Delivery Disposition
+
+- **Disposition:** `<active | delivered | authority_blocked | cancelled>`
+- **Terminal Result Rule evaluation:** `<non-terminal reason, or exact satisfied terminal disposition>`
+- **Remaining admitted nodes:** `<task/gate/Feature identities, or none>`
+- **Next coordinator action:** `<dispatch | poll/wait | return exact authority blocker | final result>`
+- **Authority blocker:** `<none, or concrete evidence / owning authority / smallest decision>`
+
 ## Handoff
 
 - **Result Currentness Check:** `<exact bound/current Decision and disposition, or n/a>`
-- **Last reconciled source/provider state:** `<summary and locators>`
-- **Next bounded action:** `<action>`
+- **Last reconciled source/provider state:** `<summary and receipt refs>`
+- **Next bounded action:** `<action; required while disposition is active>`
 - **Assumptions/exact typed limitations:** `<items>`
 - **Execution map:** `<repeat stable locator>`
 
-Do not add commit-hash ledgers, event transcripts, transactional ownership machinery, or mirrored Atlas/tracker state. Git, Feature Atlas domain records, and external systems remain authoritative.
+Do not add commit-hash ledgers, event transcripts, transactional ownership machinery, or mirrored Atlas/tracker state. `evidence/INDEX.md` is compact; retained artifacts stay private/untracked until explicit cleanup/archive. Git, Feature Atlas domain records, and external systems remain authoritative.

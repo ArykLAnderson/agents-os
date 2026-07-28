@@ -35,9 +35,9 @@ Proceed when destination, cumulative scoped execution grant, scope, effects, pro
 
 ## 2. Prepare The Fancy To-Do List
 
-Create the execution map from [the template](templates/execution-map.md). It is a human-readable resumption and coordination surface, not source, Atlas, or workflow truth. In Atlas mode, copy the Delivery Binding and accepted execution graph into the map: stable Atlas identities/local labels remain visible on every task and accepted proof barrier. Operational subdivision may add detail but cannot change Work Item ownership, behavior, prerequisites, convergence, or proof order. In stacked mode, also record each Feature branch, repository, base/predecessor relationship, draft PR, and gate state.
+Create the execution map from [the template](templates/execution-map.md). It is a human-readable resumption and coordination surface, not source, Atlas, or workflow truth. Create its private, untracked sibling `evidence/` directory and compact `evidence/INDEX.md`; retain sanitized artifacts there until explicit cleanup/archive, never automatically commit or publish them. In Atlas mode, copy the Delivery Binding and accepted execution graph into the map: stable Atlas identities/local labels remain visible on every task and accepted proof barrier. Operational subdivision may add detail but cannot change Work Item ownership, behavior, prerequisites, convergence, or proof order. In stacked mode, also record each Feature branch, repository, base/predecessor relationship, draft PR, and gate state.
 
-Give every task a stable execution identity, Atlas binding when applicable, dependency prerequisites, owned deep module/files, required baseline name, destination, and wave. Give imported proof gates their accepted owners, prerequisites, effect needs, pass claims, and downstream blockers. This supports an effect-bound gate between implementation items—for example FM-003's bounded-live proof after WI-014 and before WI-015—rather than forcing all proof to the end.
+Give every task a stable execution identity, Atlas binding when applicable, dependency prerequisites, owned deep module/files, required baseline name, destination, wave, and smallest owning evidence boundary. Give imported proof gates their accepted owners, prerequisites, effect needs, pass claims, downstream blockers, and Evidence Receipt expectations. The map registry records receipt references and `current | stale | limited | explicitly_untested`; it never becomes a transcript store. This supports an effect-bound gate between implementation items—for example FM-003's bounded-live proof after WI-014 and before WI-015—rather than forcing all proof to the end.
 
 Assign uncertain overlap to serial waves. Select only dependency-ready tasks with non-overlapping ownership for parallel dispatch. Delegate repository discovery and all administrative worktree operations to the Workspace Operator in [Workspace And Integration](references/workspace-integration.md). Use explicit persistent Git worktrees; never substitute a harness's temporary patch-return worktree.
 
@@ -45,17 +45,23 @@ Proceed when the graph is acyclic, each writer has exclusive scope/worktree owne
 
 ## 3. Drive Task And Convergence Gates
 
+### Coordinator Continuity
+
+A worker result, validator verdict, integration result, CI status, proof observation, pushed branch, or Feature draft PR is a checkpoint, not a delivery result. Do not emit a final response, hand control back to the requester, or describe the delivery as complete while any admitted task, proof gate, required repair, stack layer, or final result Currentness Check remains non-terminal.
+
+After every checkpoint, persist the compact map update, run the required Currentness Check, recompute the frontier, and dispatch the next authorized ready operation. Use progress communication only for material progress or a real recorded blocker. A final result is permitted only under the Terminal Result Rule in the execution loop.
+
 Follow [the execution loop](references/execution-loop.md):
 
 1. dispatch one sibling [`coding-worker`](../coding-worker/SKILL.md) per ready task, with a complete Task Contract and commit authority when the branch will be integrated;
-2. await compact worker evidence;
+2. await compact worker Evidence Receipt references, selected output, or explicit execution attestation;
 3. dispatch sibling [`focused-validator`](../focused-validator/SKILL.md) after successful worker build/lint/test evidence when the admitted allocation requires task-scope independent validation;
 4. return bounded findings to the original worker when available, otherwise a fresh worker with a complete compact handoff;
 5. delegate each validated wave to one Integration Worker on the global integration branch in `single_pr` mode or the owning Feature branch in `stacked_feature_prs` mode;
 6. dispatch convergence-scope focused validation over the integrated result; and
 7. advance the named integration baseline before creating or refreshing dependent worktrees.
 
-The coordinator records only compact state, exact Atlas bindings, gate state, and locators in the map. Git, Atlas Decisions, repository state, accepted design, review artifacts, providers, and external systems remain authoritative.
+The coordinator records only compact state, exact Atlas bindings, gate state, receipt references, and limitations in the map. Git, Atlas Decisions, repository state, accepted design, review artifacts, providers, and external systems remain authoritative. Missing retained artifacts are retention limitations, not proof failures, unless an accepted gate specifically requires that artifact or an existing effect/cleanup rule blocks progress.
 
 Use [Recovery](references/recovery.md) for interrupted writers, repeated no-progress, repair routing, Atlas/source/map reconciliation, and successor stops.
 
@@ -72,13 +78,15 @@ Use only the proof allocation admitted in the Delivery Contract:
 
 For Atlas delivery, the imported allocation is authoritative. Software Implementation may add commands, environments, effect bindings, and evidence detail needed to execute a gate, but may not weaken, replace, reorder, OR-combine, or universally inflate it with generic release gates. An omitted generic architecture/quality/fidelity/full-security/E2E gate remains omitted unless the Map Decision or separately accepted successor requires it. Follow [Release Gates](references/release-gates.md) for execution mechanics without changing the accepted gate graph.
 
-Proceed only when every gate currently due under the admitted graph has current evidence or its exact authority-bound typed limitation/blocker.
+Proceed only when every gate currently due under the admitted graph has the proof result its admitted claim requires, with current evidence or its exact authority-bound typed limitation/blocker. A receipt may be `limited` because retention was unavailable without turning an otherwise passed test into `blocked`; E2E is required only when admitted.
 
-## 5. Prepare The Handoff Or PR
+## 5. Prepare Feature PRs And The Terminal Handoff
 
 Perform the result Currentness Check before claiming completion. Delegate push plus PR lookup/preparation/creation to the PR Operator in [Internal Roles](references/internal-roles.md) under the exact derived draft-PR operation binding from the Execution Authorization Envelope. It must return an existing matching open PR for the same provider/account/repository/head/base rather than create a duplicate. In stacked mode, create or refresh each Feature draft PR only after its admitted pre-PR gates pass and preserve the declared base graph. Ask again only when PR delivery was excluded, the binding is ambiguous or unverifiable, the operation would mutate a protected branch, or scope would broaden. Draft-PR authority never implies ready conversion, merge, deployment, landing, credentials, or external/live-effect authority.
 
-Return:
+A Feature draft PR is an intermediate stack artifact unless the Terminal Result Rule is satisfied for the whole admitted delivery. Do not use a Feature PR, its CI state, or its review result as the coordinator's final handoff while other admitted graph nodes remain.
+
+Only after the Terminal Result Rule permits a final result, return:
 
 ```markdown
 Mode/outcome: <atlas | ad_hoc | prototype — delivered result>
@@ -87,6 +95,7 @@ Atlas binding/currentness: <exact Decision and result check, or not applicable>
 Execution map: <stable locator>
 Task waves: <completed waves and remaining non-blocking findings>
 Convergence/proof gates: <evidence under admitted allocation>
+Evidence Receipts: <final receipt references, selected output, or explicit attestation; retention limitations>
 Assumptions/typed limitations: <material exact items>
 Handoff: <PR link | verified integration branch | exact blocker>
 Merge/deployment: <separately authorized and performed elsewhere | not authorized>
