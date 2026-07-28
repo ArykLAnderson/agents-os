@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "6aaa51e4ed5f76d282a9fb09845a57798c0ac452a5cee035cf2c5b04fd77dca0"
+    "sha256": "60c2a34b02926c6c7270ad44dade36df404ec9db7b76b284f2704624131423bc"
   },
   "entrypoints": [
     {
@@ -1018,7 +1018,7 @@
       "id": "sqlite-admission-guards",
       "path": "variants/sqlite/lib/resource/admission-guards.mjs",
       "kind": "module",
-      "sha256": "c1b7f52b601416ffe1437198a4e68d3f450b43d54f2a98b98790bd6574a543f8"
+      "sha256": "017b4188ce98361b7a73306b026e4e186cee95611dd6641a6e94b37fccdd32e9"
     },
     {
       "id": "sqlite-frame-resource-complete",
@@ -1048,7 +1048,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "95bbb77a0eb338160998ea4bc16ba048bb0f8e24c2553e039da546ffbf6f249a"
+      "sha256": "e6a785a5c4972d4530dbd13c6df6f7ba169d01d017392ea48dd8a3fab8b35716"
     },
     {
       "id": "sqlite-wasm-node-module",
@@ -1108,7 +1108,7 @@
       "id": "asset-34",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "318b834d6b5111d69f6c10504a4c8f033ffc167111298522493e9146d6071028"
+      "sha256": "725f773f3e62775f3806bc6971208e9e58df28d940239fb6d6a038a4846f6fe2"
     },
     {
       "id": "asset-35",
