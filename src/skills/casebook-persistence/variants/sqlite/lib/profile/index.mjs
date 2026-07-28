@@ -139,10 +139,9 @@ async function admissionFailureIfAny(binary, storePath, prepared) {
 }
 function common(request, operation) {
   requireString(request.operation_id, "operation_id", 256);
-  requireId(request.workspace_id, "workspace_id", "workspace");
   requireId(request.store_id, "store_id", "store");
   requireId(request.admission_slot_id, "admission_slot_id", "admission-slot");
-  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, workspaceId: request.workspace_id, admissionSlotId: request.admission_slot_id, admission: request.admission });
+  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, admissionSlotId: request.admission_slot_id, admission: request.admission });
 }
 function eventSql({ eventId, operationId, ownerId, revisionId, type, payload, next, now }) {
   return `INSERT INTO owner_events VALUES(${sqlText(eventId)},${sqlText(operationId)},${sqlText(ownerId)},${sqlText(revisionId)},${sqlText(type)},${sqlText(JSON.stringify(payload))},${sqlText(successorDigest(payload))},${next},${sqlText(now)});`;
@@ -164,7 +163,6 @@ function genericVersionSql({ ownerId, ownerKind, expected, revisionId, versionId
 async function profileCreateOrRevise(request, operation) {
   const preparedStore = await prepareStore(request); if (preparedStore.failure) return preparedStore.failure;
   const { binary, storePath, state } = preparedStore;
-  if (request.store_id !== state.metadata.store_id || request.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
   const prepared = common(request, operation), claim = authority(request.authority_claim);
   const digestValue = canonicalProfileRequestDigest(state.metadata.store_id, request);
   if (request.request_digest !== digestValue) return failure("request_digest_mismatch", "request_digest does not match canonical Profile operation meaning.");
@@ -197,7 +195,6 @@ async function profileCreateOrRevise(request, operation) {
 async function profileActivate(request) {
   const preparedStore = await prepareStore(request); if (preparedStore.failure) return preparedStore.failure;
   const { binary, storePath, state } = preparedStore;
-  if (request.store_id !== state.metadata.store_id || request.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
   const prepared = common(request, "profile.activate"), claim = authority(request.authority_claim), digestValue = canonicalProfileRequestDigest(state.metadata.store_id, request);
   if (request.request_digest !== digestValue) return failure("request_digest_mismatch", "request_digest does not match canonical Profile activation meaning.");
   const existing = await readReceipt(binary, storePath, request.operation_id);
@@ -230,7 +227,6 @@ async function profileActivate(request) {
 async function profileRetire(request) {
   const preparedStore = await prepareStore(request); if (preparedStore.failure) return preparedStore.failure;
   const { binary, storePath, state } = preparedStore;
-  if (request.store_id !== state.metadata.store_id || request.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
   const prepared = common(request, "profile.retire"), claim = authority(request.authority_claim), digestValue = canonicalProfileRequestDigest(state.metadata.store_id, request);
   if (request.request_digest !== digestValue) return failure("request_digest_mismatch", "request_digest does not match canonical Profile retirement meaning.");
   const existing = await readReceipt(binary, storePath, request.operation_id);
@@ -269,7 +265,6 @@ async function profileRetire(request) {
 async function profileRead(request, history) {
   const preparedStore = await prepareStore(request); if (preparedStore.failure) return preparedStore.failure;
   const { binary, storePath, state } = preparedStore;
-  if (request.store_id !== state.metadata.store_id || request.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
   const operation = history ? "profile.history" : "profile.read", prepared = common(request, operation);
   requireId(request.profile_id, "profile_id", "profile");
   { const denied = await admissionFailureIfAny(binary, storePath, prepared); if (denied) return denied; }

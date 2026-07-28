@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "253bc6e57b252ca32222c1d454217904d622d7e5f5b97ac8aab390918084073d"
+    "sha256": "e00bbd5d34ef7438803d1316891a1870713caff261f9d464e824ec136a444bb9"
   },
   "entrypoints": [
     {
@@ -911,22 +911,16 @@
   ],
   "assets": [
     {
+      "id": "shared-protocol",
+      "path": "shared/protocol.mjs",
+      "kind": "module",
+      "sha256": "3c1a7b9fb0d1d755b446ff51982356bf14d90619b6f13c9dc4e373375b693404"
+    },
+    {
       "id": "shared-configuration",
       "path": "shared/config.mjs",
       "kind": "module",
-      "sha256": "039ae4ad081962fac58ba48d4993fda19458d737f13991fd70053c6c62a87162"
-    },
-    {
-      "id": "runtime-shared-l01-interchange-mjs",
-      "path": "shared/l01-interchange.mjs",
-      "kind": "runtime_asset",
-      "sha256": "3629f4382fdd38b8b56f8b342328d137eeb92aa907d9557ffb57167350c9fdb1"
-    },
-    {
-      "id": "runtime-shared-locator-mjs",
-      "path": "shared/locator.mjs",
-      "kind": "runtime_asset",
-      "sha256": "8c49ae3014311c387beffa2ab57ec0095a0ab9b3e5be47c8e70c6f8a5ad5573a"
+      "sha256": "a1b8d3fc20e7407ad90c85fe567966ad39440ba53501daa1ef575076d7516bb5"
     },
     {
       "id": "shared-manifest",
@@ -935,232 +929,16 @@
       "sha256": "55bbd8fb0fce20cd384ff143039f65fd743c795629e7a371880bdf3de67970be"
     },
     {
-      "id": "shared-protocol",
-      "path": "shared/protocol.mjs",
-      "kind": "module",
-      "sha256": "3c1a7b9fb0d1d755b446ff51982356bf14d90619b6f13c9dc4e373375b693404"
-    },
-    {
-      "id": "runtime-variants-markdown-bin-casebook-persistence-mjs",
-      "path": "variants/markdown/bin/casebook-persistence.mjs",
-      "kind": "runtime_asset",
-      "sha256": "7047142c7e590e65571fe7b2d2dd06c705c58b4542b857c000eb30ce91469c4e"
-    },
-    {
-      "id": "runtime-variants-markdown-lib-interchange-mjs",
-      "path": "variants/markdown/lib/interchange.mjs",
-      "kind": "runtime_asset",
-      "sha256": "8541d7045f15f1d6155cbc9be442debc125396b45a7734e0ed6a284156853f97"
-    },
-    {
-      "id": "runtime-variants-markdown-lib-workspace-mjs",
-      "path": "variants/markdown/lib/workspace.mjs",
-      "kind": "runtime_asset",
-      "sha256": "61ca95c5ac8363fbdf1bea03e44de9cb562d1b6e78b1f79d5455363eae3c9823"
-    },
-    {
-      "id": "runtime-variants-markdown-variant-json",
-      "path": "variants/markdown/variant.json",
-      "kind": "runtime_asset",
-      "sha256": "800096fdc9ed3badea80be499eea264be3990ad12b82f25cbb695c0c5be08658"
-    },
-    {
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
       "sha256": "7f4113d21d0ff6f28df0edaab6ffbfbdf15c1a581858e7b6f178d5d909224198"
     },
     {
-      "id": "runtime-variants-sqlite-cutover-predecessor-v1-fingerprint-json",
-      "path": "variants/sqlite/cutover/predecessor-v1-fingerprint.json",
-      "kind": "runtime_asset",
-      "sha256": "8d8b76af9c673c96f51f92f43e56c2d75815894f17b75b64a7b8cc41b28dfc20"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-case-index-mjs",
-      "path": "variants/sqlite/lib/case/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "8bf040cb4549f2ff5d00a3579dc08affd6a8ece04adfe84b7e0a97df4e71fab3"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-case-resources-complete-mjs",
-      "path": "variants/sqlite/lib/case/resources/complete.mjs",
-      "kind": "runtime_asset",
-      "sha256": "cbf6e440a94faa9f1227a4fb51a4c1694f3561a803df64cc4f087ad748740d9e"
-    },
-    {
-      "id": "sqlite-case-successor-adapter",
-      "path": "variants/sqlite/lib/case/successor.mjs",
-      "kind": "module",
-      "sha256": "66b3d651c838a7c0b6d56cc09b011ea07f5fd14d1d7c5490187daa55f280f274"
-    },
-    {
-      "id": "sqlite-cli-admission",
-      "path": "variants/sqlite/lib/cli/index.mjs",
-      "kind": "module",
-      "sha256": "15c431bf542336d08b82b8f0ae20d642c75eb21c88896b498df7310e93e21360"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-common-index-mjs",
-      "path": "variants/sqlite/lib/common/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "a4c1fec38b65a3299591ecd39c796a92e9da9441d25d067e59dce08db72fecd8"
-    },
-    {
-      "id": "sqlite-context-service",
-      "path": "variants/sqlite/lib/context/index.mjs",
-      "kind": "module",
-      "sha256": "f931a7b7039c7ddbbb2786b49699f5070422922c9ba146b3a692370b90627403"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-export-index-mjs",
-      "path": "variants/sqlite/lib/export/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "b7b91c30abe6e9e1762b4ab42749ceb4801bd0ece1d27ecd53330933ed876c3c"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-frame-index-mjs",
-      "path": "variants/sqlite/lib/frame/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "fc592d5ef352bd58dc1cecdf1fe14fdac8a8cc08e6f742df56523d6ef6b45ab1"
-    },
-    {
-      "id": "sqlite-frame-resource-complete",
-      "path": "variants/sqlite/lib/frame/resources/complete.mjs",
-      "kind": "module",
-      "sha256": "d6b69432db4b045434a93cda8259355db5394c16efe635d04e6fe93af2140f40"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-frame-restricted-legacy-authority-evidence-mjs",
-      "path": "variants/sqlite/lib/frame/restricted-legacy-authority-evidence.mjs",
-      "kind": "runtime_asset",
-      "sha256": "7da431869f70101669d08900a63a24bda0a3d4a29db8afc73da9f6ebba4db144"
-    },
-    {
-      "id": "sqlite-frame-successor-adapter",
-      "path": "variants/sqlite/lib/frame/successor.mjs",
-      "kind": "module",
-      "sha256": "f2acc4e8f4a4dea8be9e116aabf8643529c6b47fc6c45364653376cb15b1228d"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-operations-index-mjs",
-      "path": "variants/sqlite/lib/operations/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "0c392fbdc03bf92e54cec2a82436413e434e10dbd7ab5f34190725e70ac8fcd4"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-operations-modules-mjs",
-      "path": "variants/sqlite/lib/operations/modules.mjs",
-      "kind": "runtime_asset",
-      "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
-    },
-    {
-      "id": "sqlite-placement-generation",
-      "path": "variants/sqlite/lib/placement/index.mjs",
-      "kind": "module",
-      "sha256": "572de0ccdbf2db53f46927205306db9e8836f8f301ddf7a593ae98984052de30"
-    },
-    {
-      "id": "sqlite-profile-service",
-      "path": "variants/sqlite/lib/profile/index.mjs",
-      "kind": "module",
-      "sha256": "68d3b19b1b7b0b386599b38c70bafb1222e38763385cd3b30ea47dd5e4971dea"
-    },
-    {
-      "id": "sqlite-query-cursor",
-      "path": "variants/sqlite/lib/query/cursor.mjs",
-      "kind": "module",
-      "sha256": "9e947675215f241a747c461c09010bf38c2118c97fd5a17aa57cfe011602ea92"
-    },
-    {
-      "id": "sqlite-graph-query",
-      "path": "variants/sqlite/lib/query/graph.mjs",
-      "kind": "module",
-      "sha256": "9d42890d5da97825fe6f94fc07a4fa8d53824d8da777b237600c7f3b8224e6ad"
-    },
-    {
-      "id": "sqlite-query-handoff",
-      "path": "variants/sqlite/lib/query/handoff.mjs",
-      "kind": "module",
-      "sha256": "7ab14ff2ba2ca81660d15196e87f05641ea10948018fe036343b5fb574a3e862"
-    },
-    {
-      "id": "sqlite-organizational-query",
-      "path": "variants/sqlite/lib/query/search.mjs",
-      "kind": "module",
-      "sha256": "48737b1631304c008f54d82c516aa223ff543e4a1e0e8daa3521c439ad07156b"
-    },
-    {
-      "id": "sqlite-snapshot-reconcile",
-      "path": "variants/sqlite/lib/query/snapshot-reconcile.mjs",
-      "kind": "module",
-      "sha256": "cfb4d6f3d9c2126fae8c03e21c31fd9a2ff04fc45192c2f3ec2c308ef242bccd"
-    },
-    {
-      "id": "sqlite-admission-guards",
-      "path": "variants/sqlite/lib/resource/admission-guards.mjs",
-      "kind": "module",
-      "sha256": "c7413b8a348771ea5c9a859a86da81e5234fa654ac5a0e0b448ba31ab1c1edfe"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-resource-foundation-mjs",
-      "path": "variants/sqlite/lib/resource/foundation.mjs",
-      "kind": "runtime_asset",
-      "sha256": "de91b5203799aa74e1b53b825cf04ab934faf793ead6ef217a4f0748a5257ba2"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-resource-graph-query-mjs",
-      "path": "variants/sqlite/lib/resource/graph-query.mjs",
-      "kind": "runtime_asset",
-      "sha256": "dd1403e81e02b012ffb0803a97a3e034794fe261ba773715af57a6f1eb9162a4"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-resource-historical-visibility-mjs",
-      "path": "variants/sqlite/lib/resource/historical-visibility.mjs",
-      "kind": "runtime_asset",
-      "sha256": "050d27ccac50df7dcb430ac7a86eb2775297cf5114bebdc0b70bcf5dbaaa8b64"
-    },
-    {
-      "id": "sqlite-exact-normalization",
-      "path": "variants/sqlite/lib/resource/normalization.mjs",
-      "kind": "module",
-      "sha256": "b01739f5d449503c6bbfb0bb8d9f37dba5d9cf0cfeae0bf2a79848ebc43267f7"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-resource-owner-lifecycle-mjs",
-      "path": "variants/sqlite/lib/resource/owner-lifecycle.mjs",
-      "kind": "runtime_asset",
-      "sha256": "703a02a4eda25cf60b46f7fb5de21eff3ca8ffa0fa6674c2a3a351d367a1fa3f"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-resource-registry-mjs",
-      "path": "variants/sqlite/lib/resource/registry.mjs",
-      "kind": "runtime_asset",
-      "sha256": "40cf5d55c8161983cf4a5fc7e3fd9700cae43b86d350b8750968774706efe00b"
-    },
-    {
-      "id": "sqlite-bootstrap",
-      "path": "variants/sqlite/lib/substrate/bootstrap.mjs",
-      "kind": "module",
-      "sha256": "4bbe9f40be62d41a3b0c21b5e7bbad11a4d392fedd6778849d163eda0076ec15"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-substrate-cutover-mjs",
-      "path": "variants/sqlite/lib/substrate/cutover.mjs",
-      "kind": "runtime_asset",
-      "sha256": "a7e7a4e5f109020fe3f20e28201f1f0a7a3941b87f63a58b5b8d9ae1fa8dfe84"
-    },
-    {
       "id": "sqlite-diagnostics",
       "path": "variants/sqlite/lib/substrate/diagnostics.mjs",
       "kind": "module",
-      "sha256": "7f95c380ba7748ca8bd2d33acf6f0e9d0fc0bdddf7925d59636727c4a07cd5c0"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-substrate-discovery-mjs",
-      "path": "variants/sqlite/lib/substrate/discovery.mjs",
-      "kind": "runtime_asset",
-      "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+      "sha256": "d4763acbbb00e2d2435faae2959cdb0ade71a1b7b30c51c76e601a3af430c021"
     },
     {
       "id": "sqlite-embedded-engine",
@@ -1169,94 +947,118 @@
       "sha256": "762b398591879107d9bcd621d211622dcd205f1f64285e5133ef8373f3a40b78"
     },
     {
-      "id": "runtime-variants-sqlite-lib-substrate-impact-mjs",
-      "path": "variants/sqlite/lib/substrate/impact.mjs",
-      "kind": "runtime_asset",
-      "sha256": "73b8ed2b7daad7c133f3b405b5d105cab3321d78edb977cc551bfcc07f38f680"
+      "id": "sqlite-bootstrap",
+      "path": "variants/sqlite/lib/substrate/bootstrap.mjs",
+      "kind": "module",
+      "sha256": "4d7a27c3da3f41798d193ec9d5419c31b766b8ad40990b87f35bc9a2a30e7036"
     },
     {
-      "id": "runtime-variants-sqlite-lib-substrate-index-mjs",
-      "path": "variants/sqlite/lib/substrate/index.mjs",
-      "kind": "runtime_asset",
-      "sha256": "d2612c317fb6942616cbd603e3d4d1f6ee9370455085a50892217ce529ea67c4"
+      "id": "sqlite-cli-admission",
+      "path": "variants/sqlite/lib/cli/index.mjs",
+      "kind": "module",
+      "sha256": "844446a5709cb8ea6eb5baca16e28bc57cdd3db1fbad18a0a90fbef8a417e63d"
     },
     {
-      "id": "runtime-variants-sqlite-lib-substrate-integrity-mjs",
-      "path": "variants/sqlite/lib/substrate/integrity.mjs",
-      "kind": "runtime_asset",
-      "sha256": "4345fcb395f1317516f93a9e06c1de34724d4b3901d9b252d0cd040a648e69ef"
+      "id": "sqlite-profile-service",
+      "path": "variants/sqlite/lib/profile/index.mjs",
+      "kind": "module",
+      "sha256": "41215ba16196ec1fa8047500037aadd6d6e873e874682873bdb36325081dd8fe"
+    },
+    {
+      "id": "sqlite-context-service",
+      "path": "variants/sqlite/lib/context/index.mjs",
+      "kind": "module",
+      "sha256": "47d143088d414a3128d5db0e1f6147a1f24b699910f3afeecb82630a24bca7e2"
+    },
+    {
+      "id": "sqlite-case-service",
+      "path": "variants/sqlite/lib/case/index.mjs",
+      "kind": "module",
+      "sha256": "8bf040cb4549f2ff5d00a3579dc08affd6a8ece04adfe84b7e0a97df4e71fab3"
+    },
+    {
+      "id": "sqlite-case-successor-adapter",
+      "path": "variants/sqlite/lib/case/successor.mjs",
+      "kind": "module",
+      "sha256": "40eb5690c248b46f98c4414ddd8c328d8f8e783d7784c97aae9748cccf7cc9bc"
+    },
+    {
+      "id": "sqlite-frame-successor-adapter",
+      "path": "variants/sqlite/lib/frame/successor.mjs",
+      "kind": "module",
+      "sha256": "0e5963af38db60d23488c9d4b515ed1de81ee58870d3a0720c04640da48650b4"
+    },
+    {
+      "id": "sqlite-placement-generation",
+      "path": "variants/sqlite/lib/placement/index.mjs",
+      "kind": "module",
+      "sha256": "553245bf07bdfd0a9b83bae4e70f5c4a251ab5115e55977216f16c480106dc08"
+    },
+    {
+      "id": "sqlite-organizational-query",
+      "path": "variants/sqlite/lib/query/search.mjs",
+      "kind": "module",
+      "sha256": "26b31abe28d4cfd293772f5b98ea31bff8b8c5ebccb965e674f0b4cb698fb2be"
+    },
+    {
+      "id": "sqlite-graph-query",
+      "path": "variants/sqlite/lib/query/graph.mjs",
+      "kind": "module",
+      "sha256": "13b75d86b354baa04f7d49d80a556d16aa857e45badd6319138a66a75da3b818"
+    },
+    {
+      "id": "sqlite-snapshot-reconcile",
+      "path": "variants/sqlite/lib/query/snapshot-reconcile.mjs",
+      "kind": "module",
+      "sha256": "aae36e22f99f7f9ad7185fbd4bd3f2f8768116ea93594c46531053643d47748e"
+    },
+    {
+      "id": "sqlite-query-cursor",
+      "path": "variants/sqlite/lib/query/cursor.mjs",
+      "kind": "module",
+      "sha256": "9e947675215f241a747c461c09010bf38c2118c97fd5a17aa57cfe011602ea92"
+    },
+    {
+      "id": "sqlite-query-handoff",
+      "path": "variants/sqlite/lib/query/handoff.mjs",
+      "kind": "module",
+      "sha256": "7ab14ff2ba2ca81660d15196e87f05641ea10948018fe036343b5fb574a3e862"
+    },
+    {
+      "id": "sqlite-admission-guards",
+      "path": "variants/sqlite/lib/resource/admission-guards.mjs",
+      "kind": "module",
+      "sha256": "c1b7f52b601416ffe1437198a4e68d3f450b43d54f2a98b98790bd6574a543f8"
+    },
+    {
+      "id": "sqlite-frame-resource-complete",
+      "path": "variants/sqlite/lib/frame/resources/complete.mjs",
+      "kind": "module",
+      "sha256": "d6b69432db4b045434a93cda8259355db5394c16efe635d04e6fe93af2140f40"
+    },
+    {
+      "id": "sqlite-exact-normalization",
+      "path": "variants/sqlite/lib/resource/normalization.mjs",
+      "kind": "module",
+      "sha256": "b01739f5d449503c6bbfb0bb8d9f37dba5d9cf0cfeae0bf2a79848ebc43267f7"
     },
     {
       "id": "sqlite-owner-neutral-substrate",
       "path": "variants/sqlite/lib/substrate/mechanical-successor.mjs",
       "kind": "module",
-      "sha256": "68d117ca9df028db5fffa48b69bc0f68d3b4eeab8579cf0fc2e4125c4e9e108a"
+      "sha256": "152df03a285031aa4f8734d11967c8780f2d1bd6f0d1ac617b869fc395e1e1b1"
     },
     {
-      "id": "runtime-variants-sqlite-lib-substrate-mechanical-mjs",
-      "path": "variants/sqlite/lib/substrate/mechanical.mjs",
-      "kind": "runtime_asset",
-      "sha256": "a8536212b1393f4a47480b81933a47a17a20304f422f86c0853e1a1a04df8515"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-substrate-observation-mjs",
-      "path": "variants/sqlite/lib/substrate/observation.mjs",
-      "kind": "runtime_asset",
-      "sha256": "4f0e2d93c2b0856cbd08d85fe20b71561f6e0298d98b35dff386bed646b5ff85"
-    },
-    {
-      "id": "runtime-variants-sqlite-lib-substrate-projection-mjs",
-      "path": "variants/sqlite/lib/substrate/projection.mjs",
-      "kind": "runtime_asset",
-      "sha256": "e66a1e28f5ba668047b3ebec9f3589d2d5649ee5c404af392a58ad30024ab356"
+      "id": "sqlite-successor-schema",
+      "path": "variants/sqlite/sql/schema-successor.sql",
+      "kind": "sql",
+      "sha256": "98653603b7563f4dba811a764db965796e42bf521fd0bfc5ce3ca10bbc768733"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
       "sha256": "95bbb77a0eb338160998ea4bc16ba048bb0f8e24c2553e039da546ffbf6f249a"
-    },
-    {
-      "id": "runtime-variants-sqlite-migrations-0003-namespace-foundation-sql",
-      "path": "variants/sqlite/migrations/0003-namespace-foundation.sql",
-      "kind": "runtime_asset",
-      "sha256": "b1cdb2c367e968ab7318a054e44f0c11ffdcc16367fd5fe98082a6902973c4b2"
-    },
-    {
-      "id": "runtime-variants-sqlite-migrations-manifest-json",
-      "path": "variants/sqlite/migrations/manifest.json",
-      "kind": "runtime_asset",
-      "sha256": "27f7fe621bd9609f410f7bb69710a4c3240631e82e845debc81e4442d9a725e1"
-    },
-    {
-      "id": "runtime-variants-sqlite-sql-schema-final-sql",
-      "path": "variants/sqlite/sql/schema-final.sql",
-      "kind": "runtime_asset",
-      "sha256": "8aa213dab7bb78b37f2652ff6ad31522c8c3a6cd61dfad99adc118087af6d0a8"
-    },
-    {
-      "id": "sqlite-successor-schema",
-      "path": "variants/sqlite/sql/schema-successor.sql",
-      "kind": "sql",
-      "sha256": "25f0c8ffe7fa896046fc62e0ce76cf34e2c2b13c35d9917ac5ef3fafb74da8c8"
-    },
-    {
-      "id": "runtime-variants-sqlite-sql-schema-v1-sql",
-      "path": "variants/sqlite/sql/schema-v1.sql",
-      "kind": "runtime_asset",
-      "sha256": "c718e43f576de0235df5ea23f023bef5e904af1c14844bfaa74dd16f4fece42d"
-    },
-    {
-      "id": "runtime-variants-sqlite-sql-schema-v3-sql",
-      "path": "variants/sqlite/sql/schema-v3.sql",
-      "kind": "runtime_asset",
-      "sha256": "c3df3b4b20537c30900e474601ae9623d15aaac3565420542418acf72f523200"
-    },
-    {
-      "id": "sqlite-wasm-license-notice",
-      "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt",
-      "kind": "license_notice",
-      "sha256": "9f5f68675d98acdfaa5f21d26e02392834c799302fc73f3ebcaff82419a05efb"
     },
     {
       "id": "sqlite-wasm-node-module",
@@ -1269,6 +1071,144 @@
       "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/sqlite3.wasm",
       "kind": "vendored_runtime",
       "sha256": "02d7e48164395fa68f81c6ec33e9da5461be397dc57602ac0cd89b4bbba1d312"
+    },
+    {
+      "id": "sqlite-wasm-license-notice",
+      "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt",
+      "kind": "license_notice",
+      "sha256": "9f5f68675d98acdfaa5f21d26e02392834c799302fc73f3ebcaff82419a05efb"
+    },
+    {
+      "id": "asset-28",
+      "path": "shared/l01-interchange.mjs",
+      "kind": "module",
+      "sha256": "3629f4382fdd38b8b56f8b342328d137eeb92aa907d9557ffb57167350c9fdb1"
+    },
+    {
+      "id": "asset-29",
+      "path": "shared/locator.mjs",
+      "kind": "module",
+      "sha256": "8c49ae3014311c387beffa2ab57ec0095a0ab9b3e5be47c8e70c6f8a5ad5573a"
+    },
+    {
+      "id": "asset-30",
+      "path": "variants/sqlite/lib/case/resources/complete.mjs",
+      "kind": "module",
+      "sha256": "cbf6e440a94faa9f1227a4fb51a4c1694f3561a803df64cc4f087ad748740d9e"
+    },
+    {
+      "id": "asset-31",
+      "path": "variants/sqlite/lib/common/index.mjs",
+      "kind": "module",
+      "sha256": "a4c1fec38b65a3299591ecd39c796a92e9da9441d25d067e59dce08db72fecd8"
+    },
+    {
+      "id": "asset-32",
+      "path": "variants/sqlite/lib/export/index.mjs",
+      "kind": "module",
+      "sha256": "b7b91c30abe6e9e1762b4ab42749ceb4801bd0ece1d27ecd53330933ed876c3c"
+    },
+    {
+      "id": "asset-33",
+      "path": "variants/sqlite/lib/frame/index.mjs",
+      "kind": "module",
+      "sha256": "fc592d5ef352bd58dc1cecdf1fe14fdac8a8cc08e6f742df56523d6ef6b45ab1"
+    },
+    {
+      "id": "asset-34",
+      "path": "variants/sqlite/lib/frame/restricted-legacy-authority-evidence.mjs",
+      "kind": "module",
+      "sha256": "7da431869f70101669d08900a63a24bda0a3d4a29db8afc73da9f6ebba4db144"
+    },
+    {
+      "id": "asset-35",
+      "path": "variants/sqlite/lib/operations/index.mjs",
+      "kind": "module",
+      "sha256": "175acdf95ad307ce0af2587508bae20305a957fd4ba7bc631c0a41fe2067839d"
+    },
+    {
+      "id": "asset-36",
+      "path": "variants/sqlite/lib/operations/modules.mjs",
+      "kind": "module",
+      "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
+    },
+    {
+      "id": "asset-37",
+      "path": "variants/sqlite/lib/resource/foundation.mjs",
+      "kind": "module",
+      "sha256": "de91b5203799aa74e1b53b825cf04ab934faf793ead6ef217a4f0748a5257ba2"
+    },
+    {
+      "id": "asset-38",
+      "path": "variants/sqlite/lib/resource/graph-query.mjs",
+      "kind": "module",
+      "sha256": "dd1403e81e02b012ffb0803a97a3e034794fe261ba773715af57a6f1eb9162a4"
+    },
+    {
+      "id": "asset-39",
+      "path": "variants/sqlite/lib/resource/historical-visibility.mjs",
+      "kind": "module",
+      "sha256": "050d27ccac50df7dcb430ac7a86eb2775297cf5114bebdc0b70bcf5dbaaa8b64"
+    },
+    {
+      "id": "asset-40",
+      "path": "variants/sqlite/lib/resource/owner-lifecycle.mjs",
+      "kind": "module",
+      "sha256": "703a02a4eda25cf60b46f7fb5de21eff3ca8ffa0fa6674c2a3a351d367a1fa3f"
+    },
+    {
+      "id": "asset-41",
+      "path": "variants/sqlite/lib/resource/registry.mjs",
+      "kind": "module",
+      "sha256": "40cf5d55c8161983cf4a5fc7e3fd9700cae43b86d350b8750968774706efe00b"
+    },
+    {
+      "id": "asset-42",
+      "path": "variants/sqlite/lib/substrate/cutover.mjs",
+      "kind": "module",
+      "sha256": "af7734c5bd23bf896e7bf54608cdf761c8d804e2caf85147fc6d671f0245bc0d"
+    },
+    {
+      "id": "asset-43",
+      "path": "variants/sqlite/lib/substrate/discovery.mjs",
+      "kind": "module",
+      "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+    },
+    {
+      "id": "asset-44",
+      "path": "variants/sqlite/lib/substrate/impact.mjs",
+      "kind": "module",
+      "sha256": "73b8ed2b7daad7c133f3b405b5d105cab3321d78edb977cc551bfcc07f38f680"
+    },
+    {
+      "id": "asset-45",
+      "path": "variants/sqlite/lib/substrate/index.mjs",
+      "kind": "module",
+      "sha256": "54adc4fe112b51e658da5dde6c576ff8ce644c644c170313776297c187d0e52c"
+    },
+    {
+      "id": "asset-46",
+      "path": "variants/sqlite/lib/substrate/integrity.mjs",
+      "kind": "module",
+      "sha256": "4345fcb395f1317516f93a9e06c1de34724d4b3901d9b252d0cd040a648e69ef"
+    },
+    {
+      "id": "asset-47",
+      "path": "variants/sqlite/lib/substrate/mechanical.mjs",
+      "kind": "module",
+      "sha256": "a8536212b1393f4a47480b81933a47a17a20304f422f86c0853e1a1a04df8515"
+    },
+    {
+      "id": "asset-48",
+      "path": "variants/sqlite/lib/substrate/observation.mjs",
+      "kind": "module",
+      "sha256": "4f0e2d93c2b0856cbd08d85fe20b71561f6e0298d98b35dff386bed646b5ff85"
+    },
+    {
+      "id": "asset-49",
+      "path": "variants/sqlite/lib/substrate/projection.mjs",
+      "kind": "module",
+      "sha256": "e66a1e28f5ba668047b3ebec9f3589d2d5649ee5c404af392a58ad30024ab356"
     }
   ],
   "result": {

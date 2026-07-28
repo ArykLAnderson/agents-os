@@ -6,7 +6,7 @@ const testFault = () => process.env.CASEBOOK_CLI_TEST_HOOK === TEST_HOOK
   ? process.env.CASEBOOK_CLI_TEST_BRIDGE_FAULT
   : null;
 const failure = (code, message) => ({ ok: false, failure: { code, message } });
-const config = (workspace, store) => ({ source: { kind: "workspace-root", locator: workspace }, authority_mode: "sqlite", sqlite: { database_url: store } });
+const config = (store) => ({ authority_mode: "sqlite", sqlite: { database_url: store } });
 const provenance = { acting_role: "casebook-cli", authority_basis: "trusted-local standalone CLI invocation" };
 
 async function runtime() {
@@ -22,11 +22,11 @@ async function runtime() {
 }
 function common(request) {
   const target = request.target;
-  return { protocol, request_version: 1, store_id: target.store_id, workspace_id: target.workspace_id, admission_slot_id: target.admission_slot_id, admission: { kind: "sqlite_profile", binding: { selection_id: target.profile_selection_id, selection_revision_id: target.profile_selection_revision_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence } }, configuration: config(request.workspace, request.store) };
+  return { protocol, request_version: 1, store_id: target.store_id, admission_slot_id: target.admission_slot_id, admission: { kind: "sqlite_profile", binding: { selection_id: target.profile_selection_id, selection_revision_id: target.profile_selection_revision_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence } }, configuration: config(request.store) };
 }
 async function dispatch(request) {
   const provider = await runtime();
-  if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, workspace_locator: request.workspace, configuration: config(request.workspace, request.store) });
+  if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: config(request.store) });
   const base = common(request), flags = request.flags ?? {};
   const placement = flags.namespace_id ? { placement: { namespace_id: flags.namespace_id } } : {};
   if (request.operation === "case.create" || request.operation === "case.commit_revision") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "case.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, case: request.aggregate, ...placement });

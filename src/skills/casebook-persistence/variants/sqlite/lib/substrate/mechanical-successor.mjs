@@ -89,7 +89,6 @@ function validateEnvelope(value) {
   if (value.envelope_version !== 1) throw new MechanicalError("substrate_request_invalid", "envelope_version must be 1.");
   requireString(value.operation_id, "envelope.operation_id", 256);
   requireId(value.store_id, "envelope.store_id", "store");
-  requireId(value.workspace_id, "envelope.workspace_id", "workspace");
   requireId(value.admission_slot_id, "envelope.admission_slot_id", "admission-slot");
   requireObject(value.admission, "envelope.admission");
   if (value.owner_policy_guard != null) requireObject(value.owner_policy_guard, "envelope.owner_policy_guard");
@@ -150,7 +149,7 @@ function publicReceipt(row) { const value = { ...row }; delete value.result_json
 function replayResponse(receipt, replay) { return receipt.outcome === "rejected" ? JSON.parse(receipt.result_json) : success(receipt.operation_kind, { ...receipt.result, receipt: publicReceipt(receipt), idempotent_replay: replay }); }
 function mismatch(operationId) { return failure("idempotency_mismatch", "operation_id is settled for different canonical meaning.", { failureClass: "idempotency_mismatch", evidence: { operation_id: operationId } }); }
 function prepareRequestAdmission(request, operation) {
-  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, workspaceId: request.workspace_id, admissionSlotId: request.admission_slot_id, admission: request.admission });
+  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, admissionSlotId: request.admission_slot_id, admission: request.admission });
 }
 async function inspectAdmission(binary, storePath, admission) {
   const rows = await queryJson(binary, storePath, `SELECT CASE WHEN ${profileBindingPredicate(admission)} THEN 1 ELSE 0 END binding_ok,CASE WHEN ${profileAdmissionPredicate(admission)} THEN 1 ELSE 0 END admission_ok;`);
@@ -183,8 +182,7 @@ async function settleRejected(binary, storePath, state, envelope, response, obse
 async function commitRevision(request, admissionRegistry) {
   const envelope = validateEnvelope(request.envelope);
   const admission = prepareAdmission({
-    registry: admissionRegistry, operation: "substrate.commit_revision",
-    workspaceId: envelope.workspace_id, admissionSlotId: envelope.admission_slot_id,
+    registry: admissionRegistry, operation: "substrate.commit_revision", admissionSlotId: envelope.admission_slot_id,
     admission: envelope.admission, ownerPolicyGuard: envelope.owner_policy_guard ?? null, targetOwnerKind: envelope.owner.kind,
   });
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
@@ -193,7 +191,6 @@ async function commitRevision(request, admissionRegistry) {
   if (envelope.request_digest !== expectedDigest) return failure("request_digest_mismatch", "request_digest does not match canonical resolved-store meaning.", { failureClass: "representation_invalid" });
   const existing = await readReceipt(binary, storePath, envelope.operation_id);
   if (existing) return existing.operation_kind === "substrate.commit_revision" && existing.request_digest === expectedDigest ? replayResponse(existing, true) : mismatch(envelope.operation_id);
-  if (envelope.store_id !== state.metadata.store_id || envelope.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable resolved store/workspace identity differs.");
   const admissionRows = await queryJson(binary, storePath, `SELECT CASE WHEN ${profileBindingPredicate(admission)} THEN 1 ELSE 0 END binding_ok,CASE WHEN ${profileAdmissionPredicate(admission)} THEN 1 ELSE 0 END profile_ok,CASE WHEN ${ownerPolicyPredicate(admission)} THEN 1 ELSE 0 END policy_ok;`);
   if (admissionRows[0]?.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection or activation fence changed.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
   if (admissionRows[0]?.profile_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit the provider-derived purpose or target kind.", { failureClass: "profile_guard_denied" });
@@ -272,14 +269,12 @@ async function commitRevision(request, admissionRegistry) {
 
 async function readOwner(request, exactRevision = false) {
   requireId(request.store_id, "store_id", "store");
-  requireId(request.workspace_id, "workspace_id", "workspace");
   requireId(request.admission_slot_id, "admission_slot_id", "admission-slot");
   requireObject(request.owner, "owner");
   requireId(request.owner.id, "owner.id", request.owner.kind);
   requireString(request.owner.kind, "owner.kind", 64);
   if (exactRevision) requireId(request.revision_id, "revision_id", "owner-revision");
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
-  if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return success(exactRevision ? "substrate.read_owner_revision" : "substrate.read_owner_current", { status: "not_visible" });
   const operation = exactRevision ? "substrate.read_owner_revision" : "substrate.read_owner_current";
   const admission = prepareRequestAdmission(request, operation);
   const admissionStatus = await inspectAdmission(prepared.binary, prepared.storePath, admission);
@@ -299,7 +294,7 @@ async function readOwner(request, exactRevision = false) {
 }
 
 async function resolveFamilyBinding(request) {
-  requireId(request.store_id, "store_id", "store"); requireId(request.workspace_id, "workspace_id", "workspace"); requireId(request.admission_slot_id, "admission_slot_id", "admission-slot");
+  requireId(request.store_id, "store_id", "store"); requireId(request.admission_slot_id, "admission_slot_id", "admission-slot");
   requireString(request.owner_kind, "owner_kind", 64); if (!OWNER_KINDS.has(request.owner_kind)) throw new MechanicalError("owner_kind_unknown", "The owner kind is not registered by the successor substrate.");
   requireId(request.family_id, "family_id"); requireObject(request.selector, "selector");
   const current = Object.keys(request.selector).length === 1 && request.selector.current === true;
@@ -307,7 +302,6 @@ async function resolveFamilyBinding(request) {
   if (!current && !historical) throw new MechanicalError("substrate_request_invalid", "selector must select current or one exact owner revision.");
   if (historical) requireId(request.selector.owner_revision_id, "selector.owner_revision_id", "owner-revision");
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
-  if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return success("substrate.resolve_family_binding", { status: "not_visible" });
   const admission = prepareRequestAdmission(request, "substrate.resolve_family_binding"); const status = await inspectAdmission(prepared.binary, prepared.storePath, admission);
   if (status.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection changed before family binding disclosure.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
   if (status.admission_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit family binding disclosure.", { failureClass: "profile_guard_denied" });
@@ -319,10 +313,9 @@ async function resolveFamilyBinding(request) {
   return success("substrate.resolve_family_binding", { status: "found", owner: { id: row.owner_id, kind: row.owner_kind }, owner_revision: { id: row.revision_id, number: row.revision_number }, family: { id: request.family_id, version_id: row.version_id }, operation_fence: row.operation_fence });
 }
 async function resolveCurrentClaim(request) {
-  requireId(request.store_id, "store_id", "store"); requireId(request.workspace_id, "workspace_id", "workspace"); requireId(request.admission_slot_id, "admission_slot_id", "admission-slot"); requireString(request.owner_kind, "owner_kind", 64); requireString(request.claim_type, "claim_type", 128); requireId(request.namespace_id, "namespace_id", "namespace");
+  requireId(request.store_id, "store_id", "store"); requireId(request.admission_slot_id, "admission_slot_id", "admission-slot"); requireString(request.owner_kind, "owner_kind", 64); requireString(request.claim_type, "claim_type", 128); requireId(request.namespace_id, "namespace_id", "namespace");
   if (normalizeExactLocator(requireString(request.normalized_value, "normalized_value", 256)) !== request.normalized_value) throw new MechanicalError("substrate_request_invalid", "normalized_value is not canonically normalized.");
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
-  if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return success("substrate.resolve_current_claim", { status: "zero" });
   const admission = prepareRequestAdmission(request, "substrate.resolve_current_claim"); const status = await inspectAdmission(prepared.binary, prepared.storePath, admission);
   if (status.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection changed before claim disclosure.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE }); if (status.admission_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit claim disclosure.", { failureClass: "profile_guard_denied" });
   const rows = await queryJson(prepared.binary, prepared.storePath, `SELECT c.owner_id,c.owner_revision_id,(SELECT revision_number FROM owner_revisions r WHERE r.revision_id=c.owner_revision_id) revision_number,(SELECT operation_fence FROM store_fence WHERE singleton=1) operation_fence FROM owner_current_claims c WHERE c.owner_kind=${sqlText(request.owner_kind)} AND c.claim_type=${sqlText(request.claim_type)} AND c.namespace_id=${sqlText(request.namespace_id)} AND c.normalized_value=${sqlText(request.normalized_value)} AND ${profileAdmissionPredicate(admission)} LIMIT 2;`);
@@ -333,7 +326,6 @@ async function getReceipt(request) {
   requireId(request.store_id, "store_id", "store"); requireString(request.operation_id, "operation_id", 256);
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
   const admission = prepareRequestAdmission(request, "substrate.get_receipt");
-  if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return success("substrate.get_receipt", { status: "not_visible" });
   const admissionStatus = await inspectAdmission(prepared.binary, prepared.storePath, admission);
   if (admissionStatus.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection or receipt-disclosure fence changed.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
   if (admissionStatus.admission_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit receipt disclosure.", { failureClass: "profile_guard_denied" });
@@ -344,7 +336,6 @@ async function getReceipt(request) {
 async function observeIntegrity(request) {
   requireId(request.store_id, "store_id", "store"); const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
   const admission = prepareRequestAdmission(request, "integrity.observe");
-  if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return failure("store_target_mismatch", "Store/workspace identity differs.");
   const admissionStatus = await inspectAdmission(prepared.binary, prepared.storePath, admission);
   if (admissionStatus.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection or integrity purpose fence changed.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
   if (admissionStatus.admission_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit integrity observation.", { failureClass: "profile_guard_denied" });
@@ -369,9 +360,9 @@ async function rebuildProjection(request) {
   requireId(request.store_id, "store_id", "store"); requireString(request.operation_id, "operation_id", 256);
   if (!Number.isInteger(request.expected_fence) || request.expected_fence < 1) throw new MechanicalError("projection_rebuild_invalid", "expected_fence must be positive.");
   const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
-  const { binary, storePath, state } = prepared; if (request.store_id !== state.metadata.store_id || request.workspace_id !== state.metadata.workspace_id) return failure("store_target_mismatch", "Store/workspace identity differs.");
+  const { binary, storePath, state } = prepared;
   const admission = prepareRequestAdmission(request, "projection.rebuild");
-  const requestDigest = successorDigest({ domain: "casebook-successor-projection-rebuild@1", store_id: request.store_id, workspace_id: request.workspace_id, operation_id: request.operation_id, expected_fence: request.expected_fence, admission_slot_id: request.admission_slot_id, admission: request.admission });
+  const requestDigest = successorDigest({ domain: "casebook-successor-projection-rebuild@1", store_id: request.store_id, operation_id: request.operation_id, expected_fence: request.expected_fence, admission_slot_id: request.admission_slot_id, admission: request.admission });
   const existing = await readReceipt(binary, storePath, request.operation_id); if (existing) return existing.request_digest === requestDigest ? replayResponse(existing, true) : mismatch(request.operation_id);
   const admissionStatus = await inspectAdmission(binary, storePath, admission);
   if (admissionStatus.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection or projection purpose fence changed.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
@@ -403,13 +394,9 @@ async function rebuildProjection(request) {
 export async function authorizeSuccessorOperation(request, operation, targetOwnerKind) {
   try {
     requireId(request.store_id, "store_id", "store");
-    requireId(request.workspace_id, "workspace_id", "workspace");
     requireId(request.admission_slot_id, "admission_slot_id", "admission-slot");
     const prepared = await prepare(request); if (prepared.failure) return prepared.failure;
-    if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) {
-      return failure("store_target_mismatch", "The immutable resolved store/workspace identity differs.", { failureClass: "store_target_mismatch" });
-    }
-    const admission = prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, workspaceId: request.workspace_id, admissionSlotId: request.admission_slot_id, admission: request.admission, targetOwnerKind });
+    const admission = prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, admissionSlotId: request.admission_slot_id, admission: request.admission, targetOwnerKind });
     const status = await inspectAdmission(prepared.binary, prepared.storePath, admission);
     if (status.binding_ok !== 1) return failure("profile_changed", "The exact Profile selection changed before operation access.", { failureClass: "profile_changed", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
     if (status.admission_ok !== 1) return failure("profile_guard_denied", "The selected Profile does not admit the provider-derived operation.", { failureClass: "profile_guard_denied" });

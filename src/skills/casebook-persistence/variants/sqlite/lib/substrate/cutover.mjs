@@ -197,7 +197,7 @@ async function buildFinal(sourcePath, siblingPath, admitted, request, snapshot, 
     destination.exec("PRAGMA foreign_keys=ON; BEGIN IMMEDIATE;");
     const metadata = one(source, "SELECT * FROM store_metadata WHERE singleton=1");
     insert(destination, "store_metadata", { ...metadata, schema_id: SCHEMA_ID, schema_version: SCHEMA_VERSION });
-    for (const table of ["store_authority_binding", "namespaces", "view_families"]) for (const row of rows(source, `SELECT * FROM ${table}`)) insert(destination, table, row);
+    for (const table of ["namespaces", "view_families"] ) for (const row of rows(source, `SELECT * FROM ${table}`)) insert(destination, table, row);
     copyViewPolicy(source, destination);
     insert(destination, "store_fence", { singleton: 1, operation_fence: admitted.operationFence + 1 });
     for (const row of canonical.owners) insert(destination, "owners", row);

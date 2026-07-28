@@ -21,7 +21,6 @@ const REQUIRED_TABLES = Object.freeze([
   "owner_versions",
   "owners",
   "schema_migrations",
-  "store_authority_binding",
   "store_cutovers",
   "store_fence",
   "store_metadata",
@@ -58,63 +57,6 @@ function unavailable(code, evidence = {}) {
 
 export async function storeExists(storePath) {
   return lstat(storePath).then((entry) => entry.isFile()).catch(() => false);
-}
-
-export async function bindStoreAuthorityIfAuthorized(binary, storePath, configuration, request) {
-  if (request?.authority_claim?.human_authorized !== true
-    || typeof request.operation_id !== "string" || !request.operation_id.trim()
-    || typeof request.store_id !== "string") return false;
-  let rows;
-  try {
-    rows = await queryJson(binary, storePath, `
-      SELECT m.store_id,m.schema_id,m.schema_version,m.protocol_id,m.protocol_version,
-        (SELECT application_id FROM pragma_application_id) AS application_id,
-        (SELECT user_version FROM pragma_user_version) AS user_version,
-        (SELECT json_group_array(name) FROM (SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name)) AS tables
-      FROM store_metadata m WHERE singleton=1;
-    `);
-  } catch {
-    return false;
-  }
-  const observed = rows[0];
-  const tableValues = typeof observed?.tables === "string" ? JSON.parse(observed.tables) : observed?.tables;
-  const tables = new Set(tableValues ?? []);
-  const requiredBeforeBinding = REQUIRED_TABLES.filter((table) => table !== "store_authority_binding");
-  if (rows.length !== 1 || observed.store_id !== request.store_id
-    || observed.schema_id !== SCHEMA_ID || !SUPPORTED_SCHEMA_VERSIONS.includes(observed.schema_version)
-    || observed.protocol_id !== PROTOCOL_ID || observed.protocol_version !== PROTOCOL_VERSION
-    || observed.application_id !== APPLICATION_ID || observed.user_version !== observed.schema_version
-    || requiredBeforeBinding.some((table) => !tables.has(table))) return false;
-  if (tables.has("store_authority_binding")) {
-    const count = await queryJson(binary, storePath, "SELECT count(*) AS binding_count FROM store_authority_binding;").catch(() => []);
-    if (count[0]?.binding_count !== 0) return false;
-  }
-  const now = new Date().toISOString();
-  try {
-    await sqlite(binary, storePath, `.bail on\nPRAGMA foreign_keys=ON;\nPRAGMA busy_timeout=5000;\nBEGIN IMMEDIATE;
-      CREATE TABLE IF NOT EXISTS store_authority_binding (
-        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-        store_id TEXT NOT NULL UNIQUE REFERENCES store_metadata(store_id),
-        source_kind TEXT NOT NULL,
-        source_locator TEXT NOT NULL,
-        authority_mode TEXT NOT NULL CHECK (authority_mode = 'sqlite'),
-        bound_at TEXT NOT NULL,
-        binding_operation_id TEXT NOT NULL
-      ) STRICT;
-      CREATE TRIGGER IF NOT EXISTS store_authority_binding_immutable_update
-      BEFORE UPDATE ON store_authority_binding
-      BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration'); END;
-      CREATE TRIGGER IF NOT EXISTS store_authority_binding_immutable_delete
-      BEFORE DELETE ON store_authority_binding
-      BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration'); END;
-      INSERT INTO store_authority_binding(singleton,store_id,source_kind,source_locator,authority_mode,bound_at,binding_operation_id)
-      SELECT 1,${sqlText(request.store_id)},${sqlText(configuration.source.kind)},${sqlText(configuration.source.locator)},'sqlite',${sqlText(now)},${sqlText(request.operation_id)}
-      WHERE NOT EXISTS(SELECT 1 FROM store_authority_binding);
-      COMMIT;`, { args: ["-batch", "-bail"], timeout: 20_000, maxBuffer: 4 * 1024 * 1024 });
-  } catch {
-    return false;
-  }
-  return true;
 }
 
 export async function inspectStore(binary, storePath) {
@@ -182,15 +124,6 @@ export async function inspectStore(binary, storePath) {
           'initialization_operation_id', initialization_operation_id
         ) FROM store_metadata WHERE singleton = 1),
         'metadata_count', (SELECT count(*) FROM store_metadata),
-        'authority_binding', (SELECT json_object(
-          'store_id', store_id,
-          'source_kind', source_kind,
-          'source_locator', source_locator,
-          'authority_mode', authority_mode,
-          'bound_at', bound_at,
-          'binding_operation_id', binding_operation_id
-        ) FROM store_authority_binding WHERE singleton = 1),
-        'authority_binding_count', (SELECT count(*) FROM store_authority_binding),
         'namespace', (SELECT json_object(
           'namespace_id', namespace_id,
           'namespace_key', namespace_key,
@@ -273,7 +206,7 @@ export async function inspectStore(binary, storePath) {
       ) AS inspection_json;
     `);
     detail = JSON.parse(rows[0]?.inspection_json ?? "{}");
-    for (const key of ["metadata", "authority_binding", "namespace", "view", "migration", "latest_migration", "cutover"]) {
+    for (const key of ["metadata", "namespace", "view", "migration", "latest_migration", "cutover"]) {
       if (typeof detail[key] === "string") detail[key] = JSON.parse(detail[key]);
     }
   } catch {
@@ -307,13 +240,6 @@ export async function inspectStore(binary, storePath) {
 
   const complete = detail.metadata_count === 1
     && detail.metadata.store_id?.startsWith("store:")
-    && detail.authority_binding_count === 1
-    && detail.authority_binding?.store_id === detail.metadata.store_id
-    && detail.authority_binding?.authority_mode === "sqlite"
-    && typeof detail.authority_binding?.source_kind === "string"
-    && detail.authority_binding.source_kind.length > 0
-    && typeof detail.authority_binding?.source_locator === "string"
-    && detail.authority_binding.source_locator.length > 0
     && detail.namespace_count >= 1
     && detail.active_namespace_count >= 1
     && detail.view_family_count >= 1
@@ -356,7 +282,6 @@ export async function inspectStore(binary, storePath) {
     return unavailable("store_partial_initialization", {
       components: {
         metadata: detail.metadata_count,
-        authority_binding: detail.authority_binding_count,
         namespaces: detail.namespace_count,
         view_families: detail.view_family_count,
         policy_revisions: detail.policy_revision_count,
@@ -383,7 +308,6 @@ export async function inspectStore(binary, storePath) {
   return {
     status: "available",
     metadata: detail.metadata,
-    authority_binding: detail.authority_binding,
     namespace: detail.namespace,
     view: detail.view,
     operation_fence: detail.operation_fence,
@@ -541,17 +465,12 @@ export async function createInitializedStore(binary, storePath, initialization) 
   const temporaryStore = path.join(temporaryDirectory, "store.sqlite3");
   try {
     const schema = await readFile(SQL_ASSET, "utf8");
-    const { identities, receipt, migration, authorityClaim, authorityBinding, initializedAt } = initialization;
+    const { identities, receipt, migration, authorityClaim, initializedAt } = initialization;
     const command = `.bail on\nPRAGMA busy_timeout = 5000;\nPRAGMA journal_mode = WAL;\nPRAGMA application_id = ${APPLICATION_ID};\nBEGIN IMMEDIATE;\n${schema}\n
       INSERT INTO store_metadata VALUES (
         1, ${sqlText(identities.storeId)}, ${sqlText(SCHEMA_ID)}, ${SCHEMA_VERSION},
         ${sqlText(initialization.protocol.id)}, ${initialization.protocol.version},
         ${sqlText(initializedAt)}, ${sqlText(receipt.operation_id)}
-      );
-      INSERT INTO store_authority_binding VALUES (
-        1, ${sqlText(identities.storeId)}, ${sqlText(authorityBinding.source.kind)},
-        ${sqlText(authorityBinding.source.locator)}, 'sqlite', ${sqlText(initializedAt)},
-        ${sqlText(receipt.operation_id)}
       );
       INSERT INTO namespaces VALUES (
         ${sqlText(identities.namespaceId)}, 'personal', 'active', ${sqlText(initializedAt)}

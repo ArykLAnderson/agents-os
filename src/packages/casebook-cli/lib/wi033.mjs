@@ -22,7 +22,6 @@ const baseAuthority = (workspace = null) => ({
   store: null,
   resolution_source: null,
   store_id: null,
-  workspace_id: null,
   admission_slot_id: null,
   profile_id: null,
   profile_revision_id: null,
@@ -315,9 +314,9 @@ export async function run(argv) {
     const describe = await bridgeCall({ operation: "target.describe", workspace, store: canonicalCandidate }, workspace);
     if (!describe.ok) return { result: refuse(operation, authority, describe.failure?.code ?? "target_refused", describe.failure?.message ?? "Target admission refused."), exitCode: 2 };
     const target = describe.result;
-    if (!target || typeof target.store_id !== "string" || typeof target.workspace_id !== "string" || typeof target.admission_slot_id !== "string" || typeof target.profile_id !== "string" || typeof target.profile_revision_id !== "string" || !Number.isInteger(target.activation_fence)) throw Error("target_response_invalid");
+    if (!target || typeof target.store_id !== "string" || typeof target.admission_slot_id !== "string" || typeof target.profile_id !== "string" || typeof target.profile_revision_id !== "string" || !Number.isInteger(target.activation_fence)) throw Error("target_response_invalid");
     const canonicalStore = await realpath(canonicalCandidate);
-    authority = { status: "target_admitted", workspace, store: canonicalStore, resolution_source: source, store_id: target.store_id, workspace_id: target.workspace_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
+    authority = { status: "target_admitted", workspace, store: canonicalStore, resolution_source: source, store_id: target.store_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
     ctx = { authority };
     const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
     const operationId = mutation ? `operation:${randomUUID().toLowerCase()}` : null;

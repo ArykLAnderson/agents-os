@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { aggregateContentDigest, sha256 } from "../shared/manifest.mjs";
@@ -15,6 +15,7 @@ const assetDefinitions = [
   ["sqlite-cli-admission", "variants/sqlite/lib/cli/index.mjs", "module"],
   ["sqlite-profile-service", "variants/sqlite/lib/profile/index.mjs", "module"],
   ["sqlite-context-service", "variants/sqlite/lib/context/index.mjs", "module"],
+  ["sqlite-case-service", "variants/sqlite/lib/case/index.mjs", "module"],
   ["sqlite-case-successor-adapter", "variants/sqlite/lib/case/successor.mjs", "module"],
   ["sqlite-frame-successor-adapter", "variants/sqlite/lib/frame/successor.mjs", "module"],
   ["sqlite-placement-generation", "variants/sqlite/lib/placement/index.mjs", "module"],
@@ -33,6 +34,19 @@ const assetDefinitions = [
   ["sqlite-wasm-binary", "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/sqlite3.wasm", "vendored_runtime"],
   ["sqlite-wasm-license-notice", "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt", "license_notice"],
 ];
+async function files(directory, relative = path.relative(packageRoot, directory)) {
+  const result = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const full = path.join(directory, entry.name);
+    const rel = path.join(relative, entry.name);
+    if (entry.isDirectory()) result.push(...await files(full, rel));
+    else if (entry.isFile() && (entry.name.endsWith(".mjs") || entry.name.endsWith(".sql"))) result.push(rel);
+  }
+  return result;
+}
+const listed = new Set(assetDefinitions.map(([, relativePath]) => relativePath));
+for (const relativePath of await files(path.join(packageRoot, "shared"))) if (!listed.has(relativePath)) assetDefinitions.push([`asset-${assetDefinitions.length}`, relativePath, "module"]);
+for (const relativePath of await files(path.join(packageRoot, "variants/sqlite/lib"))) if (!listed.has(relativePath)) assetDefinitions.push([`asset-${assetDefinitions.length}`, relativePath, "module"]);
 const manifestPath = path.join(packageRoot, "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 manifest.assets = await Promise.all(assetDefinitions.map(async ([id, relativePath, kind]) => ({ id, path: relativePath, kind, sha256: sha256(await readFile(path.join(packageRoot, relativePath))) })));
