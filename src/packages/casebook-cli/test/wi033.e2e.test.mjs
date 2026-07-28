@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { createBootstrapAuthorizationDocument } from "../../../skills/casebook-persistence/variants/sqlite/lib/substrate/bootstrap.mjs";
 import { successorDigest } from "../../../skills/casebook-persistence/variants/sqlite/lib/substrate/mechanical-successor.mjs";
+import { packageCli } from "../build/package-assembly.mjs";
 
 const packageRoot = path.resolve(import.meta.dirname, "..");
 const providerEntrypoint = path.resolve(packageRoot, "../../skills/casebook-persistence/variants/sqlite/bin/casebook-persistence.mjs");
@@ -30,12 +31,9 @@ const frameAggregate = (title = "Pack Frame") => ({ id: ids.frame, status: "acti
 async function packed(t) {
   const sandbox = await mkdtemp(path.join(os.tmpdir(), "wi033-packed-"));
   t.after(() => rm(sandbox, { recursive: true, force: true }));
-  const packed = await runFile("npm", ["pack", "--silent"], { cwd: packageRoot });
-  assert.equal(packed.code, 0, packed.stderr);
-  const archive = packed.stdout.trim().split(/\s+/).at(-1);
-  const copied = path.join(packageRoot, archive);
-  const untarred = await runFile("tar", ["-xzf", copied, "-C", sandbox]);
-  await rm(copied, { force: true });
+  const packed = await packageCli();
+  t.after(() => packed.cleanup());
+  const untarred = await runFile("tar", ["-xzf", packed.archive, "-C", sandbox]);
   assert.equal(untarred.code, 0, untarred.stderr);
   return path.join(sandbox, "package", "bin", "casebook.mjs");
 }

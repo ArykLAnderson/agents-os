@@ -12,10 +12,10 @@ const aggregateContentDigest = (assets) => digest(Buffer.from([...assets]
   .join("")));
 const contained = (rootPath, candidate) => candidate !== rootPath && candidate.startsWith(`${rootPath}${path.sep}`);
 
-async function asset(relative, expected) {
+async function asset(rootPath, relative, expected) {
   if (typeof relative !== "string" || !relative || path.isAbsolute(relative) || path.normalize(relative) !== relative) throw Error("bridge_asset_invalid");
-  const candidate = path.resolve(root, relative);
-  if (!contained(root, candidate)) throw Error("bridge_asset_invalid");
+  const candidate = path.resolve(rootPath, relative);
+  if (!contained(rootPath, candidate)) throw Error("bridge_asset_invalid");
   const listed = await lstat(candidate);
   if (!listed.isFile() || listed.isSymbolicLink()) throw Error("bridge_asset_invalid");
   const file = await open(candidate, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -65,13 +65,13 @@ async function verifyProviderRuntime(manifestPath, provider) {
  * Verifies the fixed bridge and complete package-relative provider snapshot
  * before the CLI can spawn the bridge or dynamically import provider code.
  */
-export async function verifyPackageAssets() {
+export async function verifyPackageAssets(packageRoot = root) {
   try {
-    const metadata = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+    const metadata = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
     const contract = metadata.casebookCli;
     if (!contract || contract.bridge?.id !== "casebook-persistence-bridge@1" || contract.provider?.id !== "casebook-persistence@0.19.0-successor") throw Error("bridge_asset_invalid");
-    await asset(contract.bridge.path, contract.bridge.sha256);
-    const manifestPath = await asset(contract.provider.manifest, contract.provider.manifest_sha256);
+    await asset(packageRoot, contract.bridge.path, contract.bridge.sha256);
+    const manifestPath = await asset(packageRoot, contract.provider.manifest, contract.provider.manifest_sha256);
     await verifyProviderRuntime(manifestPath, contract.provider);
     return { bridge: contract.bridge, provider: contract.provider };
   } catch {
