@@ -6,6 +6,7 @@ import { interchangeFrontmatter, interchangeJsonSection } from "../../../../shar
 import { locatorSafeForAudience, portablePublicLocatorAssessment } from "../../../../shared/locator.mjs";
 import { createResourceFoundation } from "../resource/foundation.mjs";
 import { createFinalOwnerLifecycleRegistry, createFinalResourceRegistry } from "../resource/registry.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 import {
   KNOWLEDGE_TOMBSTONE_SCHEMA,
   KnowledgeServiceError,
@@ -70,7 +71,7 @@ class CaseRequestError extends Error { constructor(path, rule, message = rule) {
 const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 function exact(value, fields, path) { for (const key of Object.keys(value)) if (!fields.has(key)) throw new CaseRequestError(`${path}.${key}`, "field_unsupported"); }
 function string(value, path, max = 16_384) { if (typeof value !== "string" || !value.trim() || value.length > max) throw new CaseRequestError(path, "required_bounded_string"); return value; }
-function id(value, path, prefix) { string(value, path, 128); const match = UUID_RE.exec(value); if (!match || (prefix && match[1] !== prefix)) throw new CaseRequestError(path, "uuid_identity_required"); return value; }
+function id(value, path, prefix) { string(value, path, 128); if (prefix === "namespace") { try { return requireNamespaceId(value, path); } catch { throw new CaseRequestError(path, "semantic_namespace_identity_required"); } } const match = UUID_RE.exec(value); if (!match || (prefix && match[1] !== prefix)) throw new CaseRequestError(path, "uuid_identity_required"); return value; }
 function selectedVersion(value, path) { string(value, path, 128); if (!(new RegExp(`^(?:version|case-version):${UUID}$`)).test(value)) throw new CaseRequestError(path, "uuid_identity_required"); return value; }
 function mechanicalVersion(value) { return value.startsWith("case-version:") ? `version:${value.slice(13)}` : value; }
 function caseVersionId(value,path){string(value,path,128);if(!(new RegExp(`^case-version:${UUID}$`)).test(value))throw new CaseRequestError(path,"uuid_identity_required");return value;}

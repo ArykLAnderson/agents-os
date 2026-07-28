@@ -1,10 +1,14 @@
 import {
   canonicalSuccessorCommitDigest, invokeSuccessorMechanicalOperation, successorDigest,
 } from "../substrate/mechanical-successor.mjs";
+import { isStructuralNamespace, requireNamespaceId } from "../context/namespace.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0");
 const identity = (value, field, prefix) => {
+  if (prefix === "namespace") {
+    try { const id = requireNamespaceId(value, field); if (isStructuralNamespace(id)) throw new PlacementError("namespace_structural_only", "namespace:root is structural and cannot receive Case or Frame placement."); return id; } catch (error) { if (error instanceof PlacementError) throw error; throw new PlacementError("placement_request_invalid", `${field} must be a canonical semantic Namespace identity.`); }
+  }
   if (typeof value !== "string" || !ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new PlacementError("placement_request_invalid", `${field} must be an exact ${prefix ?? ""} identity.`);
   return value;
 };

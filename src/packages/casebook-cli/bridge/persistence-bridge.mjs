@@ -11,14 +11,24 @@ const provenance = { acting_role: "casebook-cli", authority_basis: "trusted-loca
 
 async function runtime() {
   await verifyPackageAssets();
-  const [{ describeTarget, recentOperations }, { invokeSuccessorCaseOperation }, { invokeSuccessorFrameOperation }, { invokeSuccessorMechanicalOperation }, { organizationalSearch }] = await Promise.all([
+  const [{ describeTarget, recentOperations }, { invokeSuccessorCaseOperation }, { invokeSuccessorFrameOperation }, { invokeSuccessorMechanicalOperation }, { invokeContextOperation }, { organizationalSearch }] = await Promise.all([
     import("./runtime/casebook-persistence/variants/sqlite/lib/cli/index.mjs"),
     import("./runtime/casebook-persistence/variants/sqlite/lib/case/successor.mjs"),
     import("./runtime/casebook-persistence/variants/sqlite/lib/frame/successor.mjs"),
     import("./runtime/casebook-persistence/variants/sqlite/lib/substrate/mechanical-successor.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs"),
     import("./runtime/casebook-persistence/variants/sqlite/lib/query/search.mjs"),
   ]);
-  return { describeTarget, recentOperations, invokeSuccessorCaseOperation, invokeSuccessorFrameOperation, invokeSuccessorMechanicalOperation, organizationalSearch };
+  return { describeTarget, recentOperations, invokeSuccessorCaseOperation, invokeSuccessorFrameOperation, invokeSuccessorMechanicalOperation, invokeContextOperation, organizationalSearch };
+}
+async function resolveNamespace(provider, request, base, value) {
+  const path = value.slice("namespace:".length).split("/");
+  const context = { ...base, operation: "namespace.resolve", path };
+  const { canonicalContextRequestDigest } = await import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs");
+  context.request_digest = canonicalContextRequestDigest(base.store_id, context);
+  const result = await provider.invokeContextOperation(context);
+  if (!result?.ok || result.result.status !== "found") return failure(result?.result?.status === "ambiguous" ? "namespace_ambiguous" : "namespace_unavailable", "The requested semantic Namespace is unavailable or ambiguous.");
+  return result.result.namespace.id;
 }
 function common(request) {
   const target = request.target;
@@ -28,12 +38,17 @@ async function dispatch(request) {
   const provider = await runtime();
   if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: config(request.store) });
   const base = common(request), flags = request.flags ?? {};
-  const placement = flags.namespace_id ? { placement: { namespace_id: flags.namespace_id } } : {};
+  const selectedNamespace = flags.namespace_id ? await resolveNamespace(provider, request, base, flags.namespace_id) : null;
+  if (selectedNamespace?.ok === false) return selectedNamespace;
+  const placement = selectedNamespace ? { placement: { namespace_id: selectedNamespace } } : {};
   if (request.operation === "case.create" || request.operation === "case.commit_revision") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "case.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, case: request.aggregate, ...placement });
   if (request.operation === "frame.create" || request.operation === "frame.commit_revision") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "frame.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, frame: request.aggregate, ...(request.operation === "frame.commit_revision" ? { frame_id: flags.frame_id } : {}), ...placement });
   if (request.operation === "case.read") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, case_id: flags.case_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
   if (request.operation === "frame.read") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, frame_id: flags.frame_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
-  if (request.operation === "query.search") return provider.organizationalSearch({ ...base, operation: "query.search", query: flags.query, scope: flags.namespace_id ? "exact_namespace" : "workspace", ...(flags.namespace_id ? { namespace_id: flags.namespace_id } : {}), ...(flags.limit ? { limit: Number(flags.limit) } : {}), ...(flags.cursor ? { cursor: flags.cursor } : {}) });
+  if (request.operation === "query.search") {
+    if (!selectedNamespace) return failure("namespace_required", "Search requires an explicit or project-local semantic Namespace.");
+    return provider.organizationalSearch({ ...base, operation: "query.search", query: flags.query, scope: "exact_namespace", namespace_id: selectedNamespace, ...(flags.limit ? { limit: Number(flags.limit) } : {}), ...(flags.cursor ? { cursor: flags.cursor } : {}) });
+  }
   if (request.operation === "substrate.get_receipt") return provider.invokeSuccessorMechanicalOperation({ ...base, operation: "substrate.get_receipt", operation_id: flags.operation_id });
   if (request.operation === "operation.recent") return provider.recentOperations({ ...base, operation: "operation.recent", limit: Number(flags.limit ?? 20), ...(flags.before_operation_fence ? { before_operation_fence: Number(flags.before_operation_fence) } : {}) });
   return failure("operation_unsupported", "Operation is not admitted.");

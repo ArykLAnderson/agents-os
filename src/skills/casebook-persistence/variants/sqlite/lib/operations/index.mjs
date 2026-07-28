@@ -785,7 +785,7 @@ async function initializeStore(request) {
   const initializedAt = new Date().toISOString();
   const identities = {
     storeId: `store:${randomUUID()}`,
-    namespaceId: `namespace:${randomUUID()}`,
+    namespaceId: "namespace:personal",
     viewId: `view:${randomUUID()}`,
     viewPolicyRevisionId: `view-policy:${randomUUID()}`,
   };

@@ -47,7 +47,7 @@ test("CLI refuses unsafe and duplicate local input before target admission", asy
   const malformed = await invoke(["--workspace", workspace, "search", "--query", "hello"], {}, executable);
   assert.equal(malformed.code, 1);
   assert.equal(malformed.json.failure.code, "json_invalid");
-  const aggregate = await invoke(["--workspace", workspace, "--store", path.join(workspace, "missing.sqlite"), "create", "case", "--commit-basis", "basis", "--input", '{"id":"case:a","id":"case:b"}'], {}, executable);
+  const aggregate = await invoke(["--workspace", workspace, "--store", path.join(workspace, "missing.sqlite"), "create", "case", "--namespace", "namespace:personal", "--commit-basis", "basis", "--input", '{"id":"case:a","id":"case:b"}'], {}, executable);
   assert.equal(aggregate.code, 1);
   assert.equal(aggregate.json.failure.code, "json_duplicate_key");
   assert.equal(aggregate.json.authority.status, "workspace_resolved");

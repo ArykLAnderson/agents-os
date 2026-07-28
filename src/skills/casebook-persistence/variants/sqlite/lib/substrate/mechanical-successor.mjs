@@ -9,6 +9,7 @@ import {
   ownerPolicyPredicate, prepareAdmission, profileAdmissionPredicate, profileBindingPredicate,
 } from "../resource/admission-guards.mjs";
 import { normalizeExactLocator } from "../resource/normalization.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const UUID_ID = new RegExp(`^[a-z][a-z0-9_-]*:${UUID}$`);
@@ -33,6 +34,9 @@ function requireObject(value, field) { if (!object(value)) throw new MechanicalE
 function requireString(value, field, max = 512) { if (typeof value !== "string" || !value.trim() || value.length > max) throw new MechanicalError("substrate_request_invalid", `${field} must be a non-empty bounded string.`); return value; }
 function requireId(value, field, prefix = null) {
   requireString(value, field, 128);
+  if (prefix === "namespace") {
+    try { return requireNamespaceId(value, field); } catch { throw new MechanicalError("identity_invalid", `${field} is not a supported semantic Namespace identity.`); }
+  }
   if (!UUID_ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new MechanicalError("identity_invalid", `${field} is not a supported UUID identity.`);
   return value;
 }
@@ -145,7 +149,7 @@ async function readReceipt(binary, storePath, operationId) {
   if (!rows.length) return null;
   const row = rows[0]; return { ...row, result: JSON.parse(row.result_json) };
 }
-function publicReceipt(row) { const value = { ...row }; delete value.result_json; delete value.result; return value; }
+function publicReceipt(row) { const value = { ...row }; const namespace = row.result?.owner?.namespace_id ?? (row.result_json ? JSON.parse(row.result_json).owner?.namespace_id : null); if (namespace != null) value.namespace_id = namespace; delete value.result_json; delete value.result; return value; }
 function replayResponse(receipt, replay) { return receipt.outcome === "rejected" ? JSON.parse(receipt.result_json) : success(receipt.operation_kind, { ...receipt.result, receipt: publicReceipt(receipt), idempotent_replay: replay }); }
 function mismatch(operationId) { return failure("idempotency_mismatch", "operation_id is settled for different canonical meaning.", { failureClass: "idempotency_mismatch", evidence: { operation_id: operationId } }); }
 function prepareRequestAdmission(request, operation) {
@@ -202,7 +206,7 @@ async function commitRevision(request, admissionRegistry) {
     return settleRejected(binary, storePath, state, envelope, response, observed, admission);
   }
   const now = new Date().toISOString(), next = state.operation_fence + 1;
-  const core = { status: "settled", owner: envelope.owner, committed_revision: { id: envelope.revision.id, number: envelope.revision.number }, request_digest: expectedDigest, ...(envelope.placement_request_digest ? { placement_request_digest: envelope.placement_request_digest } : {}), admission_evidence: admission.evidence, generations: { placement_changed: envelope.generation_effects?.placement_changed ?? false, query_changed: envelope.generation_effects?.query_changed ?? false } };
+  const core = { status: "settled", owner: { ...envelope.owner, namespace_id: envelope.placement?.namespace_id ?? envelope.placement_guard?.namespace_id ?? null }, committed_revision: { id: envelope.revision.id, number: envelope.revision.number }, request_digest: expectedDigest, ...(envelope.placement_request_digest ? { placement_request_digest: envelope.placement_request_digest } : {}), admission_evidence: admission.evidence, generations: { placement_changed: envelope.generation_effects?.placement_changed ?? false, query_changed: envelope.generation_effects?.query_changed ?? false } };
   const statements = [".bail on", "PRAGMA foreign_keys=ON;", "BEGIN IMMEDIATE;", "CREATE TEMP TABLE guard(ok INTEGER CHECK(ok=1));", `INSERT INTO guard VALUES(CASE WHEN ${profileAdmissionPredicate(admission)} THEN 1 ELSE 0 END);`, `INSERT INTO guard VALUES(CASE WHEN ${ownerPolicyPredicate(admission)} THEN 1 ELSE 0 END);`, `INSERT INTO guard VALUES(CASE WHEN (SELECT operation_fence FROM store_fence WHERE singleton=1)=${state.operation_fence} THEN 1 ELSE 0 END);`,
     ...(envelope.placement_guard ? [`INSERT INTO guard VALUES(CASE WHEN ${placementGuardPredicate(envelope.placement_guard)} THEN 1 ELSE 0 END);`] : []), `INSERT INTO guard VALUES(CASE WHEN NOT EXISTS(SELECT 1 FROM store_operation_receipts WHERE operation_id=${sqlText(envelope.operation_id)}) THEN 1 ELSE 0 END);`];
   if (envelope.expected_revision === 0) statements.push(`INSERT INTO owners VALUES(${sqlText(envelope.owner.id)},${sqlText(envelope.owner.kind)},${sqlText(now)});`);

@@ -6,7 +6,7 @@ This document is for a human operator. Ordinary Case and Frame workflows use the
 
 Install the packaged `@agents-os/casebook-cli` command with Node.js 22 or newer. The package is SQLite-only and operates an existing store. It does not initialize stores or provide a Markdown fallback.
 
-Configure ordinary resolution with an existing workspace and, when needed, the CLI's settings files or explicit `--store` option. Settings allow only `schema` and `store`: `schema` is `casebook-cli-settings@1`; `store` may be omitted or `null` to continue resolution, or be an absolute normalized string. Unsafe, malformed, extra, or otherwise invalid settings refuse rather than falling through. See the CLI reference for the complete workspace and XDG resolution order, input modes, operations, outcomes, and exit-3 recovery procedure.
+Configure ordinary resolution with an existing workspace and, when needed, an explicit `--store` or XDG/global store config. Project-local `.casebook/settings.json` is Namespace context only and uses `{"schema":"casebook-cli-settings@2","namespace":"namespace:personal"}`. It cannot select a store; legacy local files containing `store` refuse rather than silently changing authority. Namespace-scoped creates, commits, and search require `--namespace` or this local context. See the CLI reference for precedence, input modes, operations, outcomes, and exit-3 recovery.
 
 ## Maintenance boundary
 

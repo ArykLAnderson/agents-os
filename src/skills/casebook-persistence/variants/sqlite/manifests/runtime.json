@@ -93,7 +93,6 @@
     "case.resolve",
     "case.update",
     "case.tombstone",
-    "case.move_namespace",
     "case.knowledge.read",
     "case.knowledge.create",
     "case.knowledge.update",

@@ -14,6 +14,7 @@ import {
   sqlite,
 } from "./diagnostics.mjs";
 import { inspectStore, readStoreOperationReceipt } from "./index.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 
 const MAX_VERSIONS = 256;
 const MAX_SELECTIONS = 256;
@@ -103,6 +104,9 @@ function requireString(value, field, max = 512) {
 
 function requireUuidId(value, field, prefix = null) {
   requireString(value, field, 128);
+  if (prefix === "namespace") {
+    try { return requireNamespaceId(value, field); } catch { throw new RequestError("identity_invalid", `${field} must be a canonical semantic Namespace identity.`); }
+  }
   if (!UUID_ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) {
     throw new RequestError("identity_invalid", `${field} must be a lowercase UUID-based identity${prefix ? ` with ${prefix}: prefix` : ""}.`);
   }
