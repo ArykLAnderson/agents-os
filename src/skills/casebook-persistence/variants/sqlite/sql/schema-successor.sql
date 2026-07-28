@@ -29,7 +29,7 @@ CREATE TABLE store_fence (
 
 CREATE TABLE bootstrap_state (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
-  root_namespace_id TEXT NOT NULL,
+  root_namespace_id TEXT NOT NULL CHECK(root_namespace_id = 'namespace:root'),
   initial_profile_id TEXT NOT NULL,
   initial_profile_revision_id TEXT NOT NULL,
   profile_selection_id TEXT NOT NULL,
@@ -278,9 +278,9 @@ CREATE TABLE disposable_projection_selection (
 -- current rows are disposable selections and never derive authority from cwd/host state.
 CREATE TABLE context_namespace_revisions (
   namespace_revision_id TEXT PRIMARY KEY REFERENCES owner_revisions(revision_id),
-  namespace_id TEXT NOT NULL REFERENCES owners(owner_id),
+  namespace_id TEXT NOT NULL REFERENCES owners(owner_id) CHECK(namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????'),
   revision_number INTEGER NOT NULL CHECK(revision_number > 0),
-  parent_namespace_id TEXT REFERENCES owners(owner_id),
+  parent_namespace_id TEXT REFERENCES owners(owner_id) CHECK(parent_namespace_id IS NULL OR (parent_namespace_id LIKE 'namespace:%' AND parent_namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND parent_namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????')),
   lifecycle TEXT NOT NULL CHECK(lifecycle IN ('active','retired')),
   display_name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
@@ -294,9 +294,9 @@ BEGIN SELECT RAISE(ABORT, 'context namespace revisions are immutable'); END;
 CREATE TRIGGER context_namespace_revisions_no_delete BEFORE DELETE ON context_namespace_revisions
 BEGIN SELECT RAISE(ABORT, 'context namespace revisions are durable'); END;
 CREATE TABLE context_namespace_current (
-  namespace_id TEXT PRIMARY KEY REFERENCES owners(owner_id),
+  namespace_id TEXT PRIMARY KEY REFERENCES owners(owner_id) CHECK(namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????'),
   namespace_revision_id TEXT NOT NULL REFERENCES context_namespace_revisions(namespace_revision_id),
-  parent_namespace_id TEXT REFERENCES owners(owner_id),
+  parent_namespace_id TEXT REFERENCES owners(owner_id) CHECK(parent_namespace_id IS NULL OR (parent_namespace_id LIKE 'namespace:%' AND parent_namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND parent_namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????')),
   lifecycle TEXT NOT NULL CHECK(lifecycle IN ('active','retired')),
   hierarchy_generation INTEGER NOT NULL CHECK(hierarchy_generation > 0),
   updated_at TEXT NOT NULL
@@ -306,7 +306,7 @@ CREATE TABLE context_namespace_current (
 CREATE TABLE owner_current_claims (
   owner_kind TEXT NOT NULL,
   claim_type TEXT NOT NULL,
-  namespace_id TEXT NOT NULL REFERENCES owners(owner_id),
+  namespace_id TEXT NOT NULL REFERENCES owners(owner_id) CHECK(namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????'),
   normalized_value TEXT NOT NULL,
   owner_id TEXT NOT NULL REFERENCES owners(owner_id),
   owner_revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),
@@ -318,7 +318,7 @@ CREATE TABLE context_project_default_revisions (
   project_default_revision_id TEXT PRIMARY KEY REFERENCES owner_revisions(revision_id),
   project_default_id TEXT NOT NULL REFERENCES owners(owner_id),
   revision_number INTEGER NOT NULL CHECK(revision_number > 0),
-  namespace_id TEXT,
+  namespace_id TEXT CHECK(namespace_id IS NULL OR (namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????')),
   lifecycle TEXT NOT NULL CHECK(lifecycle IN ('active','retired')),
   default_fence INTEGER NOT NULL CHECK(default_fence > 0),
   created_at TEXT NOT NULL,
@@ -330,7 +330,7 @@ CREATE TABLE context_project_default_current (
   singleton INTEGER PRIMARY KEY CHECK(singleton=1),
   project_default_id TEXT NOT NULL REFERENCES owners(owner_id),
   project_default_revision_id TEXT NOT NULL REFERENCES context_project_default_revisions(project_default_revision_id),
-  namespace_id TEXT,
+  namespace_id TEXT CHECK(namespace_id IS NULL OR (namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????')),
   default_fence INTEGER NOT NULL CHECK(default_fence > 0),
   updated_at TEXT NOT NULL
 ) STRICT;
@@ -338,7 +338,7 @@ CREATE TABLE context_chat_revisions (
   chat_revision_id TEXT PRIMARY KEY REFERENCES owner_revisions(revision_id),
   chat_id TEXT NOT NULL REFERENCES owners(owner_id),
   revision_number INTEGER NOT NULL CHECK(revision_number > 0),
-  namespace_id TEXT NOT NULL REFERENCES owners(owner_id),
+  namespace_id TEXT NOT NULL REFERENCES owners(owner_id) CHECK(namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????'),
   parent_chat_id TEXT REFERENCES owners(owner_id),
   lifecycle TEXT NOT NULL CHECK(lifecycle='active'),
   created_at TEXT NOT NULL,
@@ -349,7 +349,7 @@ BEGIN SELECT RAISE(ABORT, 'chat revisions are immutable'); END;
 CREATE TABLE context_chat_current (
   chat_id TEXT PRIMARY KEY REFERENCES owners(owner_id),
   chat_revision_id TEXT NOT NULL REFERENCES context_chat_revisions(chat_revision_id),
-  namespace_id TEXT NOT NULL REFERENCES owners(owner_id),
+  namespace_id TEXT NOT NULL REFERENCES owners(owner_id) CHECK(namespace_id LIKE 'namespace:%' AND namespace_id NOT GLOB '*[^a-z0-9:/-]*' AND namespace_id NOT GLOB 'namespace:????????-????-????-????-????????????'),
   parent_chat_id TEXT REFERENCES owners(owner_id),
   updated_at TEXT NOT NULL
 ) STRICT;

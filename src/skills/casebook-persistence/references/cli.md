@@ -5,8 +5,9 @@ Use the packaged `casebook` command for ordinary Case and Frame persistence. It 
 ## Resolution
 
 - `--workspace <path>` accepts only an existing absolute workspace directory. Without it, the CLI resolves the real current directory, uses the nearest Git worktree root when one contains it, and otherwise uses that resolved directory. Bare repositories are not workspaces.
-- The store is selected in this order: an explicit normalized absolute `--store <path>`; `<workspace>/.casebook/settings.json`; `$XDG_CONFIG_HOME/casebook/config.json`; then `$XDG_DATA_HOME/casebook/casebook.sqlite` (with normal XDG home defaults when those variables are absent).
-- A settings file must be a regular, safe JSON object whose only allowed keys are `schema` and `store`, with `schema` exactly `"casebook-cli-settings@1"`. `store` may be omitted or `null` to permit the next source in the order; when non-null, it must be an absolute normalized string. Malformed, unsafe, changed, extra, or otherwise invalid settings refuse the command and never silently fall through.
+- The store is selected in this order: an explicit normalized absolute `--store <path>`; `$XDG_CONFIG_HOME/casebook/config.json`; then `$XDG_DATA_HOME/casebook/casebook.sqlite` (with normal XDG home defaults when those variables are absent). Project-local settings never select a store.
+- `<workspace>/.casebook/settings.json` is optional Namespace context only: `{ "schema": "casebook-cli-settings@2", "namespace": "namespace:personal" }`. It must be a regular, safe JSON object with no extra keys. A legacy local settings file containing `store` refuses with `settings_store_authority_forbidden`; move store selection to XDG/global config.
+- Namespace-scoped mutations and search resolve in this order: explicit `--namespace <semantic-id>`; legacy spelling `--namespace-id <semantic-id>` when supplied alone; then project-local settings. The canonical form is `namespace:<lowercase-kebab-segment>(/<segment>)*`. If no selector is available, the command refuses with `namespace_required`. Namespace selection never relocates existing content or grants workspace authority.
 - `CASEBOOK_DATABASE_URL` and `CASEBOOK_SQLITE_BIN` are direct-provider or maintenance concerns, not CLI inputs. Do not use them to select ordinary Case or Frame persistence.
 
 Use an explicit workspace or store only when it is already part of the user's request or configuration. Otherwise let the CLI resolve both.
@@ -21,17 +22,17 @@ All commands emit exactly one `casebook-cli-result@2` JSON value on stdout. Muta
 Do not supply either input mode to reads, search, receipt, or recent-operation commands. The available public commands are:
 
 ```sh
-casebook create case --commit-basis <text> [--namespace-id <id>] --input <json>
+casebook create case --namespace <semantic-id> --commit-basis <text> --input <json>
 casebook read case --case-id <id> [--owner-revision-id <id>]
-casebook commit case --case-id <id> --expected-revision <positive-integer> \
-  --commit-basis <text> [--namespace-id <id>] --input <json>
+casebook commit case --namespace <semantic-id> --case-id <id> --expected-revision <positive-integer> \
+  --commit-basis <text> --input <json>
 
-casebook create frame --commit-basis <text> [--namespace-id <id>] --input <json>
+casebook create frame --namespace <semantic-id> --commit-basis <text> --input <json>
 casebook read frame --frame-id <id> [--owner-revision-id <id>]
-casebook commit frame --frame-id <id> --expected-revision <positive-integer> \
-  --commit-basis <text> [--namespace-id <id>] --input <json>
+casebook commit frame --namespace <semantic-id> --frame-id <id> --expected-revision <positive-integer> \
+  --commit-basis <text> --input <json>
 
-casebook search --query <text> [--namespace-id <id>] [--limit 1..100] [--cursor <cursor>]
+casebook search --namespace <semantic-id> --query <text> [--limit 1..100] [--cursor <cursor>]
 casebook receipt read --operation-id <id>
 casebook operation status --operation-id <id>
 casebook operation recent [--limit 1..20] [--before-operation-fence <positive-integer>]

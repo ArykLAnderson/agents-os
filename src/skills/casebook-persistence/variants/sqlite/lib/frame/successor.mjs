@@ -5,8 +5,7 @@ import { createPlacementGenerationFoundation, createSuccessorSqlitePlacementAdap
 import { authorizeSuccessorOperation, invokeSuccessorMechanicalOperation, successorDigest } from "../substrate/mechanical-successor.mjs";
 import { mechanicalDigest } from "../substrate/mechanical.mjs";
 import { failure, RETRY_DISPOSITIONS, success, unsupported } from "../../../../shared/protocol.mjs";
-import { inspectSuccessorStore } from "../substrate/bootstrap.mjs";
-import { selectSqliteBinary } from "../substrate/diagnostics.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
@@ -39,6 +38,7 @@ export class SuccessorFrameError extends Error {
   constructor(path, rule) { super(rule); this.path = path; this.rule = rule; }
 }
 function id(value, path, prefix) {
+  if (prefix === "namespace") { try { return requireNamespaceId(value, path); } catch { throw new SuccessorFrameError(path, "semantic_namespace_identity_required"); } }
   if (typeof value !== "string" || !ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new SuccessorFrameError(path, "uuid_identity_required");
   return value;
 }
@@ -124,9 +124,9 @@ function queryMaterial(frame, allocations) {
  */
 export function assembleSuccessorFrameEnvelope(request, priorPlacement = null) {
   const explicitNamespace = request.placement?.namespace_id;
-  // Chat placement is resolved by the placement foundation; this temporary
-  // validation identity never enters successor output.
-  const placementNamespace = explicitNamespace ?? "namespace:00000000-0000-4000-8000-000000000000";
+  if (!explicitNamespace) throw new SuccessorFrameError("placement", "namespace_required");
+  if (request.frame?.home_namespace_id != null && request.frame.home_namespace_id !== explicitNamespace) throw new SuccessorFrameError("frame.home_namespace_id", "placement_namespace_mismatch");
+  const placementNamespace = explicitNamespace;
   const normalized = normalizeFrame(frameForNormalization(request.frame, placementNamespace), { requireDispositionSets: true });
   if (explicitNamespace != null && normalized.home_namespace_id !== explicitNamespace) throw new SuccessorFrameError("frame.home_namespace_id", "placement_namespace_mismatch");
   if (1 + normalized.discovery.length + (normalized.disposition_boundaries?.length ?? 0) + (normalized.case_dispositions?.length ?? 0) > 256) throw new SuccessorFrameError("frame", "resource_count_exceeded");
@@ -223,35 +223,17 @@ async function rawFrame(request, frameId, revisionId = null) {
 }
 async function selectedFramePlacement(request, placement) {
   if (placement?.namespace_id) return { namespace_id: id(placement.namespace_id, "placement.namespace_id", "namespace") };
-  if (placement?.chat_id && placement?.chat_revision_id) return { chat_id: id(placement.chat_id, "placement.chat_id", "chat"), chat_revision_id: id(placement.chat_revision_id, "placement.chat_revision_id", "owner-revision") };
-  throw new SuccessorFrameError("placement", "placement_required");
+  throw new SuccessorFrameError("placement", "namespace_required");
 }
-async function defaultFrameCreatePlacement(request) {
-  const binary = await selectSqliteBinary();
-  const state = await inspectSuccessorStore(binary.path, request.configuration?.sqlite?.database_url);
-  if (state.status !== "available" || !state.bootstrap?.root_namespace_id) throw new SuccessorFrameError("placement", "placement_unavailable");
-  return { namespace_id: state.bootstrap.root_namespace_id };
-}
-async function framePlacementForMutation(request, port) {
-  if (request.placement != null) return selectedFramePlacement(request, request.placement);
-  if (request.operation === "frame.create") return defaultFrameCreatePlacement(request);
-  const current = await port.readCurrent({ owner: { id: request.frame.id, kind: "frame" } });
-  if (!current.placement) throw new SuccessorFrameError("placement", "placement_unavailable");
-  const history = await port.readRevision({ owner: { id: request.frame.id, kind: "frame" }, revision_id: current.revision_id });
-  return history?.placement_selection?.kind === "chat_default"
-    ? { chat_id: history.placement_selection.chat_id, chat_revision_id: history.placement_selection.chat_revision_id }
-    : { namespace_id: current.placement.namespace_id };
+async function framePlacementForMutation(request) {
+  if (request.placement == null) throw new SuccessorFrameError("placement", "namespace_required");
+  return selectedFramePlacement(request, request.placement);
 }
 function publicFrame(loaded) { return { ...loaded.hydrated, revision: { ...loaded.hydrated.revision, id: typedFrameRevision(loaded.hydrated.revision.id) }, placement: loaded.hydrated.placement }; }
 function resourceKind(operation) { const parts = operation.split("."); return parts.length === 2 || parts[1] === "profile" ? "frame" : parts[1]; }
 function resourcePrefix(kind) { return kind === "frame" ? "frame" : kind === "discovery" ? "discovery" : kind === "disposition_boundary" ? "disposition-boundary" : "case-disposition"; }
 function findFrameResource(frame, kind, resourceId) { return frameResourceFromHydrated({ frame }, kind, resourceId); }
 function selectedComplete(frame) { return structuredClone(frame); }
-function retainedPlacement(loaded) {
-  const placement = loaded.hydrated.placement;
-  if (loaded.hydrated.placement_selection?.kind === "chat_default") return { chat_id: loaded.hydrated.placement_selection.chat_id, chat_revision_id: loaded.hydrated.placement_selection.chat_revision_id };
-  return { namespace_id: placement.namespace_id };
-}
 async function commitSuccessorFrame(request, base, next, frameId, placement) {
   const internal = { ...request, frame: next, expected_revision: base.hydrated.revision.number, placement, operation_id: request.operation_id };
   const built = assembleSuccessorFrameEnvelope(internal, { placement: base.hydrated.placement, placement_selection: base.hydrated.placement_selection });
@@ -320,7 +302,7 @@ async function invokeModularFrameOperation(request) {
       collection[index] = classified;
     } else if (action === "settle" && kind === "case_disposition") collection[index] = { ...prior, realization_state: "settled", ...(request.observed_case_revision_id ? { observed_case_revision_id: request.observed_case_revision_id } : {}), ...(request.pinned_case_revision_id ? { pinned_case_revision_id: request.pinned_case_revision_id } : {}) };
   }
-  const { built, settled } = await commitSuccessorFrame(request, base, next, frameId, await selectedFramePlacement(request, request.placement ?? retainedPlacement(base)));
+  const { built, settled } = await commitSuccessorFrame(request, base, next, frameId, await selectedFramePlacement(request, request.placement));
   return success(request.operation, { status: "settled", resource: findFrameResource(next, kind, returnedId), owner: { id: frameId, kind: "frame" }, revision: { id: typedFrameRevision(settled.revision_id), number: settled.revision_number, version_ids: built.allocations }, receipt: settled.receipt, idempotent_replay: settled.receipt?.idempotent_replay === true, placement: settled.placement, placement_changed: settled.placement_changed, query_changed: settled.query_changed });
 }
 
@@ -343,7 +325,7 @@ export async function invokeSuccessorFrameOperation(request) {
     if (typeof request.operation_id !== "string" || !request.operation_id || typeof request.commit_basis !== "string" || !request.commit_basis) throw new SuccessorFrameError("request", "required_bounded_string");
     let prior = null;
     if (request.expected_revision > 0) { const loaded = await rawFrame(request, request.frame.id); if (loaded?.hydrated.revision.number === request.expected_revision) prior = { placement: loaded.hydrated.placement, placement_selection: loaded.hydrated.placement_selection }; }
-    const placement = await framePlacementForMutation(request, createSuccessorSqlitePlacementAdapter(await frameBinding(request)));
+    const placement = await framePlacementForMutation(request);
     const built = assembleSuccessorFrameEnvelope({ ...request, placement }, prior);
     const settled = await createPlacementGenerationFoundation(createSuccessorSqlitePlacementAdapter(await frameBinding(request))).commit({ operation_id: request.operation_id, owner: { id: built.normalized.id, kind: "frame" }, expected_revision: request.expected_revision, revision_id: built.allocations.revision_id, event: built.allocations.event_id, placement: built.placement, aggregate: built.aggregate });
     return success(request.operation, { status: "settled", frame: structuredClone(built.normalized), revision: { id: typedFrameRevision(settled.revision_id), number: settled.revision_number, version_ids: built.allocations }, event_id: built.allocations.event_id, receipt: settled.receipt, idempotent_replay: settled.receipt?.idempotent_replay === true, placement: settled.placement, placement_changed: settled.placement_changed, query_changed: settled.query_changed });
