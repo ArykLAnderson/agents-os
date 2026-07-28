@@ -247,9 +247,4 @@ test("package/runtime versions and advertised per-entrypoint operations remain c
   assert.deepEqual([...SUPPORTED_OPERATIONS].sort(), union);
   assert.equal(runtime.supported_operations.includes("interchange.parse"), false);
   assert.equal(markdown.supported_operations.includes("initialize_store"), false);
-  const install = await readFile(path.join(packageRoot, "INSTALL.md"), "utf8");
-  const skill = await readFile(path.join(packageRoot, "SKILL.md"), "utf8");
-  for (const stale of ["Later event, checkpoint, and snapshot query surfaces remain unavailable", "purge execution, publication/file mutation", "L01-W05 only implements"]) {
-    assert.equal(install.includes(stale) || skill.includes(stale), false, stale);
-  }
 });

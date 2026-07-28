@@ -30,7 +30,7 @@ Open the stable execution-map locator, then reconcile:
 - the persisted Atlas Delivery Binding against a fresh resume Currentness Check through Feature Atlas domain operations;
 - task/gate states against the admitted graph, Git branches, and worktrees;
 - role/session notes against adapter inspection;
-- evidence locators, qualifications, and invalidators against candidate source/external state;
+- Evidence Receipt references, qualifications, retention limitations, and invalidators against candidate source/external state;
 - effects against their bound external systems and cleanup records; and
 - PR state against the bound provider/repository.
 
@@ -44,4 +44,4 @@ A triggered/unknown invalidator or typed limitation may yield `exact_admitted_li
 
 ## Authority Stops
 
-Technical blockage cannot broaden accepted design, Atlas meaning, external effects, spend, provider identity, PR permission, or landing authority. Preserve a coherent source disposition and return the smallest decision/evidence packet to the authority that owns the contradiction.
+Technical blockage cannot broaden accepted design, Atlas meaning, external effects, spend, provider identity, PR permission, or landing authority. Preserve a coherent source disposition and return the smallest decision/evidence packet to the authority that owns the contradiction. Do not invent publication authority to remedy a retention limitation.

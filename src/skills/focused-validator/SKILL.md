@@ -22,6 +22,8 @@ Require:
 
 `read-only` is your binding role, not automatically a sandbox claim. Bash is required to run meaningful checks and may be technically mutable at the latter two tiers. In coordinated certification, use the dedicated verification checkout supplied by the Workspace Operator; candidate-state inspection after your run is part of certification.
 
+Identify the candidate as repository plus checkout/worktree/branch/ref. Return Evidence Receipts for material claims using the lowest-cost practical form: authoritative provider artifact, sanitized private artifact, copied selected output, or explicit execution attestation. When practical, retain sanitized artifacts in the coordinator-provided private untracked `evidence/` directory and update its compact `INDEX.md`; never invent commit, attachment, upload, or publication authority. A missing artifact is a retention limitation, not a failed passing check.
+
 ## Verify
 
 ### 1. Inspect the boundary
@@ -61,6 +63,7 @@ Scope: <task | convergence>
 Candidate state: <checkout/worktree and branch identity>
 Behavior tested: <public scenarios and observations>
 Commands: <command — result>
+Evidence Receipts: <ER-* references, selected sanitized output, or explicit execution attestation; limitations>
 Enforcement tier: <exact supplied tier>
 Non-blocking limitations: <none or bounded limitations>
 ```
@@ -72,6 +75,7 @@ Return bounded findings; for each:
 ```markdown
 Result: findings
 - Evidence: <observed failure, location, or command output>
+  Evidence Receipt: <ER-* reference, selected sanitized output, or attestation>
   Violated clause: <Task/Convergence Contract clause>
   Interface/consumer: <affected boundary>
   Smallest required correction: <behavioral correction, not implementation design>
@@ -86,6 +90,7 @@ Use only for concrete evidence that accepted behavior or design cannot be realiz
 ```markdown
 Result: material_contradiction
 Evidence: <specific observation>
+Evidence Receipt: <ER-* reference, selected sanitized output, or attestation>
 Conflicting authorities/clauses: <exact sources>
 Affected interface/consumer: <boundary>
 Why bounded correction cannot satisfy both: <reason>

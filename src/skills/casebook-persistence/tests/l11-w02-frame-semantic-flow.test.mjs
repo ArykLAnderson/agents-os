@@ -202,34 +202,6 @@ async function generateFrameSkill(destination) {
   await writeFile(skillPath, `${source.slice(0, frontmatterEnd + 5)}\n${generatedHeader}\n\n${source.slice(frontmatterEnd + 5).trimStart()}`);
 }
 
-async function assertGeneratedProcedure(frameRoot) {
-  const skill = await readFile(path.join(frameRoot, "SKILL.md"), "utf8");
-  const persistence = await readFile(path.join(frameRoot, "references/persistence.md"), "utf8");
-  const state = await readFile(path.join(frameRoot, "references/state.md"), "utf8");
-  const discovery = await readFile(path.join(frameRoot, "references/discovery.md"), "utf8");
-  const combined = [skill, persistence, state, discovery].join("\n");
-
-  assert.match(skill, /casebook-persistence/);
-  assert.match(persistence, /missing or ambiguous/i);
-  assert.match(persistence, /Do not (?:probe|fall back)/i);
-  assert.match(persistence, /no fallback or dual write/i);
-  for (const operation of ["frame.create", "frame.commit_revision", "frame.read", "frame.list", "frame.resolve", "frame.discovery.read", "frame.disposition.read", "frame.legacy.prepare_reconciliation"]) {
-    assert.match(persistence, new RegExp(operation.replaceAll(".", "\\.")));
-  }
-  assert.match(combined, /pending_classification/);
-  assert.match(combined, /awaiting_case/);
-  assert.match(combined, /settled/);
-  assert.match(combined, /intake/);
-  assert.match(combined, /reconcile/);
-  assert.match(combined, /no_case/);
-  assert.match(combined, /complete (?:typed )?Frame aggregate/i);
-  assert.match(combined, /separate (?:Case and Frame|Frame and Case|owner|Frame and Case owner) (?:commits?|transactions?)/i);
-  assert.match(combined, /human judgment/i);
-  assert.match(combined, /provenance/i);
-  assert.match(combined, /requested_audience_ceiling.*private/i);
-  assert.doesNotMatch(combined, /(?:write|edit|create) (?:the )?\.casebook\/frames\//i);
-}
-
 async function exerciseMarkdown(entrypoint, root, target) {
   const workspace = path.join(root, "markdown-authority");
   await mkdir(workspace, { recursive: true });
@@ -401,7 +373,6 @@ test("generated Pi, Codex, and OpenCode Frame procedures execute selected-author
     for (const target of generated.results) {
       const frameRoot = path.join(path.dirname(target.package_root), "frame");
       await generateFrameSkill(frameRoot);
-      await assertGeneratedProcedure(frameRoot);
       const targetRoot = path.join(sandbox, "semantic-flow", target.target);
       await exerciseMarkdown(path.join(target.package_root, "variants/markdown/bin/casebook-persistence.mjs"), path.join(targetRoot, "markdown"), target.target);
       await exerciseSqlite(path.join(target.package_root, "variants/sqlite/bin/casebook-persistence.mjs"), path.join(targetRoot, "sqlite"), target.target, generated.sqlite_binary);

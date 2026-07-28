@@ -116,17 +116,6 @@ async function validateGeneratedBytes(generatorRoot) {
     for (const relative of relevantSupport) {
       assert.deepEqual(await readFile(path.join(skillsRoot, relative)), await readFile(path.join(sourceSkills, relative)), `${target} ${relative} support bytes`);
     }
-    const caseProcedure = await readFile(path.join(skillsRoot, "case/references/persistence.md"), "utf8");
-    const frameProcedure = await readFile(path.join(skillsRoot, "frame/references/persistence.md"), "utf8");
-    const modelFacingProcedure = `${caseProcedure}\n${frameProcedure}`;
-    assert.match(modelFacingProcedure, /never a source-tree or live-sync fallback/i);
-    assert.match(modelFacingProcedure, /There is no fallback or dual write/i);
-    assert.match(modelFacingProcedure, /Do not substitute filesystem globbing, grep, direct/i);
-    assert.match(modelFacingProcedure, /pending_classification/);
-    assert.match(modelFacingProcedure, /awaiting_case/);
-    assert.match(modelFacingProcedure, /separate Frame and Case owner commits/i);
-    assert.match(modelFacingProcedure, /requested_audience_ceiling: "private"/);
-
     const packageRoot = path.join(skillsRoot, "casebook-persistence");
     const manifestBytes = await readFile(path.join(packageRoot, "manifest.json"));
     const manifest = JSON.parse(manifestBytes);

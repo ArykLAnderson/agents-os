@@ -21,7 +21,7 @@ Use the `normal` tier for Coding Workers, task-scope Focused Validators, converg
 
 Treat every imported gate as an accepted graph node, not as a final checklist category. Preserve its owner, prerequisites, ordering, evaluator/independence, environment, effects, observations, cleanup, pass claim, invalidators, evidence qualification, and downstream blockers.
 
-Software Implementation may add operational commands, concrete environments, Effect Bindings, and evidence locators needed to execute the accepted gate. It must not:
+Software Implementation may add operational commands, concrete environments, Effect Bindings, and best-effort Evidence Receipt locators needed to execute the accepted gate. It must not:
 
 - remove, weaken, replace, reorder, or OR-combine required proof;
 - universally add architecture, code-quality, design-fidelity, security, or E2E gates omitted by the accepted allocation;
@@ -54,11 +54,11 @@ Atlas proof binding: <accepted gate identity/owner/prerequisites/downstream bloc
 Scenario/environment: <exact flow and target>
 Effect Binding: <setup/run/cleanup authority>
 Evaluator/independence: <accepted requirement and actual capability>
-Observations/evidence: <what will be captured>
+Observations/evidence: <what will be captured and smallest owning Evidence Receipt boundary>
 Cleanup: <owner, steps, terminal state>
 Pass condition/claim: <functional behavior plus cleanup success>
 Expense/risk limits: <ceilings>
-Evidence retention/invalidators: <locators, qualification and disposition>
+Evidence retention/invalidators: <provider artifact, private sanitized artifact, copied output, or attestation; qualification and disposition>
 ```
 
 An inter-Work-Item bounded-live proof runs after its accepted upstream item and before its accepted downstream item; it is not postponed until final review. Final E2E runs only after its accepted prerequisites, which may or may not include a full review suite.
@@ -67,6 +67,7 @@ An inter-Work-Item bounded-live proof runs after its accepted upstream item and 
 - Production-code repair renews affected focused/convergence/review/E2E evidence according to the imported invalidators and accepted allocation; an admitted late full review suite is rerun completely before another final E2E.
 - Test/environment-only correction resets only evidence it invalidates unless the trust boundary changed.
 - Cleanup failure returns `unresolved_effects` with resource/evidence locators. It blocks dependent work, retry, and PR progression until cleanup succeeds or the original effect authority gives an explicit terminal disposition within its ceiling.
+- Inability to retain an artifact after a completed observation is a receipt limitation, not a cleanup failure or failed E2E. Do not require E2E unless it is admitted by the allocation.
 
 ## PR Gate
 

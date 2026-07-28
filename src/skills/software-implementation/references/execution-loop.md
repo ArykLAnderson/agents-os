@@ -19,11 +19,11 @@ Send each Coding Worker:
 - exact proof responsibility and effect limits; and
 - commit authority when its branch will enter coordinated integration.
 
-One worker owns one worktree. Children execute; they do not coordinate. Await correlated, compact result envelopes and update only map state/locators.
+One worker owns one worktree. Children execute; they do not coordinate. Await correlated, compact result envelopes with candidate identity and Evidence Receipt references, selected output, or explicit attestation; update only map state/receipt references/limitations.
 
 ## Task Verification
 
-A worker reaches `verify` only after reporting successful applicable build, lint, test, and task behavioral checks required by its admitted proof obligation. When the admitted allocation requires task-scope independent validation, launch Focused Validator against a dedicated verification checkout and state the truthful enforcement tier. When it requires writer-owned focused proof only, preserve that exact evidence and do not add a generic independent task gate; the task advances to its next accepted integration/proof node.
+A worker reaches `verify` only after reporting successful applicable build, lint, test, and task behavioral checks required by its admitted proof obligation. Retain the lowest-cost practical sanitized evidence form and record any retention failure as a `limited` receipt; do not block an otherwise passing claim solely for a missing artifact. When the admitted allocation requires task-scope independent validation, launch Focused Validator against a dedicated verification checkout and state the truthful enforcement tier. When it requires writer-owned focused proof only, preserve that exact evidence and do not add a generic independent task gate; the task advances to its next accepted integration/proof node.
 
 On independent `findings`, set `repair` and return the bounded evidence to the original worker if it is available and safe. Otherwise launch a fresh Coding Worker with the Task Contract, current safe branch/worktree, prior evidence, and findings. Revalidate the corrected candidate under the same admitted allocation.
 
@@ -49,18 +49,32 @@ When an imported Atlas proof node becomes ready:
 2. verify its accepted prerequisites, owner, evaluator/independence requirement, environment, observations, cleanup, pass claim, and downstream blockers;
 3. require a separate exact Effect Binding for every external operation;
 4. dispatch the applicable independent reviewer or E2E/security operator without substituting a generic gate; and
-5. record qualified source evidence and terminal cleanup, then unblock only the accepted downstream nodes.
+5. record Evidence Receipts at the smallest owning gate boundary, including qualified source evidence and terminal cleanup, then unblock only the accepted downstream nodes.
 
-Do not OR a failed required gate with another check, move a bounded-live gate to final E2E, or add universal reviews around it. Missing capability remains the exact limitation/blocker specified by the handoff or stops for owning-authority resolution.
+Do not OR a failed required gate with another check, move a bounded-live gate to final E2E, or add universal reviews around it. Missing capability remains the exact limitation/blocker specified by the handoff or stops for owning-authority resolution. Missing retention alone is a receipt limitation, not a failed gate.
+
+## Terminal Result Rule
+
+Before emitting a final result, evaluate the persisted execution map against the admitted graph.
+
+The delivery is terminal only when exactly one disposition is true:
+
+1. `delivered`: every admitted task is `done`; every required imported/admitted proof gate is `passed` or in an exact admitted `limited` state; every required integration/convergence node has passed; every required stacked Feature branch and draft PR has reached its admitted state; and the result Currentness Check is `clear` or the exact admitted limitation permits the claimed boundary.
+2. `authority_blocked`: at least one remaining node is blocked by a recorded, concrete, authority-owned blocker that cannot be resolved within the active Execution Authorization Envelope; the result names the blocked node, evidence, owner, and smallest required decision.
+3. `cancelled`: the requester or governing authority explicitly cancelled the admitted delivery.
+
+Everything else is non-terminal. In particular, `todo`, `working`, `verify`, `repair`, `ready_to_integrate`, `integrated`, pending/running CI or proof, an open draft PR, a worker completion, and an available but undispatched dependency frontier are non-terminal.
+
+A pending external check does not justify a final result. If another node is ready, dispatch it. If no node is ready, poll or wait within the admitted bound and continue; only an actual failed gate or authority-owned block may produce `authority_blocked`.
 
 ## Advance
 
 After integration or a passing imported gate:
 
-1. update compact task/gate states and evidence locators;
+1. update compact task/gate states, receipt references, and evidence status;
 2. ask Workspace Operator to create or refresh newly ready dependent worktrees from the advanced named baseline;
 3. run the currentness check and recompute the safe frontier; and
-4. repeat until no tasks/gates remain outside terminal state or a real authority blocker is recorded.
+4. apply the Terminal Result Rule; if it is non-terminal, repeat. Do not emit a final result at a checkpoint.
 
 In stacked mode, once a Feature's gates due before PR pass, non-force push its owned branch and upsert its matching draft PR under the inherited envelope. Create lower stack layers before dependent layers. Do not silently retarget, flatten the stack onto the integration base, or create a duplicate PR.
 

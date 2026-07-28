@@ -19,3 +19,5 @@ Prepare the selected model/provider explicitly under any required Effect Binding
 ## Continuity
 
 Child continuation is optional. When status/cancellation is unsupported or uncertain, quarantine the old worktree after the required safety checks and launch a fresh role with compact handoff in a new persistent worktree.
+
+Coordinator continuity is mandatory within an active Delivery Contract. A completed child-session or tool result is input to the execution loop, not a prompt to emit a final response. Record the checkpoint, recompute the frontier, and launch or poll the next authorized operation. Use a final response only when the portable Terminal Result Rule permits it.

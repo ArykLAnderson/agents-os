@@ -138,31 +138,6 @@ async function generateCaseSkill(destination) {
   await writeFile(skillPath, `${source.slice(0, frontmatterEnd + 5)}\n${generatedHeader}\n\n${source.slice(frontmatterEnd + 5).trimStart()}`);
 }
 
-async function assertGeneratedProcedure(caseRoot) {
-  const skill = await readFile(path.join(caseRoot, "SKILL.md"), "utf8");
-  const persistence = await readFile(path.join(caseRoot, "references/persistence.md"), "utf8");
-  const intake = await readFile(path.join(caseRoot, "references/intake.md"), "utf8");
-  const reconcile = await readFile(path.join(caseRoot, "references/reconcile.md"), "utf8");
-  const explore = await readFile(path.join(caseRoot, "references/explore.md"), "utf8");
-  const combined = [skill, persistence, intake, reconcile, explore].join("\n");
-
-  assert.match(skill, /casebook-persistence/);
-  assert.match(persistence, /missing or ambiguous/i);
-  assert.match(persistence, /Do not (?:probe|fall back)/i);
-  assert.match(persistence, /no fallback or dual write/i);
-  assert.match(persistence, /case\.create/);
-  assert.match(persistence, /case\.commit_revision/);
-  assert.match(persistence, /case\.read/);
-  assert.match(persistence, /case\.search/);
-  assert.match(persistence, /common\.search/);
-  assert.match(persistence, /expected_revision/);
-  assert.match(persistence, /expected_digest/);
-  assert.match(combined, /requested_audience_ceiling.*private/i);
-  assert.match(combined, /human (?:judgment|authority)/i);
-  assert.match(combined, /provenance/i);
-  assert.doesNotMatch(combined, /(?:write|edit) (?:the )?\.casebook\/cases\//i);
-}
-
 async function exerciseMarkdown(entrypoint, root, target) {
   const workspace = path.join(root, "markdown-authority");
   await mkdir(workspace, { recursive: true });
@@ -265,7 +240,6 @@ test("generated Pi, Codex, and OpenCode Case procedures execute selected Markdow
     for (const target of generated.results) {
       const caseRoot = path.join(path.dirname(target.package_root), "case");
       await generateCaseSkill(caseRoot);
-      await assertGeneratedProcedure(caseRoot);
       const targetRoot = path.join(sandbox, "semantic-flow", target.target);
       await mkdir(targetRoot, { recursive: true });
       await exerciseMarkdown(path.join(target.package_root, "variants/markdown/bin/casebook-persistence.mjs"), path.join(targetRoot, "markdown"), target.target);

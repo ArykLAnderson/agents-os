@@ -23,6 +23,36 @@ Stopping conditions: <binding failures, authority blockers, limits>
 
 Git resolves exact source revisions transiently. The map retains the named baseline, not a revision ledger. Atlas planning authority does not imply execution authority. Once an explicit implementation request is normalized into an Execution Authorization Envelope, every operation inside that envelope proceeds without repeated confirmation until an invalidator fires. Unknown authority blocks only the operation that needs it; explicitly absent and not-applicable authorities do not block unrelated work.
 
+## Evidence Receipt
+
+An Evidence Receipt is a compact, provider-neutral record connecting one exact claim to the smallest boundary that owns it. It improves retention and handoff; it is **best effort**, not a new proof gate. A passed command or observed behavior does not become blocked solely because its preferred artifact cannot be retained. Record the retention limitation, selected output, or explicit execution attestation instead. Existing cleanup/effect rules still govern `unresolved_effects`; a missing cleanup disposition is not merely an evidence-retention limitation.
+
+Prefer the first practical form in this hierarchy:
+
+1. authoritative provider artifact;
+2. low-cost retained, sanitized artifact;
+3. copied selected output; or
+4. explicit execution attestation when no artifact/output can be retained.
+
+Do not turn this into a machine schema, transcript store, or universal logging requirement. Each receipt contains enough of the following to make a claim reviewable:
+
+```markdown
+Receipt ID: <stable ID>
+Claim: <exact observed claim; pass/fail/limited claim, not a broad summary>
+Owning boundary: <smallest task, convergence gate, review, E2E/effect, or final handoff boundary>
+Candidate: <repository + worktree/branch/ref or external target tuple>
+Method: <command, provider action, or observation method>
+Result/status: <pass | fail | limited | attested>
+Observed: <time>
+Evidence: <form plus authoritative locator, private artifact locator, or copied selected output>
+Freshness/invalidators: <applicability, relevant invalidators, and stale/current status>
+Sensitivity/redaction: <classification and redactions applied>
+Cleanup disposition: <not applicable | terminal disposition | unresolved_effects locator>
+Limitations: <retention, environment, or observation limits; none when absent>
+```
+
+Create new retained evidence beside the execution map in a private, untracked `evidence/` directory by default. Keep it until an explicit cleanup or archive disposition; never automatically commit, publish, attach, or upload it. Add a compact `evidence/INDEX.md` that maps receipt IDs to retained files, claim, boundary, and sensitivity/cleanup status. The execution map stores receipt references and short limitations only; it is not a transcript or log store. Sanitise secrets, credentials, personal data, and other sensitive output before retention. Authority to retain privately does not grant publication authority.
+
 ### Execution Authorization Envelope
 
 Record one cumulative scoped grant for the delivery. An implementation request does include ordinary commit, exact feature-branch push, and PR lookup/creation authority, plus scoped worktree and owned-branch mechanics, for a verified non-protected `single_pr` delivery unless the requester excludes PR delivery or requests local-only work. An explicit `stacked_feature_prs` request supplies those mechanics across the declared stack graph. Do not infer merge, deployment, release, force push, protected-branch mutation, ready-for-review conversion, credentials, external/live effects, landing, Atlas closure, or unrelated effects.
@@ -132,6 +162,7 @@ Starting baseline: <named integration ref containing prerequisites>
 Repository/worktree/branch: <explicit persistent path and identities>
 Execution envelope / derived commit authority: <locator and task-branch boundary | not granted>
 Repair context: <prior evidence/findings or none>
+Evidence receipts: <worker must return receipt references, selected output, or attestation>
 Handoff: <required result schema>
 ```
 
@@ -151,6 +182,7 @@ Cleanup: <required local cleanup>
 Pass condition: <observable condition>
 Permitted seam repairs: <bounded behavior and writer destination>
 Finding routes: <module-local | seam-spanning | material contradiction>
+Evidence receipts: <smallest-boundary receipt requirements and retention limitations>
 ```
 
 Focused Validator consumes this in `convergence` scope and remains non-implementing.
@@ -168,6 +200,7 @@ Credential reference: <opaque reference selected outside model output>
 Network/provider capabilities: <allowed capabilities>
 Ceilings: <spend, duration, resources, risk>
 Cleanup owner/disposition: <owner and terminal state>
+Evidence receipt: <required claim/boundary and permitted retention form>
 ```
 
 Never fall back to unverified credentials, substitute a provider/account/model, or broaden a binding during repair. Provider/PR discovery does not itself grant mutation authority. For an explicit implementation request, the verified repository remote, authenticated provider account, exact non-protected head, and verified base form the default PR Delivery Binding for exact branch push plus PR lookup/create. E2E setup/run/cleanup and all external/live effects still consume separately declared Effect Bindings. An Atlas proof obligation does not supply a missing live-effect, merge, deployment, landing, or protected-branch binding.
@@ -176,16 +209,16 @@ Never fall back to unverified credentials, substitute a provider/account/model, 
 
 ### Worker
 
-`complete` carries outcome, exact Atlas task binding when applicable, deep interfaces, assumptions/refactoring, behavioral tests, commands/results, focused-verifier instructions, residual limits, worktree/branch, and commit disposition. `technically_blocked` is reserved for impossible continuation and carries evidence plus one discriminating question.
+`complete` carries outcome, exact Atlas task binding when applicable, candidate identity, deep interfaces, assumptions/refactoring, behavioral tests, commands/results, Evidence Receipt references or selected output/attestation, focused-verifier instructions, residual limits, worktree/branch, and commit disposition. `technically_blocked` is reserved for impossible continuation and carries candidate identity, evidence receipts or attestation, plus one discriminating question.
 
 ### Focused validator
 
-Exactly `pass | findings | material_contradiction`, including candidate identity, bound Atlas obligation when applicable, and enforcement tier. Findings carry observed evidence, violated Contract clause, affected interface/consumer, and smallest behavioral correction.
+Exactly `pass | findings | material_contradiction`, including candidate identity, bound Atlas obligation when applicable, enforcement tier, and Evidence Receipt references or selected output/attestation. Findings carry observed evidence, violated Contract clause, affected interface/consumer, and smallest behavioral correction.
 
 ### Integration worker
 
-Carries integrated behavior, included branches, accepted convergence binding, conflicts/seam repairs, commands/results, assumptions, and integration branch/worktree. It never self-certifies.
+Carries candidate identity, integrated behavior, included branches, accepted convergence binding, conflicts/seam repairs, commands/results, Evidence Receipt references or selected output/attestation, assumptions, and integration branch/worktree. It never self-certifies.
 
 ### Coordinator
 
-Carries mode/outcome, exact consumed Atlas Decision and result Currentness Check when applicable, stable map locator, completed waves, evidence under the admitted proof allocation, assumptions/exact typed limits, and PR or integration-branch handoff.
+Carries mode/outcome, exact consumed Atlas Decision and result Currentness Check when applicable, stable map locator, completed waves, evidence under the admitted proof allocation, final Evidence Receipt references or selected output/attestation, assumptions/exact typed limits, and PR or integration-branch handoff. It does not publish retained evidence without separate authority.

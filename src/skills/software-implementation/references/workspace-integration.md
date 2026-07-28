@@ -11,7 +11,8 @@ The Workspace Operator performs repository administration, not product implement
 - bootstrap required dependencies without modifying product source, or report any unavoidable source mutation;
 - verify that coordinated writer and Feature branches stay inside the inherited Execution Authorization Envelope and declared stack graph;
 - create dedicated/disposable validator checkouts and report `filesystem_enforced | tool_restricted_shell_mutable | instruction_only`;
-- report worktree/branch paths and setup evidence;
+- establish the private untracked `evidence/` directory and compact `INDEX.md` beside the execution map when requested, without committing or publishing it;
+- report worktree/branch paths, candidate identity, and setup Evidence Receipt references or attestation;
 - inspect whether an existing worktree is safe to reuse;
 - after validation, inspect candidate/verification state and invalidate a verdict if unexplained product-source mutation occurred; and
 - remove worktrees/branches only after integration or retention disposition and cleanliness checks.
@@ -40,6 +41,6 @@ A conflict requiring new product meaning, architecture, effects, or changed depe
 
 ### Output
 
-Report included branches, integrated behavior, conflicts and repairs, commands/results, assumptions, and the integration branch/worktree ready for independent convergence validation.
+Report candidate identity, included branches, integrated behavior, conflicts and repairs, commands/results, Evidence Receipt references or selected output/attestation, assumptions, and the integration branch/worktree ready for independent convergence validation. Retain low-cost sanitized artifacts privately when practical; do not publish them.
 
 The Integration Worker does not select tasks, independently validate its own result, change accepted design, open a PR, change stack topology, or land an authoritative branch.
