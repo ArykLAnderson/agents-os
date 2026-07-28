@@ -33,7 +33,7 @@ SELECT json_object(
   const placements = owners.filter((item) => item.namespace_id != null);
   const violations = [];
   if (personal.length !== 1) violations.push({ rule: "exact_active_personal_namespace", observed: personal.length });
-  if (placements.some((item) => item.namespace_id !== namespaces[0]?.id)) violations.push({ rule: "all_current_content_in_old_personal", observed: [...new Set(placements.map((item) => item.namespace_id))] });
+  if (personal.length === 1 && placements.some((item) => item.namespace_id !== personal[0].id)) violations.push({ rule: "all_current_content_in_old_personal", observed: [...new Set(placements.map((item) => item.namespace_id))] });
   if (owners.some((item) => item.namespace_id == null)) violations.push({ rule: "current_case_frame_placement_present" });
   const result = {
     schema: "casebook-semantic-namespace-migration-proof@1",

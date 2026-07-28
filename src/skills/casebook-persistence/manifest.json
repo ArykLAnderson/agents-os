@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "67877a35da06f8e0a4917b0745aca6ef6c434c1df27c2e11c8ec69a1622bb6df"
+    "sha256": "fd04c093eee01e35fd2180501f66c382899addcdd05f594e60ef20323fac270a"
   },
   "entrypoints": [
     {
@@ -958,7 +958,7 @@
       "id": "sqlite-context-service",
       "path": "variants/sqlite/lib/context/index.mjs",
       "kind": "module",
-      "sha256": "08a96fbf5ca419cc9afb85010cf87c95d1e66e7b9441e8f0720ec0c73a37d7b1"
+      "sha256": "16989fecef6ddb390ea4e81fa73926148ea07bfd10f115dd9157d9115f0af968"
     },
     {
       "id": "sqlite-case-service",
@@ -1042,7 +1042,7 @@
       "id": "sqlite-successor-schema",
       "path": "variants/sqlite/sql/schema-successor.sql",
       "kind": "sql",
-      "sha256": "d3203fa5f26ebc26def85b1eb508d67cf96dc4879c921d432628936b4b21891c"
+      "sha256": "872b0ef8dc2a9c1627ba831b00c3cf77042d43e22533434e925bccdf9a8c6198"
     },
     {
       "id": "sqlite-runtime",

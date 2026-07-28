@@ -27,7 +27,7 @@ async function invokeConnector(entrypoint, cwd, request) {
 
 const id = (kind, n) => `${kind}:50000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const owner = { id: id("case", 1), kind: "case" };
-const chat = id("chat", 2), nsA = id("namespace", 3), nsB = id("namespace", 4);
+const chat = id("chat", 2), nsA = "namespace:personal", nsB = "namespace:other";
 const chatRevision = id("owner-revision", 5), nsARevision = id("owner-revision", 6), nsBRevision = id("owner-revision", 7);
 
 function aggregate(version = id("version", 20), query = { documents: [], edges: [] }, selections = [{ family_id: id("case", 21), version_id: version }], versions = [{ family_id: id("case", 21), version_id: version, content: { schema: "opaque@1", version }, content_digest: successorDigest({ schema: "opaque@1", version }) }]) {
@@ -136,21 +136,22 @@ test("Chat binding races return context_stale, while explicit Namespace moves an
 
 test("disposable SQLite atomically projects canonical P/R and owner-neutral query material", { timeout: 60_000 }, async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "casebook-placement-pr-")); t.after(() => rm(root, { recursive: true, force: true }));
-  const ids = { store: id("store", 400), workspace: id("workspace", 401), namespace: id("namespace", 402), namespaceRevision: id("owner-revision", 403), namespaceVersion: id("version", 404), childNamespace: id("namespace", 499), childNamespaceRevision: id("owner-revision", 498), childNamespaceVersion: id("version", 497), profile: id("profile", 405), profileRevision: id("owner-revision", 406), profileVersion: id("version", 407), selection: id("profile-selection", 408), selectionRevision: id("owner-revision", 409), selectionVersion: id("version", 410), slot: id("admission-slot", 411), initEvent: id("event", 412), project: id("project-default", 413), chat: id("chat", 414), case: id("case", 415), childCase: id("case", 496) };
+  const ids = { store: id("store", 400), workspace: id("workspace", 401), rootNamespace: "namespace:root", namespace: "namespace:personal", personalNamespaceRevision: id("owner-revision", 497), personalNamespaceVersion: id("version", 498), personalNamespaceEvent: id("event", 496), childNamespace: "namespace:other", childNamespaceRevision: id("owner-revision", 499), childNamespaceVersion: id("version", 500), profile: id("profile", 405), profileRevision: id("owner-revision", 406), profileVersion: id("version", 407), selection: id("profile-selection", 408), selectionRevision: id("owner-revision", 409), selectionVersion: id("version", 410), slot: id("admission-slot", 411), initEvent: id("event", 412), project: id("project-default", 413), chat: id("chat", 414), case: id("case", 415), childCase: id("case", 496) };
   const store = path.join(root, "authority.sqlite3"), grant = path.join(root, "bootstrap.grant.json"), configuration = { source: { kind: "synthetic-test", locator: "placement-pr" }, authority_mode: "sqlite", sqlite: { database_url: store } };
   const record = (owner_id, revision_id, version_id, content) => ({ owner_id, revision_id, version_id, content, content_digest: successorDigest(content) });
   const init = { protocol: { id: "casebook-persistence-json", version: 2 }, operation: "initialize_store", request_version: 1, operation_id: "operation:placement-pr:bootstrap", store_id: ids.store,  authority_claim: { human_authorized: true, local_uid: process.getuid(), human_identity: "test", provenance: "disposable" }, configuration, initial: {
-    root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Root", parent_id: null, lifecycle: "active" }),
+    root_namespace: record(ids.rootNamespace, id("owner-revision", 403), id("version", 404), { schema: "namespace-bootstrap@1", display_name: "Root", parent_id: null, lifecycle: "active" }),
     private_profile: record(ids.profile, ids.profileRevision, ids.profileVersion, { schema: "admission-disclosure-profile@1", audience_ceiling: "private", lifecycle: "active", predecessor_revision_id: null, object_kinds: ["profile", "profile-selection", "namespace", "project-default", "chat", "case"], purposes: ["profile.manage", "profile.read", "context.manage", "context.read", "query.search", "substrate.commit_revision", "substrate.read", "receipt.read", "integrity.observe", "projection.rebuild"], bounds: { max_results: 100, max_traversal_depth: 8, max_export_bytes: 1024 }, projection: { locator: "redacted", export: "deny" }, disclosure: { receipts: true, events: true, checkpoints: true } }),
     profile_selection: record(ids.selection, ids.selectionRevision, ids.selectionVersion, { schema: "profile-selection@1", admission_slot_id: ids.slot, selected_profile_id: ids.profile, selected_profile_revision_id: ids.profileRevision, lifecycle: "active", activation_fence: 1 }), project_default: null, initialization_event_id: ids.initEvent,
   } };
   const auth = await createBootstrapAuthorizationDocument(init, { grant_path: grant }); init.request_digest = auth.request_digest; init.bootstrap_authorization = { path: grant, sha256: auth.sha256 }; await writeFile(grant, `${JSON.stringify(auth.document)}\n`, { mode: 0o600 });
   assert.equal((await initializeSuccessorStore(init)).ok, true);
   const admission = { kind: "sqlite_profile", binding: { selection_id: ids.selection, selection_revision_id: ids.selectionRevision, profile_id: ids.profile, profile_revision_id: ids.profileRevision, activation_fence: 1 } };
-  const context = async (operation, extra) => { const value = { operation, operation_id: `operation:placement-pr:${operation}`, store_id: ids.store,  admission_slot_id: ids.slot, admission, configuration, ...extra }; value.request_digest = canonicalContextRequestDigest(ids.store, value); return invokeContextOperation(value); };
+  const context = async (operation, extra) => { const value = { operation, operation_id: `operation:placement-pr:${operation}:${extra.namespace_id ?? extra.chat_id ?? extra.project_default_id ?? "none"}`, store_id: ids.store,  admission_slot_id: ids.slot, admission, configuration, ...extra }; value.request_digest = canonicalContextRequestDigest(ids.store, value); return invokeContextOperation(value); };
+  assert.equal((await context("namespace.create", { namespace_id: ids.namespace, namespace_revision_id: ids.personalNamespaceRevision, version_id: ids.personalNamespaceVersion, expected_revision: 0, parent_namespace_id: ids.rootNamespace, event_id: ids.personalNamespaceEvent, display_name: "Personal", aliases: [] })).ok, true);
   assert.equal((await context("project_default.create", { project_default_id: ids.project, project_default_revision_id: id("owner-revision", 416), version_id: id("version", 417), expected_revision: 0, namespace_id: ids.namespace, event_id: id("event", 418) })).ok, true);
   assert.equal((await context("chat.establish", { chat_id: ids.chat, chat_revision_id: id("owner-revision", 419), version_id: id("version", 420), expected_revision: 0, use_project_default: true, event_id: id("event", 421) })).ok, true, "Project default establishes Chat before default placement");
-  assert.equal((await context("namespace.create", { namespace_id: ids.childNamespace, namespace_revision_id: ids.childNamespaceRevision, version_id: ids.childNamespaceVersion, expected_revision: 0, parent_namespace_id: ids.namespace, event_id: id("event", 495), display_name: "Child", aliases: [] })).ok, true);
+  assert.equal((await context("namespace.create", { namespace_id: ids.childNamespace, namespace_revision_id: ids.childNamespaceRevision, version_id: ids.childNamespaceVersion, expected_revision: 0, parent_namespace_id: ids.rootNamespace, event_id: id("event", 495), display_name: "Other", aliases: [] })).ok, true);
   const registry = createAdmissionRegistry({ operations: SUBSTRATE_ADMISSION_ROWS, adapters: [{ owner_kind: "case", adapter_version: 1, schemas: ["opaque-owner@1"], operations: ["substrate.commit_revision"], complete_owner: true, resource_deltas: true, events: true, results: true, projections: true, supported_guards: ["owner-policy-fence@1"] }], lifecycles: [{ owner_kind: "case", descriptor_version: 1, descriptor_kind: "selected-version-lifecycle@1", current_states: ["active"], mutation_states: ["active"] }] });
   const service = createPlacementGenerationFoundation(createSuccessorSqlitePlacementAdapter({ configuration, store_id: ids.store,  admission_slot_id: ids.slot, admission, mechanical_options: { admissionRegistry: registry } }));
   const commit = (number, expected_revision, placementValue, aggregateValue) => service.commit({ operation_id: `operation:placement-pr:${number}`, owner: { id: ids.case, kind: "case" }, expected_revision, revision_id: id("owner-revision", 430 + number), event: id("event", 440 + number), placement: placementValue, aggregate: aggregateValue });
@@ -196,16 +197,16 @@ test("disposable SQLite atomically projects canonical P/R and owner-neutral quer
   const fence = (await sqlite(binary, store, "PRAGMA query_only=ON; SELECT operation_fence FROM store_fence;", { args: ["-batch", "-bail", "-json"] })).stdout; const rebuilt = await resolve("projection.rebuild", { operation_id: "operation:placement-pr:rebuild", expected_fence: JSON.parse(fence)[0].operation_fence }); assert.equal(rebuilt.ok, true); const afterRebuild = await resolve("substrate.resolve_current_claim", { owner_kind: "case", claim_type: "alias", namespace_id: ids.namespace, normalized_value: normalizeExactLocator("alpha") }); assert.equal(afterRebuild.result.status, "ambiguous");
 
 
-  const baseRequest = { protocol: { id: "casebook-persistence-json", version: 2 }, store_id: ids.store,  admission_slot_id: ids.slot, admission, configuration };
+  const baseRequest = { protocol: { id: "casebook-persistence-json", version: 2 }, store_id: ids.store,  admission_slot_id: ids.slot, admission, configuration, namespace_id: ids.namespace };
   const resolverRequests = [
     { operation: "namespace.resolve", path: ["root"] },
     { operation: "substrate.resolve_family_binding", owner_kind: "case", family_id: id("case", 453), selector: { current: true } },
     { operation: "substrate.resolve_current_claim", owner_kind: "case", claim_type: "alias", namespace_id: ids.namespace, normalized_value: normalizeExactLocator("missing") },
   ].map((request) => ({ ...baseRequest, ...request }));
   const allScopes = [
-    { scope: "chat_default", chat_id: ids.chat },
+    { scope: "chat_default", namespace_id: ids.namespace, chat_id: ids.chat },
     { scope: "global", namespace_id: ids.namespace },
-    { scope: "workspace" },
+    { scope: "workspace", namespace_id: ids.namespace },
     { scope: "exact_namespace", namespace_id: ids.namespace },
     { scope: "subtree", namespace_id: ids.childNamespace },
     { scope: "ancestors", namespace_id: ids.childNamespace },
