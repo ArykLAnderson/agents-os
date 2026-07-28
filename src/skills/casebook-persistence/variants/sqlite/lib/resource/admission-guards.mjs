@@ -179,7 +179,6 @@ export const CASE_OPERATION_ROWS = Object.freeze([
   ["case.resolve", "case.read", "ordinary_cli"],
   ["case.update", "case.manage", "human_operational"],
   ["case.tombstone", "case.manage", "human_operational"],
-  ["case.move_namespace", "case.manage", "human_operational"],
   ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => [
     ["read", "case.read", "ordinary_cli"], ["create", "case.manage", "human_operational"],
     ["update", "case.manage", "human_operational"], ["tombstone", "case.manage", "human_operational"],

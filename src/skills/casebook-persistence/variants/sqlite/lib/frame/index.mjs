@@ -19,7 +19,7 @@ import { locatorSafeForAudience, portablePublicLocatorAssessment } from "../../.
 import { authorizeFrameHistoricalVisibility } from "../resource/historical-visibility.mjs";
 import { createResourceFoundation } from "../resource/foundation.mjs";
 import { createFinalOwnerLifecycleRegistry, createFinalResourceRegistry } from "../resource/registry.mjs";
-import { requireNamespaceId } from "../context/namespace.mjs";
+import { isNamespaceId, requireNamespaceId } from "../context/namespace.mjs";
 import {
   FrameResourceError,
   applyFrameResourceMask,
@@ -1827,7 +1827,10 @@ export function parseLegacyFrameMarkdown(text) {
     violations.push(...disposition.violations);
   }
   const idFields = [["id", "frame"], ["home_namespace_id", "namespace"]];
-  for (const [key, prefix] of idFields) if (typeof parsed[key] !== "string" || !uuidId(prefix).test(parsed[key])) violations.push({ path: `documents.frame.md.frontmatter.${key}`, rule: `${prefix}_id_required` });
+  for (const [key, prefix] of idFields) {
+    const valid = prefix === "namespace" ? isNamespaceId(parsed[key]) : uuidId(prefix).test(parsed[key]);
+    if (typeof parsed[key] !== "string" || !valid) violations.push({ path: `documents.frame.md.frontmatter.${key}`, rule: `${prefix}_id_required` });
+  }
   if (!FRAME_STATUSES.has(parsed.status)) violations.push({ path: "documents.frame.md.frontmatter.status", rule: "frame_status_invalid" });
   if (parsed.title != null && typeof parsed.title !== "string") violations.push({ path: "documents.frame.md.frontmatter.title", rule: "optional_string_required" });
   for (const key of ["outcome", "limitations", "completion_condition"]) if (parsed[key] != null && typeof parsed[key] !== "string") violations.push({ path: `documents.frame.md.${key}`, rule: "optional_string_required" });

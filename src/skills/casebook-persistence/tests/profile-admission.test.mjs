@@ -17,7 +17,7 @@ import { CASE_OPERATION_FIELDS, invokeSuccessorCaseOperation } from "../variants
 const protocol = { id: "casebook-persistence-json", version: 2 };
 const id = (prefix, suffix) => `${prefix}:30000000-0000-4000-8000-${suffix.padStart(12, "0")}`;
 const ids = {
-  store: id("store", "1"), workspace: id("workspace", "2"), namespace: id("namespace", "3"),
+  store: id("store", "1"), workspace: id("workspace", "2"), namespace: "namespace:personal",
   namespaceRevision: id("owner-revision", "4"), namespaceVersion: id("version", "5"),
   profile: id("profile", "6"), profileRevision: id("owner-revision", "7"), profileVersion: id("version", "8"),
   selection: id("profile-selection", "9"), selectionRevision: id("owner-revision", "10"), selectionVersion: id("version", "11"),
@@ -44,7 +44,7 @@ async function fixture(t, label) {
     store_id: ids.store,
     authority_claim: { human_authorized: true, local_uid: process.getuid(), human_identity: "test-operator", provenance: `disposable:${label}` },
     initial: {
-      root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Personal", parent_id: null, lifecycle: "active" }),
+      root_namespace: record("namespace:root", ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Root", parent_id: null, lifecycle: "active" }),
       private_profile: record(ids.profile, ids.profileRevision, ids.profileVersion, profileContent(null, "active")),
       profile_selection: record(ids.selection, ids.selectionRevision, ids.selectionVersion, { schema: "profile-selection@1", admission_slot_id: ids.slot, selected_profile_id: ids.profile, selected_profile_revision_id: ids.profileRevision, lifecycle: "active", activation_fence: 1 }),
       project_default: null, initialization_event_id: ids.event,
@@ -219,7 +219,7 @@ test("substrate-only Profile admission cannot access any Case read, resolver, or
 });
 
 test("published Case operation contracts and exact request allowlists are closed", () => {
-  const expected = ["case.create", "case.commit_revision", "case.tombstone.commit", "case.read", "case.resolve", "case.update", "case.tombstone", "case.move_namespace", ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => ["read", "create", "update", "tombstone"].map((action) => `case.${kind}.${action}`))];
+  const expected = ["case.create", "case.commit_revision", "case.tombstone.commit", "case.read", "case.resolve", "case.update", "case.tombstone", ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => ["read", "create", "update", "tombstone"].map((action) => `case.${kind}.${action}`))];
   assert.deepEqual(CASE_OPERATION_ROWS.map((row) => row.operation), expected);
   assert.deepEqual([...CASE_OPERATION_FIELDS.keys()], expected);
   for (const row of CASE_OPERATION_ROWS) {

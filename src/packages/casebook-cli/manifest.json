@@ -30,7 +30,7 @@
   "provider": {
     "id": "casebook-persistence@0.19.0-successor",
     "manifest": "bridge/runtime/casebook-persistence/manifest.json",
-    "manifest_sha256": "4438a5ab453b1614f95b57ce8a691d2e5a5d62468c93102ebfad4c5b40f4eb41",
-    "content_digest": "6aaa51e4ed5f76d282a9fb09845a57798c0ac452a5cee035cf2c5b04fd77dca0"
+    "manifest_sha256": "b09c5a168c5fa29660ea9a67c3b293fb820d8ce3f407f9ee7046b20c7594d13a",
+    "content_digest": "60c2a34b02926c6c7270ad44dade36df404ec9db7b76b284f2704624131423bc"
   }
 }

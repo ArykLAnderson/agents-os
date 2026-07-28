@@ -37,7 +37,7 @@ const TEST_CASE_COMMIT_REGISTRY = createAdmissionRegistry({
 const ids = {
   store: "store:10000000-0000-4000-8000-000000000001",
   workspace: "workspace:10000000-0000-4000-8000-000000000002",
-  namespace: "namespace:10000000-0000-4000-8000-000000000003",
+  namespace: "namespace:personal",
   namespaceRevision: "owner-revision:10000000-0000-4000-8000-000000000004",
   namespaceVersion: "version:10000000-0000-4000-8000-000000000005",
   profile: "profile:10000000-0000-4000-8000-000000000006",
@@ -93,8 +93,8 @@ async function fixture(t, label = "fresh", executable = entrypoint) {
       provenance: `disposable:${label}`,
     },
     initial: {
-      root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, {
-        schema: "namespace-bootstrap@1", display_name: "Personal", parent_id: null, lifecycle: "active",
+      root_namespace: record("namespace:root", ids.namespaceRevision, ids.namespaceVersion, {
+        schema: "namespace-bootstrap@1", display_name: "Root", parent_id: null, lifecycle: "active",
       }),
       private_profile: record(ids.profile, ids.profileRevision, ids.profileVersion, {
         schema: "admission-disclosure-profile@1", audience_ceiling: "private", lifecycle: "active", predecessor_revision_id: null,
@@ -124,6 +124,30 @@ async function fixture(t, label = "fresh", executable = entrypoint) {
   return { root, store, grant, request, authorization };
 }
 
+async function createPersonalNamespace(value, admission, operationId) {
+  const request = {
+    protocol,
+    operation: "namespace.create",
+    request_version: 1,
+    operation_id: operationId,
+    store_id: ids.store,
+    admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d",
+    admission,
+    configuration: value.request.configuration,
+    namespace_id: ids.namespace,
+    namespace_revision_id: "owner-revision:30000000-0000-4000-8000-000000000010",
+    version_id: "version:30000000-0000-4000-8000-000000000011",
+    event_id: "event:30000000-0000-4000-8000-000000000012",
+    expected_revision: 0,
+    parent_namespace_id: "namespace:root",
+    display_name: "Personal",
+    aliases: [],
+  };
+  request.request_digest = canonicalContextRequestDigest(ids.store, request);
+  const result = await invoke(value.root, request);
+  assert.equal(result.code, 0, `${result.stderr}\n${JSON.stringify(result.json)}`);
+}
+
 test("exceptional bootstrap consumes one closed grant and publishes only a complete successor store", async (t) => {
   const value = await fixture(t);
   const result = await invoke(value.root, value.request);
@@ -131,7 +155,7 @@ test("exceptional bootstrap consumes one closed grant and publishes only a compl
   assert.equal(result.json.result.status, "settled");
   assert.equal(result.json.result.initialization.store_id, ids.store);
   assert.equal(result.json.result.initialization.profile.id, ids.profile);
-  assert.equal(result.json.result.initialization.root_namespace.id, ids.namespace);
+  assert.equal(result.json.result.initialization.root_namespace.id, "namespace:root");
   assert.equal(await stat(value.store).then((entry) => entry.mode & 0o777), 0o600);
   await assert.rejects(stat(value.grant), { code: "ENOENT" });
 
@@ -370,7 +394,7 @@ test("successor schema has no Candidate-1 authority, placement, cutover, or comp
 test("public manifest and connector admit Profile, Context, graph, and reconciliation lifecycles over the preserved successor substrate", async (t) => {
   const manifest = JSON.parse(await readFile(path.join(packageRoot, "manifest.json"), "utf8"));
   assert.deepEqual(manifest.schema, { id: "sqlite_casebook", version: 2, compatible_versions: [2], store_initialization: "bootstrap-authorization@1" });
-  const baseOperations = ["diagnose", "initialize_store", "profile.create", "profile.revise", "profile.activate", "profile.retire", "profile.read", "profile.history", "namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.history", "namespace.resolve", "project_default.create", "project_default.revise", "project_default.retire", "project_default.read", "chat.establish", "chat.resume", "chat.fork", "chat.rebind", "chat.read", "chat.history", "substrate.commit_revision", "substrate.get_receipt", "substrate.read_owner_current", "substrate.read_owner_revision", "substrate.resolve_family_binding", "substrate.resolve_current_claim", "integrity.observe", "projection.rebuild", "case.create", "case.commit_revision", "case.tombstone.commit", "case.read", "case.resolve", "case.update", "case.tombstone", "case.move_namespace"];
+  const baseOperations = ["diagnose", "initialize_store", "profile.create", "profile.revise", "profile.activate", "profile.retire", "profile.read", "profile.history", "namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.history", "namespace.resolve", "project_default.create", "project_default.revise", "project_default.retire", "project_default.read", "chat.establish", "chat.resume", "chat.fork", "chat.rebind", "chat.read", "chat.history", "substrate.commit_revision", "substrate.get_receipt", "substrate.read_owner_current", "substrate.read_owner_revision", "substrate.resolve_family_binding", "substrate.resolve_current_claim", "integrity.observe", "projection.rebuild", "case.create", "case.commit_revision", "case.tombstone.commit", "case.read", "case.resolve", "case.update", "case.tombstone"];
   const frameOperations = ["frame.create", "frame.commit_revision", "frame.read", "frame.profile.read", "frame.profile.update", "frame.discovery.create", "frame.discovery.read", "frame.discovery.update", "frame.discovery.settle", "frame.discovery.tombstone", "frame.discovery.reopen", "frame.disposition_boundary.read", "frame.disposition_boundary.create", "frame.disposition_boundary.update", "frame.disposition_boundary.close", "frame.case_disposition.read", "frame.case_disposition.create", "frame.case_disposition.update", "frame.case_disposition.classify", "frame.case_disposition.settle"];
   assert.deepEqual(manifest.supported_operations, [...baseOperations, ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => ["read", "create", "update", "tombstone"].map((action) => `case.${kind}.${action}`)), ...frameOperations, "query.search", "query.resolve", "query.hydrate", "graph.neighbors", "graph.traverse", "graph.path", "events.page", "query.snapshot_reconcile.begin", "query.snapshot_reconcile.page", "query.snapshot_reconcile.finish", "query.snapshot_reconcile.checkpoint"]);
   const runtime = JSON.parse(await readFile(path.join(packageRoot, "variants/sqlite/manifests/runtime.json"), "utf8"));
@@ -386,6 +410,7 @@ test("public connector keeps Case-local masks, tombstones, revision identities, 
   assert.equal((await invoke(value.root, value.request)).code, 0);
   const slot = "admission-slot:10000000-0000-4000-8000-00000000000d";
   const admission = { kind: "sqlite_profile", binding: { selection_id: ids.selection, selection_revision_id: ids.selectionRevision, profile_id: ids.profile, profile_revision_id: ids.profileRevision, activation_fence: 1 } };
+  await createPersonalNamespace(value, admission, "operation:successor:case-local:namespace");
   const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store,  admission_slot_id: slot, admission, configuration: value.request.configuration });
   const chatId = "chat:30000000-0000-4000-8000-000000000001";
   const chat = { ...base("chat.establish", "operation:successor:case-local:chat"), chat_id: chatId, chat_revision_id: "owner-revision:30000000-0000-4000-8000-000000000002", version_id: "version:30000000-0000-4000-8000-000000000003", event_id: "event:30000000-0000-4000-8000-000000000004", expected_revision: 0, namespace_id: ids.namespace, correlation: null };
@@ -393,14 +418,14 @@ test("public connector keeps Case-local masks, tombstones, revision identities, 
   assert.equal((await invoke(value.root, chat)).code, 0);
   const caseId = "case:30000000-0000-4000-8000-000000000005";
   const caseValue = { id: caseId, home_namespace_id: ids.namespace, state: "active", title: "Public Case", summary: "initial", scope: "WI020", aliases: [], references: [], facets: [], entries: [], sources: [], relationships: [] };
-  const created = await invoke(value.root, { ...base("case.create", "operation:successor:case-local:create"), expected_revision: 0, commit_basis: "public Case create", provenance: {}, case: caseValue, placement: { chat_id: chatId } });
+  const created = await invoke(value.root, { ...base("case.create", "operation:successor:case-local:create"), expected_revision: 0, commit_basis: "public Case create", provenance: {}, case: caseValue, placement: { namespace_id: ids.namespace } });
   assert.equal(created.code, 0, `${created.stderr}\n${JSON.stringify(created.json)}`);
   assert.equal(created.json.result.placement.namespace_id, ids.namespace);
-  const noOp = await invoke(value.root, { ...base("case.update", "operation:successor:case-local:no-op"), resource_id: caseId, if_match_revision_id: created.json.result.revision.id, commit_basis: "owner no-op mask", changes: { set: { summary: "initial" } } });
+  const noOp = await invoke(value.root, { ...base("case.update", "operation:successor:case-local:no-op"), resource_id: caseId, if_match_revision_id: created.json.result.revision.id, commit_basis: "owner no-op mask", changes: { set: { summary: "initial" } }, placement: { namespace_id: ids.namespace } });
   assert.equal(noOp.code, 0, `${noOp.stderr}\n${JSON.stringify(noOp.json)}`);
   assert.equal(noOp.json.result.resource.version.summary, "initial");
   assert.equal(noOp.json.result.placement.placement_version_id, created.json.result.placement.placement_version_id);
-  const updated = await invoke(value.root, { ...base("case.update", "operation:successor:case-local:update"), resource_id: caseId, if_match_revision_id: noOp.json.result.revision.id, commit_basis: "owner masked update", changes: { set: { summary: "masked" } } });
+  const updated = await invoke(value.root, { ...base("case.update", "operation:successor:case-local:update"), resource_id: caseId, if_match_revision_id: noOp.json.result.revision.id, commit_basis: "owner masked update", changes: { set: { summary: "masked" } }, placement: { namespace_id: ids.namespace } });
   assert.equal(updated.code, 0, updated.stderr);
   assert.equal(updated.json.result.resource.version.summary, "masked");
   const historicalBase = base("case.read", "operation:successor:case-local:read"); delete historicalBase.operation_id;
@@ -409,7 +434,7 @@ test("public connector keeps Case-local masks, tombstones, revision identities, 
   assert.equal(historical.json.result.revision.id, updated.json.result.revision.id);
   assert.equal(historical.json.result.case.summary, "masked");
   assert.equal(historical.json.result.placement.placement_version_id, created.json.result.placement.placement_version_id);
-  const tombstoned = await invoke(value.root, { ...base("case.tombstone", "operation:successor:case-local:tombstone"), resource_id: caseId, if_match_revision_id: updated.json.result.revision.id, commit_basis: "owner tombstone", reason: "complete" });
+  const tombstoned = await invoke(value.root, { ...base("case.tombstone", "operation:successor:case-local:tombstone"), resource_id: caseId, if_match_revision_id: updated.json.result.revision.id, commit_basis: "owner tombstone", reason: "complete", placement: { namespace_id: ids.namespace } });
   assert.equal(tombstoned.code, 0, tombstoned.stderr);
   assert.equal(tombstoned.json.result.resource.state, "tombstoned");
   const hiddenBase = base("case.read", "operation:successor:case-local:hidden"); delete hiddenBase.operation_id;
@@ -438,7 +463,6 @@ test("every modular Case operation rejects unsupported top-level fields before r
     const cases = [
       { operation: "case.update", request: { ...mutation("case.update", caseId), changes: { set: { summary: "never read" } } }, identities: [caseId, revisionId] },
       { operation: "case.tombstone", request: { ...mutation("case.tombstone", caseId), reason: "never read" }, identities: [caseId, revisionId] },
-      { operation: "case.move_namespace", request: { ...mutation("case.move_namespace", caseId), placement: { namespace_id: ids.namespace } }, identities: [caseId, revisionId] },
       ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => {
         const resource_id = resourceIds[kind];
         return [
@@ -449,7 +473,7 @@ test("every modular Case operation rejects unsupported top-level fields before r
         ];
       }),
     ];
-    assert.equal(cases.length, 23);
+    assert.equal(cases.length, 22);
     const before = await readFile(value.store);
     for (const entry of cases) {
       const rejected = await invoke(value.root, { ...entry.request, unsupported_top_level_field: "must fail before any resource access" }, {}, target.executable);
@@ -568,6 +592,7 @@ test("public successor connector settles complete and modular Frame resources wi
   const value = await fixture(t, "frame-public");
   assert.equal((await invoke(value.root, value.request)).code, 0);
   const admission = { kind: "sqlite_profile", binding: { selection_id: ids.selection, selection_revision_id: ids.selectionRevision, profile_id: ids.profile, profile_revision_id: ids.profileRevision, activation_fence: 1 } };
+  await createPersonalNamespace(value, admission, "operation:successor:frame:namespace");
   const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store,  admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d", admission, configuration: value.request.configuration });
   const frameId = "frame:30000000-0000-4000-8000-000000000101";
   const discoveryId = "discovery:30000000-0000-4000-8000-000000000102";
@@ -584,25 +609,25 @@ test("public successor connector settles complete and modular Frame resources wi
   const noQueryAdvance = await invoke(value.root, { ...base("frame.commit_revision", "operation:successor:frame:no-r"), frame_id: frameId, expected_revision: current.json.result.revision.number, commit_basis: "retain semantics with new restricted provenance", provenance: { acting_role: "different-private-actor" }, frame: current.json.result.frame, placement: { namespace_id: ids.namespace } });
   assert.equal(noQueryAdvance.code, 0, `${noQueryAdvance.stderr}\n${JSON.stringify(noQueryAdvance.json)}`);
   assert.equal(noQueryAdvance.json.result.query_changed, false, "restricted provenance alone does not advance R");
-  const profile = await invoke(value.root, { ...base("frame.profile.update", "operation:successor:frame:profile"), resource_id: frameId, if_match_revision_id: noQueryAdvance.json.result.revision.id, commit_basis: "update only profile", changes: { set: { title: "Updated Frame" } } });
+  const profile = await invoke(value.root, { ...base("frame.profile.update", "operation:successor:frame:profile"), resource_id: frameId, if_match_revision_id: noQueryAdvance.json.result.revision.id, commit_basis: "update only profile", changes: { set: { title: "Updated Frame" } }, placement: { namespace_id: ids.namespace } });
   assert.equal(profile.code, 0, `${profile.stderr}\n${JSON.stringify(profile.json)}`);
   assert.equal(profile.json.result.query_changed, true, "queryable profile meaning advances R");
-  const settled = await invoke(value.root, { ...base("frame.discovery.settle", "operation:successor:frame:settle"), resource_id: discoveryId, if_match_revision_id: profile.json.result.revision.id, commit_basis: "settle discovery", resolution: "Evidence reviewed", disposition: "settled" });
+  const settled = await invoke(value.root, { ...base("frame.discovery.settle", "operation:successor:frame:settle"), resource_id: discoveryId, if_match_revision_id: profile.json.result.revision.id, commit_basis: "settle discovery", resolution: "Evidence reviewed", disposition: "settled", placement: { namespace_id: ids.namespace } });
   assert.equal(settled.code, 0, settled.stderr);
-  const reopened = await invoke(value.root, { ...base("frame.discovery.reopen", "operation:successor:frame:reopen"), resource_id: discoveryId, if_match_revision_id: settled.json.result.revision.id, commit_basis: "new evidence", category: "frontier", reopening_basis: "New restricted evidence" });
+  const reopened = await invoke(value.root, { ...base("frame.discovery.reopen", "operation:successor:frame:reopen"), resource_id: discoveryId, if_match_revision_id: settled.json.result.revision.id, commit_basis: "new evidence", category: "frontier", reopening_basis: "New restricted evidence", placement: { namespace_id: ids.namespace } });
   assert.equal(reopened.code, 0, reopened.stderr);
   assert.equal(reopened.json.result.resource.lifecycle, "active");
-  const classified = await invoke(value.root, { ...base("frame.case_disposition.classify", "operation:successor:frame:classify"), resource_id: dispositionId, if_match_revision_id: reopened.json.result.revision.id, commit_basis: "classify intake", disposition: "intake", rationale: "Case needed", case_id: "case:30000000-0000-4000-8000-000000000105", case_operation_id: "operation:case:separate-receipt" });
+  const classified = await invoke(value.root, { ...base("frame.case_disposition.classify", "operation:successor:frame:classify"), resource_id: dispositionId, if_match_revision_id: reopened.json.result.revision.id, commit_basis: "classify intake", disposition: "intake", rationale: "Case needed", case_id: "case:30000000-0000-4000-8000-000000000105", case_operation_id: "operation:case:separate-receipt", placement: { namespace_id: ids.namespace } });
   assert.equal(classified.code, 0, `${classified.stderr}\n${JSON.stringify(classified.json)}`);
   assert.equal(classified.json.result.receipt.operation_id, "operation:successor:frame:classify", "Frame classification settles its own Frame receipt and does not atomically mutate the referenced Case");
-  const realized = await invoke(value.root, { ...base("frame.case_disposition.settle", "operation:successor:frame:realize"), resource_id: dispositionId, if_match_revision_id: classified.json.result.revision.id, commit_basis: "Case settled separately", observed_case_revision_id: "case-revision:30000000-0000-4000-8000-000000000106" });
+  const realized = await invoke(value.root, { ...base("frame.case_disposition.settle", "operation:successor:frame:realize"), resource_id: dispositionId, if_match_revision_id: classified.json.result.revision.id, commit_basis: "Case settled separately", observed_case_revision_id: "case-revision:30000000-0000-4000-8000-000000000106", placement: { namespace_id: ids.namespace } });
   assert.equal(realized.code, 0, `${realized.stderr}\n${JSON.stringify(realized.json)}`);
-  const closed = await invoke(value.root, { ...base("frame.disposition_boundary.close", "operation:successor:frame:close"), resource_id: boundaryId, if_match_revision_id: realized.json.result.revision.id, commit_basis: "all dispositions settled" });
+  const closed = await invoke(value.root, { ...base("frame.disposition_boundary.close", "operation:successor:frame:close"), resource_id: boundaryId, if_match_revision_id: realized.json.result.revision.id, commit_basis: "all dispositions settled", placement: { namespace_id: ids.namespace } });
   assert.equal(closed.code, 0, `${closed.stderr}\n${JSON.stringify(closed.json)}`);
   const historical = await invoke(value.root, { ...readBase, frame_id: frameId, revision_id: profile.json.result.revision.id });
   assert.equal(historical.code, 0, historical.stderr);
   assert.equal(historical.json.result.frame.title, "Updated Frame");
-  const stale = await invoke(value.root, { ...base("frame.profile.update", "operation:successor:frame:conflict"), resource_id: frameId, if_match_revision_id: profile.json.result.revision.id, commit_basis: "stale conflict", changes: { set: { title: "stale" } } });
+  const stale = await invoke(value.root, { ...base("frame.profile.update", "operation:successor:frame:conflict"), resource_id: frameId, if_match_revision_id: profile.json.result.revision.id, commit_basis: "stale conflict", changes: { set: { title: "stale" } }, placement: { namespace_id: ids.namespace } });
   assert.equal(stale.code, 2);
   assert.equal(stale.json.failure.code, "frame.revision_conflict");
   assert.notEqual(created.json.result.receipt.operation_id, profile.json.result.receipt.operation_id, "Frame receipts are independent from Case receipt namespace and each Frame operation");
