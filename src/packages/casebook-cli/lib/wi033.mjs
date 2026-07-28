@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { lstat, open, readFile, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { verifyPackageAssets } from "./package-assets.mjs";
 
 const MAX = 1024 * 1024;
 const SETTINGS_MAX = 64 * 1024;
@@ -30,7 +31,41 @@ const refuse = (operation, authority, code, message, delivery = false, evidence 
   },
 });
 const absolute = (value) => typeof value === "string" && path.isAbsolute(value) && !value.includes("\0") && !value.includes("~") && path.normalize(value) === value ? value : null;
-const duplicateFreeJson = (text) => JSON.parse(text);
+function duplicateFreeJson(text) {
+  let at = 0;
+  const whitespace = () => { while (/\s/.test(text[at] ?? "")) at += 1; };
+  const string = () => {
+    const start = at++;
+    for (; at < text.length; at += 1) {
+      if (text[at] === "\\") { at += 1; continue; }
+      if (text[at] === '"') { at += 1; return JSON.parse(text.slice(start, at)); }
+    }
+    throw Error("json_invalid");
+  };
+  const value = () => {
+    whitespace();
+    if (text[at] === "{") {
+      at += 1; const keys = new Set(); whitespace();
+      if (text[at] === "}") { at += 1; return; }
+      while (true) {
+        whitespace(); if (text[at] !== '"') throw Error("json_invalid");
+        const key = string(); if (keys.has(key)) throw Error("json_duplicate_key"); keys.add(key);
+        whitespace(); if (text[at++] !== ":") throw Error("json_invalid"); value(); whitespace();
+        if (text[at] === "}") { at += 1; return; }
+        if (text[at++] !== ",") throw Error("json_invalid");
+      }
+    }
+    if (text[at] === "[") {
+      at += 1; whitespace(); if (text[at] === "]") { at += 1; return; }
+      while (true) { value(); whitespace(); if (text[at] === "]") { at += 1; return; } if (text[at++] !== ",") throw Error("json_invalid"); }
+    }
+    if (text[at] === '"') { string(); return; }
+    const start = at; while (at < text.length && !/[\s,\]}]/.test(text[at])) at += 1;
+    JSON.parse(text.slice(start, at));
+  };
+  value(); whitespace(); if (at !== text.length) throw Error("json_invalid");
+  return JSON.parse(text);
+}
 
 async function safeSettings(file) {
   let fh;
@@ -44,9 +79,10 @@ async function safeSettings(file) {
     const bytes = await fh.readFile({ encoding: "utf8" });
     const after = await fh.stat();
     if (before.ino !== after.ino || before.size !== after.size) throw Error("settings_changed");
+    if (pathInfo.dev !== before.dev || pathInfo.ino !== before.ino || before.isSymbolicLink()) throw Error("settings_changed");
     const data = duplicateFreeJson(bytes), keys = Object.keys(data ?? {});
-    if (!data || Array.isArray(data) || data.schema !== "casebook-cli-settings@1" || keys.length !== 2 || !keys.includes("schema") || !keys.includes("store") || (data.store != null && !absolute(data.store))) throw Error("settings_invalid");
-    return data.store;
+    if (!data || Array.isArray(data) || data.schema !== "casebook-cli-settings@1" || !keys.every((key) => key === "schema" || key === "store") || (data.store != null && !absolute(data.store))) throw Error("settings_invalid");
+    return data.store ?? undefined;
   } catch (error) {
     if (error?.code === "ENOENT") return undefined;
     throw error;
@@ -139,6 +175,7 @@ async function bridgeCall(request, workspace) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [bridge.pathname], { cwd: workspace, shell: false, stdio: ["pipe", "pipe", "pipe"] });
     let output = Buffer.alloc(0), dispatched = false, settled = false;
+    const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(request.operation);
     const finish = (fn, value) => { if (!settled) { settled = true; clearTimeout(timer); fn(value); } };
     const fail = (error) => finish(reject, error);
     const timer = setTimeout(() => {
@@ -156,9 +193,10 @@ async function bridgeCall(request, workspace) {
     child.on("error", () => fail(Error("bridge_launch_failed")));
     child.on("close", (code, signal) => {
       if (settled) return;
-      if (signal || code !== 0) return fail(Object.assign(Error("bridge_signal"), { delivery: dispatched, operation_id: request.operation_id ?? null }));
+      if (code !== 0 && !signal) return fail(Error("bridge_launch_failed"));
+      if (signal) return fail(Object.assign(Error("bridge_signal"), { delivery: mutation && dispatched, operation_id: request.operation_id ?? null }));
       try { finish(resolve, duplicateFreeJson(output.toString("utf8"))); }
-      catch { fail(Object.assign(Error("bridge_malformed"), { delivery: dispatched, operation_id: request.operation_id ?? null })); }
+      catch { fail(Object.assign(Error("bridge_malformed"), { delivery: mutation && dispatched, operation_id: request.operation_id ?? null })); }
     });
     child.stdin.end(encoded);
     dispatched = true;
@@ -169,6 +207,7 @@ export async function run(argv) {
   let ctx, operation = "unknown";
   try {
     const parsed = parse(argv);
+    await verifyPackageAssets();
     operation = operations.get(parsed.command.join(" ")) ?? null;
     if (!operation) throw Error("grammar_invalid");
     const declaredInput = parsed.global["--input"] !== undefined || parsed.global["--input-file"] !== undefined;
@@ -187,8 +226,9 @@ export async function run(argv) {
     if (!store) { store = path.join(absolute(process.env.XDG_DATA_HOME) || path.join(process.env.HOME || os.homedir(), ".local", "share"), "casebook", "casebook.sqlite"); source = "xdg_default"; }
     // This is retained solely as the request candidate. It is never rendered until
     // the provider has admitted this same canonical path through target.describe.
-    const canonicalCandidate = await realpath(store).catch(() => store);
-    ctx.authority = { ...authority, resolution_source: source };
+    const canonicalCandidate = store;
+    authority = { ...authority, resolution_source: source };
+    ctx.authority = authority;
     let aggregate = null;
     const modes = [parsed.global["--input"] !== undefined, parsed.global["--input-file"] !== undefined].filter(Boolean).length;
     if (modes > 1) throw Error("input_transport_conflict");
@@ -209,11 +249,12 @@ export async function run(argv) {
     if (!describe.ok) return { result: refuse(operation, authority, describe.failure?.code ?? "target_refused", describe.failure?.message ?? "Target admission refused."), exitCode: 2 };
     const target = describe.result;
     if (!target || typeof target.store_id !== "string" || typeof target.workspace_id !== "string" || typeof target.admission_slot_id !== "string" || typeof target.profile_id !== "string" || typeof target.profile_revision_id !== "string" || !Number.isInteger(target.activation_fence)) throw Error("target_response_invalid");
-    authority = { status: "target_admitted", workspace, store: canonicalCandidate, resolution_source: source, store_id: target.store_id, workspace_id: target.workspace_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
+    const canonicalStore = await realpath(canonicalCandidate);
+    authority = { status: "target_admitted", workspace, store: canonicalStore, resolution_source: source, store_id: target.store_id, workspace_id: target.workspace_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
     ctx = { authority };
     const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
     const operationId = mutation ? `operation:${randomUUID().toLowerCase()}` : null;
-    const answer = await bridgeCall({ operation, workspace, store: canonicalCandidate, target, flags: parsed.flags, aggregate, operation_id: operationId }, workspace);
+    const answer = await bridgeCall({ operation, workspace, store: canonicalStore, target, flags: parsed.flags, aggregate, operation_id: operationId }, workspace);
     if (!answer || typeof answer.ok !== "boolean" || (answer.ok && (!answer.result || typeof answer.result !== "object")) || (!answer.ok && (!answer.failure || typeof answer.failure !== "object"))) throw Object.assign(Error("bridge_contradiction"), { delivery: mutation, operation_id: operationId });
     if (!answer.ok) return { result: refuse(operation, authority, answer.failure?.code ?? "provider_refused", answer.failure?.message ?? "Provider refused the operation."), exitCode: 2 };
     const raw = answer.result;

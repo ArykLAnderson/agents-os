@@ -1,4 +1,5 @@
 import path from "node:path";
+import { lstat } from "node:fs/promises";
 import { validateAuthorityConfiguration } from "../../../../shared/config.mjs";
 import { loadAndValidateManifest } from "../../../../shared/manifest.mjs";
 import { failure, success } from "../../../../shared/protocol.mjs";
@@ -11,14 +12,22 @@ async function rows(binary, store, statement) {
   const { stdout } = await sqlite(binary, store, `PRAGMA query_only=ON;\n${statement}`, { args: ["-batch", "-bail", "-json"] });
   return JSON.parse(stdout || "[]");
 }
+async function checkedStore(pathname) {
+  const record = await lstat(pathname);
+  if (!record.isFile() || record.isSymbolicLink()) throw Error("store_unsafe");
+  return { dev: record.dev, ino: record.ino, size: record.size };
+}
 async function prepared(configuration) {
   const config = validateAuthorityConfiguration(configuration);
   if (config.authority_mode !== "sqlite") return { failure: failure("sqlite_authority_required", "The connected CLI requires SQLite authority.") };
+  const initialStore = await checkedStore(config.sqlite.store_path);
   const manifest = await loadAndValidateManifest();
   if (!manifest.ok) return { failure: failure("asset_incompatible", "Package assets are incompatible.", { evidence: { problems: manifest.problems } }) };
   const selected = await selectSqliteBinary();
   if (!(await probeSqlite(selected.path, path.dirname(config.sqlite.store_path))).ok) return { failure: failure("sqlite_feature_unsupported", "The package-owned SQLite runtime is incompatible.") };
   const state = await inspectSuccessorStore(selected.path, config.sqlite.store_path);
+  const finalStore = await checkedStore(config.sqlite.store_path);
+  if (initialStore.dev !== finalStore.dev || initialStore.ino !== finalStore.ino || initialStore.size !== finalStore.size) return { failure: failure("store_changed", "The resolved store changed during admission.") };
   if (state.status !== "available") return { failure: failure(state.code ?? "store_unavailable", "The resolved store is unavailable.", { evidence: state.evidence ?? {} }) };
   return { config, manifest, binary: selected.path, store: config.sqlite.store_path, state };
 }
@@ -45,7 +54,7 @@ export async function recentOperations(request) {
     if ((await rows(ready.binary, ready.store, `SELECT CASE WHEN ${profileAdmissionPredicate(admission)} THEN 1 ELSE 0 END ok;`))[0]?.ok !== 1) return targetFailure("profile_guard_denied", "The selected Profile no longer admits the request.");
     const limit = request.limit, before = request.before_operation_fence ?? null;
     if (!Number.isInteger(limit) || limit < 1 || limit > 20 || (before != null && (!Number.isInteger(before) || before < 1))) return targetFailure("recent_request_invalid", "Recent operation bounds are invalid.");
-    const page = await rows(ready.binary, ready.store, `SELECT operation_id,operation_kind,request_digest,outcome,result_digest,settled_at,retry_disposition,operation_fence,owner_id,owner_revision_id,event_id FROM store_operation_receipts WHERE ${before == null ? "1" : `operation_fence < ${before}`} ORDER BY operation_fence DESC LIMIT ${limit + 1};`);
+    const page = await rows(ready.binary, ready.store, `SELECT operation_id,operation_kind,request_digest,outcome,result_digest,settled_at,retry_disposition,operation_fence,owner_id,committed_revision AS owner_revision_id,event_id FROM store_operation_receipts WHERE ${before == null ? "1" : `operation_fence < ${before}`} ORDER BY operation_fence DESC LIMIT ${limit + 1};`);
     const operations = page.slice(0, limit).map((row) => ({ ...row, owner_id: row.owner_id ?? null, owner_revision_id: row.owner_revision_id ?? null, event_id: row.event_id ?? null }));
     return success("operation.recent", { observed_operation_fence: ready.state.operation_fence, operations, next_before_operation_fence: page.length > limit ? operations.at(-1).operation_fence : null });
   } catch { return targetFailure("profile_guard_denied", "The selected Profile no longer admits the request."); }

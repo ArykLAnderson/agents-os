@@ -148,7 +148,7 @@
   ],
   "ordinary_cli_capabilities": [
     "sqlite_casebook@2",
-    "casebook-cli-selection@2",
+    "casebook-resolved-target@1",
     "casebook-persistence-json@2",
     "casebook-cli-result@2"
   ],
@@ -165,22 +165,18 @@
     "version": 2
   },
   "selection": {
-    "id": "casebook-cli-selection",
-    "version": 2,
-    "authority": "explicit SQLite/Profile selection only"
+    "id": "casebook-resolved-target",
+    "version": 1,
+    "authority": "per-invocation resolved target admission only"
   },
   "ordinary_cli_capability_contracts": {
     "sqlite_casebook@2": {
       "authority": "selected SQLite authority only"
     },
-    "casebook-cli-selection@2": {
-      "authority": "explicit SQLite/Profile selection only",
+    "casebook-resolved-target@1": {
+      "authority": "per-invocation resolved target admission only",
       "operations": [
-        "profile.read",
-        "profile.history",
-        "namespace.read",
-        "namespace.history",
-        "project_default.read"
+        "target.describe"
       ]
     },
     "casebook-persistence-json@2": {
@@ -192,5 +188,17 @@
       "operations": "supported_operations"
     }
   },
-  "unsupported_until_later_work_items": []
+  "unsupported_until_later_work_items": [],
+  "ordinary_cli_operations": [
+    "target.describe",
+    "case.create",
+    "case.read",
+    "case.commit_revision",
+    "frame.create",
+    "frame.read",
+    "frame.commit_revision",
+    "query.search",
+    "substrate.get_receipt",
+    "operation.recent"
+  ]
 }

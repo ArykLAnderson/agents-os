@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "c95d9657cb782187240d04d72cbee8c11c5f52d11f5c806ae371119090a27cfd"
+    "sha256": "23b6e49ca64aa4b82aa3bf31285a889419ce6497fdc89226a0a1ac0e3353187c"
   },
   "entrypoints": [
     {
@@ -153,7 +153,7 @@
   ],
   "ordinary_cli_capabilities": [
     "sqlite_casebook@2",
-    "casebook-cli-selection@2",
+    "casebook-resolved-target@1",
     "casebook-persistence-json@2",
     "casebook-cli-result@2"
   ],
@@ -161,14 +161,10 @@
     "sqlite_casebook@2": {
       "authority": "selected SQLite authority only"
     },
-    "casebook-cli-selection@2": {
-      "authority": "explicit SQLite/Profile selection only",
+    "casebook-resolved-target@1": {
+      "authority": "per-invocation resolved target admission only",
       "operations": [
-        "profile.read",
-        "profile.history",
-        "namespace.read",
-        "namespace.history",
-        "project_default.read"
+        "target.describe"
       ]
     },
     "casebook-persistence-json@2": {
@@ -918,7 +914,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "1424262a7d634f08615e5a5b4cae323f6909474b20ca37baee8071a5a769c07d"
+      "sha256": "3c1a7b9fb0d1d755b446ff51982356bf14d90619b6f13c9dc4e373375b693404"
     },
     {
       "id": "shared-configuration",
@@ -930,7 +926,7 @@
       "id": "shared-manifest",
       "path": "shared/manifest.mjs",
       "kind": "module",
-      "sha256": "429845f5ee63ea1f4c4824e40ad9046ec6baa7a6b2b0fef05d7ce56e50587144"
+      "sha256": "55bbd8fb0fce20cd384ff143039f65fd743c795629e7a371880bdf3de67970be"
     },
     {
       "id": "sqlite-entrypoint",
@@ -960,7 +956,7 @@
       "id": "sqlite-cli-admission",
       "path": "variants/sqlite/lib/cli/index.mjs",
       "kind": "module",
-      "sha256": "48296311e38eeb3c9bdc1b5c6dad632624e484f02ea7d7daade882915d6347e6"
+      "sha256": "15c431bf542336d08b82b8f0ae20d642c75eb21c88896b498df7310e93e21360"
     },
     {
       "id": "sqlite-profile-service",
@@ -978,13 +974,13 @@
       "id": "sqlite-case-successor-adapter",
       "path": "variants/sqlite/lib/case/successor.mjs",
       "kind": "module",
-      "sha256": "4075f5eeb2355cee3368ad0840cd13a5285a4789163bb3ab863a2bf30ddff34b"
+      "sha256": "f5a4c3cf3146f30bdc1928397f18b25731b42582abf5f07fedcc9f220bee3ec6"
     },
     {
       "id": "sqlite-frame-successor-adapter",
       "path": "variants/sqlite/lib/frame/successor.mjs",
       "kind": "module",
-      "sha256": "968558f18b90465af438490ac77da684f345f19028eab7e5f306601722013854"
+      "sha256": "f2acc4e8f4a4dea8be9e116aabf8643529c6b47fc6c45364653376cb15b1228d"
     },
     {
       "id": "sqlite-placement-generation",
@@ -1056,7 +1052,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "228b9a6689a17bd4f302606ce03a45a83392a5a81b89cf245fcf5315f0cd9e30"
+      "sha256": "95bbb77a0eb338160998ea4bc16ba048bb0f8e24c2553e039da546ffbf6f249a"
     },
     {
       "id": "sqlite-wasm-node-module",
@@ -1082,8 +1078,20 @@
     "version": 2
   },
   "selection": {
-    "id": "casebook-cli-selection",
-    "version": 2,
-    "authority": "explicit SQLite/Profile selection only"
-  }
+    "id": "casebook-resolved-target",
+    "version": 1,
+    "authority": "per-invocation resolved target admission only"
+  },
+  "ordinary_cli_operations": [
+    "target.describe",
+    "case.create",
+    "case.read",
+    "case.commit_revision",
+    "frame.create",
+    "frame.read",
+    "frame.commit_revision",
+    "query.search",
+    "substrate.get_receipt",
+    "operation.recent"
+  ]
 }

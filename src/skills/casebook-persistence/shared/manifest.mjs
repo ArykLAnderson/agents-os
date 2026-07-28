@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PACKAGE_ID, PROTOCOL_ID, PROTOCOL_VERSION, RESULT_ID, RESULT_VERSION, SCHEMA_ID, SCHEMA_VERSION, SELECTION_ID, SELECTION_VERSION, SUPPORTED_OPERATIONS } from "./protocol.mjs";
+import { PACKAGE_ID, PROTOCOL_ID, PROTOCOL_VERSION, RESULT_ID, RESULT_VERSION, SCHEMA_ID, SCHEMA_VERSION, SELECTION_ID, SELECTION_VERSION, SUPPORTED_OPERATIONS, ORDINARY_CLI_OPERATIONS } from "./protocol.mjs";
 
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const MANIFEST_PATH = path.join(PACKAGE_ROOT, "manifest.json");
@@ -27,15 +27,16 @@ export async function loadAndValidateManifest() {
   if (manifest.protocol?.id !== PROTOCOL_ID || manifest.protocol?.version !== PROTOCOL_VERSION || manifest.protocol?.compatible_versions?.join(",") !== String(PROTOCOL_VERSION)) problems.push("protocol");
   if (manifest.schema?.id !== SCHEMA_ID || manifest.schema?.version !== SCHEMA_VERSION || manifest.schema?.compatible_versions?.join(",") !== String(SCHEMA_VERSION)) problems.push("schema");
   if (manifest.result?.id !== RESULT_ID || manifest.result?.version !== RESULT_VERSION) problems.push("result");
-  if (manifest.selection?.id !== SELECTION_ID || manifest.selection?.version !== SELECTION_VERSION || manifest.selection?.authority !== "explicit SQLite/Profile selection only") problems.push("selection");
+  if (manifest.selection?.id !== SELECTION_ID || manifest.selection?.version !== SELECTION_VERSION || manifest.selection?.authority !== "per-invocation resolved target admission only") problems.push("selection");
   const expectedCapabilities = [`${SCHEMA_ID}@${SCHEMA_VERSION}`, `${SELECTION_ID}@${SELECTION_VERSION}`, `${PROTOCOL_ID}@${PROTOCOL_VERSION}`, `${RESULT_ID}@${RESULT_VERSION}`];
   if (JSON.stringify(manifest.ordinary_cli_capabilities) !== JSON.stringify(expectedCapabilities)
     || JSON.stringify(Object.keys(manifest.ordinary_cli_capability_contracts ?? {})) !== JSON.stringify(expectedCapabilities)
     || manifest.ordinary_cli_capability_contracts?.[`${SCHEMA_ID}@${SCHEMA_VERSION}`]?.authority !== "selected SQLite authority only"
-    || manifest.ordinary_cli_capability_contracts?.[`${SELECTION_ID}@${SELECTION_VERSION}`]?.authority !== "explicit SQLite/Profile selection only"
+    || manifest.ordinary_cli_capability_contracts?.[`${SELECTION_ID}@${SELECTION_VERSION}`]?.authority !== "per-invocation resolved target admission only"
     || manifest.ordinary_cli_capability_contracts?.[`${PROTOCOL_ID}@${PROTOCOL_VERSION}`]?.authority !== "verified connector transport only"
     || manifest.ordinary_cli_capability_contracts?.[`${RESULT_ID}@${RESULT_VERSION}`]?.authority !== "closed terminal result only") problems.push("ordinary_cli_capabilities");
   if (JSON.stringify(manifest.supported_operations) !== JSON.stringify(SUPPORTED_OPERATIONS)) problems.push("supported_operations");
+  if (JSON.stringify(manifest.ordinary_cli_operations) !== JSON.stringify(ORDINARY_CLI_OPERATIONS)) problems.push("ordinary_cli_operations");
 
   const expectedOperationContracts = new Map([
     ["profile.create", ["human_operational", "profile.manage", "profile"]],

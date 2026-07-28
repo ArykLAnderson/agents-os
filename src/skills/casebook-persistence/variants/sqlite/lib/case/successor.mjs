@@ -9,6 +9,8 @@ import { createPlacementGenerationFoundation, createSuccessorSqlitePlacementAdap
 import { authorizeSuccessorOperation, invokeSuccessorMechanicalOperation, successorDigest } from "../substrate/mechanical-successor.mjs";
 import { canonicalContextRequestDigest, invokeContextOperation } from "../context/index.mjs";
 import { normalizeExactLocator } from "../resource/normalization.mjs";
+import { inspectSuccessorStore } from "../substrate/bootstrap.mjs";
+import { selectSqliteBinary } from "../substrate/diagnostics.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
@@ -126,7 +128,8 @@ function mechanicalBinding(request) { const value = binding(request); delete val
 function rawRevision(request, raw) {
   if (!raw?.normalized?.representation || !Array.isArray(raw.selected_versions)) throw new SuccessorCaseError("stored", "revision_selection_unavailable");
   const placementFamilyId = raw.placement_history?.placement_family_id ?? raw.current_projection?._mechanical_placement?.placement_family_id;
-  const selectedVersions = raw.selected_versions.filter((version) => version.family_id !== placementFamilyId);
+  const selectedFamilies = new Set(raw.normalized?.selected_family_ids ?? []);
+  const selectedVersions = raw.selected_versions.filter((version) => version.family_id !== placementFamilyId && selectedFamilies.has(version.family_id));
   const hydrated = hydrate({ owner: raw.owner, revision: { representation: raw.normalized.representation, normalized: raw.normalized, selected_versions: selectedVersions, id: raw.revision_id, number: raw.revision_number, committed_at: raw.committed_at }, applied_view: null });
   hydrated.placement = raw.placement_history?.placement ?? raw.current_projection?._mechanical_placement ?? null;
   hydrated.placement_selection = raw.placement_history?.placement_selection ?? null;
@@ -166,6 +169,22 @@ async function selectedPlacement(request, placement) {
   if (placement?.namespace_id) return { namespace_id: id(placement.namespace_id, "placement.namespace_id", "namespace") };
   if (placement?.chat_id) return currentChatPlacement(request, id(placement.chat_id, "placement.chat_id", "chat"));
   throw new SuccessorCaseError("placement", "placement_required");
+}
+async function defaultCreatePlacement(request) {
+  const binary = await selectSqliteBinary();
+  const state = await inspectSuccessorStore(binary.path, request.configuration?.sqlite?.database_url);
+  if (state.status !== "available" || !state.bootstrap?.root_namespace_id) throw new SuccessorCaseError("placement", "placement_unavailable");
+  return { namespace_id: state.bootstrap.root_namespace_id };
+}
+async function placementForMutation(request, port) {
+  if (request.placement != null) return selectedPlacement(request, request.placement);
+  if (request.operation === "case.create") return defaultCreatePlacement(request);
+  const current = await port.readCurrent({ owner: { id: request.case.id, kind: "case" } });
+  if (!current.placement) throw new SuccessorCaseError("placement", "placement_unavailable");
+  const history = await port.readRevision({ owner: { id: request.case.id, kind: "case" }, revision_id: current.revision_id });
+  return history?.placement_selection?.kind === "chat_default"
+    ? { chat_id: history.placement_selection.chat_id, chat_revision_id: history.placement_selection.chat_revision_id }
+    : { namespace_id: current.placement.namespace_id };
 }
 async function rawCase(request, caseId, revisionId = null) {
   const result = await invokeSuccessorMechanicalOperation({ operation: revisionId ? "substrate.read_owner_revision" : "substrate.read_owner_current", ...mechanicalBinding(request), owner: { id: caseId, kind: "case" }, ...(revisionId ? { revision_id: revisionId } : {}) });
@@ -341,7 +360,7 @@ export async function invokeSuccessorCaseOperation(request) {
         priorPlacement = { placement: current.placement, placement_selection: history?.placement_selection, chat_revision_id: chat?.chat_revision_id };
       }
     }
-    const placement = await selectedPlacement(request, request.placement);
+    const placement = await placementForMutation(request, port);
     const built = assembleSuccessorCaseEnvelope({ ...request, placement }, priorPlacement);
     const service = createPlacementGenerationFoundation(port);
     const settled = await service.commit({ operation_id: request.operation_id, owner: { id: built.normalized.id, kind: "case" }, expected_revision: request.expected_revision, revision_id: built.allocations.revision, event: built.allocations.event, placement: built.placement, aggregate: built.aggregate });

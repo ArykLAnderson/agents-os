@@ -5,8 +5,15 @@ export const SCHEMA_ID = "sqlite_casebook";
 export const SCHEMA_VERSION = 2;
 export const RESULT_ID = "casebook-cli-result";
 export const RESULT_VERSION = 2;
-export const SELECTION_ID = "casebook-cli-selection";
-export const SELECTION_VERSION = 2;
+export const TARGET_ID = "casebook-resolved-target";
+export const TARGET_VERSION = 1;
+export const SELECTION_ID = TARGET_ID;
+export const SELECTION_VERSION = TARGET_VERSION;
+export const ORDINARY_CLI_OPERATIONS = Object.freeze([
+  "target.describe", "case.create", "case.read", "case.commit_revision",
+  "frame.create", "frame.read", "frame.commit_revision", "query.search",
+  "substrate.get_receipt", "operation.recent",
+]);
 
 // The successor currently exposes exceptional bootstrap, the owner-neutral
 // substrate, and human-operational Profile admission. Later Work Items add
