@@ -271,8 +271,8 @@ async function bridgeCall(request, workspace) {
 export async function run(argv) {
   let ctx, operation = "unknown";
   try {
-    const parsed = parse(argv);
     await verifyPackageAssets();
+    const parsed = parse(argv);
     operation = operations.get(parsed.command.join(" ")) ?? null;
     if (!operation) throw Error("grammar_invalid");
     const declaredInput = parsed.global["--input"] !== undefined || parsed.global["--input-file"] !== undefined;
