@@ -1,2 +1,3 @@
 # Preserve upstream vendored SQLite-WASM bytes; its generated JavaScript contains intentional trailing whitespace.
 src/packages/casebook-cli/bridge/runtime/casebook-persistence/variants/sqlite/vendor/** -whitespace
+src/skills/casebook-persistence/variants/sqlite/vendor/** -whitespace
