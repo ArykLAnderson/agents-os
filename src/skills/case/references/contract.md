@@ -1,46 +1,16 @@
 # Case Contract
 
-One Case is one complete logical aggregate selected under one persistence authority. Its immutable stable ID defines identity. Under file-authoritative Markdown, the selected connector materializes that aggregate as an independently readable `.casebook/cases/<case-id>.md` dossier and performs complete atomic replacement; this path is not a direct-write interface.
+One Case is one complete logical aggregate committed through the packaged Casebook CLI. Its immutable stable ID defines identity.
 
-```markdown
----
-type: case
-schema_version: 1
-id: case:<collision-resistant-local-id>
-title: <mutable title>
-summary: <one-sentence conceptual boundary>
-relationships:
-  <directional-key>:
-    - case:<id>
----
+A complete Case aggregate includes:
 
-## Scope
-<included subject, authority context, and material exclusions>
+- its stable ID, title, summary, scope, provenance, aliases, facets, relationships, and references;
+- Knowledge entries with stable IDs and display labels such as `CK-001`, classification, purpose, support, conditional authority, examination objective, scope, relationships, and substantive content; and
+- Sources with stable IDs and display labels such as `SRC-001`, locators, examination objective, scope, and evidence fragments.
 
-## Knowledge
+`title`, `summary`, Scope, Knowledge, and Sources are mandatory semantic content. Assemble and submit the complete aggregate through the CLI; it is not a direct-file interface. Every family has a stable typed ID; preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
 
-### CK-001: <title>
-- Classification: accepted | provisional | contested | superseded
-- Purpose: <why this is reusable>
-- Support: <SRC references with pinpoint locators, authority, inference, or unsupported>
-- Authority: <conditionally required person or role, decision/source reference, and applicability>
-- Examined for: <knowledge objective of the intake or reconciliation batch>
-- Scope: <when materially narrower than the Case>
-- Relationships: <optional directional key-to-target collections>
-
-<one independently classifiable semantic unit>
-
-## Sources
-
-### SRC-001: <source title>
-- Locator: <stable URI, path plus revision, page, or artifact reference>
-- Examined for: <short objective summary>
-- Scope: <material qualification or exclusion>
-```
-
-`title`, `summary`, Scope, Knowledge, and Sources are mandatory semantic content. The Markdown above is a readable authoring projection, not permission to write the authority file. Assemble the connector request as one complete typed Case aggregate: Case profile and provenance, aliases, facets, knowledge entries, sources and evidence fragments, relationships, and references. Every family has a stable typed ID; keep `CK-001` and `SRC-001` as human-readable display labels. Preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
-
-The selected connector controls physical rendering and may include stricter normalized fields than this semantic projection. Read the current aggregate through `case.read`, validate it here, then use `case.create` or `case.commit_revision` as specified by the persistence procedure. Never reconstruct an update from a partial Markdown excerpt.
+The CLI may enforce stricter normalized fields than this semantic outline. Read the current aggregate with `casebook read case`, validate it here, then use `casebook create case` or `casebook commit case` as specified by the persistence procedure. Never reconstruct an update from a partial excerpt.
 
 ## Knowledge Integrity
 

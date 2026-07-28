@@ -16,4 +16,4 @@ Check every Case for:
 - content that still fits the title, summary, and scope;
 - cohesion across subject, authority, lifecycle, retrieval, and distribution boundaries.
 
-Repair derived indexes and mechanical references only through a supported typed operation on the already selected authority. Never edit authority files as a repair shortcut, fall back to another variant, or silently change semantic meaning, classification, provenance, or human authority.
+The ordinary public CLI has no mechanical-repair command. Report a mechanical defect, or reconcile the complete Case only when the needed change is semantically justified. Never edit storage files as a repair shortcut, select another store, or silently change semantic meaning, classification, provenance, or human authority.
