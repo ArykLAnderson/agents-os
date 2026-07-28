@@ -4,7 +4,7 @@ description: Frames a consequential software outcome into externally meaningful 
 ---
 # Frame: external boundary, not machinery
 
-Use for a software-system outcome that is ambiguous, consequential, or likely to acquire accidental architecture. Optimize for the earliest trustworthy connected production outcome, not exhaustive discovery.
+Use for a software-system outcome that is ambiguous, consequential, or likely to acquire accidental architecture. Optimize for the earliest trustworthy connected production outcome, not exhaustive discovery. When ordinary Frame state must be created, resumed, or changed, read [references/persistence.md](references/persistence.md) and use the packaged Casebook CLI.
 
 ## Make the boundary
 

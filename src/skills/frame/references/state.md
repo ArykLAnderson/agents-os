@@ -1,6 +1,6 @@
 # Frame State
 
-Persist current reality at natural boundaries, not after every turn. Frame state is one complete typed Frame aggregate selected by the workspace authority; paths and rendered Markdown do not define identity. Read and mutate it only through the [persistence procedure](persistence.md).
+Persist current reality at natural boundaries, not after every turn. Frame state is one complete Frame aggregate; paths and search similarity do not define identity. Read and mutate it only through the packaged Casebook CLI in the [persistence procedure](persistence.md).
 
 ## Complete aggregate
 
@@ -12,7 +12,7 @@ The aggregate carries:
 - complete `disposition_boundaries` and `case_dispositions` arrays, including empty arrays for a new Frame with no accounted boundary; and
 - authorization provenance that records applicable scope and duration without converting authorization into an instruction to act.
 
-Statuses are descriptive: `active`, `completed`, `abandoned`, or `superseded`. They do not route work. A lifecycle change is a `frame.commit_revision` of the complete aggregate after an exact typed read; never patch a rendered file or omit unchanged families.
+Statuses are descriptive: `active`, `completed`, `abandoned`, or `superseded`. They do not route work. A lifecycle change is a `casebook commit frame` of the complete aggregate after an exact CLI read; never patch a storage file or omit unchanged families.
 
 ## Discovery state
 
@@ -57,8 +57,6 @@ Pending classification is temporary boundary state, not a fourth disposition or 
 
 A boundary cannot close while a member is pending classification or awaiting Case realization. A Frame cannot complete with an open or unsettled material boundary. Complete accounting still records every material result even when the boundary must remain open.
 
-## Persistence projections
+## Persistence receipt
 
-SQLite authority returns immutable owner revision, selected-family version, event, receipt, and completion evidence according to its typed capabilities. File-authoritative Markdown selects one coherent aggregate generation containing independently readable `frame.md`, exactly one manifest-selected Discovery filename, and strict Case Dispositions content. The Markdown connector owns its digest comparison and atomic selection; no semantic procedure writes those files or manifests directly.
-
-On every read or mutation, preserve hidden-reference counts, view-policy identity, stable family IDs, selected version bindings, provenance, and connector limitations. Do not infer completion, No Case, Case settlement, or human authority from storage success.
+The CLI returns owner revision and mutation operation evidence. Preserve its stable family IDs, revision, provenance, and any reported limitation with the aggregate. Do not infer completion, No Case, Case settlement, or human authority from storage success.
