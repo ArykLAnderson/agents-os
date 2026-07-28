@@ -43,7 +43,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "case.tombstone.commit",
   "case.read",
   "case.resolve",
-  "case.update", "case.tombstone", "case.move_namespace",
+  "case.update", "case.tombstone",
   ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => ["read", "create", "update", "tombstone"].map((action) => `case.${kind}.${action}`)),
   "frame.create", "frame.commit_revision", "frame.read",
   "frame.profile.read", "frame.profile.update",

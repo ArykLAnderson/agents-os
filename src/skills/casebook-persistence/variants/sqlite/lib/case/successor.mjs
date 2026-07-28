@@ -9,8 +9,7 @@ import { createPlacementGenerationFoundation, createSuccessorSqlitePlacementAdap
 import { authorizeSuccessorOperation, invokeSuccessorMechanicalOperation, successorDigest } from "../substrate/mechanical-successor.mjs";
 import { canonicalContextRequestDigest, invokeContextOperation } from "../context/index.mjs";
 import { normalizeExactLocator } from "../resource/normalization.mjs";
-import { inspectSuccessorStore } from "../substrate/bootstrap.mjs";
-import { selectSqliteBinary } from "../substrate/diagnostics.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
@@ -19,7 +18,7 @@ export class SuccessorCaseError extends Error {
   constructor(path, rule) { super(rule); this.path = path; this.rule = rule; }
 }
 function exact(value, fields, path) { if (!object(value) || Object.keys(value).some((key) => !fields.has(key))) throw new SuccessorCaseError(path, "field_unsupported"); }
-function id(value, path, prefix) { if (typeof value !== "string" || !ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new SuccessorCaseError(path, "uuid_identity_required"); return value; }
+function id(value, path, prefix) { if (prefix === "namespace") { try { return requireNamespaceId(value, path); } catch { throw new SuccessorCaseError(path, "semantic_namespace_identity_required"); } } if (typeof value !== "string" || !ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new SuccessorCaseError(path, "uuid_identity_required"); return value; }
 function text(value, path, max = 2048) { if (typeof value !== "string" || !value.trim() || value.length > max) throw new SuccessorCaseError(path, "required_bounded_string"); return value; }
 function uuid(seed) { const bytes = createHash("sha256").update(seed).digest().subarray(0, 16); bytes[6] = (bytes[6] & 15) | 80; bytes[8] = (bytes[8] & 63) | 128; const value = bytes.toString("hex"); return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`; }
 function allocated(prefix, request, role) { return `${prefix}:${uuid(`${request.store_id}\0${request.case.id}\0${request.operation_id}\0${role}`)}`; }
@@ -88,7 +87,9 @@ function queryMaterial(normalized, allocations) {
  * receipt in its single substrate transaction.
  */
 export function assembleSuccessorCaseEnvelope(request, priorPlacement = null) {
-  const placementNamespace = request.placement?.namespace_id ?? request.case?.home_namespace_id;
+  const placementNamespace = request.placement?.namespace_id;
+  if (!placementNamespace) throw new SuccessorCaseError("placement", "namespace_required");
+  if (request.case?.home_namespace_id != null && request.case.home_namespace_id !== placementNamespace) throw new SuccessorCaseError("case.home_namespace_id", "placement_namespace_mismatch");
   const normalized = normalizeCase(legacyCaseForNormalization(request.case, placementNamespace), request.expected_revision);
   if (normalized.families.length + 1 > 256) throw new SuccessorCaseError("case", "resource_count_exceeded");
   const assembled = assemble(request, normalized);
@@ -157,44 +158,18 @@ function findResource(record, kind, resourceId) {
   const collection = kind === "knowledge" ? record.entries : kind === "facet" ? record.facets : kind === "source" ? record.sources : record.relationships;
   return structuredClone(collection?.find((value) => value.id === resourceId) ?? null);
 }
-async function currentChatPlacement(request, chatId) {
-  const port = mechanicalBinding(request), context = { operation: "chat.read", ...port, chat_id: chatId };
-  context.request_digest = canonicalContextRequestDigest(port.store_id, context);
-  const result = await invokeContextOperation(context);
-  const row = result.ok && result.result.status === "visible" ? result.result.revisions?.[0] : null;
-  if (!row?.chat_revision_id || !row?.namespace_id) throw new SuccessorCaseError("placement.chat_id", "chat_not_visible");
-  return { chat_id: chatId, chat_revision_id: row.chat_revision_id, namespace_id: row.namespace_id };
-}
 async function selectedPlacement(request, placement) {
   if (placement?.namespace_id) return { namespace_id: id(placement.namespace_id, "placement.namespace_id", "namespace") };
-  if (placement?.chat_id) return currentChatPlacement(request, id(placement.chat_id, "placement.chat_id", "chat"));
-  throw new SuccessorCaseError("placement", "placement_required");
+  throw new SuccessorCaseError("placement", "namespace_required");
 }
-async function defaultCreatePlacement(request) {
-  const binary = await selectSqliteBinary();
-  const state = await inspectSuccessorStore(binary.path, request.configuration?.sqlite?.database_url);
-  if (state.status !== "available" || !state.bootstrap?.root_namespace_id) throw new SuccessorCaseError("placement", "placement_unavailable");
-  return { namespace_id: state.bootstrap.root_namespace_id };
-}
-async function placementForMutation(request, port) {
-  if (request.placement != null) return selectedPlacement(request, request.placement);
-  if (request.operation === "case.create") return defaultCreatePlacement(request);
-  const current = await port.readCurrent({ owner: { id: request.case.id, kind: "case" } });
-  if (!current.placement) throw new SuccessorCaseError("placement", "placement_unavailable");
-  const history = await port.readRevision({ owner: { id: request.case.id, kind: "case" }, revision_id: current.revision_id });
-  return history?.placement_selection?.kind === "chat_default"
-    ? { chat_id: history.placement_selection.chat_id, chat_revision_id: history.placement_selection.chat_revision_id }
-    : { namespace_id: current.placement.namespace_id };
+async function placementForMutation(request) {
+  if (request.placement == null) throw new SuccessorCaseError("placement", "namespace_required");
+  return selectedPlacement(request, request.placement);
 }
 async function rawCase(request, caseId, revisionId = null) {
   const result = await invokeSuccessorMechanicalOperation({ operation: revisionId ? "substrate.read_owner_revision" : "substrate.read_owner_current", ...mechanicalBinding(request), owner: { id: caseId, kind: "case" }, ...(revisionId ? { revision_id: revisionId } : {}) });
   if (!result.ok || result.result.status !== "visible") return null;
   return rawRevision(request, result.result);
-}
-async function retainedPlacement(request, caseId) {
-  const current = await createSuccessorSqlitePlacementAdapter(binding(request)).readCurrent({ owner: { id: caseId, kind: "case" } });
-  if (!current.placement?.namespace_id) throw new SuccessorCaseError("placement", "placement_unavailable");
-  return current.placement.chat_id ? { chat_id: current.placement.chat_id } : { namespace_id: current.placement.namespace_id };
 }
 function typedFailure(operation, result) {
   const source = result?.failure ?? {};
@@ -216,7 +191,6 @@ export const CASE_OPERATION_FIELDS = new Map([
   ["case.resolve", new Set([...CASE_COMMON_FIELDS, "alias", "namespace_id", "namespace_path"])],
   ["case.update", MODULAR_UPDATE_FIELDS],
   ["case.tombstone", new Set([...CASE_COMMON_FIELDS, "operation_id", "resource_id", "if_match_revision_id", "commit_basis", "provenance", "placement", "reason"])],
-  ["case.move_namespace", new Set([...CASE_COMMON_FIELDS, "operation_id", "resource_id", "if_match_revision_id", "commit_basis", "provenance", "placement"])],
   ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => [
     [`case.${kind}.read`, MODULAR_READ_FIELDS],
     [`case.${kind}.create`, MODULAR_CREATE_FIELDS(kind)],
@@ -265,8 +239,7 @@ async function invokeModularCaseOperation(request) {
   if (!base || base.case.state !== "active") return failure(`case.${kind}.not_found_or_not_visible`, "The Case resource is unknown or not visible.", { failureClass: `case.${kind}.mutation_failure`, evidence: {} });
   const next = selectedCase(base), prior = resourceId ? findResource(base.case, kind, resourceId) : null;
   const collection = kind === "knowledge" ? next.entries : kind === "facet" ? next.facets : kind === "source" ? next.sources : kind === "relationship" ? next.relationships : null;
-  if (request.operation === "case.move_namespace") { /* semantic selection is deliberately unchanged */ }
-  else if (kind === "case") {
+  if (kind === "case") {
     if (action === "tombstone") { text(request.reason, "reason"); next.state = "tombstoned"; }
     else { const changed = applyCaseResourceMask("case", prior.version, request.changes); Object.assign(next, changed); for (const field of ["title", "summary", "scope", "provenance"]) if (!Object.hasOwn(changed, field)) delete next[field]; }
   } else if (action === "create") {
@@ -275,7 +248,7 @@ async function invokeModularCaseOperation(request) {
     if (kind === "evidence") { const sourceId = id(request.source_id, "source_id", "source"); const source = next.sources.find((item) => item.id === sourceId); if (!source) throw new SuccessorCaseError("source_id", "source_not_found"); source.fragments.push({ id: createdId, state: "active", version: value }); }
     else if (kind === "source") collection.push({ id: createdId, state: "active", display_label: value.display_label, version: value, fragments: [] });
     else collection.push({ id: createdId, state: "active", version: value });
-    return commitModular(request, base, next, caseId, createdId, await selectedPlacement(request, request.placement ?? await retainedPlacement(request, caseId)));
+    return commitModular(request, base, next, caseId, createdId, await selectedPlacement(request, request.placement));
   } else {
     if (!prior || prior.state !== "active") return failure(`case.${kind}.not_found_or_not_visible`, "The Case resource is unknown or not visible.", { failureClass: `case.${kind}.mutation_failure`, evidence: {} });
     const target = kind === "evidence" ? next.sources.find((source) => source.id === prior.source_id).fragments : collection;
@@ -283,7 +256,7 @@ async function invokeModularCaseOperation(request) {
     if (action === "update") target[index] = { id: resourceId, state: "active", ...(kind === "source" ? { display_label: prior.display_label } : {}), version: kind === "knowledge" ? applyKnowledgeMask(prior.version, request.changes) : applyCaseResourceMask(kind, prior.version, request.changes), ...(kind === "source" ? { fragments: target[index].fragments } : {}) };
     else { text(request.reason, "reason"); const version = tombstoneKnowledgeVersion({ previousVersionId: base.revision.version_ids[resourceId], reason: request.reason, replacement: request.replacement, operationId: request.operation_id }); target[index] = { id: resourceId, state: "tombstoned", ...(kind === "source" ? { display_label: prior.display_label, fragments: target[index].fragments } : {}), version }; }
   }
-  return commitModular(request, base, next, caseId, resourceId, await selectedPlacement(request, request.placement ?? await retainedPlacement(request, caseId)));
+  return commitModular(request, base, next, caseId, resourceId, await selectedPlacement(request, request.placement));
 }
 async function commitModular(request, base, next, caseId, resourceId, placement) {
   const internal = { ...request, case: next, expected_revision: base.revision.number, placement, operation_id: request.operation_id };
@@ -360,7 +333,7 @@ export async function invokeSuccessorCaseOperation(request) {
         priorPlacement = { placement: current.placement, placement_selection: history?.placement_selection, chat_revision_id: chat?.chat_revision_id };
       }
     }
-    const placement = await placementForMutation(request, port);
+    const placement = await placementForMutation(request);
     const built = assembleSuccessorCaseEnvelope({ ...request, placement }, priorPlacement);
     const service = createPlacementGenerationFoundation(port);
     const settled = await service.commit({ operation_id: request.operation_id, owner: { id: built.normalized.id, kind: "case" }, expected_revision: request.expected_revision, revision_id: built.allocations.revision, event: built.allocations.event, placement: built.placement, aggregate: built.aggregate });

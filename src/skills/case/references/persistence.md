@@ -4,15 +4,15 @@ Case owns meaning, classification, support, authority, provenance, and reconcili
 
 ## Read and locate a Case
 
-Use `casebook read case --case-id <stable-id>` for an exact Case ID. There is no public Case resolve or list command. To find candidates, use bounded `casebook search --query <text>` and inspect its results; search similarity never establishes identity. Read a candidate only after its stable ID is returned.
+Use `casebook read case --case-id <stable-id>` for an exact Case ID. There is no public Case resolve or list command. To find candidates, use bounded `casebook search --namespace <semantic-id> --query <text>` and inspect its results; search similarity never establishes identity. Read a candidate only after its stable ID is returned.
 
 The optional `--owner-revision-id` on `read case` reads that named revision. Respect search bounds, cursors, completeness, and any unavailable operation as a limitation. Do not substitute filesystem globbing, grep, guessed paths, direct SQL, or provider operations.
 
 ## Create or reconcile
 
 1. Validate the complete Case aggregate against the Case contract. Preserve private visibility, stable IDs, provenance, support, authority, and every unchanged family.
-2. For a new Case, submit the aggregate once with `casebook create case --commit-basis <basis> --input-file <absolute-file>` (or the other CLI input mode).
-3. For reconciliation, first read the selected Case. Make only semantically justified changes, then submit the complete aggregate once with `casebook commit case --case-id <id> --expected-revision <current-number> --commit-basis <basis> --input-file <absolute-file>`.
+2. For a new Case, submit the aggregate once with `casebook create case --namespace <semantic-id> --commit-basis <basis> --input-file <absolute-file>` (or the other CLI input mode).
+3. For reconciliation, first read the selected Case. Make only semantically justified changes, then submit the complete aggregate once with `casebook commit case --namespace <semantic-id> --case-id <id> --expected-revision <current-number> --commit-basis <basis> --input-file <absolute-file>`. The Namespace affects request placement only; it never relocates existing content implicitly.
 4. Keep the successful result's Case ID, revision, and generated operation ID as the persistence receipt.
 
 A stale revision or other refusal requires a fresh CLI read and explicit semantic reconciliation. Never auto-merge, retry blindly, fall back, dual-write, or bypass the CLI. On exit `3`, use `casebook operation status --operation-id <exact-id>` before another mutation; do not resubmit first.

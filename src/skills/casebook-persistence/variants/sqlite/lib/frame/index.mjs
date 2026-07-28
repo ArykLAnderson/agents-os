@@ -19,6 +19,7 @@ import { locatorSafeForAudience, portablePublicLocatorAssessment } from "../../.
 import { authorizeFrameHistoricalVisibility } from "../resource/historical-visibility.mjs";
 import { createResourceFoundation } from "../resource/foundation.mjs";
 import { createFinalOwnerLifecycleRegistry, createFinalResourceRegistry } from "../resource/registry.mjs";
+import { requireNamespaceId } from "../context/namespace.mjs";
 import {
   FrameResourceError,
   applyFrameResourceMask,
@@ -234,6 +235,7 @@ function optionalString(value, path, max = 16_384) {
 
 function requiredId(value, path, prefix) {
   requiredString(value, path, 128);
+  if (prefix === "namespace") { try { return requireNamespaceId(value, path); } catch { throw new FrameRequestError(path, "semantic_namespace_identity_required", "A canonical semantic Namespace identity is required."); } }
   if (!uuidId(prefix).test(value)) throw new FrameRequestError(path, "uuid_identity_required", `A lowercase UUID-based ${prefix}: identity is required.`);
   return value;
 }
