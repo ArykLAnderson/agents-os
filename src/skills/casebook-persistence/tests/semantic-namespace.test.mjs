@@ -18,17 +18,31 @@ test("semantic Namespace IDs canonicalize to lowercase kebab paths and reject UU
   assert.throws(() => requireNamespaceId("namespace:10000000-0000-4000-8000-000000000001"), /semantic_namespace_identity_required/);
 });
 
-test("SQLite successor schema rejects malformed semantic Namespace paths at the storage boundary", async (t) => {
+test("SQLite successor schema enforces the canonical semantic Namespace grammar at the storage boundary", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "casebook-namespace-schema-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const store = path.join(root, "schema.sqlite3");
   const schema = await readFile(new URL("../variants/sqlite/sql/schema-successor.sql", import.meta.url), "utf8");
   const binary = await selectSqliteBinary();
   await sqlite(binary, store, schema, { args: ["-batch", "-bail"] });
-  await assert.rejects(
-    () => sqlite(binary, store, "PRAGMA foreign_keys=OFF; INSERT INTO context_namespace_revisions VALUES('owner-revision:10000000-0000-4000-8000-000000000001','namespace:bad//path',1,NULL,'active','Bad','bad','[]',1,'2026-01-01T00:00:00.000Z');", { args: ["-batch", "-bail"] }),
-    (error) => /constraint|SQLITE_CONSTRAINT/i.test(`${error.message} ${error.stderr ?? ""}`),
-  );
+  const insert = (revision, namespace) => `PRAGMA foreign_keys=OFF; INSERT INTO context_namespace_revisions VALUES('owner-revision:${revision}','${namespace}',1,NULL,'active','Namespace','namespace','[]',1,'2026-01-01T00:00:00.000Z');`;
+  for (const [revision, namespace] of [
+    ["bad-trailing-hyphen", "namespace:bad-/next"],
+    ["uuid-segment", "namespace:personal/10000000-0000-4000-8000-000000000001"],
+    ["nine-segments", "namespace:a/b/c/d/e/f/g/h/i"],
+  ]) {
+    await assert.rejects(
+      () => sqlite(binary, store, insert(revision, namespace), { args: ["-batch", "-bail"] }),
+      (error) => /constraint|SQLITE_CONSTRAINT/i.test(`${error.message} ${error.stderr ?? ""}`),
+      namespace,
+    );
+  }
+  for (const [revision, namespace] of [
+    ["structural-root", "namespace:root"],
+    ["single-segment", "namespace:personal"],
+    ["nested-path", "namespace:personal/project-research"],
+    ["maximum-depth", "namespace:a/b/c/d/e/f/g/h"],
+  ]) await sqlite(binary, store, insert(revision, namespace), { args: ["-batch", "-bail"] });
 });
 
 test("migration proof identifies personal Namespace rather than relying on query order", async (t) => {

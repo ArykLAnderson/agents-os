@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "fd04c093eee01e35fd2180501f66c382899addcdd05f594e60ef20323fac270a"
+    "sha256": "6aaa51e4ed5f76d282a9fb09845a57798c0ac452a5cee035cf2c5b04fd77dca0"
   },
   "entrypoints": [
     {
@@ -1042,7 +1042,7 @@
       "id": "sqlite-successor-schema",
       "path": "variants/sqlite/sql/schema-successor.sql",
       "kind": "sql",
-      "sha256": "872b0ef8dc2a9c1627ba831b00c3cf77042d43e22533434e925bccdf9a8c6198"
+      "sha256": "8323cf56674dedee7e7d10dab0605097fd19425db4578342fe6b9c02f26bb1bb"
     },
     {
       "id": "sqlite-runtime",
