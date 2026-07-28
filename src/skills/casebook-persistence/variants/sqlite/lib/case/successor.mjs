@@ -356,7 +356,7 @@ export async function invokeSuccessorCaseOperation(request) {
       const current = await port.readCurrent({ owner: { id: request.case.id, kind: "case" } });
       if (current.revision_number === request.expected_revision && current.placement) {
         const history = await port.readRevision({ owner: { id: request.case.id, kind: "case" }, revision_id: current.revision_id });
-        const chat = request.placement.chat_id == null ? null : await port.readChat({ chat_id: request.placement.chat_id });
+        const chat = request.placement?.chat_id == null ? null : await port.readChat({ chat_id: request.placement.chat_id });
         priorPlacement = { placement: current.placement, placement_selection: history?.placement_selection, chat_revision_id: chat?.chat_revision_id };
       }
     }

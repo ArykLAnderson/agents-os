@@ -8,6 +8,10 @@ const runtimeRoot = path.join(root, "bridge", "runtime", "casebook-persistence")
 const runtimeManifest = path.join(runtimeRoot, "manifest.json");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const protocol = { id: "casebook-persistence-json", version: 2 };
+const TEST_HOOK = "casebook-cli-e2e@1";
+const testFault = () => process.env.CASEBOOK_CLI_TEST_HOOK === TEST_HOOK
+  ? process.env.CASEBOOK_CLI_TEST_BRIDGE_FAULT
+  : null;
 const failure = (code, message) => ({ ok: false, failure: { code, message } });
 const config = (workspace, store) => ({ source: { kind: "workspace-root", locator: workspace }, authority_mode: "sqlite", sqlite: { database_url: store } });
 const provenance = { acting_role: "casebook-cli", authority_basis: "trusted-local standalone CLI invocation" };
@@ -58,7 +62,15 @@ for await (const chunk of process.stdin) {
 }
 try {
   const request = JSON.parse(bytes.toString("utf8"));
-  process.stdout.write(JSON.stringify(await dispatch(request)));
+  const fault = request.operation === "target.describe" ? null : testFault();
+  const response = await dispatch(request);
+  if (fault === "exit") process.exitCode = 1;
+  else if (fault === "signal") process.kill(process.pid, "SIGTERM");
+  else if (fault === "timeout") await new Promise((resolve) => setTimeout(resolve, 60_000));
+  else if (fault === "malformed") process.stdout.write("not-json");
+  else if (fault === "overflow") process.stdout.write("x".repeat(1024 * 1024 + 1));
+  else if (fault === "contradictory") process.stdout.write(JSON.stringify({ ok: true, result: null }));
+  else process.stdout.write(JSON.stringify(response));
 } catch (error) {
   if (error?.message === "bridge_runtime_invalid") process.exitCode = 1;
   else process.stdout.write(JSON.stringify(failure("bridge_request_invalid", "Bridge request is invalid.")));
