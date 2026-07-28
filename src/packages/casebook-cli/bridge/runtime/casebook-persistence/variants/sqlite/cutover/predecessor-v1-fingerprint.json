@@ -1,0 +1,301 @@
+{
+  "fingerprint_version": 1,
+  "schema_id": "casebook-persistence-sqlite",
+  "schema_version": 1,
+  "application_id": 1128419377,
+  "user_version": 1,
+  "schema_asset_sha256": "ff967013cb01d4df5f29a34ee32da2561cebeedb4cf7a2029fe81773b16c3343",
+  "migration_manifest_sha256": "05f93ed0aaf46586c7f9656a30409f843691243382ccf4defbcb1c9503b0a0dd",
+  "inspected_logical_schema_sha256": "9e11b06d6247e3c93ba9076e0c2025f9c09ecf124749509dd94c72dddfa22b25",
+  "inventory_sha256": "db55022f480d398c4e522dcac18809c91a1815fcb86ccc5a84263b5ba8e01362",
+  "inventory": [
+    {
+      "type": "index",
+      "name": "one_active_policy_per_view",
+      "table": "view_policy_revisions",
+      "sql": "CREATE UNIQUE INDEX one_active_policy_per_view\nON view_policy_revisions(view_id)\nWHERE lifecycle = 'active'"
+    },
+    {
+      "type": "table",
+      "name": "consumer_checkpoints",
+      "table": "consumer_checkpoints",
+      "sql": "CREATE TABLE consumer_checkpoints (\n  view_id TEXT NOT NULL REFERENCES view_families(view_id),\n  consumer_id TEXT NOT NULL,\n  view_policy_revision_id TEXT NOT NULL REFERENCES view_policy_revisions(view_policy_revision_id),\n  checkpoint_revision INTEGER NOT NULL CHECK (checkpoint_revision > 0),\n  event_cursor TEXT NOT NULL,\n  event_sequence INTEGER NOT NULL CHECK (event_sequence >= 0),\n  snapshot_fence INTEGER NOT NULL CHECK (snapshot_fence >= 0),\n  pending_event_ids_json TEXT NOT NULL CHECK (json_valid(pending_event_ids_json)),\n  freshness TEXT NOT NULL CHECK (freshness IN ('complete', 'partial')),\n  predecessor_policy_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),\n  updated_at TEXT NOT NULL,\n  PRIMARY KEY (view_id, consumer_id)\n) STRICT, WITHOUT ROWID"
+    },
+    {
+      "type": "table",
+      "name": "event_retention",
+      "table": "event_retention",
+      "sql": "CREATE TABLE event_retention (\n  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n  retained_after_sequence INTEGER NOT NULL CHECK (retained_after_sequence >= 0)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "namespaces",
+      "table": "namespaces",
+      "sql": "CREATE TABLE namespaces (\n  namespace_id TEXT PRIMARY KEY,\n  namespace_key TEXT NOT NULL UNIQUE,\n  lifecycle TEXT NOT NULL CHECK (lifecycle IN ('active', 'retired')),\n  created_at TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_current",
+      "table": "owner_current",
+      "sql": "CREATE TABLE owner_current (\n  owner_id TEXT PRIMARY KEY REFERENCES owners(owner_id),\n  revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),\n  revision_number INTEGER NOT NULL CHECK (revision_number > 0),\n  projection_json TEXT NOT NULL CHECK (json_valid(projection_json)),\n  updated_at TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_events",
+      "table": "owner_events",
+      "sql": "CREATE TABLE owner_events (\n  event_id TEXT PRIMARY KEY,\n  owner_id TEXT NOT NULL REFERENCES owners(owner_id),\n  owner_kind TEXT NOT NULL,\n  owner_revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),\n  owner_revision INTEGER NOT NULL CHECK (owner_revision > 0),\n  namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),\n  event_type TEXT NOT NULL,\n  event_schema_version INTEGER NOT NULL CHECK (event_schema_version > 0),\n  operation_id TEXT NOT NULL UNIQUE,\n  causation TEXT,\n  correlation TEXT,\n  commit_sequence INTEGER NOT NULL UNIQUE CHECK (commit_sequence > 0),\n  committed_at TEXT NOT NULL,\n  visibility_ceiling TEXT NOT NULL CHECK (visibility_ceiling = 'private'),\n  payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),\n  payload_digest TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_family_bindings",
+      "table": "owner_family_bindings",
+      "sql": "CREATE TABLE owner_family_bindings (\n  family_id TEXT PRIMARY KEY,\n  owner_id TEXT NOT NULL REFERENCES owners(owner_id),\n  created_at TEXT NOT NULL,\n  UNIQUE (family_id, owner_id)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_outbox",
+      "table": "owner_outbox",
+      "sql": "CREATE TABLE owner_outbox (\n  outbox_id TEXT PRIMARY KEY,\n  operation_id TEXT NOT NULL,\n  owner_id TEXT NOT NULL REFERENCES owners(owner_id),\n  outbox_kind TEXT NOT NULL,\n  payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),\n  payload_digest TEXT NOT NULL,\n  commit_sequence INTEGER NOT NULL REFERENCES owner_events(commit_sequence),\n  created_at TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_revision_selections",
+      "table": "owner_revision_selections",
+      "sql": "CREATE TABLE owner_revision_selections (\n  revision_id TEXT NOT NULL REFERENCES owner_revisions(revision_id),\n  family_id TEXT NOT NULL,\n  version_id TEXT NOT NULL REFERENCES owner_versions(version_id),\n  PRIMARY KEY (revision_id, family_id)\n) STRICT, WITHOUT ROWID"
+    },
+    {
+      "type": "table",
+      "name": "owner_revisions",
+      "table": "owner_revisions",
+      "sql": "CREATE TABLE owner_revisions (\n  revision_id TEXT PRIMARY KEY,\n  owner_id TEXT NOT NULL REFERENCES owners(owner_id),\n  revision_number INTEGER NOT NULL CHECK (revision_number > 0),\n  normalized_json TEXT NOT NULL CHECK (json_valid(normalized_json)),\n  representation_id TEXT NOT NULL,\n  representation_version INTEGER NOT NULL CHECK (representation_version > 0),\n  operation_id TEXT NOT NULL UNIQUE,\n  committed_at TEXT NOT NULL,\n  UNIQUE (owner_id, revision_number)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owner_versions",
+      "table": "owner_versions",
+      "sql": "CREATE TABLE owner_versions (\n  version_id TEXT PRIMARY KEY,\n  owner_id TEXT NOT NULL REFERENCES owners(owner_id),\n  family_id TEXT NOT NULL REFERENCES owner_family_bindings(family_id),\n  content_json TEXT NOT NULL CHECK (json_valid(content_json)),\n  content_digest TEXT NOT NULL,\n  created_at TEXT NOT NULL,\n  UNIQUE (owner_id, family_id, version_id),\n  FOREIGN KEY (family_id, owner_id) REFERENCES owner_family_bindings(family_id, owner_id)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "owners",
+      "table": "owners",
+      "sql": "CREATE TABLE owners (\n  owner_id TEXT PRIMARY KEY,\n  owner_kind TEXT NOT NULL,\n  home_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),\n  created_at TEXT NOT NULL,\n  UNIQUE (owner_id, owner_kind)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "schema_migrations",
+      "table": "schema_migrations",
+      "sql": "CREATE TABLE schema_migrations (\n  migration_id TEXT PRIMARY KEY,\n  schema_id TEXT NOT NULL,\n  from_version INTEGER NOT NULL CHECK (from_version >= 0),\n  to_version INTEGER NOT NULL CHECK (to_version > from_version),\n  schema_asset_digest TEXT NOT NULL,\n  migration_manifest_digest TEXT NOT NULL,\n  operation_id TEXT NOT NULL REFERENCES store_operation_receipts(operation_id),\n  applied_at TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "store_authority_binding",
+      "table": "store_authority_binding",
+      "sql": "CREATE TABLE store_authority_binding (\n  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n  store_id TEXT NOT NULL UNIQUE REFERENCES store_metadata(store_id),\n  source_kind TEXT NOT NULL,\n  source_locator TEXT NOT NULL,\n  authority_mode TEXT NOT NULL CHECK (authority_mode = 'sqlite'),\n  bound_at TEXT NOT NULL,\n  binding_operation_id TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "store_fence",
+      "table": "store_fence",
+      "sql": "CREATE TABLE store_fence (\n  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n  operation_fence INTEGER NOT NULL CHECK (operation_fence >= 0)\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "store_metadata",
+      "table": "store_metadata",
+      "sql": "CREATE TABLE store_metadata (\n  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n  store_id TEXT NOT NULL UNIQUE,\n  schema_id TEXT NOT NULL,\n  schema_version INTEGER NOT NULL CHECK (schema_version > 0),\n  protocol_id TEXT NOT NULL,\n  protocol_version INTEGER NOT NULL CHECK (protocol_version > 0),\n  initialized_at TEXT NOT NULL,\n  initialization_operation_id TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "store_operation_receipts",
+      "table": "store_operation_receipts",
+      "sql": "CREATE TABLE store_operation_receipts (\n  operation_id TEXT PRIMARY KEY,\n  operation_kind TEXT NOT NULL,\n  store_id TEXT NOT NULL REFERENCES store_metadata(store_id),\n  request_digest TEXT NOT NULL,\n  outcome TEXT NOT NULL,\n  result_json TEXT NOT NULL CHECK (json_valid(result_json)),\n  result_digest TEXT NOT NULL,\n  authority_claim_json TEXT NOT NULL CHECK (json_valid(authority_claim_json)),\n  settled_at TEXT NOT NULL,\n  failure_class TEXT,\n  retry_disposition TEXT NOT NULL CHECK (retry_disposition IN ('never', 'after_reconcile', 'after_operator_repair')),\n  operation_fence INTEGER NOT NULL CHECK (operation_fence > 0),\n  owner_id TEXT,\n  owner_kind TEXT,\n  owner_home_namespace_id TEXT REFERENCES namespaces(namespace_id),\n  view_policy_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),\n  expected_revision INTEGER CHECK (expected_revision IS NULL OR expected_revision >= 0),\n  observed_revision INTEGER CHECK (observed_revision IS NULL OR observed_revision >= 0),\n  committed_revision INTEGER CHECK (committed_revision IS NULL OR committed_revision > 0),\n  event_id TEXT\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "view_families",
+      "table": "view_families",
+      "sql": "CREATE TABLE view_families (\n  view_id TEXT PRIMARY KEY,\n  home_namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),\n  created_at TEXT NOT NULL\n) STRICT"
+    },
+    {
+      "type": "table",
+      "name": "view_policy_namespace_grants",
+      "table": "view_policy_namespace_grants",
+      "sql": "CREATE TABLE view_policy_namespace_grants (\n  view_policy_revision_id TEXT NOT NULL REFERENCES view_policy_revisions(view_policy_revision_id),\n  namespace_id TEXT NOT NULL REFERENCES namespaces(namespace_id),\n  PRIMARY KEY (view_policy_revision_id, namespace_id)\n) STRICT, WITHOUT ROWID"
+    },
+    {
+      "type": "table",
+      "name": "view_policy_revisions",
+      "table": "view_policy_revisions",
+      "sql": "CREATE TABLE view_policy_revisions (\n  view_policy_revision_id TEXT PRIMARY KEY,\n  view_id TEXT NOT NULL REFERENCES view_families(view_id),\n  revision_number INTEGER NOT NULL CHECK (revision_number > 0),\n  audience_ceiling TEXT NOT NULL CHECK (audience_ceiling = 'private'),\n  lifecycle TEXT NOT NULL CHECK (lifecycle IN ('created', 'active', 'superseded', 'retired')),\n  authority_claim_json TEXT NOT NULL CHECK (json_valid(authority_claim_json)),\n  object_kinds_json TEXT NOT NULL CHECK (json_valid(object_kinds_json)),\n  store_operation_receipts_visible INTEGER NOT NULL CHECK (store_operation_receipts_visible IN (0, 1)),\n  predecessor_revision_id TEXT REFERENCES view_policy_revisions(view_policy_revision_id),\n  activation_fence INTEGER,\n  created_at TEXT NOT NULL,\n  limits_json TEXT NOT NULL DEFAULT '{\"max_results\":100,\"max_traversal_depth\":8}' CHECK (json_valid(limits_json)),\n  superseded_fence INTEGER,\n  retirement_fence INTEGER,\n  UNIQUE (view_id, revision_number)\n) STRICT"
+    },
+    {
+      "type": "trigger",
+      "name": "consumer_checkpoint_identity_immutable",
+      "table": "consumer_checkpoints",
+      "sql": "CREATE TRIGGER consumer_checkpoint_identity_immutable\nBEFORE UPDATE OF view_id, consumer_id ON consumer_checkpoints\nBEGIN SELECT RAISE(ABORT, 'consumer checkpoint identity is immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "consumer_checkpoints_immutable_delete",
+      "table": "consumer_checkpoints",
+      "sql": "CREATE TRIGGER consumer_checkpoints_immutable_delete BEFORE DELETE ON consumer_checkpoints\nBEGIN SELECT RAISE(ABORT, 'consumer checkpoints cannot be deleted implicitly'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_events_immutable_delete",
+      "table": "owner_events",
+      "sql": "CREATE TRIGGER owner_events_immutable_delete BEFORE DELETE ON owner_events\nBEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_events_immutable_update",
+      "table": "owner_events",
+      "sql": "CREATE TRIGGER owner_events_immutable_update BEFORE UPDATE ON owner_events\nBEGIN SELECT RAISE(ABORT, 'owner events are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_family_bindings_immutable_delete",
+      "table": "owner_family_bindings",
+      "sql": "CREATE TRIGGER owner_family_bindings_immutable_delete BEFORE DELETE ON owner_family_bindings\nBEGIN SELECT RAISE(ABORT, 'owner family bindings are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_family_bindings_immutable_update",
+      "table": "owner_family_bindings",
+      "sql": "CREATE TRIGGER owner_family_bindings_immutable_update BEFORE UPDATE ON owner_family_bindings\nBEGIN SELECT RAISE(ABORT, 'owner family bindings are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_outbox_immutable_delete",
+      "table": "owner_outbox",
+      "sql": "CREATE TRIGGER owner_outbox_immutable_delete BEFORE DELETE ON owner_outbox\nBEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_outbox_immutable_update",
+      "table": "owner_outbox",
+      "sql": "CREATE TRIGGER owner_outbox_immutable_update BEFORE UPDATE ON owner_outbox\nBEGIN SELECT RAISE(ABORT, 'owner outbox is immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_revision_selections_immutable_delete",
+      "table": "owner_revision_selections",
+      "sql": "CREATE TRIGGER owner_revision_selections_immutable_delete BEFORE DELETE ON owner_revision_selections\nBEGIN SELECT RAISE(ABORT, 'owner revision selections are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_revision_selections_immutable_update",
+      "table": "owner_revision_selections",
+      "sql": "CREATE TRIGGER owner_revision_selections_immutable_update BEFORE UPDATE ON owner_revision_selections\nBEGIN SELECT RAISE(ABORT, 'owner revision selections are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_revisions_immutable_delete",
+      "table": "owner_revisions",
+      "sql": "CREATE TRIGGER owner_revisions_immutable_delete BEFORE DELETE ON owner_revisions\nBEGIN SELECT RAISE(ABORT, 'owner revisions are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_revisions_immutable_update",
+      "table": "owner_revisions",
+      "sql": "CREATE TRIGGER owner_revisions_immutable_update BEFORE UPDATE ON owner_revisions\nBEGIN SELECT RAISE(ABORT, 'owner revisions are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_versions_immutable_delete",
+      "table": "owner_versions",
+      "sql": "CREATE TRIGGER owner_versions_immutable_delete BEFORE DELETE ON owner_versions\nBEGIN SELECT RAISE(ABORT, 'owner versions are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owner_versions_immutable_update",
+      "table": "owner_versions",
+      "sql": "CREATE TRIGGER owner_versions_immutable_update BEFORE UPDATE ON owner_versions\nBEGIN SELECT RAISE(ABORT, 'owner versions are immutable'); END"
+    },
+    {
+      "type": "trigger",
+      "name": "owners_identity_immutable",
+      "table": "owners",
+      "sql": "CREATE TRIGGER owners_identity_immutable\nBEFORE UPDATE OF owner_id, owner_kind, home_namespace_id ON owners\nBEGIN\n  SELECT RAISE(ABORT, 'owner identity is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "schema_migrations_immutable_delete",
+      "table": "schema_migrations",
+      "sql": "CREATE TRIGGER schema_migrations_immutable_delete\nBEFORE DELETE ON schema_migrations\nBEGIN\n  SELECT RAISE(ABORT, 'schema migration ledger is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "schema_migrations_immutable_update",
+      "table": "schema_migrations",
+      "sql": "CREATE TRIGGER schema_migrations_immutable_update\nBEFORE UPDATE ON schema_migrations\nBEGIN\n  SELECT RAISE(ABORT, 'schema migration ledger is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_authority_binding_immutable_delete",
+      "table": "store_authority_binding",
+      "sql": "CREATE TRIGGER store_authority_binding_immutable_delete\nBEFORE DELETE ON store_authority_binding\nBEGIN\n  SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_authority_binding_immutable_update",
+      "table": "store_authority_binding",
+      "sql": "CREATE TRIGGER store_authority_binding_immutable_update\nBEFORE UPDATE ON store_authority_binding\nBEGIN\n  SELECT RAISE(ABORT, 'store authority binding is immutable; switching requires migration');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_metadata_immutable_delete",
+      "table": "store_metadata",
+      "sql": "CREATE TRIGGER store_metadata_immutable_delete\nBEFORE DELETE ON store_metadata\nBEGIN\n  SELECT RAISE(ABORT, 'store metadata is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_metadata_immutable_update",
+      "table": "store_metadata",
+      "sql": "CREATE TRIGGER store_metadata_immutable_update\nBEFORE UPDATE ON store_metadata\nBEGIN\n  SELECT RAISE(ABORT, 'store metadata is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_operation_receipts_immutable_delete",
+      "table": "store_operation_receipts",
+      "sql": "CREATE TRIGGER store_operation_receipts_immutable_delete\nBEFORE DELETE ON store_operation_receipts\nBEGIN\n  SELECT RAISE(ABORT, 'store operation receipts are immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "store_operation_receipts_immutable_update",
+      "table": "store_operation_receipts",
+      "sql": "CREATE TRIGGER store_operation_receipts_immutable_update\nBEFORE UPDATE ON store_operation_receipts\nBEGIN\n  SELECT RAISE(ABORT, 'store operation receipts are immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "view_policy_grants_immutable_delete",
+      "table": "view_policy_namespace_grants",
+      "sql": "CREATE TRIGGER view_policy_grants_immutable_delete\nBEFORE DELETE ON view_policy_namespace_grants\nBEGIN\n  SELECT RAISE(ABORT, 'view policy grants are immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "view_policy_grants_immutable_update",
+      "table": "view_policy_namespace_grants",
+      "sql": "CREATE TRIGGER view_policy_grants_immutable_update\nBEFORE UPDATE ON view_policy_namespace_grants\nBEGIN\n  SELECT RAISE(ABORT, 'view policy grants are immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "view_policy_grants_only_while_created",
+      "table": "view_policy_namespace_grants",
+      "sql": "CREATE TRIGGER view_policy_grants_only_while_created\nBEFORE INSERT ON view_policy_namespace_grants\nWHEN NOT EXISTS (\n  SELECT 1 FROM view_policy_revisions\n  WHERE view_policy_revision_id = NEW.view_policy_revision_id AND lifecycle = 'created'\n)\nBEGIN\n  SELECT RAISE(ABORT, 'view policy grants are immutable after activation');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "view_policy_meaning_immutable",
+      "table": "view_policy_revisions",
+      "sql": "CREATE TRIGGER view_policy_meaning_immutable\nBEFORE UPDATE OF view_policy_revision_id, view_id, revision_number, audience_ceiling,\n  authority_claim_json, object_kinds_json, store_operation_receipts_visible,\n  predecessor_revision_id, created_at, limits_json\nON view_policy_revisions\nBEGIN\n  SELECT RAISE(ABORT, 'view policy meaning is immutable');\nEND"
+    },
+    {
+      "type": "trigger",
+      "name": "view_policy_revisions_immutable_delete",
+      "table": "view_policy_revisions",
+      "sql": "CREATE TRIGGER view_policy_revisions_immutable_delete\nBEFORE DELETE ON view_policy_revisions\nBEGIN\n  SELECT RAISE(ABORT, 'view policy revisions are immutable');\nEND"
+    }
+  ]
+}
