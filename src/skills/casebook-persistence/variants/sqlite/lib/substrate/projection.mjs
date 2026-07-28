@@ -132,7 +132,7 @@ async function prepare(request) {
       evidence: { store_present: Boolean(storeEntry), regular_file: storeEntry ? false : null },
     }) };
   }
-  const selected = await selectSqliteBinary(configuration.sqlite.sqlite_bin);
+  const selected = await selectSqliteBinary();
   const probe = await probeSqlite(selected.path, path.dirname(configuration.sqlite.store_path));
   if (!probe.ok) {
     return { failure: failure("sqlite_runtime_incompatible", "The selected SQLite runtime cannot safely rebuild projections.", {

@@ -66,7 +66,6 @@ function renderFrameMarkdown(record) {
     ["schema_version", 1],
     ["id", record.id],
     ["home_namespace_id", record.home_namespace_id],
-    ["authority_scope_namespace_ids", record.authority_scope_namespace_ids],
     ["status", record.status],
     ["title", record.title],
   ]);
