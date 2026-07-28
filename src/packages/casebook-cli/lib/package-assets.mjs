@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { lstat, readdir, readFile, realpath } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open, readdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,9 +16,16 @@ async function asset(relative, expected) {
   if (typeof relative !== "string" || !relative || path.isAbsolute(relative) || path.normalize(relative) !== relative) throw Error("bridge_asset_invalid");
   const candidate = path.resolve(root, relative);
   if (!contained(root, candidate)) throw Error("bridge_asset_invalid");
-  const actual = await realpath(candidate);
-  if (!contained(root, actual) || digest(await readFile(actual)) !== expected) throw Error("bridge_asset_invalid");
-  return actual;
+  const listed = await lstat(candidate);
+  if (!listed.isFile() || listed.isSymbolicLink()) throw Error("bridge_asset_invalid");
+  const file = await open(candidate, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const opened = await file.stat();
+    if (!opened.isFile() || opened.isSymbolicLink() || listed.dev !== opened.dev || listed.ino !== opened.ino || digest(await file.readFile()) !== expected) throw Error("bridge_asset_invalid");
+  } finally {
+    await file.close();
+  }
+  return candidate;
 }
 
 async function runtimeFiles(directory, runtimeRoot, files = []) {

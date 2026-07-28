@@ -277,6 +277,38 @@ test("extracted package refuses tampered, missing, added, and substituted runtim
   await attempt("runtime substituted");
 });
 
+test("extracted package refuses missing, changed, and in-package symlinked fixed bridge assets before grammar or dispatch", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace, store } = await initializedWorkspace(t, "wi033-e2e-bridge-assets-");
+  const packageDirectory = path.dirname(path.dirname(bin));
+  const bridge = path.join(packageDirectory, "bridge", "persistence-bridge.mjs");
+  const original = await readFile(bridge);
+  const before = await readFile(store);
+  const attempt = async (label, args = ["create", "case", "--commit-basis", label, "--input", JSON.stringify(caseAggregate(9300))]) => {
+    const result = await invoke(bin, workspace, args);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.json.failure.code, "bridge_asset_invalid");
+    assert.equal(result.json.failure.evidence.commit_may_have_occurred, false);
+    assert.equal(result.json.failure.evidence.operation_id, null);
+    assert.deepEqual(await readFile(store), before);
+  };
+
+  await rm(bridge);
+  await attempt("bridge missing");
+  await writeFile(bridge, original);
+
+  await writeFile(bridge, "export const replaced = true;\n");
+  await attempt("bridge changed");
+  await writeFile(bridge, original);
+
+  const identical = path.join(path.dirname(bridge), "identical-persistence-bridge.mjs");
+  await writeFile(identical, original);
+  await rm(bridge);
+  await symlink(path.basename(identical), bridge);
+  // Even an identical in-package target is a substitution; verification precedes parsing.
+  await attempt("bridge symlink", ["not-a-command"]);
+});
+
 test("packaged asset verification recognizes a known pre-dispatch package failure without delivery ambiguity", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace } = await initializedWorkspace(t, "wi033-e2e-preflight-");
