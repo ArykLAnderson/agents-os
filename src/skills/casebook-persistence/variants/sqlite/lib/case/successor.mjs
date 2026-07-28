@@ -120,9 +120,9 @@ export function assembleSuccessorCaseEnvelope(request, priorPlacement = null) {
 }
 
 function binding(request) {
-  id(request.store_id, "store_id", "store"); id(request.workspace_id, "workspace_id", "workspace"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
+  id(request.store_id, "store_id", "store"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
   if (!object(request.admission)) throw new SuccessorCaseError("admission", "object_required");
-  return { configuration: request.configuration, store_id: request.store_id, workspace_id: request.workspace_id, admission_slot_id: request.admission_slot_id, admission: request.admission, mechanical_options: undefined };
+  return { configuration: request.configuration, store_id: request.store_id, admission_slot_id: request.admission_slot_id, admission: request.admission, mechanical_options: undefined };
 }
 function mechanicalBinding(request) { const value = binding(request); delete value.mechanical_options; return value; }
 function rawRevision(request, raw) {
@@ -203,7 +203,7 @@ function typedFailure(operation, result) {
   return failure(source.code === "idempotency_mismatch" ? "case.idempotency_mismatch" : "case.substrate_failure", "The Case adapter could not settle the atomic owner revision.", { failureClass: source.failureClass ?? "case.substrate_failure", retryDisposition: source.retry_disposition, evidence: source.evidence ?? {} });
 }
 
-const CASE_COMMON_FIELDS = ["protocol", "operation", "request_version", "store_id", "workspace_id", "admission_slot_id", "admission", "configuration"];
+const CASE_COMMON_FIELDS = ["protocol", "operation", "request_version", "store_id", "admission_slot_id", "admission", "configuration"];
 const MODULAR_READ_FIELDS = new Set([...CASE_COMMON_FIELDS, "resource_id", "owner_revision_id"]);
 const MODULAR_CREATE_FIELDS = (kind) => new Set([...CASE_COMMON_FIELDS, "operation_id", "case_id", "resource_id", "if_match_revision_id", "commit_basis", "provenance", "placement", kind, ...(kind === "evidence" ? ["source_id"] : [])]);
 const MODULAR_UPDATE_FIELDS = new Set([...CASE_COMMON_FIELDS, "operation_id", "resource_id", "if_match_revision_id", "commit_basis", "provenance", "placement", "changes"]);
@@ -307,7 +307,7 @@ async function caseBinding(request) {
   // As with Frame, reject an inexact envelope and fence the provider-derived
   // Case purpose before any resolver/read/receipt/disclosure/write path.
   exact(request, fields, "request");
-  id(request.store_id, "store_id", "store"); id(request.workspace_id, "workspace_id", "workspace"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
+  id(request.store_id, "store_id", "store"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
   if (!object(request.admission)) throw new SuccessorCaseError("admission", "object_required");
   const authorized = await authorizeSuccessorOperation(request, request.operation, "case");
   if (!authorized.ok) throw Object.assign(new SuccessorCaseError("admission", authorized.failure?.code ?? "profile_guard_denied"), { admissionFailure: authorized });
@@ -322,7 +322,7 @@ export async function invokeSuccessorCaseOperation(request) {
     const modular = await invokeModularCaseOperation(request);
     if (modular) return modular;
     if (request.operation === "case.read") {
-      exact(request, new Set(["protocol", "operation", "request_version", "store_id", "workspace_id", "admission_slot_id", "admission", "configuration", "case_id", "revision_id"]), "request");
+      exact(request, new Set(["protocol", "operation", "request_version", "store_id", "admission_slot_id", "admission", "configuration", "case_id", "revision_id"]), "request");
       const caseId = id(request.case_id, "case_id", "case");
       const raw = await invokeSuccessorMechanicalOperation({ operation: request.revision_id ? "substrate.read_owner_revision" : "substrate.read_owner_current", ...mechanicalBinding(request), owner: { id: caseId, kind: "case" }, ...(request.revision_id ? { revision_id: mechanicalCaseRevision(request.revision_id, "revision_id") } : {}) });
       if (!raw.ok) return typedFailure("case.read", raw);
@@ -332,7 +332,7 @@ export async function invokeSuccessorCaseOperation(request) {
       return success("case.read", publicCaseRead(raw.result, hydrated));
     }
     if (request.operation === "case.resolve") {
-      exact(request, new Set(["protocol", "operation", "request_version", "store_id", "workspace_id", "admission_slot_id", "admission", "configuration", "alias", "namespace_id", "namespace_path"]), "request");
+      exact(request, new Set(["protocol", "operation", "request_version", "store_id", "admission_slot_id", "admission", "configuration", "alias", "namespace_id", "namespace_path"]), "request");
       const namespace = await exactNamespace(request, request.namespace_id, request.namespace_path);
       if (!namespace) return success("case.resolve", { status: "not_found" });
       const alias = normalizeExactLocator(text(request.alias, "alias", 256));
@@ -346,7 +346,7 @@ export async function invokeSuccessorCaseOperation(request) {
       return success("case.resolve", { status: "found", case: hydrated.case, revision: hydrated.revision, namespace_id: namespace, operation_fence: claim.result.operation_fence });
     }
     if (!new Set(["case.create", "case.commit_revision", "case.tombstone.commit"]).has(request.operation)) return unsupported(request.operation);
-    exact(request, new Set(["protocol", "operation", "request_version", "operation_id", "store_id", "workspace_id", "admission_slot_id", "admission", "configuration", "expected_revision", "commit_basis", "provenance", "case", "placement"]), "request");
+    exact(request, new Set(["protocol", "operation", "request_version", "operation_id", "store_id", "admission_slot_id", "admission", "configuration", "expected_revision", "commit_basis", "provenance", "case", "placement"]), "request");
     if (request.request_version !== 1 || !Number.isInteger(request.expected_revision) || request.expected_revision < 0) throw new SuccessorCaseError("expected_revision", "expected_revision_required");
     text(request.operation_id, "operation_id", 256); text(request.commit_basis, "commit_basis");
     if (request.operation === "case.create" && request.expected_revision !== 0) throw new SuccessorCaseError("expected_revision", "create_requires_absent_revision");

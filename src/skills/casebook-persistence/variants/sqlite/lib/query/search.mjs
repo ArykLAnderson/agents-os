@@ -26,8 +26,8 @@ function tokens(value) {
 }
 function fts(value) { return value.map((token) => `"${token.replaceAll('"', '""')}"`).join(" AND "); }
 function profileBinding(request, operation) {
-  id(request.workspace_id, "workspace_id", "workspace"); id(request.store_id, "store_id", "store"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
-  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, workspaceId: request.workspace_id, admissionSlotId: request.admission_slot_id, admission: request.admission });
+  id(request.store_id, "store_id", "store"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
+  return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation, admissionSlotId: request.admission_slot_id, admission: request.admission });
 }
 async function queryJson(binary, storePath, statement) { const { stdout } = await sqlite(binary, storePath, `PRAGMA query_only=ON;\n${statement}`, { args: ["-batch", "-bail", "-json"], maxBuffer: 16 * 1024 * 1024 }); return JSON.parse(stdout || "[]"); }
 async function preparedStore(request) {
@@ -90,7 +90,6 @@ function docText(row) { try { const doc = JSON.parse(row.document_json); return 
 export async function organizationalSearch(request) {
   const prepared = await preparedStore(request); if (prepared.failure) return prepared.failure;
   try {
-    if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
     if (request.mode != null && request.mode !== "lexical") return failure("unsupported_capability", "Only lexical organizational search is available.", { failureClass: "operation_unsupported" });
     const admission = profileBinding(request, "query.search");
     // Profile is deliberately proven before candidate identity, count, snippet,
@@ -131,7 +130,6 @@ export async function organizationalSearch(request) {
 export async function resolveOrganizationalIdentity(request) {
   const prepared = await preparedStore(request); if (prepared.failure) return prepared.failure;
   try {
-    if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
     const admission = profileBinding(request, "query.resolve");
     if (!await profileAllowed(prepared.binary, prepared.storePath, admission)) return failure("profile_guard_denied", "The selected Profile does not admit organizational resolution.", { failureClass: "profile_guard_denied" });
     if (!object(request.selector)) throw new QueryError("query_request_invalid", "selector must be an exact stable identity or Namespace alias selector.");
@@ -156,7 +154,6 @@ export async function resolveOrganizationalIdentity(request) {
 export async function hydrateOrganizationalHandoff(request) {
   const prepared = await preparedStore(request); if (prepared.failure) return prepared.failure;
   try {
-    if (request.store_id !== prepared.state.metadata.store_id || request.workspace_id !== prepared.state.metadata.workspace_id) return failure("store_target_mismatch", "The immutable store/workspace identity differs.");
     const admission = profileBinding(request, "query.hydrate");
     if (!await profileAllowed(prepared.binary, prepared.storePath, admission)) return failure("profile_guard_denied", "The selected Profile does not admit organizational hydration.", { failureClass: "profile_guard_denied" });
     const handoff = decodeHandoff(request.handoff);

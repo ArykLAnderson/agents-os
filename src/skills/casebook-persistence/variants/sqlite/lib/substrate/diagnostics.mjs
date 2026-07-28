@@ -138,7 +138,7 @@ export async function diagnose(request) {
     const configuration = validateAuthorityConfiguration(request.configuration), manifestCheck = await loadAndValidateManifest();
     if (!manifestCheck.ok) return failure("asset_incompatible", "Package manifest or asset verification failed.", { failureClass: "asset_incompatible", retryDisposition: RETRY_DISPOSITIONS.AFTER_OPERATOR_REPAIR, evidence: { problems: manifestCheck.problems, manifest_path: manifestCheck.manifest_path } });
     const base = {
-      configuration: { source: configuration.source, authority_mode: configuration.authority_mode, resolved_store_path: configuration.sqlite?.store_path ?? null, resolved_workspace_root: configuration.markdown?.workspace_root ?? null },
+      configuration: { authority_mode: configuration.authority_mode, resolved_store_path: configuration.sqlite?.store_path ?? null, resolved_workspace_root: configuration.markdown?.workspace_root ?? null },
       interpreter: { path: process.execPath, version: process.versions.node, required_engine: PINNED_RUNTIME_CONTRACT.node_engine, role: "javascript-launcher-only" },
       package: { root: PACKAGE_ROOT, manifest_path: manifestCheck.manifest_path, manifest_sha256: manifestCheck.manifest_sha256, content_digest: manifestCheck.manifest.content_digest.sha256, assets_verified: manifestCheck.manifest.assets.length, source_isolation: "self-relative-package-root" },
       compatibility: { protocol: { compatible: true, id: manifestCheck.manifest.protocol.id, version: manifestCheck.manifest.protocol.version }, schema: { compatible: true, id: SCHEMA_ID, version: SCHEMA_VERSION, store_check: "successor-only" } },

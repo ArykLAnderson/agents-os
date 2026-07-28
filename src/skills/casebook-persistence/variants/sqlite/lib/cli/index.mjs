@@ -34,23 +34,20 @@ async function prepared(configuration) {
 function targetFailure(code, message) { return failure(code, message, { failureClass: "target_admission_refused" }); }
 export async function describeTarget(request) {
   try {
-    if (!request || Object.keys(request).sort().join("\0") !== ["configuration", "operation", "protocol", "request_version", "workspace_locator"].join("\0") || request.operation !== "target.describe" || request.request_version !== 1 || request.protocol?.id !== "casebook-persistence-json" || request.protocol?.version !== 2 || !path.isAbsolute(request.workspace_locator)) return targetFailure("target_request_invalid", "target.describe has an invalid closed request.");
+    if (!request || Object.keys(request).sort().join("\0") !== ["configuration", "operation", "protocol", "request_version"].join("\0") || request.operation !== "target.describe" || request.request_version !== 1 || request.protocol?.id !== "casebook-persistence-json" || request.protocol?.version !== 2) return targetFailure("target_request_invalid", "target.describe has an invalid closed request.");
     const ready = await prepared(request.configuration); if (ready.failure) return ready.failure;
-    if (ready.config.source.kind !== "workspace-root" || ready.config.source.locator !== request.workspace_locator) return targetFailure("workspace_mismatch", "The SQLite authority source differs from the resolved workspace.");
-    const bindings = await rows(ready.binary, ready.store, `SELECT source_kind,source_locator FROM store_authority_binding WHERE singleton=1;`);
-    if (bindings.length !== 1 || bindings[0].source_kind !== "workspace-root" || bindings[0].source_locator !== request.workspace_locator) return targetFailure("workspace_mismatch", "The immutable store binding differs from the resolved workspace.");
     const slots = await rows(ready.binary, ready.store, `SELECT admission_slot_id,selection_id,selection_revision_id,profile_id,profile_revision_id,activation_fence FROM profile_selection_current ORDER BY admission_slot_id;`);
     if (slots.length !== 1) return targetFailure(slots.length ? "multiple_admission_slots" : "admission_slot_missing", "Exactly one active Profile selection is required.");
     const slot = slots[0];
-    const target = { schema: "casebook-resolved-target@1", store_id: ready.state.metadata.store_id, workspace_id: ready.state.metadata.workspace_id, root_namespace_id: ready.state.bootstrap.root_namespace_id, admission_slot_id: slot.admission_slot_id, profile_selection_id: slot.selection_id, profile_selection_revision_id: slot.selection_revision_id, profile_id: slot.profile_id, profile_revision_id: slot.profile_revision_id, activation_fence: slot.activation_fence, observed_operation_fence: ready.state.operation_fence, sqlite_schema: { id: ready.state.metadata.schema_id, version: ready.state.metadata.schema_version }, package: { manifest_sha256: ready.state.metadata.package_manifest_sha256, content_digest: ready.manifest.manifest.content_digest.sha256 } };
+    const target = { schema: "casebook-resolved-target@1", store_id: ready.state.metadata.store_id, root_namespace_id: ready.state.bootstrap.root_namespace_id, admission_slot_id: slot.admission_slot_id, profile_selection_id: slot.selection_id, profile_selection_revision_id: slot.selection_revision_id, profile_id: slot.profile_id, profile_revision_id: slot.profile_revision_id, activation_fence: slot.activation_fence, observed_operation_fence: ready.state.operation_fence, sqlite_schema: { id: ready.state.metadata.schema_id, version: ready.state.metadata.schema_version }, package: { manifest_sha256: ready.state.metadata.package_manifest_sha256, content_digest: ready.manifest.manifest.content_digest.sha256 } };
     return success("target.describe", target);
   } catch { return targetFailure("store_unavailable", "The resolved store is unavailable."); }
 }
 export async function recentOperations(request) {
   try {
     const ready = await prepared(request.configuration); if (ready.failure) return ready.failure;
-    const admission = prepareAdmission({ operation: "substrate.get_receipt", workspaceId: request.workspace_id, admissionSlotId: request.admission_slot_id, admission: request.admission });
-    if (request.store_id !== ready.state.metadata.store_id || request.workspace_id !== ready.state.metadata.workspace_id) return targetFailure("store_target_mismatch", "The resolved target changed.");
+    const admission = prepareAdmission({ operation: "substrate.get_receipt", admissionSlotId: request.admission_slot_id, admission: request.admission });
+    if (request.store_id !== ready.state.metadata.store_id) return targetFailure("store_target_mismatch", "The resolved target changed.");
     if ((await rows(ready.binary, ready.store, `SELECT CASE WHEN ${profileAdmissionPredicate(admission)} THEN 1 ELSE 0 END ok;`))[0]?.ok !== 1) return targetFailure("profile_guard_denied", "The selected Profile no longer admits the request.");
     const limit = request.limit, before = request.before_operation_fence ?? null;
     if (!Number.isInteger(limit) || limit < 1 || limit > 20 || (before != null && (!Number.isInteger(before) || before < 1))) return targetFailure("recent_request_invalid", "Recent operation bounds are invalid.");

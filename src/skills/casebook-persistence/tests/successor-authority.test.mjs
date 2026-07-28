@@ -85,7 +85,7 @@ async function fixture(t, label = "fresh", executable = entrypoint) {
     request_version: 1,
     operation_id: `operation:successor:${label}:initialize`,
     store_id: ids.store,
-    workspace_id: ids.workspace,
+
     authority_claim: {
       human_authorized: true,
       local_uid: process.getuid(),
@@ -157,12 +157,16 @@ test("exact target.describe admits one validated Profile target without publishi
   await writeFile(value.grant, `${JSON.stringify(authorization.document)}\n`, { mode: 0o600 });
   const initialized = await invoke(value.root, value.request);
   assert.equal(initialized.code, 0, initialized.stderr);
-  const response = await describeTarget({ protocol, operation: "target.describe", request_version: 1, workspace_locator: value.root, configuration: value.request.configuration });
+  const response = await describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: value.request.configuration });
   assert.equal(response.ok, true, JSON.stringify(response));
-  assert.deepEqual(Object.keys(response.result).sort(), ["activation_fence", "admission_slot_id", "observed_operation_fence", "package", "profile_id", "profile_revision_id", "profile_selection_id", "profile_selection_revision_id", "root_namespace_id", "schema", "sqlite_schema", "store_id", "workspace_id"]);
+  assert.deepEqual(Object.keys(response.result).sort(), ["activation_fence", "admission_slot_id", "observed_operation_fence", "package", "profile_id", "profile_revision_id", "profile_selection_id", "profile_selection_revision_id", "root_namespace_id", "schema", "sqlite_schema", "store_id"]);
   assert.equal("store" in response.result, false);
   assert.equal(response.result.store_id, ids.store);
-  assert.equal(response.result.workspace_id, ids.workspace);
+  assert.equal("workspace_id" in response.result, false);
+  const unrelated = await describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: { ...value.request.configuration, source: { kind: "workspace-root", locator: `${value.root}-unrelated` } } });
+  assert.equal(unrelated.ok, true, JSON.stringify(unrelated));
+  assert.equal(unrelated.result.store_id, response.result.store_id);
+  assert.equal("workspace_id" in unrelated.result, false);
 });
 
 test("bootstrap rejects changed replay, destination preexistence, and owner/mode/digest mismatch before store work", async (t) => {
@@ -382,7 +386,7 @@ test("public connector keeps Case-local masks, tombstones, revision identities, 
   assert.equal((await invoke(value.root, value.request)).code, 0);
   const slot = "admission-slot:10000000-0000-4000-8000-00000000000d";
   const admission = { kind: "sqlite_profile", binding: { selection_id: ids.selection, selection_revision_id: ids.selectionRevision, profile_id: ids.profile, profile_revision_id: ids.profileRevision, activation_fence: 1 } };
-  const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: slot, admission, configuration: value.request.configuration });
+  const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store,  admission_slot_id: slot, admission, configuration: value.request.configuration });
   const chatId = "chat:30000000-0000-4000-8000-000000000001";
   const chat = { ...base("chat.establish", "operation:successor:case-local:chat"), chat_id: chatId, chat_revision_id: "owner-revision:30000000-0000-4000-8000-000000000002", version_id: "version:30000000-0000-4000-8000-000000000003", event_id: "event:30000000-0000-4000-8000-000000000004", expected_revision: 0, namespace_id: ids.namespace, correlation: null };
   chat.request_digest = canonicalContextRequestDigest(ids.store, chat);
@@ -429,7 +433,7 @@ test("every modular Case operation rejects unsupported top-level fields before r
     const value = await fixture(t, `modular-fields-${target.label}`, target.executable);
     const initialized = await invoke(value.root, value.request, {}, target.executable);
     assert.equal(initialized.code, 0, initialized.stderr);
-    const common = { protocol, request_version: 1, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: slot, admission, configuration: value.request.configuration };
+    const common = { protocol, request_version: 1, store_id: ids.store,  admission_slot_id: slot, admission, configuration: value.request.configuration };
     const mutation = (operation, resource_id) => ({ ...common, operation, operation_id: `operation:successor:modular-fields:${target.label}:${operation}`, resource_id, if_match_revision_id: revisionId, commit_basis: "reject unsupported field" });
     const cases = [
       { operation: "case.update", request: { ...mutation("case.update", caseId), changes: { set: { summary: "never read" } } }, identities: [caseId, revisionId] },
@@ -468,7 +472,7 @@ test("every Frame operation rejects unsupported top-level fields before reads, r
   const targets = [{ label: "source", executable: entrypoint }, ...sandbox.results.map((generated) => ({ label: generated.target, executable: path.join(generated.package_root, "variants/sqlite/bin/casebook-persistence.mjs") }))];
   for (const target of targets) await t.test(target.label, async (t) => {
     const value = await fixture(t, `frame-fields-${target.label}`, target.executable); assert.equal((await invoke(value.root, value.request, {}, target.executable)).code, 0);
-    const common = { protocol, request_version: 1, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: slot, admission, configuration: value.request.configuration };
+    const common = { protocol, request_version: 1, store_id: ids.store,  admission_slot_id: slot, admission, configuration: value.request.configuration };
     const mutation = (operation, resource_id) => ({ ...common, operation, operation_id: `operation:successor:frame-fields:${target.label}:${operation}`, resource_id, if_match_revision_id: revisionId, commit_basis: "reject unsupported field" });
     const requests = [
       { operation: "frame.create", request: { ...common, operation: "frame.create", operation_id: "operation:frame-fields:create", expected_revision: 0, commit_basis: "reject", frame: {}, placement: { namespace_id: ids.namespace } }, identities: [frameId] },
@@ -504,7 +508,7 @@ test("owner-neutral substrate atomically commits versions, selections, receipt, 
     envelope_version: 1,
     operation_id: "operation:successor:mechanical:commit",
     store_id: ids.store,
-    workspace_id: ids.workspace,
+
     admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d",
     admission: { kind: "sqlite_profile", binding: {
       selection_id: ids.selection, selection_revision_id: ids.selectionRevision,
@@ -526,7 +530,7 @@ test("owner-neutral substrate atomically commits versions, selections, receipt, 
   };
   envelope.request_digest = canonicalSuccessorCommitDigest(ids.store, envelope);
   const configuration = value.request.configuration;
-  const admissionContext = { workspace_id: ids.workspace, admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d", admission: envelope.admission };
+  const admissionContext = {  admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d", admission: envelope.admission };
   const committed = await invokeSuccessorMechanicalOperation({ operation: "substrate.commit_revision", configuration, envelope }, { admissionRegistry: TEST_CASE_COMMIT_REGISTRY });
   assert.equal(committed.ok, true, JSON.stringify(committed));
   assert.equal(committed.result.receipt.committed_revision, 1);
@@ -564,7 +568,7 @@ test("public successor connector settles complete and modular Frame resources wi
   const value = await fixture(t, "frame-public");
   assert.equal((await invoke(value.root, value.request)).code, 0);
   const admission = { kind: "sqlite_profile", binding: { selection_id: ids.selection, selection_revision_id: ids.selectionRevision, profile_id: ids.profile, profile_revision_id: ids.profileRevision, activation_fence: 1 } };
-  const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d", admission, configuration: value.request.configuration });
+  const base = (operation, operation_id) => ({ protocol, operation, request_version: 1, operation_id, store_id: ids.store,  admission_slot_id: "admission-slot:10000000-0000-4000-8000-00000000000d", admission, configuration: value.request.configuration });
   const frameId = "frame:30000000-0000-4000-8000-000000000101";
   const discoveryId = "discovery:30000000-0000-4000-8000-000000000102";
   const boundaryId = "disposition-boundary:30000000-0000-4000-8000-000000000103";

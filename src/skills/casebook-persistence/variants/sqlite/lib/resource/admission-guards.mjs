@@ -269,9 +269,9 @@ export function validateOwnerPolicyGuard(value, purpose) {
   return Object.freeze({ ...value });
 }
 
-export function prepareAdmission({ registry = FINAL_ADMISSION_REGISTRY, operation, workspaceId, admissionSlotId, admission, ownerPolicyGuard = null, targetOwnerKind = null }) {
+export function prepareAdmission({ registry = FINAL_ADMISSION_REGISTRY, operation, admissionSlotId, admission, ownerPolicyGuard = null, targetOwnerKind = null }) {
   const row = registry.operation(operation);
-  if (!ID.test(workspaceId ?? "") || !ID.test(admissionSlotId ?? "") || !exact(admission, ["binding", "kind"]) || admission.kind !== "sqlite_profile") {
+  if (!ID.test(admissionSlotId ?? "") || !exact(admission, ["binding", "kind"]) || admission.kind !== "sqlite_profile") {
     throw new AdmissionCapabilityError("admission_binding_invalid", "The SQLite Profile admission envelope is invalid.");
   }
   const binding = validateProfileHandle(admission.binding);
@@ -290,7 +290,7 @@ export function prepareAdmission({ registry = FINAL_ADMISSION_REGISTRY, operatio
       revocation_fence: guard.expected_revocation_fence, purpose: guard.purpose,
     } } : {}),
   };
-  return Object.freeze({ row, workspaceId, admissionSlotId, binding, guard, targetOwnerKind, evidence: Object.freeze(evidence), evidenceDigest: digest(evidence) });
+  return Object.freeze({ row, admissionSlotId, binding, guard, targetOwnerKind, evidence: Object.freeze(evidence), evidenceDigest: digest(evidence) });
 }
 
 export function profileBindingPredicate(prepared) {
@@ -303,7 +303,7 @@ export function profileBindingPredicate(prepared) {
     JOIN profile_revision_records p ON p.profile_revision_id=s.profile_revision_id AND p.profile_id=s.profile_id
     JOIN owner_revision_selections profile_selection ON profile_selection.revision_id=p.profile_revision_id AND profile_selection.family_id=p.profile_id AND profile_selection.version_id=p.version_id
     JOIN owner_versions profile_version ON profile_version.version_id=p.version_id AND profile_version.owner_id=p.profile_id AND profile_version.family_id=p.profile_id
-    WHERE m.singleton=1 AND m.workspace_id=${sqlText(value.workspaceId)}
+    WHERE m.singleton=1
       AND s.selection_id=${sqlText(binding.selection_id)}
       AND s.selection_revision_id=${sqlText(binding.selection_revision_id)}
       AND s.profile_id=${sqlText(binding.profile_id)}
