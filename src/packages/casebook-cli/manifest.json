@@ -1,0 +1,36 @@
+{
+  "manifest_version": 1,
+  "package": {
+    "id": "@agents-os/casebook-cli",
+    "version": "0.7.0"
+  },
+  "ordinary_cli_capabilities": [
+    "sqlite_casebook@2",
+    "casebook-resolved-target@1",
+    "casebook-persistence-json@2",
+    "casebook-cli-result@2"
+  ],
+  "ordinary_cli_operations": [
+    "target.describe",
+    "case.create",
+    "case.read",
+    "case.commit_revision",
+    "frame.create",
+    "frame.read",
+    "frame.commit_revision",
+    "query.search",
+    "substrate.get_receipt",
+    "operation.recent"
+  ],
+  "bridge": {
+    "id": "casebook-persistence-bridge@1",
+    "path": "bridge/persistence-bridge.mjs",
+    "sha256": "4d2a4d9347dd6c75964ece257b8c3f105ca42d6d36fac4eac0a8e547e2e500b5"
+  },
+  "provider": {
+    "id": "casebook-persistence@0.19.0-successor",
+    "manifest": "bridge/runtime/casebook-persistence/manifest.json",
+    "manifest_sha256": "073b9e603d72f39de2e3ebd7d9de9c4acbe072c50580b9f50e341a65b366273c",
+    "content_digest": "253bc6e57b252ca32222c1d454217904d622d7e5f5b97ac8aab390918084073d"
+  }
+}

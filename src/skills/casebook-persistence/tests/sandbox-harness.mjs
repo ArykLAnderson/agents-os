@@ -76,8 +76,6 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
   if (root === source || root.startsWith(`${source}${path.sep}`) || source.startsWith(`${root}${path.sep}`)) {
     throw new Error("sandboxRoot and source package must be unrelated");
   }
-  await access(sqliteBinary, fsConstants.X_OK);
-
   const home = path.join(root, "home");
   const cwd = path.join(root, "unrelated-cwd");
   const destinations = path.join(root, "generated-layouts");
@@ -115,12 +113,12 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
     await mkdir(probeDirectory, { recursive: true });
     const configuredStore = path.join(data, `${target}.sqlite3`);
     const request = {
-      protocol: { id: "casebook-persistence-json", version: 1 },
+      protocol: { id: "casebook-persistence-json", version: 2 },
       operation: "diagnose",
       configuration: {
         source: { kind: "sandbox-harness", locator: `synthetic:${target}` },
         authority_mode: "sqlite",
-        sqlite: { database_url: `file:${configuredStore}`, sqlite_bin: sqliteBinary },
+        sqlite: { database_url: `file:${configuredStore}`},
       },
       probe_directory: probeDirectory,
     };
@@ -134,7 +132,7 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
 
     const unsupportedRequest = { ...request, operation: "case.stage_tombstone" };
     const unsupported = await invoke(nodeBinary, entrypoint, cwd, home, unsupportedRequest);
-    if (unsupported.exitCode !== 2 || unsupported.json.failure?.code !== "not_yet_implemented") {
+    if (unsupported.exitCode !== 2 || unsupported.json.failure?.code !== "operation_unsupported") {
       throw new Error(`${target} did not fail closed for later operation`);
     }
     const mechanical = await invoke(nodeBinary, entrypoint, cwd, home, {
@@ -142,7 +140,7 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
       operation: "commit_owner_revision",
     });
     if (mechanical.exitCode !== 2
-      || mechanical.json.failure?.code !== "not_yet_implemented"
+      || mechanical.json.failure?.code !== "operation_unsupported"
       || mechanical.json.failure?.evidence?.supported_operations?.includes("commit_owner_revision")) {
       throw new Error(`${target} shipped connector exposed a generic mechanical operation`);
     }
@@ -161,7 +159,7 @@ export async function generateAndValidateSandbox({ sandboxRoot, sqliteBinary, no
     });
   }
 
-  return { root, home, ledger, sqlite_binary: sqliteBinary, results };
+  return { root, home, ledger, sqlite_runtime: "package-vendored-sqlite-wasm", sqlite_binary: sqliteBinary, results };
 }
 
 export async function cleanupSandbox(root) {
@@ -170,7 +168,7 @@ export async function cleanupSandbox(root) {
 }
 
 async function sqliteIsCompatible(candidate) {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "casebook-persistence-sqlite-screen-"));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "casebook-persistence-sqlite-final-screen-"));
   try {
     const binary = await realpath(candidate);
     await access(binary, fsConstants.X_OK);
@@ -249,12 +247,11 @@ async function main() {
     return index >= 0 ? args[index + 1] : null;
   };
   const requestedRoot = valueAfter("--sandbox-root");
-  const sqliteBinary = await selectCompatibleSqliteBinary(valueAfter("--sqlite-bin") ?? undefined);
   const root = requestedRoot ? path.resolve(requestedRoot) : await mkdtemp(path.join(os.tmpdir(), "casebook-persistence-w01-"));
   const keep = args.includes("--keep");
   let report;
   try {
-    report = await generateAndValidateSandbox({ sandboxRoot: root, sqliteBinary });
+    report = await generateAndValidateSandbox({ sandboxRoot: root, sqliteBinary: valueAfter("--sqlite-bin") ?? undefined });
   } finally {
     if (!keep) await cleanupSandbox(root);
   }

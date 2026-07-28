@@ -247,7 +247,7 @@ async function inspectDisposableProjection(binary, storePath) {
 function projectionMismatch(row, profile, projection) {
   if (!profile || !projection || projection.id !== row.owner_id || projection.home_namespace_id !== row.home_namespace_id) return true;
   if (row.owner_kind === "case") {
-    return projection.schema !== "case-current@2"
+    return projection.schema !== "case-current-final@1"
       || projection.case_version_id !== row.profile_version_id
       || projection.state !== profile.state
       || projection.title !== profile.title
@@ -346,7 +346,7 @@ async function observe(request) {
       failureClass: "configuration_or_store_unavailable",
     });
   }
-  const selected = await selectSqliteBinary(configuration.sqlite.sqlite_bin);
+  const selected = await selectSqliteBinary();
   const storeEntry = await lstat(configuration.sqlite.store_path).catch(() => null);
   if (!storeEntry?.isFile()) {
     return failure("store_unavailable", "The configured store is unavailable and was not created.", {
