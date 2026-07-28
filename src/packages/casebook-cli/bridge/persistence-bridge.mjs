@@ -1,12 +1,5 @@
-import { randomUUID, createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const runtimeRoot = path.join(root, "bridge", "runtime", "casebook-persistence");
-const runtimeManifest = path.join(runtimeRoot, "manifest.json");
-const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+import { randomUUID } from "node:crypto";
+import { verifyPackageAssets } from "../lib/package-assets.mjs";
 const protocol = { id: "casebook-persistence-json", version: 2 };
 const TEST_HOOK = "casebook-cli-e2e@1";
 const testFault = () => process.env.CASEBOOK_CLI_TEST_HOOK === TEST_HOOK
@@ -17,14 +10,7 @@ const config = (workspace, store) => ({ source: { kind: "workspace-root", locato
 const provenance = { acting_role: "casebook-cli", authority_basis: "trusted-local standalone CLI invocation" };
 
 async function runtime() {
-  const packageMetadata = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-  const expected = packageMetadata.casebookCli?.provider;
-  const manifestBytes = await readFile(runtimeManifest);
-  const manifest = JSON.parse(manifestBytes);
-  if (expected?.id !== "casebook-persistence@0.19.0-successor"
-    || digest(manifestBytes) !== expected.manifest_sha256
-    || manifest.package?.id !== "casebook-persistence"
-    || manifest.content_digest?.sha256 !== expected.content_digest) throw Error("bridge_runtime_invalid");
+  await verifyPackageAssets();
   const [{ describeTarget, recentOperations }, { invokeSuccessorCaseOperation }, { invokeSuccessorFrameOperation }, { invokeSuccessorMechanicalOperation }, { organizationalSearch }] = await Promise.all([
     import("./runtime/casebook-persistence/variants/sqlite/lib/cli/index.mjs"),
     import("./runtime/casebook-persistence/variants/sqlite/lib/case/successor.mjs"),
@@ -70,8 +56,11 @@ try {
   else if (fault === "malformed") process.stdout.write("not-json");
   else if (fault === "overflow") process.stdout.write("x".repeat(1024 * 1024 + 1));
   else if (fault === "contradictory") process.stdout.write(JSON.stringify({ ok: true, result: null }));
-  else process.stdout.write(JSON.stringify(response));
+  else {
+    if (fault === "stderr_overflow") process.stderr.write(`bridge-private-stderr:${"x".repeat(64 * 1024)}`);
+    process.stdout.write(JSON.stringify(response));
+  }
 } catch (error) {
-  if (error?.message === "bridge_runtime_invalid") process.exitCode = 1;
+  if (error?.message === "bridge_asset_invalid") process.exitCode = 1;
   else process.stdout.write(JSON.stringify(failure("bridge_request_invalid", "Bridge request is invalid.")));
 }

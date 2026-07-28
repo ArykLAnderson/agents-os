@@ -7,7 +7,7 @@ import { verifyPackageAssets } from "./package-assets.mjs";
 
 const MAX = 1024 * 1024;
 const SETTINGS_MAX = 64 * 1024;
-const STDERR_MAX = 16 * 1024;
+const STDERR_MAX = 64 * 1024;
 const CHILD_CLEANUP_MS = 1_000;
 const TEST_HOOK = "casebook-cli-e2e@1";
 const bridgeDeadline = () => {
@@ -104,28 +104,33 @@ async function safeSettings(file) {
   }
 }
 
+const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => !["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"].includes(key)));
+async function gitOutput(directory, args) {
+  const git = spawn("git", ["--no-optional-locks", "-C", directory, ...args], { shell: false, env: gitEnvironment, stdio: ["ignore", "pipe", "ignore"] });
+  let out = "";
+  for await (const chunk of git.stdout) out += chunk;
+  return { code: await new Promise((resolve) => git.once("close", resolve)), out: out.trim() };
+}
+async function rejectBareRepository(directory) {
+  const bare = await gitOutput(directory, ["rev-parse", "--is-bare-repository"]);
+  if (bare.code === 0 && bare.out === "true") throw Error("bare_repository");
+}
 async function resolveWorkspace(explicit) {
   if (explicit != null) {
     const candidate = absolute(explicit), info = candidate && await lstat(candidate).catch(() => null);
     if (!info?.isDirectory()) throw Error("workspace_invalid");
-    return realpath(candidate);
+    const workspace = await realpath(candidate);
+    await rejectBareRepository(workspace);
+    return workspace;
   }
   let cursor = await realpath(process.cwd());
   while (true) {
-    const gitEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => !["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"].includes(key)));
-    const gitOutput = async (args) => {
-      const git = spawn("git", ["--no-optional-locks", "-C", cursor, ...args], { shell: false, env: gitEnvironment, stdio: ["ignore", "pipe", "ignore"] });
-      let out = "";
-      for await (const chunk of git.stdout) out += chunk;
-      return { code: await new Promise((resolve) => git.once("close", resolve)), out: out.trim() };
-    };
     if (await lstat(path.join(cursor, ".git")).catch(() => null)) {
-      const result = await gitOutput(["rev-parse", "--show-toplevel"]);
+      const result = await gitOutput(cursor, ["rev-parse", "--show-toplevel"]);
       if (result.code !== 0 || !result.out) throw Error("git_marker_invalid");
       return realpath(result.out);
     }
-    const bare = await gitOutput(["rev-parse", "--is-bare-repository"]);
-    if (bare.code === 0 && bare.out === "true") return realpath(cursor);
+    await rejectBareRepository(cursor);
     const parent = path.dirname(cursor);
     if (parent === cursor) return cursor;
     cursor = parent;
@@ -190,16 +195,20 @@ async function bridgeCall(request, workspace) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [bridge.pathname], { cwd: workspace, shell: false, stdio: ["pipe", "pipe", "pipe"] });
     const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(request.operation);
-    let output = Buffer.alloc(0), stderr = Buffer.alloc(0), transportSubmitted = false, settled = false, aborting = false;
+    let output = Buffer.alloc(0), stderr = Buffer.alloc(0), stderrOverflow = false, transportSubmitted = false, settled = false, aborting = false;
     let timer;
     const terminal = new Promise((resolveTerminal) => child.once("close", (code, signal) => resolveTerminal({ code, signal })));
     const boundedAppend = (current, chunk) => {
       const combined = Buffer.concat([current, chunk]);
-      return combined.length <= STDERR_MAX ? combined : combined.subarray(combined.length - STDERR_MAX);
+      if (combined.length <= STDERR_MAX) return combined;
+      stderrOverflow = true;
+      return combined.subarray(combined.length - STDERR_MAX);
     };
+    // Child diagnostics are bounded for parent-process hygiene only. They never
+    // cross the casebook-cli-result boundary.
     const diagnostic = (termination = null) => ({
-      stderr: stderr.toString("utf8"),
-      stderr_truncated: stderr.length >= STDERR_MAX,
+      stderr_bytes_retained: stderr.length,
+      stderr_overflow: stderrOverflow,
       termination,
     });
     const finish = (fn, value) => {
@@ -326,6 +335,6 @@ export async function run(argv) {
   } catch (error) {
     const authority = ctx?.authority ?? baseAuthority();
     const delivery = Boolean(error.delivery);
-    return { result: refuse(operation, authority, error.message ?? "cli_refusal", delivery ? "Bridge delivery may have occurred." : "CLI invocation was refused.", delivery, { commit_may_have_occurred: delivery, operation_id: error.operation_id ?? null, ...(error.diagnostics ? { bridge: error.diagnostics } : {}) }), exitCode: delivery ? 3 : 1 };
+    return { result: refuse(operation, authority, error.message ?? "cli_refusal", delivery ? "Bridge delivery may have occurred." : "CLI invocation was refused.", delivery, { commit_may_have_occurred: delivery, operation_id: error.operation_id ?? null }), exitCode: delivery ? 3 : 1 };
   }
 }
