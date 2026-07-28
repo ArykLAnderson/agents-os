@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "23b6e49ca64aa4b82aa3bf31285a889419ce6497fdc89226a0a1ac0e3353187c"
+    "sha256": "fd2da086e4eb4344fa4793f1b19ac0cc339e5efa381a9cf09225db7321c0b6dd"
   },
   "entrypoints": [
     {
@@ -974,7 +974,7 @@
       "id": "sqlite-case-successor-adapter",
       "path": "variants/sqlite/lib/case/successor.mjs",
       "kind": "module",
-      "sha256": "f5a4c3cf3146f30bdc1928397f18b25731b42582abf5f07fedcc9f220bee3ec6"
+      "sha256": "66b3d651c838a7c0b6d56cc09b011ea07f5fd14d1d7c5490187daa55f280f274"
     },
     {
       "id": "sqlite-frame-successor-adapter",
