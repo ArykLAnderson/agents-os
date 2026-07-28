@@ -3,6 +3,8 @@ name: case
 description: Retrieves or curates reusable, provenance-bearing knowledge in a Casebook workspace. Use when exploring existing Cases, intaking already-understood sources, or reconciling changed Case meaning.
 ---
 
+<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->
+
 # Case
 
 Case owns reusable knowledge semantics; the packaged `casebook` CLI owns ordinary storage mechanics. Infer the operation from the request:

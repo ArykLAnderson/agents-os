@@ -2,6 +2,9 @@
 name: frame
 description: Frames a consequential software outcome into externally meaningful guarantees and decision-changing uncertainty without selecting internal machinery.
 ---
+
+<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->
+
 # Frame: external boundary, not machinery
 
 Use for a software-system outcome that is ambiguous, consequential, or likely to acquire accidental architecture. Optimize for the earliest trustworthy connected production outcome, not exhaustive discovery. When ordinary Frame state must be created, resumed, or changed, read [references/persistence.md](references/persistence.md) and use the packaged Casebook CLI.

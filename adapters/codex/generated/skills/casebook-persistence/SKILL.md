@@ -3,6 +3,8 @@ name: casebook-persistence
 description: Operates ordinary Case and Frame persistence through the packaged Casebook CLI.
 ---
 
+<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->
+
 # Casebook Persistence
 
 This skill supplies storage mechanics only; Case and Frame retain semantic judgment. For every ordinary Case or Frame read or mutation, first read [references/cli.md](references/cli.md) and use the packaged `casebook` command it defines.

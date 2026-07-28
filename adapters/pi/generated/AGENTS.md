@@ -1,3 +1,5 @@
+<!-- Generated from Agent OS src by scripts/agents-os.mjs. Do not edit directly. -->
+
 # Global Agent Instructions
 
 ## UUID generation
