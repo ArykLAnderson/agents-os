@@ -10,7 +10,7 @@ import { selectSqliteBinary } from "../substrate/diagnostics.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
-const FRAME_COMMON_FIELDS = ["protocol", "operation", "request_version", "store_id", "workspace_id", "admission_slot_id", "admission", "configuration"];
+const FRAME_COMMON_FIELDS = ["protocol", "operation", "request_version", "store_id", "admission_slot_id", "admission", "configuration"];
 export const FRAME_OPERATION_FIELDS = new Map([
   ["frame.create", new Set([...FRAME_COMMON_FIELDS, "operation_id", "expected_revision", "commit_basis", "provenance", "frame", "placement"])],
   ["frame.commit_revision", new Set([...FRAME_COMMON_FIELDS, "operation_id", "expected_revision", "commit_basis", "provenance", "frame_id", "frame", "placement"])],
@@ -173,11 +173,11 @@ async function frameBinding(request) {
   // This exact envelope check and provider-derived Profile gate precede every
   // resolver/read/receipt/disclosure/write path in the Frame adapter.
   exact(request, fields, "request");
-  id(request.store_id, "store_id", "store"); id(request.workspace_id, "workspace_id", "workspace"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
+  id(request.store_id, "store_id", "store"); id(request.admission_slot_id, "admission_slot_id", "admission-slot");
   if (!object(request.admission)) throw new SuccessorFrameError("admission", "object_required");
   const authorized = await authorizeSuccessorOperation(request, request.operation, "frame");
   if (!authorized.ok) throw Object.assign(new SuccessorFrameError("admission", authorized.failure?.code ?? "profile_guard_denied"), { admissionFailure: authorized });
-  return { configuration: request.configuration, store_id: request.store_id, workspace_id: request.workspace_id, admission_slot_id: request.admission_slot_id, admission: request.admission, mechanical_options: undefined };
+  return { configuration: request.configuration, store_id: request.store_id, admission_slot_id: request.admission_slot_id, admission: request.admission, mechanical_options: undefined };
 }
 async function frameMechanicalBinding(request) { const value = await frameBinding(request); delete value.mechanical_options; return value; }
 function frameRevision(value, path = "revision_id") { return id(value, path, "frame-revision").replace("frame-revision:", "owner-revision:"); }

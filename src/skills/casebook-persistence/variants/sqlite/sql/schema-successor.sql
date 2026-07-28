@@ -5,7 +5,6 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE store_metadata (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
   store_id TEXT NOT NULL UNIQUE,
-  workspace_id TEXT NOT NULL,
   schema_id TEXT NOT NULL,
   schema_version INTEGER NOT NULL CHECK(schema_version = 2),
   protocol_id TEXT NOT NULL,
@@ -19,23 +18,6 @@ CREATE TRIGGER store_metadata_no_update BEFORE UPDATE ON store_metadata
 BEGIN SELECT RAISE(ABORT, 'store metadata is immutable'); END;
 CREATE TRIGGER store_metadata_no_delete BEFORE DELETE ON store_metadata
 BEGIN SELECT RAISE(ABORT, 'store metadata is immutable'); END;
-
-CREATE TABLE store_authority_binding (
-  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
-  store_id TEXT NOT NULL UNIQUE REFERENCES store_metadata(store_id),
-  workspace_id TEXT NOT NULL,
-  source_kind TEXT NOT NULL,
-  source_locator TEXT NOT NULL,
-  bootstrap_grant_sha256 TEXT NOT NULL,
-  bootstrap_parent_device TEXT NOT NULL,
-  bootstrap_parent_inode TEXT NOT NULL,
-  destination_basename TEXT NOT NULL,
-  bound_at TEXT NOT NULL
-) STRICT;
-CREATE TRIGGER store_authority_binding_no_update BEFORE UPDATE ON store_authority_binding
-BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable'); END;
-CREATE TRIGGER store_authority_binding_no_delete BEFORE DELETE ON store_authority_binding
-BEGIN SELECT RAISE(ABORT, 'store authority binding is immutable'); END;
 
 CREATE TABLE store_fence (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
@@ -443,7 +425,6 @@ CREATE TABLE reconciliation_snapshots (
   snapshot_id TEXT PRIMARY KEY,
   operation_scope_digest TEXT NOT NULL,
   store_id TEXT NOT NULL REFERENCES store_metadata(store_id),
-  workspace_id TEXT NOT NULL,
   admission_slot_id TEXT NOT NULL,
   operation_fence INTEGER NOT NULL CHECK(operation_fence>0),
   event_sequence INTEGER NOT NULL CHECK(event_sequence>=0),

@@ -25,7 +25,7 @@ const REQUIRED_TABLES = Object.freeze([
   "owner_current", "owner_events", "owner_family_bindings", "owner_outbox", "owner_policy_admission_current",
   "context_namespace_revisions", "context_namespace_current", "owner_current_claims", "context_project_default_revisions", "context_project_default_current", "context_chat_revisions", "context_chat_current", "context_correlation_claims",
   "owner_revision_selections", "owner_revisions", "owner_versions", "owners", "profile_revision_records",
-  "profile_selection_current", "profile_selection_revisions", "store_authority_binding", "store_fence", "store_metadata",
+  "profile_selection_current", "profile_selection_revisions", "store_fence", "store_metadata",
   "store_operation_receipts", "reconciliation_cursor_keys", "reconciliation_snapshot_policy", "reconciliation_snapshots", "reconciliation_event_retention", "reconciliation_checkpoints",
 ]);
 let temporarySequence = 0;
@@ -104,9 +104,9 @@ async function packageBinding() {
 function canonicalRequestBinding(request, configuration, destination, initial, packageValue, authority) {
   return {
     operation: "initialize_store", request_version: 1, operation_id: requireString(request.operation_id, "operation_id", 256),
-    store_id: requireId(request.store_id, "store_id", "store"), workspace_id: requireId(request.workspace_id, "workspace_id", "workspace"),
+    store_id: requireId(request.store_id, "store_id", "store"),
     destination: { parent_realpath: destination.parent_realpath, parent_device: destination.parent_device, parent_inode: destination.parent_inode, basename: destination.basename },
-    authority_binding: { source: configuration.source, authority_mode: "sqlite" }, authority_claim: authority,
+    authority_claim: authority,
     initial: {
       root_namespace: initial.root_namespace, private_profile: initial.private_profile, profile_selection: initial.profile_selection,
       project_default: initial.project_default, initialization_event_id: initial.initialization_event_id,
@@ -217,9 +217,8 @@ export async function inspectSuccessorStore(binary, storePath) {
   if (missing.length) return { status: "unavailable", code: "store_partial_initialization", evidence: { missing_components: missing } };
   try {
     const rows = await queryJson(binary, storePath, `SELECT json_object(
-      'metadata',(SELECT json_object('store_id',store_id,'workspace_id',workspace_id,'schema_id',schema_id,'schema_version',schema_version,'protocol_id',protocol_id,'protocol_version',protocol_version,'package_manifest_sha256',package_manifest_sha256,'schema_asset_sha256',schema_asset_sha256,'initialized_at',initialized_at,'initialization_operation_id',initialization_operation_id) FROM store_metadata WHERE singleton=1),
+      'metadata',(SELECT json_object('store_id',store_id,'schema_id',schema_id,'schema_version',schema_version,'protocol_id',protocol_id,'protocol_version',protocol_version,'package_manifest_sha256',package_manifest_sha256,'schema_asset_sha256',schema_asset_sha256,'initialized_at',initialized_at,'initialization_operation_id',initialization_operation_id) FROM store_metadata WHERE singleton=1),
       'metadata_count',(SELECT count(*) FROM store_metadata),
-      'binding_count',(SELECT count(*) FROM store_authority_binding),
       'bootstrap',(SELECT json_object('root_namespace_id',b.root_namespace_id,'initial_profile_id',b.initial_profile_id,'initial_profile_revision_id',b.initial_profile_revision_id,'profile_selection_id',b.profile_selection_id,'admission_slot_id',b.admission_slot_id,'project_default_id',b.project_default_id,'initialization_event_id',b.initialization_event_id,'request_digest',b.request_digest,'published_receipt_digest',b.published_receipt_digest,'initial_owner_count',(SELECT count(*) FROM owners o WHERE o.owner_id IN (b.root_namespace_id,b.initial_profile_id,b.profile_selection_id,b.project_default_id))) FROM bootstrap_state b WHERE singleton=1),
       'bootstrap_count',(SELECT count(*) FROM bootstrap_state),
       'receipt_count',(SELECT count(*) FROM store_operation_receipts r JOIN store_metadata m ON m.initialization_operation_id=r.operation_id WHERE r.operation_kind='initialize_store' AND r.outcome='initialized'),
@@ -230,7 +229,7 @@ export async function inspectSuccessorStore(binary, storePath) {
     if (typeof detail.metadata === "string") detail.metadata = JSON.parse(detail.metadata);
     if (typeof detail.bootstrap === "string") detail.bootstrap = JSON.parse(detail.bootstrap);
     const expectedOwners = detail.bootstrap?.project_default_id == null ? 3 : 4;
-    const complete = detail.metadata_count === 1 && detail.binding_count === 1 && detail.bootstrap_count === 1 && detail.receipt_count === 1 && detail.event_count === 1 && detail.bootstrap?.initial_owner_count === expectedOwners && detail.metadata?.schema_id === SCHEMA_ID && detail.metadata?.schema_version === SCHEMA_VERSION && detail.metadata?.protocol_id === PROTOCOL_ID && detail.metadata?.protocol_version === PROTOCOL_VERSION && Number.isInteger(detail.operation_fence) && detail.operation_fence >= 1;
+    const complete = detail.metadata_count === 1 && detail.bootstrap_count === 1 && detail.receipt_count === 1 && detail.event_count === 1 && detail.bootstrap?.initial_owner_count === expectedOwners && detail.metadata?.schema_id === SCHEMA_ID && detail.metadata?.schema_version === SCHEMA_VERSION && detail.metadata?.protocol_id === PROTOCOL_ID && detail.metadata?.protocol_version === PROTOCOL_VERSION && Number.isInteger(detail.operation_fence) && detail.operation_fence >= 1;
     if (!complete) return { status: "unavailable", code: "store_partial_initialization", evidence: { components: detail } };
     return { status: "available", metadata: detail.metadata, bootstrap: detail.bootstrap, operation_fence: detail.operation_fence, integrity: { quick_check: "ok", foreign_key_violations: 0 } };
   } catch { return { status: "unavailable", code: "store_partial_initialization", evidence: { components_readable: false } }; }
@@ -253,7 +252,7 @@ function initializationResult(binding, initializedAt) {
   return {
     status: "settled",
     initialization: {
-      store_id: binding.store_id, workspace_id: binding.workspace_id,
+      store_id: binding.store_id,
       root_namespace: { id: initial.root_namespace.owner_id, revision_id: initial.root_namespace.revision_id, version_id: initial.root_namespace.version_id },
       profile: { id: initial.private_profile.owner_id, revision_id: initial.private_profile.revision_id, version_id: initial.private_profile.version_id, audience_ceiling: "private" },
       profile_selection: { id: initial.profile_selection.owner_id, revision_id: initial.profile_selection.revision_id, version_id: initial.profile_selection.version_id, admission_slot_id: initial.profile_selection.content.admission_slot_id, activation_fence: 1 },
@@ -275,8 +274,7 @@ async function createCompleteTemporaryStore(binary, temporaryStore, binding, gra
   if (binding.initial.project_default) records.push(initialInsert(binding.initial.project_default, "project-default", binding.operation_id, now));
   const projectId = binding.initial.project_default?.owner_id ?? null;
   const command = `.bail on\nPRAGMA foreign_keys=ON;\nPRAGMA application_id=${SUCCESSOR_APPLICATION_ID};\nBEGIN IMMEDIATE;\n${schema}
-    INSERT INTO store_metadata VALUES(1,${sqlText(binding.store_id)},${sqlText(binding.workspace_id)},${sqlText(SCHEMA_ID)},${SCHEMA_VERSION},${sqlText(PROTOCOL_ID)},${PROTOCOL_VERSION},${sqlText(binding.package.manifest_sha256)},${sqlText(binding.package.schema.sha256)},${sqlText(now)},${sqlText(binding.operation_id)});
-    INSERT INTO store_authority_binding VALUES(1,${sqlText(binding.store_id)},${sqlText(binding.workspace_id)},${sqlText(binding.authority_binding.source.kind)},${sqlText(binding.authority_binding.source.locator)},${sqlText(grantSha256)},${sqlText(binding.destination.parent_device)},${sqlText(binding.destination.parent_inode)},${sqlText(binding.destination.basename)},${sqlText(now)});
+    INSERT INTO store_metadata VALUES(1,${sqlText(binding.store_id)},${sqlText(SCHEMA_ID)},${SCHEMA_VERSION},${sqlText(PROTOCOL_ID)},${PROTOCOL_VERSION},${sqlText(binding.package.manifest_sha256)},${sqlText(binding.package.schema.sha256)},${sqlText(now)},${sqlText(binding.operation_id)});
     INSERT INTO store_fence VALUES(1,1,1,0,0);
     INSERT INTO reconciliation_cursor_keys VALUES(1,${sqlText(randomBytes(32).toString("hex"))});
     ${records.join("\n")}
@@ -287,7 +285,7 @@ async function createCompleteTemporaryStore(binary, temporaryStore, binding, gra
     INSERT INTO profile_selection_current VALUES(${sqlText(binding.initial.profile_selection.content.admission_slot_id)},${sqlText(binding.initial.profile_selection.owner_id)},${sqlText(binding.initial.profile_selection.revision_id)},${sqlText(binding.initial.private_profile.owner_id)},${sqlText(binding.initial.private_profile.revision_id)},1,${sqlText(now)});
     INSERT INTO bootstrap_state VALUES(1,${sqlText(binding.initial.root_namespace.owner_id)},${sqlText(binding.initial.private_profile.owner_id)},${sqlText(binding.initial.private_profile.revision_id)},${sqlText(binding.initial.profile_selection.owner_id)},${sqlText(binding.initial.profile_selection.content.admission_slot_id)},${sqlText(projectId)},${sqlText(binding.initial.initialization_event_id)},${sqlText(binding.request_digest)},${sqlText(resultDigest)});
     INSERT INTO store_operation_receipts VALUES(${sqlText(binding.operation_id)},'initialize_store',${sqlText(binding.store_id)},${sqlText(binding.request_digest)},'initialized',${sqlText(JSON.stringify(core))},${sqlText(resultDigest)},${sqlText(now)},'never',1,NULL,NULL,NULL,NULL,${sqlText(binding.initial.initialization_event_id)});
-    INSERT INTO owner_events VALUES(${sqlText(binding.initial.initialization_event_id)},${sqlText(binding.operation_id)},NULL,NULL,'store.initialized',${sqlText(JSON.stringify({ store_id: binding.store_id, workspace_id: binding.workspace_id }))},${sqlText(successorDigest({ store_id: binding.store_id, workspace_id: binding.workspace_id }))},1,${sqlText(now)});
+    INSERT INTO owner_events VALUES(${sqlText(binding.initial.initialization_event_id)},${sqlText(binding.operation_id)},NULL,NULL,'store.initialized',${sqlText(JSON.stringify({ store_id: binding.store_id }))},${sqlText(successorDigest({ store_id: binding.store_id }))},1,${sqlText(now)});
     PRAGMA user_version=${SCHEMA_VERSION};
     COMMIT;`;
   try { await sqlite(binary, temporaryStore, command, { args: ["-batch", "-bail"], timeout: 20_000, maxBuffer: 16 * 1024 * 1024 }); }
@@ -342,7 +340,7 @@ export async function initializeSuccessorStore(request) {
       } finally { if (grantFd != null) closeSync(grantFd); }
       if (lstatSync(destination.store_path, { throwIfNoEntry: false })) throw new BootstrapError("bootstrap_destination_exists", "Initialization publishes only to an absent destination with no replacement.");
       assertParentStable(parentFd, destination);
-      runBootstrapTestStage("before_grant_consumption", configuration.source.kind === "synthetic-test");
+      runBootstrapTestStage("before_grant_consumption", configuration.source?.kind === "synthetic-test");
       assertParentStable(parentFd, destination);
       try { linkSync(grantPath, paths.consumed); }
       catch (error) {
@@ -356,10 +354,10 @@ export async function initializeSuccessorStore(request) {
     const consumedInfo = lstatSync(paths.consumed);
     if (!consumedInfo.isFile() || consumedInfo.isSymbolicLink() || (consumedInfo.mode & 0o777) !== 0o600 || consumedInfo.uid !== request.authority_claim.local_uid) throw new BootstrapError("bootstrap_consumed_record_invalid", "The durable consumed record owner or mode is invalid.");
     validateRecordMatch(record, expected.document, request.bootstrap_authorization.sha256);
-    runBootstrapTestStage("after_grant_consumption", configuration.source.kind === "synthetic-test");
+    runBootstrapTestStage("after_grant_consumption", configuration.source?.kind === "synthetic-test");
 
     const reservation = { record_schema: "bootstrap-destination-reservation@1", operation_id: request.operation_id, request_digest: request.request_digest, grant_sha256: request.bootstrap_authorization.sha256, parent_device: destination.parent_device, parent_inode: destination.parent_inode, destination_basename: destination.basename };
-    try { atomicWriteNoReplace(paths.reservation, Buffer.from(`${JSON.stringify(reservation)}\n`), configuration.source.kind === "synthetic-test"); }
+    try { atomicWriteNoReplace(paths.reservation, Buffer.from(`${JSON.stringify(reservation)}\n`), configuration.source?.kind === "synthetic-test"); }
     catch (error) {
       if (error?.code !== "EEXIST") throw error;
       let existing;
@@ -390,7 +388,7 @@ export async function initializeSuccessorStore(request) {
     try {
       built = await createCompleteTemporaryStore(selected.path, temporary, { ...expected.document.binding, request_digest: expected.document.request_digest }, request.bootstrap_authorization.sha256);
       assertParentStable(parentFd, destination);
-      runBootstrapTestStage("before_publication", configuration.source.kind === "synthetic-test");
+      runBootstrapTestStage("before_publication", configuration.source?.kind === "synthetic-test");
       assertParentStable(parentFd, destination);
       try { linkSync(temporary, destination.store_path); }
       catch (error) {
@@ -402,7 +400,7 @@ export async function initializeSuccessorStore(request) {
       }
       syncDirectory(destination.parent_realpath); unlinkSync(temporary); syncDirectory(destination.parent_realpath);
     } finally { try { unlinkSync(temporary); } catch {} }
-    runBootstrapTestStage("after_publication", configuration.source.kind === "synthetic-test");
+    runBootstrapTestStage("after_publication", configuration.source?.kind === "synthetic-test");
     const published = { ...record, phase: "published", receipt: built.response.receipt };
     atomicReplaceMatchingPhaseRecord(paths.consumed, published); atomicReplaceMatchingPhaseRecord(paths.reservation, { ...reservation, phase: "published", receipt: built.response.receipt });
     return success("initialize_store", built.response);

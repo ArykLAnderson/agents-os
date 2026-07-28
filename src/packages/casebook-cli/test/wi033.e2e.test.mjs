@@ -40,7 +40,7 @@ async function packed(t) {
 async function initialize(workspace, store) {
   workspace = await realpath(workspace);
   const grant = path.join(workspace, "bootstrap.grant.json");
-  const request = { protocol: { id: "casebook-persistence-json", version: 2 }, operation: "initialize_store", request_version: 1, operation_id: "operation:wi033-e2e-initialize", store_id: ids.store, workspace_id: ids.workspace, authority_claim: { human_authorized: true, local_uid: process.getuid(), human_identity: "e2e", provenance: "disposable:wi033" }, initial: { root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Personal", parent_id: null, lifecycle: "active" }), private_profile: record(ids.profile, ids.profileRevision, ids.profileVersion, profile), profile_selection: record(ids.selection, ids.selectionRevision, ids.selectionVersion, { schema: "profile-selection@1", admission_slot_id: ids.slot, selected_profile_id: ids.profile, selected_profile_revision_id: ids.profileRevision, lifecycle: "active", activation_fence: 1 }), project_default: null, initialization_event_id: ids.event }, configuration: { source: { kind: "workspace-root", locator: workspace }, authority_mode: "sqlite", sqlite: { database_url: store } } };
+  const request = { protocol: { id: "casebook-persistence-json", version: 2 }, operation: "initialize_store", request_version: 1, operation_id: "operation:wi033-e2e-initialize", store_id: ids.store, authority_claim: { human_authorized: true, local_uid: process.getuid(), human_identity: "e2e", provenance: "disposable:wi033" }, initial: { root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Personal", parent_id: null, lifecycle: "active" }), private_profile: record(ids.profile, ids.profileRevision, ids.profileVersion, profile), profile_selection: record(ids.selection, ids.selectionRevision, ids.selectionVersion, { schema: "profile-selection@1", admission_slot_id: ids.slot, selected_profile_id: ids.profile, selected_profile_revision_id: ids.profileRevision, lifecycle: "active", activation_fence: 1 }), project_default: null, initialization_event_id: ids.event }, configuration: { authority_mode: "sqlite", sqlite: { database_url: store } } };
   const authorization = await createBootstrapAuthorizationDocument(request, { grant_path: grant });
   request.request_digest = authorization.request_digest;
   request.bootstrap_authorization = { path: grant, sha256: authorization.sha256 };
@@ -158,6 +158,35 @@ test("extracted package preserves recovery identities for every possible-post-di
     assert.equal(read.code, 0, `${fault}: ${read.stdout}`);
     assert.equal(read.json.result.revision.number, 1, fault);
   }
+});
+
+test("extracted package shares one XDG-selected successor store across unrelated Git workspaces", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const authorityRoot = await mkdtemp(path.join(os.tmpdir(), "wi033-e2e-xdg-authority-"));
+  const home = await mkdtemp(path.join(os.tmpdir(), "wi033-e2e-xdg-home-"));
+  const repoA = await mkdtemp(path.join(os.tmpdir(), "wi033-e2e-xdg-repo-a-"));
+  const repoB = await mkdtemp(path.join(os.tmpdir(), "wi033-e2e-xdg-repo-b-"));
+  t.after(async () => { for (const value of [authorityRoot, home, repoA, repoB]) await rm(value, { recursive: true, force: true }); });
+  const store = path.join(authorityRoot, "successor.sqlite");
+  await initialize(authorityRoot, store);
+  const configHome = path.join(home, "config");
+  await mkdir(path.join(configHome, "casebook"), { recursive: true });
+  await writeFile(path.join(configHome, "casebook", "config.json"), `${JSON.stringify({ schema: "casebook-cli-settings@1", store })}\n`);
+  await runFile("git", ["init", "--quiet"], { cwd: repoA });
+  await runFile("git", ["init", "--quiet"], { cwd: repoB });
+  const aggregate = caseAggregate(8100, "XDG shared Case", "shared XDG phrase");
+  const env = { HOME: home, XDG_CONFIG_HOME: configHome, XDG_DATA_HOME: path.join(home, "data") };
+  const created = await invoke(bin, repoA, ["create", "case", "--commit-basis", "shared store", "--input", JSON.stringify(aggregate)], env);
+  assert.equal(created.code, 0, created.stdout);
+  const read = await invoke(bin, repoB, ["read", "case", "--case-id", aggregate.id], env);
+  assert.equal(read.code, 0, read.stdout);
+  assert.equal(read.json.result.aggregate.id, aggregate.id);
+  const searched = await invoke(bin, repoB, ["search", "--query", "shared XDG phrase"], env);
+  assert.equal(searched.code, 0, searched.stdout);
+  assert.equal(searched.json.result.items.length, 1);
+  assert.equal(searched.json.authority.store, await realpath(store));
+  const schema = await runFile("sqlite3", [store, "SELECT name FROM sqlite_schema WHERE name IN ('workspace_id', 'store_authority_binding');"]);
+  assert.equal(schema.stdout.trim(), "");
 });
 
 test("extracted package resolves explicit, workspace, XDG, Git, nested, linked, malformed, and bare routes", { timeout: 120_000 }, async (t) => {
