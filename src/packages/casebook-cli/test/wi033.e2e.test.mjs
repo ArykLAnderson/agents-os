@@ -152,8 +152,7 @@ test("extracted package preserves recovery identities for every possible-post-di
     assert.equal(result.json.status, "delivery_unknown", fault);
     assert.equal(result.json.failure.evidence.commit_may_have_occurred, true, fault);
     assert.match(result.json.failure.evidence.operation_id, /^operation:[0-9a-f-]{36}$/, fault);
-    assert.equal(result.json.failure.evidence.bridge.stderr.length <= 16 * 1024, true, fault);
-    assert.ok(result.json.failure.evidence.bridge.termination, fault);
+    assert.deepEqual(Object.keys(result.json.failure.evidence).sort(), ["commit_may_have_occurred", "operation_id"], fault);
     const recovery = await invoke(bin, workspace, ["--workspace", workspace, "operation", "status", "--operation-id", result.json.failure.evidence.operation_id]);
     assert.equal(recovery.code, 0, `${fault}: ${recovery.stdout}`);
     assert.equal(recovery.json.result.observation, "settled", `${fault}: ${result.stdout}\n${recovery.stdout}`);
@@ -218,9 +217,64 @@ test("extracted package resolves explicit, workspace, XDG, Git, nested, linked, 
   const bare = path.join(path.dirname(repo), `${path.basename(repo)}-bare.git`);
   t.after(() => rm(bare, { recursive: true, force: true }));
   assert.equal((await runFile("git", ["init", "--bare", "--quiet", bare])).code, 0);
+  // A bare repository is not a workspace. This uses the extracted package
+  // entrypoint and verifies refusal happens before settings or bridge dispatch.
+  await mkdir(path.join(bare, ".casebook"));
+  await writeFile(path.join(bare, ".casebook", "settings.json"), "not json");
   const bareResult = await invoke(bin, bare, ["search", "--query", "hello"]);
-  assert.equal(bareResult.code, 2, bareResult.stdout);
-  assert.equal(bareResult.json.authority.workspace, await realpath(bare));
+  assert.equal(bareResult.code, 1, bareResult.stdout);
+  assert.equal(bareResult.json.failure.code, "bare_repository");
+  assert.equal(bareResult.json.authority.status, "unresolved");
+  assert.equal(bareResult.json.authority.workspace, null);
+});
+
+test("extracted package bounds overflowing child stderr privately without widening result evidence", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-e2e-stderr-");
+  const result = await invoke(bin, workspace, ["--workspace", workspace, "create", "case", "--commit-basis", "private diagnostics", "--input", JSON.stringify(caseAggregate(9100))], {
+    CASEBOOK_CLI_TEST_HOOK: "casebook-cli-e2e@1",
+    CASEBOOK_CLI_TEST_BRIDGE_FAULT: "stderr_overflow",
+  });
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.json.status, "success");
+  assert.equal(result.stderr, "");
+  assert.equal(JSON.stringify(result.json).includes("bridge-private-stderr"), false);
+});
+
+test("extracted package refuses tampered, missing, added, and substituted runtime assets before dispatch", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace, store } = await initializedWorkspace(t, "wi033-e2e-runtime-assets-");
+  const runtime = path.join(path.dirname(path.dirname(bin)), "bridge", "runtime", "casebook-persistence");
+  const asset = path.join(runtime, "shared", "config.mjs");
+  const original = await readFile(asset);
+  const outside = path.join(workspace, "substituted-runtime.mjs");
+  const before = await readFile(store);
+  const attempt = async (label) => {
+    const result = await invoke(bin, workspace, ["create", "case", "--commit-basis", label, "--input", JSON.stringify(caseAggregate(9200))]);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.json.failure.code, "bridge_asset_invalid");
+    assert.equal(result.json.failure.evidence.commit_may_have_occurred, false);
+    assert.equal(result.json.failure.evidence.operation_id, null);
+    assert.deepEqual(await readFile(store), before);
+  };
+
+  await writeFile(asset, "export const tampered = true;\n");
+  await attempt("runtime tamper");
+  await writeFile(asset, original);
+
+  await rm(asset);
+  await attempt("runtime missing");
+  await writeFile(asset, original);
+
+  const added = path.join(runtime, "unexpected-runtime.mjs");
+  await writeFile(added, "export const added = true;\n");
+  await attempt("runtime added");
+  await rm(added);
+
+  await writeFile(outside, original);
+  await rm(asset);
+  await symlink(outside, asset);
+  await attempt("runtime substituted");
 });
 
 test("packaged asset verification recognizes a known pre-dispatch package failure without delivery ambiguity", { timeout: 120_000 }, async (t) => {
