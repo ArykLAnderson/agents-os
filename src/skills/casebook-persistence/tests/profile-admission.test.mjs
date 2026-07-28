@@ -41,7 +41,7 @@ async function fixture(t, label) {
   const store = path.join(root, "authority.sqlite3"), grant = path.join(root, "bootstrap.grant.json");
   const request = {
     protocol, operation: "initialize_store", request_version: 1, operation_id: `operation:profile:${label}:initialize`,
-    store_id: ids.store, workspace_id: ids.workspace,
+    store_id: ids.store,
     authority_claim: { human_authorized: true, local_uid: process.getuid(), human_identity: "test-operator", provenance: `disposable:${label}` },
     initial: {
       root_namespace: record(ids.namespace, ids.namespaceRevision, ids.namespaceVersion, { schema: "namespace-bootstrap@1", display_name: "Personal", parent_id: null, lifecycle: "active" }),
@@ -66,7 +66,7 @@ async function fixture(t, label) {
 }
 function baseRequest(fx, operation, operationId, admissionHandle = handle()) {
   return {
-    operation, operation_id: operationId, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: ids.slot,
+    operation, operation_id: operationId, store_id: ids.store,  admission_slot_id: ids.slot,
     admission: { kind: "sqlite_profile", binding: admissionHandle }, configuration: fx.configuration,
     authority_claim: { human_authorized: true, human_identity: "test-operator", provenance: "disposable:profile-lifecycle" },
   };
@@ -163,9 +163,9 @@ test("Profile create/revise/activate is human-operational, exact, and stale hand
   assert.equal(activated.ok, true, JSON.stringify(activated));
   assert.equal(activated.result.profile_selection.profile_revision_id, revisedRevision);
   assert.equal(activated.result.profile_selection.activation_fence > 1, true);
-  const staleReceipt = await invokeSuccessorMechanicalOperation({ operation: "substrate.get_receipt", configuration: fx.configuration, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: handle() }, operation_id: create.operation_id });
+  const staleReceipt = await invokeSuccessorMechanicalOperation({ operation: "substrate.get_receipt", configuration: fx.configuration, store_id: ids.store,  admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: handle() }, operation_id: create.operation_id });
   assert.equal(staleReceipt.failure.code, "profile_changed");
-  const currentReceipt = await invokeSuccessorMechanicalOperation({ operation: "substrate.get_receipt", configuration: fx.configuration, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: activated.result.profile_selection }, operation_id: create.operation_id });
+  const currentReceipt = await invokeSuccessorMechanicalOperation({ operation: "substrate.get_receipt", configuration: fx.configuration, store_id: ids.store,  admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: activated.result.profile_selection }, operation_id: create.operation_id });
   assert.equal(currentReceipt.result.status, "settled");
   assert.deepEqual(currentReceipt.result.result.admission_evidence, created.result.admission_evidence);
 
@@ -203,7 +203,7 @@ test("substrate-only Profile admission cannot access any Case read, resolver, or
   const fx = await fixture(t, "substrate-not-case");
   const candidate = id("case", "102"), operationId = "operation:substrate-not-case:create";
   const before = await denialSnapshot(fx, candidate, operationId);
-  const common = { protocol, request_version: 1, store_id: ids.store, workspace_id: ids.workspace, admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: handle() }, configuration: fx.configuration };
+  const common = { protocol, request_version: 1, store_id: ids.store,  admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: handle() }, configuration: fx.configuration };
   const requests = [
     { ...common, operation: "case.read", case_id: candidate },
     { ...common, operation: "case.resolve", alias: "hidden", namespace_id: ids.namespace },
@@ -261,7 +261,7 @@ test("retiring the selected Profile without replacement makes the slot unavailab
 function mechanicalEnvelope(operationId, targetId, admissionHandle = handle(), ownerPolicyGuard = null) {
   const content = { schema: "test-target@1", lifecycle: "active" };
   const envelope = {
-    envelope_version: 1, operation_id: operationId, store_id: ids.store, workspace_id: ids.workspace,
+    envelope_version: 1, operation_id: operationId, store_id: ids.store,
     admission_slot_id: ids.slot, admission: { kind: "sqlite_profile", binding: admissionHandle }, owner_policy_guard: ownerPolicyGuard,
     owner: { id: targetId, kind: "case" }, expected_revision: 0,
     revision: { id: id("owner-revision", operationId.endsWith("allowed") ? "60" : "61"), number: 1, normalized: { schema: "test-target@1" }, versions: [{ family_id: targetId, version_id: id("version", operationId.endsWith("allowed") ? "62" : "63"), content, content_digest: successorDigest(content) }], selections: [{ family_id: targetId, version_id: id("version", operationId.endsWith("allowed") ? "62" : "63") }] },
