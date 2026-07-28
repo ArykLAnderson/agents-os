@@ -16,7 +16,8 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check bin/casebook.mjs && node --check lib/wi033.mjs && node --check lib/package-assets.mjs && node --check bridge/persistence-bridge.mjs"
+    "check": "node --check bin/casebook.mjs && node --check lib/wi033.mjs && node --check lib/package-assets.mjs && node --check bridge/persistence-bridge.mjs",
+    "package": "node build/package-assembly.mjs"
   },
   "engines": {
     "node": ">=22"
