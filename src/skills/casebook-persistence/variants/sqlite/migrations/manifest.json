@@ -4,7 +4,17 @@
   "schema_version": 1,
   "compatible_schema_versions": [1],
   "protocol": { "id": "casebook-persistence-json", "compatible_versions": [1] },
-  "implementation_status": "final_direct_initialization_and_exact_predecessor_cutover",
+  "implementation_status": "final_direct_initialization_and_exact_predecessor_cutover_with_disposable_semantic_namespace_proof",
+  "semantic_namespace_proof": {
+    "asset": "semantic-namespace-proof.mjs",
+    "schema": "casebook-semantic-namespace-migration-proof@1",
+    "ordinary_access_allowed": false,
+    "source_is_immutable_input": true,
+    "destination_database_mutation": false,
+    "mapping": "old personal Namespace -> namespace:personal",
+    "preserves": ["stable Case/Frame owner IDs", "current aggregate count", "current aggregate placement"],
+    "repartitioning": "deferred"
+  },
   "initialization": {
     "id": "0001-initialize-final-store",
     "from_version": 0,

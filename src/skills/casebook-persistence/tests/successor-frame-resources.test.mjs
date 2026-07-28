@@ -3,7 +3,7 @@ import test from "node:test";
 import { assembleSuccessorFrameEnvelope, FRAME_OPERATION_FIELDS } from "../variants/sqlite/lib/frame/successor.mjs";
 import manifest from "../manifest.json" with { type: "json" };
 
-const id = (kind, value) => `${kind}:91000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+const id = (kind, value) => kind === "namespace" ? "namespace:personal" : `${kind}:91000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 const ids = { store: id("store", 1), frame: id("frame", 2), namespace: id("namespace", 3), chat: id("chat", 4), chatRevision: id("owner-revision", 5), view: id("view", 6), policy: id("view-policy", 7), discovery: id("discovery", 8), boundary: id("disposition-boundary", 9), disposition: id("case-disposition", 10), case: id("case", 11) };
 function frame() { return {
   id: ids.frame, status: "active", title: "Frame title", outcome: "A bounded outcome", included_scope: ["Frame-local meaning"], discovery: [{ id: ids.discovery, display_order: 0, lifecycle: "active", category: "frontier", title: "Question", body: "Queryable discovery body", human_authority: "required", dependencies: [] }],
@@ -41,11 +41,9 @@ test("Frame R matrix advances for profile/Discovery/disposition query meaning an
   for (const changed of [c, d, e]) assert.notEqual(a.aggregate.query.digest, changed.aggregate.query.digest, "selected query meaning advances R");
 });
 
-test("Frame placement supports exact Chat history selection without deriving semantic defaults", () => {
-  const built = assembleSuccessorFrameEnvelope(request("chat", frame(), { chat_id: ids.chat, chat_revision_id: ids.chatRevision }));
-  assert.deepEqual({ chat_id: built.placement.chat_id, chat_revision_id: built.placement.chat_revision_id }, { chat_id: ids.chat, chat_revision_id: ids.chatRevision });
-  assert.equal(built.placement.namespace_id, undefined);
-  assert.throws(() => assembleSuccessorFrameEnvelope(request("ambiguous", frame(), { chat_id: ids.chat })), { rule: "field_unsupported" });
+test("Frame placement requires an explicit semantic Namespace", () => {
+  assert.throws(() => assembleSuccessorFrameEnvelope(request("chat", frame(), { chat_id: ids.chat, chat_revision_id: ids.chatRevision })), { rule: "namespace_required" });
+  assert.throws(() => assembleSuccessorFrameEnvelope(request("ambiguous", frame(), { chat_id: ids.chat })), { rule: "namespace_required" });
 });
 
 test("published Frame operation contracts and exact request allowlists are closed", () => {
@@ -62,7 +60,7 @@ test("published Frame operation contracts and exact request allowlists are close
 });
 
 test("Frame rejects placement/legacy scope leakage and preserves complete selection bound", () => {
-  const mismatched = frame(); mismatched.home_namespace_id = id("namespace", 99);
+  const mismatched = frame(); mismatched.home_namespace_id = "namespace:other";
   assert.throws(() => assembleSuccessorFrameEnvelope(request("mismatch", mismatched)), { rule: "placement_namespace_mismatch" });
   const atLimit = frame();
   atLimit.discovery = Array.from({ length: 128 }, (_, index) => ({ id: `discovery:91000000-0000-4000-8000-${String(100 + index).padStart(12, "0")}`, display_order: index, lifecycle: "active", category: "frontier", title: `D${index}`, body: `B${index}`, human_authority: "not_required", dependencies: [] }));

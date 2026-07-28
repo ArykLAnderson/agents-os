@@ -12,6 +12,7 @@ import { failure, PROTOCOL_ID, PROTOCOL_VERSION, RETRY_DISPOSITIONS, SCHEMA_ID, 
 import { probeSqlite, selectSqliteBinary, sqlite } from "./diagnostics.mjs";
 import { successorCanonicalJson, successorDigest } from "./mechanical-successor.mjs";
 import { normalizeExactLocator } from "../resource/normalization.mjs";
+import { isNamespaceId, isStructuralNamespace, requireNamespaceId } from "../context/namespace.mjs";
 
 export const SUCCESSOR_APPLICATION_ID = 0x43424632;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -38,7 +39,7 @@ function exact(value, keys, field) {
   return value;
 }
 function requireString(value, field, max = 512) { if (typeof value !== "string" || !value.trim() || value.length > max) throw new BootstrapError("bootstrap_request_invalid", `${field} must be a non-empty bounded string.`); return value; }
-function requireId(value, field, prefix = null) { requireString(value, field, 128); if (!UUID_ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new BootstrapError("bootstrap_request_invalid", `${field} must be a lowercase UUID identity.`); return value; }
+function requireId(value, field, prefix = null) { requireString(value, field, 128); if (prefix === "namespace") { try { return requireNamespaceId(value, field); } catch { throw new BootstrapError("bootstrap_request_invalid", `${field} must be a canonical semantic Namespace identity.`); } } if (!UUID_ID.test(value) || (prefix && !value.startsWith(`${prefix}:`))) throw new BootstrapError("bootstrap_request_invalid", `${field} must be a lowercase UUID identity.`); return value; }
 function requireDigest(value, field) { if (!DIGEST.test(value ?? "")) throw new BootstrapError("bootstrap_request_invalid", `${field} must be a lowercase SHA-256 digest.`); return value; }
 function sqlText(value) { return value == null ? "NULL" : `'${String(value).replaceAll("'", "''")}'`; }
 function fileDigest(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
@@ -55,7 +56,7 @@ function validateInitial(initial) {
   const selection = recordShape(initial.profile_selection, "initial.profile_selection", "profile-selection");
   const project = initial.project_default == null ? null : recordShape(initial.project_default, "initial.project_default", "project-default");
   requireId(initial.initialization_event_id, "initial.initialization_event_id", "event");
-  if (namespace.content.schema !== "namespace-bootstrap@1" || namespace.content.lifecycle !== "active" || namespace.content.parent_id !== null || !requireString(namespace.content.display_name, "initial.root_namespace.content.display_name", 128)) throw new BootstrapError("bootstrap_request_invalid", "The root Namespace bootstrap record is not a closed active root.");
+  if (namespace.owner_id !== "namespace:root" || namespace.content.schema !== "namespace-bootstrap@1" || namespace.content.lifecycle !== "active" || namespace.content.parent_id !== null || !requireString(namespace.content.display_name, "initial.root_namespace.content.display_name", 128)) throw new BootstrapError("bootstrap_request_invalid", "The structural namespace:root bootstrap record is not a closed active root.");
   const profileKeys = ["audience_ceiling", "bounds", "disclosure", "lifecycle", "object_kinds", "predecessor_revision_id", "projection", "purposes", "schema"];
   const forbiddenProfile = /namespace|placement|chat|cwd|^project(?:_|$)|view_policy|authority_scope/;
   if (profile.content.schema !== "admission-disclosure-profile@1" || profile.content.audience_ceiling !== "private"
@@ -231,6 +232,7 @@ export async function inspectSuccessorStore(binary, storePath) {
     const expectedOwners = detail.bootstrap?.project_default_id == null ? 3 : 4;
     const complete = detail.metadata_count === 1 && detail.bootstrap_count === 1 && detail.receipt_count === 1 && detail.event_count === 1 && detail.bootstrap?.initial_owner_count === expectedOwners && detail.metadata?.schema_id === SCHEMA_ID && detail.metadata?.schema_version === SCHEMA_VERSION && detail.metadata?.protocol_id === PROTOCOL_ID && detail.metadata?.protocol_version === PROTOCOL_VERSION && Number.isInteger(detail.operation_fence) && detail.operation_fence >= 1;
     if (!complete) return { status: "unavailable", code: "store_partial_initialization", evidence: { components: detail } };
+    if (detail.bootstrap?.root_namespace_id !== "namespace:root") return { status: "migration_required", code: "semantic_namespace_migration_required", evidence: { legacy_root_namespace_id: detail.bootstrap?.root_namespace_id ?? null, mapping: { old_personal: "namespace:personal" } } };
     return { status: "available", metadata: detail.metadata, bootstrap: detail.bootstrap, operation_fence: detail.operation_fence, integrity: { quick_check: "ok", foreign_key_violations: 0 } };
   } catch { return { status: "unavailable", code: "store_partial_initialization", evidence: { components_readable: false } }; }
 }

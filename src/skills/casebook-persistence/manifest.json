@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "e00bbd5d34ef7438803d1316891a1870713caff261f9d464e824ec136a444bb9"
+    "sha256": "60c2a34b02926c6c7270ad44dade36df404ec9db7b76b284f2704624131423bc"
   },
   "entrypoints": [
     {
@@ -98,7 +98,6 @@
     "case.resolve",
     "case.update",
     "case.tombstone",
-    "case.move_namespace",
     "case.knowledge.read",
     "case.knowledge.create",
     "case.knowledge.update",
@@ -177,12 +176,12 @@
     }
   },
   "implemented_slice_constraints": {
-    "successor_boundary": "fresh-store-only; no predecessor probe, migration, cutover, View, semantic callback, graph/semantic/hybrid query, or standalone CLI; provider-local SQLite organizational lexical query/resolve/hydrate is the only supported global search boundary, and immutable owner placement is provided through Case and Frame provider-local adapters",
+    "successor_boundary": "fresh-store-only semantic Namespace authority; legacy UUID-backed stores are refused for ordinary access and inspected only by the disposable migration proof; no predecessor probe, migration, cutover, View, semantic callback, or standalone CLI; provider-local SQLite organizational lexical query/resolve/hydrate is the only supported global search boundary, and immutable owner placement is provided through Case and Frame provider-local adapters",
     "bootstrap": "trusted-local retained-parent identity validation, no-follow/exclusive creation, hard-link no-replace grant/store publication, and exact same-operation atomic phase-record replacement",
     "bootstrap_threat_model": "does not protect against a malicious concurrent same-UID actor able to replace trusted parent pathnames",
     "substrate": "owner-neutral immutable versions/revisions/selections with CAS, idempotency, Profile-fenced exact current/revision/family binding and projected-claim reads, receipt, event, outbox, atomic Context placement guard, integrity, and rebuild",
     "profile_admission": "one admission-slot selection; complete Namespace-free private Profile lifecycle; mandatory provider-derived profile-selection-fence@1; closed owner adapter/lifecycle/guard registration",
-    "context": "durable host-neutral Namespace hierarchy with canonical name/alias path resolution, Project default, Chat binding/history, and immutable correlation claims with account_ref exactly redacted-account-ref:v1:sha256:<64 lowercase hex>; no host packaging, cwd fallback, Chat deletion, raw account/credential retention, or correlation release"
+    "context": "durable host-neutral Namespace hierarchy whose immutable IDs are namespace:<lowercase-kebab segments separated by /> with structural namespace:root, canonical name/alias path resolution, Project default, Chat binding/history, and immutable correlation claims with account_ref exactly redacted-account-ref:v1:sha256:<64 lowercase hex>; no Case/Frame root placement, implicit workspace fallback, host packaging, cwd fallback, Chat deletion, raw account/credential retention, or correlation release"
   },
   "operation_contracts": {
     "manifest": "closed-provider-derived-operation-contract@1",
@@ -504,15 +503,6 @@
       },
       {
         "operation": "case.tombstone",
-        "capability_class": "human_operational",
-        "profile_purpose": "case.manage",
-        "required_owner_kinds": [
-          "case"
-        ],
-        "optional_guards": []
-      },
-      {
-        "operation": "case.move_namespace",
         "capability_class": "human_operational",
         "profile_purpose": "case.manage",
         "required_owner_kinds": [
@@ -914,7 +904,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "3c1a7b9fb0d1d755b446ff51982356bf14d90619b6f13c9dc4e373375b693404"
+      "sha256": "1cb803c02a07677707fde73df97dd4d018e66e4d62058c8a3ecb8d64f99a321d"
     },
     {
       "id": "shared-configuration",
@@ -926,7 +916,7 @@
       "id": "shared-manifest",
       "path": "shared/manifest.mjs",
       "kind": "module",
-      "sha256": "55bbd8fb0fce20cd384ff143039f65fd743c795629e7a371880bdf3de67970be"
+      "sha256": "21c469c7df83f0b9cc57d3f21ca4c2d560251098299fae4fb5f44b9489666d7e"
     },
     {
       "id": "sqlite-entrypoint",
@@ -950,7 +940,7 @@
       "id": "sqlite-bootstrap",
       "path": "variants/sqlite/lib/substrate/bootstrap.mjs",
       "kind": "module",
-      "sha256": "4d7a27c3da3f41798d193ec9d5419c31b766b8ad40990b87f35bc9a2a30e7036"
+      "sha256": "2442e4675a5c065bdfef8a977d2f77ddb805aa95464e1995e9627835b03f6f99"
     },
     {
       "id": "sqlite-cli-admission",
@@ -968,43 +958,43 @@
       "id": "sqlite-context-service",
       "path": "variants/sqlite/lib/context/index.mjs",
       "kind": "module",
-      "sha256": "47d143088d414a3128d5db0e1f6147a1f24b699910f3afeecb82630a24bca7e2"
+      "sha256": "16989fecef6ddb390ea4e81fa73926148ea07bfd10f115dd9157d9115f0af968"
     },
     {
       "id": "sqlite-case-service",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "8bf040cb4549f2ff5d00a3579dc08affd6a8ece04adfe84b7e0a97df4e71fab3"
+      "sha256": "f9ce88c02950a5f349442c67195a58793d45a07a52f1524cd5297d3d6603086d"
     },
     {
       "id": "sqlite-case-successor-adapter",
       "path": "variants/sqlite/lib/case/successor.mjs",
       "kind": "module",
-      "sha256": "40eb5690c248b46f98c4414ddd8c328d8f8e783d7784c97aae9748cccf7cc9bc"
+      "sha256": "8fd957ccc9d6cb0b6c4a20d84a2c663c158593830a35c80d6f9e97265ba37e2f"
     },
     {
       "id": "sqlite-frame-successor-adapter",
       "path": "variants/sqlite/lib/frame/successor.mjs",
       "kind": "module",
-      "sha256": "0e5963af38db60d23488c9d4b515ed1de81ee58870d3a0720c04640da48650b4"
+      "sha256": "f8066e9988de7879c1b800b823a22f4b16479f3ab2fed40f3f74d28db198f3f1"
     },
     {
       "id": "sqlite-placement-generation",
       "path": "variants/sqlite/lib/placement/index.mjs",
       "kind": "module",
-      "sha256": "553245bf07bdfd0a9b83bae4e70f5c4a251ab5115e55977216f16c480106dc08"
+      "sha256": "fda5ab4b1f995868c4ef8a673d9d6e2cccd9093bfecd47a2141064bd2978e008"
     },
     {
       "id": "sqlite-organizational-query",
       "path": "variants/sqlite/lib/query/search.mjs",
       "kind": "module",
-      "sha256": "26b31abe28d4cfd293772f5b98ea31bff8b8c5ebccb965e674f0b4cb698fb2be"
+      "sha256": "1936d18dafb07c50da471133b8d832babf54625bf23296894f687dbb3a2d6cbc"
     },
     {
       "id": "sqlite-graph-query",
       "path": "variants/sqlite/lib/query/graph.mjs",
       "kind": "module",
-      "sha256": "13b75d86b354baa04f7d49d80a556d16aa857e45badd6319138a66a75da3b818"
+      "sha256": "fe6ce48198bde49ab13788c23f279923664d3f743579c9f416701250dc2bf2c9"
     },
     {
       "id": "sqlite-snapshot-reconcile",
@@ -1028,7 +1018,7 @@
       "id": "sqlite-admission-guards",
       "path": "variants/sqlite/lib/resource/admission-guards.mjs",
       "kind": "module",
-      "sha256": "c1b7f52b601416ffe1437198a4e68d3f450b43d54f2a98b98790bd6574a543f8"
+      "sha256": "017b4188ce98361b7a73306b026e4e186cee95611dd6641a6e94b37fccdd32e9"
     },
     {
       "id": "sqlite-frame-resource-complete",
@@ -1046,19 +1036,19 @@
       "id": "sqlite-owner-neutral-substrate",
       "path": "variants/sqlite/lib/substrate/mechanical-successor.mjs",
       "kind": "module",
-      "sha256": "152df03a285031aa4f8734d11967c8780f2d1bd6f0d1ac617b869fc395e1e1b1"
+      "sha256": "38da2bc59fad237212405933a4902ebee6c610cbd63655ae14e16b499b0dc560"
     },
     {
       "id": "sqlite-successor-schema",
       "path": "variants/sqlite/sql/schema-successor.sql",
       "kind": "sql",
-      "sha256": "98653603b7563f4dba811a764db965796e42bf521fd0bfc5ce3ca10bbc768733"
+      "sha256": "8323cf56674dedee7e7d10dab0605097fd19425db4578342fe6b9c02f26bb1bb"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "95bbb77a0eb338160998ea4bc16ba048bb0f8e24c2553e039da546ffbf6f249a"
+      "sha256": "e6a785a5c4972d4530dbd13c6df6f7ba169d01d017392ea48dd8a3fab8b35716"
     },
     {
       "id": "sqlite-wasm-node-module",
@@ -1104,108 +1094,114 @@
     },
     {
       "id": "asset-32",
+      "path": "variants/sqlite/lib/context/namespace.mjs",
+      "kind": "module",
+      "sha256": "ccd493f1e6c26ca72283fde19db7cc3322cfeec6ea1fc0fe37c5f2af424dcfd1"
+    },
+    {
+      "id": "asset-33",
       "path": "variants/sqlite/lib/export/index.mjs",
       "kind": "module",
       "sha256": "b7b91c30abe6e9e1762b4ab42749ceb4801bd0ece1d27ecd53330933ed876c3c"
     },
     {
-      "id": "asset-33",
+      "id": "asset-34",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "fc592d5ef352bd58dc1cecdf1fe14fdac8a8cc08e6f742df56523d6ef6b45ab1"
+      "sha256": "725f773f3e62775f3806bc6971208e9e58df28d940239fb6d6a038a4846f6fe2"
     },
     {
-      "id": "asset-34",
+      "id": "asset-35",
       "path": "variants/sqlite/lib/frame/restricted-legacy-authority-evidence.mjs",
       "kind": "module",
       "sha256": "7da431869f70101669d08900a63a24bda0a3d4a29db8afc73da9f6ebba4db144"
     },
     {
-      "id": "asset-35",
+      "id": "asset-36",
       "path": "variants/sqlite/lib/operations/index.mjs",
       "kind": "module",
-      "sha256": "175acdf95ad307ce0af2587508bae20305a957fd4ba7bc631c0a41fe2067839d"
+      "sha256": "d747db149342e92ab64aa1fe246d55f09a77eea2c9bbe6fbd123ec145cde5bff"
     },
     {
-      "id": "asset-36",
+      "id": "asset-37",
       "path": "variants/sqlite/lib/operations/modules.mjs",
       "kind": "module",
       "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
     },
     {
-      "id": "asset-37",
+      "id": "asset-38",
       "path": "variants/sqlite/lib/resource/foundation.mjs",
       "kind": "module",
       "sha256": "de91b5203799aa74e1b53b825cf04ab934faf793ead6ef217a4f0748a5257ba2"
     },
     {
-      "id": "asset-38",
+      "id": "asset-39",
       "path": "variants/sqlite/lib/resource/graph-query.mjs",
       "kind": "module",
       "sha256": "dd1403e81e02b012ffb0803a97a3e034794fe261ba773715af57a6f1eb9162a4"
     },
     {
-      "id": "asset-39",
+      "id": "asset-40",
       "path": "variants/sqlite/lib/resource/historical-visibility.mjs",
       "kind": "module",
       "sha256": "050d27ccac50df7dcb430ac7a86eb2775297cf5114bebdc0b70bcf5dbaaa8b64"
     },
     {
-      "id": "asset-40",
+      "id": "asset-41",
       "path": "variants/sqlite/lib/resource/owner-lifecycle.mjs",
       "kind": "module",
       "sha256": "703a02a4eda25cf60b46f7fb5de21eff3ca8ffa0fa6674c2a3a351d367a1fa3f"
     },
     {
-      "id": "asset-41",
+      "id": "asset-42",
       "path": "variants/sqlite/lib/resource/registry.mjs",
       "kind": "module",
       "sha256": "40cf5d55c8161983cf4a5fc7e3fd9700cae43b86d350b8750968774706efe00b"
     },
     {
-      "id": "asset-42",
+      "id": "asset-43",
       "path": "variants/sqlite/lib/substrate/cutover.mjs",
       "kind": "module",
       "sha256": "af7734c5bd23bf896e7bf54608cdf761c8d804e2caf85147fc6d671f0245bc0d"
     },
     {
-      "id": "asset-43",
+      "id": "asset-44",
       "path": "variants/sqlite/lib/substrate/discovery.mjs",
       "kind": "module",
       "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
     },
     {
-      "id": "asset-44",
+      "id": "asset-45",
       "path": "variants/sqlite/lib/substrate/impact.mjs",
       "kind": "module",
       "sha256": "73b8ed2b7daad7c133f3b405b5d105cab3321d78edb977cc551bfcc07f38f680"
     },
     {
-      "id": "asset-45",
+      "id": "asset-46",
       "path": "variants/sqlite/lib/substrate/index.mjs",
       "kind": "module",
       "sha256": "54adc4fe112b51e658da5dde6c576ff8ce644c644c170313776297c187d0e52c"
     },
     {
-      "id": "asset-46",
+      "id": "asset-47",
       "path": "variants/sqlite/lib/substrate/integrity.mjs",
       "kind": "module",
       "sha256": "4345fcb395f1317516f93a9e06c1de34724d4b3901d9b252d0cd040a648e69ef"
     },
     {
-      "id": "asset-47",
+      "id": "asset-48",
       "path": "variants/sqlite/lib/substrate/mechanical.mjs",
       "kind": "module",
-      "sha256": "a8536212b1393f4a47480b81933a47a17a20304f422f86c0853e1a1a04df8515"
+      "sha256": "9dc46311e76964defa37a226a0b9fcb979990735285e3843fb2de840a66f6e93"
     },
     {
-      "id": "asset-48",
+      "id": "asset-49",
       "path": "variants/sqlite/lib/substrate/observation.mjs",
       "kind": "module",
       "sha256": "4f0e2d93c2b0856cbd08d85fe20b71561f6e0298d98b35dff386bed646b5ff85"
     },
     {
-      "id": "asset-49",
+      "id": "asset-50",
       "path": "variants/sqlite/lib/substrate/projection.mjs",
       "kind": "module",
       "sha256": "e66a1e28f5ba668047b3ebec9f3589d2d5649ee5c404af392a58ad30024ab356"

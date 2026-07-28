@@ -63,7 +63,6 @@ export async function loadAndValidateManifest() {
     ["case.resolve", ["ordinary_cli", "case.read", "case"]],
     ["case.update", ["human_operational", "case.manage", "case"]],
     ["case.tombstone", ["human_operational", "case.manage", "case"]],
-    ["case.move_namespace", ["human_operational", "case.manage", "case"]],
     ...["knowledge", "facet", "source", "evidence", "relationship"].flatMap((kind) => [
       ["read", ["ordinary_cli", "case.read", "case"]],
       ["create", ["human_operational", "case.manage", "case"]],

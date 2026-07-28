@@ -5,9 +5,10 @@ import { selectSqliteBinary, probeSqlite, sqlite } from "../substrate/diagnostic
 import { inspectSuccessorStore } from "../substrate/bootstrap.mjs";
 import { AdmissionCapabilityError, FINAL_ADMISSION_REGISTRY, prepareAdmission, profileAdmissionPredicate } from "../resource/admission-guards.mjs";
 import { decodeCursor, QueryCursorError, queryBinding, readStoreCursorSecret } from "./cursor.mjs";
+import { isStructuralNamespace, requireNamespaceId } from "../context/namespace.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const SCOPES = new Set(["workspace", "exact_namespace"]);
+const SCOPES = new Set(["exact_namespace"]);
 const MAX_NODES = 100, MAX_DEPTH = 8, MAX_EDGES = 1024;
 const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 const sql = (v) => `'${String(v).replaceAll("'", "''")}'`;
@@ -17,12 +18,12 @@ function identity(v, field) { if (!object(v) || Object.keys(v).sort().join(",") 
 class GraphError extends Error { constructor(code, message, options = {}) { super(message); this.code = code; this.failureClass = options.failureClass ?? "representation_invalid"; this.retryDisposition = options.retryDisposition ?? RETRY_DISPOSITIONS.NEVER; } }
 async function json(binary, store, statement) { const { stdout } = await sqlite(binary, store, `PRAGMA query_only=ON;\n${statement}`, { args: ["-batch", "-bail", "-json"], maxBuffer: 16 * 1024 * 1024 }); return JSON.parse(stdout || "[]"); }
 async function prepared(request) { const configuration = validateAuthorityConfiguration(request.configuration); if (configuration.authority_mode !== "sqlite") return { failure: failure("sqlite_authority_required", "Graph query requires SQLite authority.") }; const selected = await selectSqliteBinary(); const probe = await probeSqlite(selected.path, path.dirname(configuration.sqlite.store_path)); if (!probe.ok) return { failure: failure("sqlite_feature_unsupported", "The package-owned runtime is incompatible.") }; const state = await inspectSuccessorStore(selected.path, configuration.sqlite.store_path); if (state.status !== "available") return { failure: failure(state.code ?? "store_unavailable", "The successor store is unavailable.", { failureClass: "store_unavailable", evidence: state.evidence ?? {} }) }; return { binary: selected.path, store: configuration.sqlite.store_path, state, cursorSecret: await readStoreCursorSecret(selected.path, configuration.sqlite.store_path) }; }
-function admission(request) { if (!ID.test(request.store_id ?? "") || !ID.test(request.admission_slot_id ?? "")) throw new GraphError("graph_request_invalid", "store, workspace, and admission identities are required."); return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation: "query.graph", admissionSlotId: request.admission_slot_id, admission: request.admission }); }
+function admission(request) { if (!ID.test(request.store_id ?? "") || !ID.test(request.admission_slot_id ?? "")) throw new GraphError("graph_request_invalid", "store and admission identities are required."); return prepareAdmission({ registry: FINAL_ADMISSION_REGISTRY, operation: "query.graph", admissionSlotId: request.admission_slot_id, admission: request.admission }); }
 async function allowed(p, a) { return (await json(p.binary, p.store, `SELECT CASE WHEN ${profileAdmissionPredicate(a)} THEN 1 ELSE 0 END ok;`))[0]?.ok === 1; }
 async function material(p, scope, namespace) {
-  if (!SCOPES.has(scope)) throw new GraphError("graph_scope_invalid", "scope must be workspace or exact_namespace.");
-  if (scope === "exact_namespace" && (!ID.test(namespace ?? "") || !namespace.startsWith("namespace:"))) throw new GraphError("graph_scope_invalid", "exact_namespace requires namespace_id.");
-  const clause = scope === "workspace" ? "1" : `placement.namespace_id=${sql(namespace)}`;
+  if (!SCOPES.has(scope)) throw new GraphError("graph_scope_invalid", "graph queries require exact_namespace scope.");
+  try { namespace = requireNamespaceId(namespace, "namespace_id"); if (isStructuralNamespace(namespace)) throw new GraphError("namespace_structural_only", "namespace:root is structural and cannot be searched as content."); } catch (error) { if (error instanceof GraphError) throw error; throw new GraphError("graph_scope_invalid", "exact_namespace requires a canonical semantic Namespace."); }
+  const clause = `placement.namespace_id=${sql(namespace)}`;
   return json(p.binary, p.store, `SELECT q.owner_id,q.revision_id,q.edges_json,q.documents_json,placement.namespace_id FROM owner_query_current q JOIN owner_query_material m ON m.revision_id=q.revision_id JOIN (SELECT owner_id,json_extract(projection_json,'$._mechanical_placement.namespace_id') namespace_id FROM owner_current) placement ON placement.owner_id=q.owner_id WHERE ${clause};`);
 }
 export function graphRows(rows) {
@@ -50,7 +51,7 @@ export async function graphQuery(request) {
     const depth = shape === "neighbors" ? 1 : (request.max_depth ?? MAX_DEPTH); if (!Number.isInteger(depth) || depth < 1 || depth > MAX_DEPTH) throw new GraphError("graph_request_invalid", "max_depth is outside bounds.");
     const limit = request.node_limit ?? MAX_NODES; if (!Number.isInteger(limit) || limit < 1 || limit > MAX_NODES) throw new GraphError("graph_request_invalid", "node_limit is outside bounds.");
     const predicates = request.predicates ?? []; if (!Array.isArray(predicates) || predicates.length > 16 || predicates.some((v) => typeof v !== "string" || !v)) throw new GraphError("graph_request_invalid", "predicates are invalid.");
-    const scope = request.scope ?? "workspace", namespace = request.namespace_id ?? null;
+    const scope = request.scope ?? "exact_namespace", namespace = request.namespace_id ?? null;
     const generations = (await json(p.binary, p.store, "SELECT hierarchy_generation h,placement_generation p,resource_generation r FROM store_fence WHERE singleton=1;"))[0];
     const binding = queryBinding({ graph: shape, start, target, direction, depth, limit, predicates: [...predicates].sort(), scope, namespace }); decodeCursor(request.cursor, binding, generations, p.cursorSecret);
     const { nodes, edges } = graphRows(await material(p, scope, namespace));

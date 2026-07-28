@@ -15,7 +15,7 @@ import { createHistoricalVisibilityService } from "../variants/sqlite/lib/resour
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ids = {
-  namespace: "namespace:21000000-0000-4000-8000-000000000001",
+  namespace: "namespace:personal",
   frame: "frame:21000000-0000-4000-8000-000000000002",
   case: "case:21000000-0000-4000-8000-000000000003",
   revision: "case-revision:21000000-0000-4000-8000-000000000004",

@@ -38,6 +38,15 @@ const refuse = (operation, authority, code, message, delivery = false, evidence 
   },
 });
 const absolute = (value) => typeof value === "string" && path.isAbsolute(value) && !value.includes("\0") && !value.includes("~") && path.normalize(value) === value ? value : null;
+const NAMESPACE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NAMESPACE_UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function canonicalNamespace(value, field = "namespace") {
+  if (typeof value !== "string" || !value.trim() || value.length > 1024) throw Error(`${field}_invalid`);
+  const raw = value.normalize("NFKC").trim(), pathValue = raw.startsWith("namespace:") ? raw.slice("namespace:".length) : raw;
+  const parts = pathValue.split("/").map((part) => part.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/[\s_]+/g, "-"));
+  if (parts.length < 1 || parts.length > 8 || parts.some((part) => !NAMESPACE_SEGMENT.test(part) || NAMESPACE_UUID_SEGMENT.test(part))) throw Error(`${field}_invalid`);
+  return `namespace:${parts.join("/")}`;
+}
 function duplicateFreeJson(text) {
  try {
   let at = 0;
@@ -79,7 +88,7 @@ function duplicateFreeJson(text) {
  }
 }
 
-async function safeSettings(file) {
+async function safeSettings(file, location = "local") {
   let fh;
   try {
     const pathInfo = await lstat(file).catch((error) => ["ENOENT", "ENOTDIR"].includes(error?.code) ? null : Promise.reject(error));
@@ -93,8 +102,16 @@ async function safeSettings(file) {
     if (before.ino !== after.ino || before.size !== after.size) throw Error("settings_changed");
     if (pathInfo.dev !== before.dev || pathInfo.ino !== before.ino || before.isSymbolicLink()) throw Error("settings_changed");
     const data = duplicateFreeJson(bytes), keys = Object.keys(data ?? {});
-    if (!data || Array.isArray(data) || data.schema !== "casebook-cli-settings@1" || !keys.every((key) => key === "schema" || key === "store") || (data.store != null && !absolute(data.store))) throw Error("settings_invalid");
-    return data.store ?? undefined;
+    if (!data || Array.isArray(data)) throw Error("settings_invalid");
+    if (data.schema === "casebook-cli-settings@2") {
+      if (location !== "local" || !keys.every((key) => key === "schema" || key === "namespace") || typeof data.namespace !== "string") throw Error("settings_invalid");
+      return { namespace: canonicalNamespace(data.namespace) };
+    }
+    if (data.schema === "casebook-cli-settings@1") {
+      if (!keys.every((key) => key === "schema" || key === "store") || (data.store != null && !absolute(data.store))) throw Error("settings_store_authority_forbidden");
+      return { store: data.store ?? undefined };
+    }
+    throw Error("settings_invalid");
   } catch (error) {
     if (["ENOENT", "ENOTDIR"].includes(error?.code)) return undefined;
     throw error;
@@ -163,13 +180,13 @@ const operations = new Map([
   ["search", "query.search"], ["receipt read", "substrate.get_receipt"], ["operation status", "substrate.get_receipt"], ["operation recent", "operation.recent"],
 ]);
 const allowedFlags = {
-  "case.create": ["commit_basis", "namespace_id"],
+  "case.create": ["commit_basis", "namespace", "namespace_id"],
   "case.read": ["case_id", "owner_revision_id"],
-  "case.commit_revision": ["case_id", "expected_revision", "commit_basis", "namespace_id"],
-  "frame.create": ["commit_basis", "namespace_id"],
+  "case.commit_revision": ["case_id", "expected_revision", "commit_basis", "namespace", "namespace_id"],
+  "frame.create": ["commit_basis", "namespace", "namespace_id"],
   "frame.read": ["frame_id", "owner_revision_id"],
-  "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis", "namespace_id"],
-  "query.search": ["query", "namespace_id", "limit", "cursor"],
+  "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis", "namespace", "namespace_id"],
+  "query.search": ["query", "namespace", "namespace_id", "limit", "cursor"],
   "substrate.get_receipt": ["operation_id"],
   "operation.recent": ["limit", "before_operation_fence"],
 };
@@ -180,6 +197,7 @@ function required(operation, flags, input) {
     "query.search": ["query"], "substrate.get_receipt": ["operation_id"], "operation.recent": [],
   }[operation];
   if (!needed || needed.some((key) => flags[key] == null) || Object.keys(flags).some((key) => !allowedFlags[operation].includes(key))) throw Error("grammar_invalid");
+  if (flags.namespace != null && flags.namespace_id != null) throw Error("namespace_selector_conflict");
   const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
   if (mutation !== input) throw Error("aggregate_transport_required");
   if ((operation === "query.search" && flags.limit != null && (!/^\d+$/.test(flags.limit) || +flags.limit < 1 || +flags.limit > 100))
@@ -281,11 +299,18 @@ export async function run(argv) {
     ctx = { authority };
     let store = parsed.global["--store"] ? absolute(parsed.global["--store"]) : null, source = store ? "cli_override" : null;
     if (parsed.global["--store"] && !store) throw Error("store_invalid");
+    const localSettings = parsed.global["--store"] && (parsed.flags.namespace != null || parsed.flags.namespace_id != null)
+      ? undefined
+      : await safeSettings(path.join(workspace, ".casebook", "settings.json"));
+    if (localSettings?.store) throw Error("settings_store_authority_forbidden");
+    let selectedNamespace = parsed.flags.namespace ?? parsed.flags.namespace_id ?? localSettings?.namespace ?? null;
+    if (selectedNamespace != null) selectedNamespace = canonicalNamespace(selectedNamespace);
+    const namespaceRequired = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "query.search"].includes(operation);
+    if (namespaceRequired && !selectedNamespace) throw Error("namespace_required");
+    if (selectedNamespace) { parsed.flags.namespace_id = selectedNamespace; delete parsed.flags.namespace; }
     if (!store) {
-      for (const [file, kind] of [[path.join(workspace, ".casebook", "settings.json"), "workspace_settings"], [path.join(absolute(process.env.XDG_CONFIG_HOME) || path.join(process.env.HOME || os.homedir(), ".config"), "casebook", "config.json"), "global_config"]]) {
-        const found = await safeSettings(file);
-        if (found) { store = found; source = kind; break; }
-      }
+      const globalSettings = await safeSettings(path.join(absolute(process.env.XDG_CONFIG_HOME) || path.join(process.env.HOME || os.homedir(), ".config"), "casebook", "config.json"), "global");
+      if (globalSettings?.store) { store = globalSettings.store; source = "global_config"; }
     }
     if (!store) { store = path.join(absolute(process.env.XDG_DATA_HOME) || path.join(process.env.HOME || os.homedir(), ".local", "share"), "casebook", "casebook.sqlite"); source = "xdg_default"; }
     // This is retained solely as the request candidate. It is never rendered until

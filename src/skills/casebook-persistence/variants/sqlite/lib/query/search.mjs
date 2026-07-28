@@ -8,13 +8,14 @@ import { AdmissionCapabilityError, FINAL_ADMISSION_REGISTRY, prepareAdmission, p
 import { decodeCursor, encodeCursor, QueryCursorError, queryBinding, readStoreCursorSecret } from "./cursor.mjs";
 import { decodeHandoff, encodeHandoff, QueryHandoffError } from "./handoff.mjs";
 import { normalizeExactLocator } from "../resource/normalization.mjs";
+import { isStructuralNamespace, requireNamespaceId } from "../context/namespace.mjs";
 
 const ID = /^[a-z][a-z0-9_-]*:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SCOPES = new Set(["chat_default", "global", "workspace", "exact_namespace", "subtree", "ancestors"]);
 const LIMIT_MAX = 100;
 const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 const sql = (v) => v == null ? "NULL" : `'${String(v).replaceAll("'", "''")}'`;
-const id = (v, field, prefix = null) => { if (typeof v !== "string" || !ID.test(v) || (prefix && !v.startsWith(`${prefix}:`))) throw new QueryError("query_request_invalid", `${field} must be an exact identity.`); return v; };
+const id = (v, field, prefix = null) => { if (prefix === "namespace") { try { const value = requireNamespaceId(v, field); if (isStructuralNamespace(value)) throw new QueryError("namespace_structural_only", "namespace:root is structural and cannot be searched as content."); return value; } catch (error) { if (error instanceof QueryError) throw error; throw new QueryError("query_request_invalid", `${field} must be a canonical semantic Namespace identity.`); } } if (typeof v !== "string" || !ID.test(v) || (prefix && !v.startsWith(`${prefix}:`))) throw new QueryError("query_request_invalid", `${field} must be an exact identity.`); return v; };
 
 export class QueryError extends Error { constructor(code, message, options = {}) { super(message); this.code = code; this.failureClass = options.failureClass ?? "representation_invalid"; this.retryDisposition = options.retryDisposition ?? RETRY_DISPOSITIONS.NEVER; } }
 
@@ -52,10 +53,10 @@ function filterTags(value) {
 }
 async function scopeClause(binary, storePath, scope, request) {
   if (!SCOPES.has(scope)) throw new QueryError("query_scope_invalid", "scope must be one supported organizational scope.");
+  let namespace = id(request.namespace_id, "namespace_id", "namespace");
   // Workspace is deliberately not a Namespace subtree: it selects every
   // otherwise-admissible object in the already-selected persistence authority.
   if (scope === "workspace") return { clause: "1", ranking_origin: null };
-  let namespace = request.namespace_id;
   if (scope === "chat_default") {
     const chat = id(request.chat_id, "chat_id", "chat");
     const row = (await queryJson(binary, storePath, `SELECT c.namespace_id,n.lifecycle FROM context_chat_current c LEFT JOIN context_namespace_current n ON n.namespace_id=c.namespace_id WHERE c.chat_id=${sql(chat)};`))[0];
@@ -95,7 +96,8 @@ export async function organizationalSearch(request) {
     // Profile is deliberately proven before candidate identity, count, snippet,
     // ordering, or cursor parsing/disclosure.
     if (!await profileAllowed(prepared.binary, prepared.storePath, admission)) return failure("profile_guard_denied", "The selected Profile does not admit organizational search.", { failureClass: "profile_guard_denied" });
-    const terms = tokens(request.query), scope = request.scope ?? "chat_default", tags = filterTags(request.tags), limit = request.limit ?? 25;
+    if (request.namespace_id == null) throw new QueryError("namespace_required", "Organizational search requires a semantic Namespace.");
+    const terms = tokens(request.query), scope = request.scope ?? "exact_namespace", tags = filterTags(request.tags), limit = request.limit ?? 25;
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > LIMIT_MAX) throw new QueryError("query_request_invalid", `limit must be between 1 and ${LIMIT_MAX}.`);
     const generations = (await queryJson(prepared.binary, prepared.storePath, "SELECT hierarchy_generation h,placement_generation p,resource_generation r FROM store_fence WHERE singleton=1;"))[0];
     const binding = queryBinding({ scope, namespace_id: request.namespace_id ?? null, chat_id: request.chat_id ?? null, terms, tags, limit, order: "organizational@1" });
