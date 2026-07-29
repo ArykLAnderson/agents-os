@@ -4,7 +4,7 @@ description: Frames a consequential software outcome into externally meaningful 
 ---
 # Frame: external boundary, not machinery
 
-Use for a software-system outcome that is ambiguous, consequential, or likely to acquire accidental architecture. Optimize for the earliest trustworthy connected production outcome, not exhaustive discovery. When ordinary Frame state must be created, resumed, or changed, read [references/persistence.md](references/persistence.md) and use the packaged Casebook CLI.
+Use for a software-system outcome that is ambiguous, consequential, or likely to acquire accidental architecture. Optimize for the earliest trustworthy connected production outcome, not exhaustive discovery. When ordinary Frame state must be created, resumed, or changed, read [references/persistence.md](references/persistence.md) and use the packaged Casebook CLI. For creation, prefer direct flags for a simple useful Frame or compact JSON on stdin with valueless `--draft` for richer creation. Changes require an exact read, preservation of all unchanged families and stable IDs, and a complete aggregate commit; shortcuts are creation-only. Whole-Frame delete is revision-checked logical tombstoning, not physical purge.
 
 ## Make the boundary
 
