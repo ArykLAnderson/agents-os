@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "60c2a34b02926c6c7270ad44dade36df404ec9db7b76b284f2704624131423bc"
+    "sha256": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
   },
   "entrypoints": [
     {
@@ -970,7 +970,7 @@
       "id": "sqlite-case-successor-adapter",
       "path": "variants/sqlite/lib/case/successor.mjs",
       "kind": "module",
-      "sha256": "8fd957ccc9d6cb0b6c4a20d84a2c663c158593830a35c80d6f9e97265ba37e2f"
+      "sha256": "f6c6e82571a1728547bcc9afd11d9af5b366826187235aa2c901d4257011cf2e"
     },
     {
       "id": "sqlite-frame-successor-adapter",
@@ -988,7 +988,7 @@
       "id": "sqlite-organizational-query",
       "path": "variants/sqlite/lib/query/search.mjs",
       "kind": "module",
-      "sha256": "1936d18dafb07c50da471133b8d832babf54625bf23296894f687dbb3a2d6cbc"
+      "sha256": "b7db6003de10d07b6d2aa0a8d9ee30434b4d9d77fcc9fadb7cdc5d6c78f8b19a"
     },
     {
       "id": "sqlite-graph-query",
@@ -1108,7 +1108,7 @@
       "id": "asset-34",
       "path": "variants/sqlite/lib/frame/index.mjs",
       "kind": "module",
-      "sha256": "725f773f3e62775f3806bc6971208e9e58df28d940239fb6d6a038a4846f6fe2"
+      "sha256": "6acb7e83f484cdce829ba2d06f269bf7f26cda60fab7145f1cbcf4a5e13a2a2d"
     },
     {
       "id": "asset-35",

@@ -15,9 +15,11 @@
     "case.create",
     "case.read",
     "case.commit_revision",
+    "case.delete",
     "frame.create",
     "frame.read",
     "frame.commit_revision",
+    "frame.delete",
     "query.search",
     "substrate.get_receipt",
     "operation.recent"
@@ -25,12 +27,12 @@
   "bridge": {
     "id": "casebook-persistence-bridge@1",
     "path": "bridge/persistence-bridge.mjs",
-    "sha256": "e7f403fcb0ca530bbf7385ddfcf78c9c9888aa68ac33400ae6994c546b712776"
+    "sha256": "cddb7f27e9b798fabce14644b5384738f5cfc9f6e3bea6d1c45ce7aa45e32f4a"
   },
   "provider": {
     "id": "casebook-persistence@0.19.0-successor",
     "manifest": "bridge/runtime/casebook-persistence/manifest.json",
-    "manifest_sha256": "b09c5a168c5fa29660ea9a67c3b293fb820d8ce3f407f9ee7046b20c7594d13a",
-    "content_digest": "60c2a34b02926c6c7270ad44dade36df404ec9db7b76b284f2704624131423bc"
+    "manifest_sha256": "bbe78493d6fd72313d7d5315d0e0b0b2ae92ab78d75fe281619eb70192f8c5a7",
+    "content_digest": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
   }
 }
