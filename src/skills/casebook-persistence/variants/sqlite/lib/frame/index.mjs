@@ -37,7 +37,7 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const uuidId = (prefix) => new RegExp(`^${prefix}:${UUID}$`);
 const FRAME_REPRESENTATION = Object.freeze({ id: "frame-canonical", version: 3 });
 const ACTIVE_CATEGORIES = new Set(["fog", "frontier", "blocked", "contested", "deferred", "out_of_scope"]);
-const FRAME_STATUSES = new Set(["active", "completed", "abandoned", "superseded"]);
+const FRAME_STATUSES = new Set(["active", "completed", "abandoned", "superseded", "tombstoned"]);
 const DISCOVERY_LIFECYCLES = new Set(["active", "settled", "tombstoned"]);
 const HUMAN_AUTHORITY = new Set(["required", "not_required", "unclear"]);
 const REFERENCE_KINDS = new Set(["case", "knowledge", "source", "evidence", "frame", "artifact", "document", "blueprint", "route", "map"]);
@@ -101,7 +101,7 @@ const LIST_REQUEST_FIELDS = new Set([
 const PREPARE_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "base_revision", "documents", "machine_manifest", "configuration"]);
 const EXPORT_REQUEST_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "frame_id", "revision_id", "revision_number", "audience", "configuration"]);
 const DISCOVERY_HYDRATE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "handoff_token", "query_digest", "candidate_ids", "configuration"]);
-const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded"]);
+const CLOSED_STATUSES = new Set(["completed", "abandoned", "superseded", "tombstoned"]);
 const MAX_PAGE = 100;
 const L01_CATEGORY_HEADING = Object.freeze({
   fog: "Fog",
@@ -1095,6 +1095,7 @@ async function validateCaseRealizationEvidence(request, frame) {
 async function mutateFrame(request, create, modular = null) {
   validateMutation(request, create);
   const frame = normalizeFrame(request.frame, { requireDispositionSets: create });
+  if (create && frame.status === "tombstoned") throw new FrameRequestError("frame.status", "tombstone_initial_create_forbidden", "A Frame must be created active and tombstoned through a revision-checked delete.");
   if (!create && request.frame_id !== frame.id) throw new FrameRequestError("frame.id", "frame_identity_mismatch", "frame.id must match frame_id.");
   let priorSelected = new Map();
   let replayAllocated = new Set();
@@ -1236,6 +1237,7 @@ async function readFrame(request) {
   try {
     const hydrated = hydrateFrame(mechanical.result);
     const completeFrame = hydrated.frame;
+    if (!historical && completeFrame.status === "tombstoned") return typedFailure("read", { failure: { code: "not_visible", retry_disposition: RETRY_DISPOSITIONS.NEVER, corrective_guidance: "The Frame is tombstoned.", evidence: {} } });
     const completion = completionEvidence(completeFrame);
     if (include.discovery === "active_only") hydrated.frame.discovery = hydrated.frame.discovery.filter((item) => item.lifecycle === "active");
     if (include.case_dispositions === "current" && hydrated.frame.disposition_boundaries != null) {

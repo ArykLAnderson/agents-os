@@ -51,8 +51,8 @@ async function initialize(workspace, store) {
   assert.equal(result.code, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).ok, true, result.stdout);
 }
-async function invoke(bin, workspace, args, env = {}) {
-  const output = await runFile(process.execPath, [bin, ...args], { cwd: workspace, env: { ...process.env, HOME: workspace, XDG_CONFIG_HOME: path.join(workspace, "config"), XDG_DATA_HOME: path.join(workspace, "data"), ...env } });
+async function invoke(bin, workspace, args, env = {}, input = "") {
+  const output = await runFile(process.execPath, [bin, ...args], { cwd: workspace, env: { ...process.env, HOME: workspace, XDG_CONFIG_HOME: path.join(workspace, "config"), XDG_DATA_HOME: path.join(workspace, "data"), ...env } }, input);
   return { ...output, json: JSON.parse(output.stdout) };
 }
 async function initializedWorkspace(t, prefix = "wi033-e2e-workspace-") {
@@ -74,6 +74,116 @@ async function initializedWorkspace(t, prefix = "wi033-e2e-workspace-") {
 // Every invocation below starts a fresh extracted-package process. The only fault
 // selector is an explicit test-hook environment value; no CLI argument or aggregate
 // field can select it.
+test("packaged CLI delete regression covers the candidate Case and Frame representation failures", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-delete-repro-");
+  await runFile("git", ["init", "--quiet"], { cwd: workspace });
+  const caseValue = caseAggregate(300, "Delete repro Case", "delete repro phrase");
+  const createdCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "create", "--input", JSON.stringify(caseValue)]);
+  assert.equal(createdCase.code, 0, createdCase.stdout);
+  const deletedCase = await invoke(bin, workspace, ["delete", "case", "--case-id", caseValue.id, "--expected-revision", "1", "--reason", "repro"]);
+  assert.equal(deletedCase.code, 0, deletedCase.stdout);
+  const frameValue = frameAggregate("Delete repro Frame");
+  const createdFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "create", "--input", JSON.stringify(frameValue)]);
+  assert.equal(createdFrame.code, 0, createdFrame.stdout);
+  const deletedFrame = await invoke(bin, workspace, ["delete", "frame", "--frame-id", frameValue.id, "--expected-revision", "1", "--reason", "repro"]);
+  assert.equal(deletedFrame.code, 0, deletedFrame.stdout);
+});
+test("packaged CLI supports direct and draft creation plus revision-checked Case and Frame tombstones", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-delete-contract-");
+  await runFile("git", ["init", "--quiet"], { cwd: workspace });
+
+  const directCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "direct", "--id", id("case", 301), "--title", "Direct Case", "--summary", "Direct summary", "--scope", "Direct scope", "--body", "Direct reusable knowledge", "--acting-role", "e2e-author"]);
+  assert.equal(directCase.code, 0, directCase.stdout);
+  const directCaseRead = await invoke(bin, workspace, ["read", "case", "--case-id", id("case", 301)]);
+  assert.equal(directCaseRead.json.result.aggregate.title, "Direct Case");
+  assert.equal(directCaseRead.json.result.aggregate.entries.length, 1);
+  assert.equal(directCaseRead.json.result.aggregate.entries[0].version.body, "Direct reusable knowledge");
+  assert.equal(directCaseRead.json.result.aggregate.entries[0].version.provenance.acting_role, "e2e-author");
+
+  const incompleteCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "incomplete", "--title", "Missing body", "--summary", "Summary", "--scope", "Scope", "--acting-role", "e2e-author"]);
+  assert.equal(incompleteCase.code, 1, incompleteCase.stdout);
+  assert.equal(incompleteCase.json.failure.code, "case_direct_fields_required");
+  assert.equal(incompleteCase.json.failure.evidence.operation_id, null);
+  const directFrameId = id("frame", 305);
+  const directFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "direct", "--id", directFrameId, "--title", "Direct Frame", "--outcome", "Direct outcome", "--discovery-title", "Direct question", "--discovery-body", "Direct body"]);
+  assert.equal(directFrame.code, 0, directFrame.stdout);
+  const directFrameRead = await invoke(bin, workspace, ["read", "frame", "--frame-id", directFrameId]);
+  assert.equal(directFrameRead.json.result.aggregate.discovery[0].body, "Direct body");
+  const incompleteFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "incomplete", "--title", "Frame", "--outcome", "Outcome", "--discovery-title", "Question"]);
+  assert.equal(incompleteFrame.code, 1, incompleteFrame.stdout);
+  assert.equal(incompleteFrame.json.failure.code, "frame_direct_fields_required");
+  assert.equal(incompleteFrame.json.failure.evidence.operation_id, null);
+
+  const draftCaseId = id("case", 306);
+  const draftCase = await invoke(bin, workspace, ["create", "case", "--draft", "--commit-basis", "draft"], {}, JSON.stringify({ id: draftCaseId, title: "Draft Case", summary: "Draft summary", scope: "Draft scope", knowledge: { body: "Draft reusable knowledge", acting_role: "draft-author", authority_basis: "draft basis" } }));
+  assert.equal(draftCase.code, 0, draftCase.stdout);
+  const draftCaseRead = await invoke(bin, workspace, ["read", "case", "--case-id", draftCaseId]);
+  assert.equal(draftCaseRead.json.result.aggregate.entries[0].version.body, "Draft reusable knowledge");
+  assert.equal(draftCaseRead.json.result.aggregate.entries[0].version.provenance.acting_role, "draft-author");
+
+  const draftFrameId = id("frame", 302);
+  const draftFrame = await invoke(bin, workspace, ["create", "frame", "--draft", "--commit-basis", "draft"], {}, JSON.stringify({ id: draftFrameId, title: "Draft Frame", outcome: "Draft outcome", discovery: [{ title: "Draft question", body: "Draft body" }] }));
+  assert.equal(draftFrame.code, 0, draftFrame.stdout);
+  const draftRead = await invoke(bin, workspace, ["read", "frame", "--frame-id", draftFrameId]);
+  assert.equal(draftRead.json.result.aggregate.title, "Draft Frame");
+  assert.equal(draftRead.json.result.aggregate.discovery[0].body, "Draft body");
+  assert.equal(draftRead.json.result.aggregate.discovery[0].display_order, 0);
+
+  const malformed = await invoke(bin, workspace, ["create", "case", "--draft", "--commit-basis", "bad"], {}, "{\"title\":");
+  assert.equal(malformed.code, 1, malformed.stdout);
+  assert.equal(malformed.json.failure.code, "json_invalid");
+  const mixed = await invoke(bin, workspace, ["create", "case", "--draft", "--commit-basis", "bad", "--input", "{}"], {}, "{}");
+  assert.equal(mixed.code, 1, mixed.stdout);
+  assert.equal(mixed.json.failure.code, "aggregate_transport_conflict");
+
+  const caseValue = caseAggregate(303, "Tombstone Case", "tombstone case phrase");
+  const createdCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "create", "--input", JSON.stringify(caseValue)]);
+  assert.equal(createdCase.code, 0, createdCase.stdout);
+  const revisedCase = { ...caseValue, title: "Tombstone Case Revised" };
+  const committedCase = await invoke(bin, workspace, ["commit", "case", "--case-id", caseValue.id, "--expected-revision", "1", "--commit-basis", "revise", "--input", JSON.stringify(revisedCase)]);
+  assert.equal(committedCase.code, 0, committedCase.stdout);
+  const staleCase = await invoke(bin, workspace, ["delete", "case", "--case-id", caseValue.id, "--expected-revision", "1", "--reason", "stale"]);
+  assert.equal(staleCase.code, 2);
+  assert.equal(staleCase.json.failure.code, "case.revision_conflict");
+  const deletedCase = await invoke(bin, workspace, ["delete", "case", "--case-id", caseValue.id, "--expected-revision", "2", "--reason", "retired"]);
+  assert.equal(deletedCase.code, 0, deletedCase.stdout);
+  const hiddenCase = await invoke(bin, workspace, ["read", "case", "--case-id", caseValue.id]);
+  assert.equal(hiddenCase.code, 2);
+  assert.equal(hiddenCase.json.failure.code, "case.not_found_or_not_visible");
+  const searchCase = await invoke(bin, workspace, ["search", "--query", "tombstone case phrase"]);
+  assert.equal(searchCase.code, 0, searchCase.stdout);
+  assert.equal(searchCase.json.result.items.some((item) => item.resource_id === caseValue.id), false);
+  const historicalCase = await invoke(bin, workspace, ["read", "case", "--case-id", caseValue.id, "--owner-revision-id", createdCase.json.result.revision.id]);
+  assert.equal(historicalCase.code, 0, historicalCase.stdout);
+  const caseReceipt = await invoke(bin, workspace, ["receipt", "read", "--operation-id", deletedCase.json.result.operation_id]);
+  assert.equal(caseReceipt.json.result.observation, "settled");
+  const frameValue = frameAggregate("Tombstone Frame");
+  frameValue.id = id("frame", 304);
+  const createdFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "create", "--input", JSON.stringify(frameValue)]);
+  assert.equal(createdFrame.code, 0, createdFrame.stdout);
+  const revisedFrame = { ...frameValue, title: "Tombstone Frame Revised" };
+  const committedFrame = await invoke(bin, workspace, ["commit", "frame", "--frame-id", frameValue.id, "--expected-revision", "1", "--commit-basis", "revise", "--input", JSON.stringify(revisedFrame)]);
+  assert.equal(committedFrame.code, 0, committedFrame.stdout);
+  const staleFrame = await invoke(bin, workspace, ["delete", "frame", "--frame-id", frameValue.id, "--expected-revision", "1", "--reason", "stale"]);
+  assert.equal(staleFrame.code, 2);
+  assert.equal(staleFrame.json.failure.code, "frame.revision_conflict");
+  const deletedFrame = await invoke(bin, workspace, ["delete", "frame", "--frame-id", frameValue.id, "--expected-revision", "2", "--reason", "retired"]);
+  assert.equal(deletedFrame.code, 0, deletedFrame.stdout);
+  const hiddenFrame = await invoke(bin, workspace, ["read", "frame", "--frame-id", frameValue.id]);
+  assert.equal(hiddenFrame.code, 2);
+  assert.equal(hiddenFrame.json.failure.code, "frame.not_found_or_not_visible");
+  const searchFrame = await invoke(bin, workspace, ["search", "--query", "Frame searchable phrase"]);
+  assert.equal(searchFrame.code, 0, searchFrame.stdout);
+  assert.equal(searchFrame.json.result.items.some((item) => item.resource_id === frameValue.id), false);
+  const historicalFrame = await invoke(bin, workspace, ["read", "frame", "--frame-id", frameValue.id, "--owner-revision-id", createdFrame.json.result.revision.id]);
+  assert.equal(historicalFrame.code, 0, historicalFrame.stdout);
+  const frameReceipt = await invoke(bin, workspace, ["receipt", "read", "--operation-id", deletedFrame.json.result.operation_id]);
+  assert.equal(frameReceipt.json.result.observation, "settled");
+
+});
+
 test("extracted package executes Candidate-4 Case, Frame, search cursor, receipts, refusal, and recovery matrix", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace, store } = await initializedWorkspace(t);
@@ -166,6 +276,48 @@ test("extracted package preserves recovery identities for every possible-post-di
     assert.equal(read.code, 0, `${fault}: ${read.stdout}`);
     assert.equal(read.json.result.revision.number, 1, fault);
   }
+});
+
+test("extracted package classifies Case and Frame delete bridge faults as delivery unknown with tombstone recovery", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-delete-fault-");
+  await runFile("git", ["init", "--quiet"], { cwd: workspace });
+  const faultEnv = {
+    CASEBOOK_CLI_TEST_HOOK: "casebook-cli-e2e@1",
+    CASEBOOK_CLI_TEST_BRIDGE_FAULT: "exit",
+    CASEBOOK_CLI_TEST_BRIDGE_TIMEOUT_MS: "1000",
+  };
+  const caseValue = caseAggregate(401, "Delete fault Case", "delete fault case phrase");
+  const createdCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "create", "--input", JSON.stringify(caseValue)]);
+  assert.equal(createdCase.code, 0, createdCase.stdout);
+  const deletedCase = await invoke(bin, workspace, ["delete", "case", "--case-id", caseValue.id, "--expected-revision", "1", "--reason", "retire"], faultEnv);
+  assert.equal(deletedCase.code, 3, deletedCase.stdout);
+  assert.equal(deletedCase.json.status, "delivery_unknown");
+  assert.equal(deletedCase.json.failure.evidence.commit_may_have_occurred, true);
+  assert.match(deletedCase.json.failure.evidence.operation_id, /^operation:[0-9a-f-]{36}$/);
+  const caseOperationId = deletedCase.json.failure.evidence.operation_id;
+  const caseStatus = await invoke(bin, workspace, ["operation", "status", "--operation-id", caseOperationId]);
+  assert.equal(caseStatus.code, 0, caseStatus.stdout);
+  assert.equal(caseStatus.json.result.observation, "settled");
+  const hiddenCase = await invoke(bin, workspace, ["read", "case", "--case-id", caseValue.id]);
+  assert.equal(hiddenCase.code, 2, hiddenCase.stdout);
+  assert.equal(hiddenCase.json.failure.code, "case.not_found_or_not_visible");
+
+  const frameValue = frameAggregate("Delete fault Frame");
+  const createdFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "create", "--input", JSON.stringify(frameValue)]);
+  assert.equal(createdFrame.code, 0, createdFrame.stdout);
+  const deletedFrame = await invoke(bin, workspace, ["delete", "frame", "--frame-id", frameValue.id, "--expected-revision", "1", "--reason", "retire"], faultEnv);
+  assert.equal(deletedFrame.code, 3, deletedFrame.stdout);
+  assert.equal(deletedFrame.json.status, "delivery_unknown");
+  assert.equal(deletedFrame.json.failure.evidence.commit_may_have_occurred, true);
+  assert.match(deletedFrame.json.failure.evidence.operation_id, /^operation:[0-9a-f-]{36}$/);
+  const frameOperationId = deletedFrame.json.failure.evidence.operation_id;
+  const frameStatus = await invoke(bin, workspace, ["operation", "status", "--operation-id", frameOperationId]);
+  assert.equal(frameStatus.code, 0, frameStatus.stdout);
+  assert.equal(frameStatus.json.result.observation, "settled");
+  const hiddenFrame = await invoke(bin, workspace, ["read", "frame", "--frame-id", frameValue.id]);
+  assert.equal(hiddenFrame.code, 2, hiddenFrame.stdout);
+  assert.equal(hiddenFrame.json.failure.code, "frame.not_found_or_not_visible");
 });
 
 test("extracted package shares one XDG-selected successor store across unrelated Git workspaces", { timeout: 120_000 }, async (t) => {

@@ -18,16 +18,21 @@ All commands emit exactly one `casebook-cli-result@2` JSON value on stdout. Muta
 
 - `--input '<JSON>'`; use `--input -` to read that JSON from standard input.
 - `--input-file <absolute-normalized-path>`.
+- `--draft` reads a compact authoring JSON object from stdin; it takes no value and cannot be combined with direct flags or another input mode. Case drafts may provide `knowledge` (or a top-level `body`) with acting-role provenance; Frame drafts may provide compact `discovery` items or one top-level discovery shorthand. Canonical `entries` and `discovery` selections remain accepted unchanged.
+
+Create commands also accept concise direct flags. Case creation requires `--title`, `--summary`, `--scope`, `--body`, and `--acting-role`; `--authority-basis` is optional, and `--id` is optional. Frame creation requires `--title`, `--outcome`, `--discovery-title`, and `--discovery-body`; `--id` is optional. These flags expand only mechanical IDs, labels, arrays, provisional/private knowledge, and active/frontier/unclear Discovery defaults; they never invent semantic claims, sources, or provenance.
 
 Do not supply either input mode to reads, search, receipt, or recent-operation commands. The available public commands are:
 
 ```sh
-casebook create case --namespace <semantic-id> --commit-basis <text> --input <json>
+casebook create case --namespace <semantic-id> --commit-basis <text> [--input <json> | --draft | direct flags]
+casebook delete case --namespace <semantic-id> --case-id <id> --expected-revision <positive-integer> --reason <text>
 casebook read case --case-id <id> [--owner-revision-id <id>]
 casebook commit case --namespace <semantic-id> --case-id <id> --expected-revision <positive-integer> \
   --commit-basis <text> --input <json>
 
-casebook create frame --namespace <semantic-id> --commit-basis <text> --input <json>
+casebook create frame --namespace <semantic-id> --commit-basis <text> [--input <json> | --draft | direct flags]
+casebook delete frame --namespace <semantic-id> --frame-id <id> --expected-revision <positive-integer> --reason <text>
 casebook read frame --frame-id <id> [--owner-revision-id <id>]
 casebook commit frame --namespace <semantic-id> --frame-id <id> --expected-revision <positive-integer> \
   --commit-basis <text> --input <json>
