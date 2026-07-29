@@ -205,6 +205,9 @@ function required(operation, flags, input) {
   if (flags.namespace != null && flags.namespace_id != null) throw Error("namespace_selector_conflict");
   const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
   const deletion = ["case.delete", "frame.delete"].includes(operation);
+  const commit = ["case.commit_revision", "frame.commit_revision"].includes(operation);
+  const authoringFlags = new Set(["draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis", "outcome", "discovery_title", "discovery_body", "discovery_category", "human_authority"]);
+  if (commit && Object.keys(flags).some((key) => authoringFlags.has(key))) throw Error("commit_aggregate_required");
   if (mutation && input && flags.draft) throw Error("aggregate_transport_conflict");
   if (mutation && !input && !flags.draft && !flags.id && !flags.title && !flags.discovery_title) throw Error("aggregate_or_direct_input_required");
   const direct = mutation && !input && !flags.draft;

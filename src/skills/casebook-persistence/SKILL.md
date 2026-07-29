@@ -11,6 +11,8 @@ The CLI is the only ordinary persistence boundary. Do not invoke a connector var
 
 Namespace identity is semantic and canonical: `namespace:<lowercase-kebab-segment>(/<segment>)*`. `namespace:root` is structural and cannot receive Case or Frame placement. Case/Frame create, commit, modular mutation, and scoped search require a resolved Namespace; never infer one from an aggregate, bootstrap root, workspace, cwd, or sentinel.
 
+Creation offers direct flags for simple useful Cases/Frames and compact JSON on stdin with valueless `--draft` for richer creation. Do not recommend file-based input as the normal path. Reconciliation/update always requires an exact read, preservation of every unchanged family and stable ID, and a complete aggregate commit through stdin/pipeline-compatible transport; direct flags and `--draft` are creation-only. Delete Case/Frame is revision-checked logical tombstoning: current reads/search hide the whole owner while history and receipts remain durable, and it is not physical purge or equivalent to tombstoning one knowledge/Discovery item.
+
 `CASEBOOK_DATABASE_URL` and `CASEBOOK_SQLITE_BIN` are not CLI configuration. They may be used only by explicitly authorized direct-provider maintenance or migration work, which is outside ordinary Case and Frame workflows. Legacy Markdown connector maintenance or migration is likewise exceptional and never an ordinary selection or fallback path.
 
 Do not point unreviewed work at a live store.
