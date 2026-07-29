@@ -10,7 +10,7 @@ A complete Case aggregate includes:
 
 `title`, `summary`, Scope, Knowledge, and Sources are mandatory semantic content. Assemble and submit the complete aggregate through the CLI; it is not a direct-file interface. Every family has a stable typed ID; preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
 
-The CLI may enforce stricter normalized fields than this semantic outline. Read the current aggregate with `casebook read case`, validate it here, then use `casebook create case` or `casebook commit case` as specified by the persistence procedure. Never reconstruct an update from a partial excerpt.
+The CLI may enforce stricter normalized fields than this semantic outline. For creation, concise direct flags or compact stdin JSON with valueless `--draft` may expand only the documented mechanical defaults; a complete aggregate remains valid. Read the current aggregate with `casebook read case`, validate it here, then use `casebook create case` or the full-aggregate-only `casebook commit case` as specified by the persistence procedure. Never reconstruct an update from a partial excerpt or use creation shortcuts for reconciliation.
 
 ## Knowledge Integrity
 
