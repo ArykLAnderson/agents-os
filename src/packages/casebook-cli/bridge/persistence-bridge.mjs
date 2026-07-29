@@ -42,7 +42,19 @@ async function dispatch(request) {
   if (selectedNamespace?.ok === false) return selectedNamespace;
   const placement = selectedNamespace ? { placement: { namespace_id: selectedNamespace } } : {};
   if (request.operation === "case.create" || request.operation === "case.commit_revision") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "case.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, case: request.aggregate, ...placement });
+  if (request.operation === "case.delete") {
+    const current = await provider.invokeSuccessorCaseOperation({ ...base, operation: "case.read", case_id: flags.case_id });
+    if (!current?.ok) return current;
+    if (current.result.revision.number !== Number(flags.expected_revision)) return failure("case.revision_conflict", "The expected Case revision is no longer current.");
+    return provider.invokeSuccessorCaseOperation({ ...base, operation: "case.tombstone", operation_id: request.operation_id, resource_id: flags.case_id, if_match_revision_id: current.result.revision.id, commit_basis: flags.reason, reason: flags.reason, provenance, ...placement });
+  }
   if (request.operation === "frame.create" || request.operation === "frame.commit_revision") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "frame.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, frame: request.aggregate, ...(request.operation === "frame.commit_revision" ? { frame_id: flags.frame_id } : {}), ...placement });
+  if (request.operation === "frame.delete") {
+    const current = await provider.invokeSuccessorFrameOperation({ ...base, operation: "frame.read", frame_id: flags.frame_id });
+    if (!current?.ok) return current;
+    const frame = { ...current.result.frame, status: "tombstoned" };
+    return provider.invokeSuccessorFrameOperation({ ...base, operation: "frame.commit_revision", operation_id: request.operation_id, frame_id: flags.frame_id, expected_revision: Number(flags.expected_revision), commit_basis: flags.reason, provenance, frame, ...placement });
+  }
   if (request.operation === "case.read") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, case_id: flags.case_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
   if (request.operation === "frame.read") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, frame_id: flags.frame_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
   if (request.operation === "query.search") {

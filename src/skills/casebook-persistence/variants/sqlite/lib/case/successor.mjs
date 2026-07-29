@@ -237,7 +237,7 @@ async function invokeModularCaseOperation(request) {
   }
   const base = await rawCase(request, caseId, expected);
   if (!base || base.case.state !== "active") return failure(`case.${kind}.not_found_or_not_visible`, "The Case resource is unknown or not visible.", { failureClass: `case.${kind}.mutation_failure`, evidence: {} });
-  const next = selectedCase(base), prior = resourceId ? findResource(base.case, kind, resourceId) : null;
+  const next = kind === "case" ? structuredClone(base.case) : selectedCase(base), prior = resourceId ? findResource(base.case, kind, resourceId) : null;
   const collection = kind === "knowledge" ? next.entries : kind === "facet" ? next.facets : kind === "source" ? next.sources : kind === "relationship" ? next.relationships : null;
   if (kind === "case") {
     if (action === "tombstone") { text(request.reason, "reason"); next.state = "tombstoned"; }
