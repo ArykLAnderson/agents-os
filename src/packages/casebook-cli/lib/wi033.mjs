@@ -161,6 +161,9 @@ function parse(argv) {
       if (global[value] !== undefined) throw Error("grammar_invalid");
       global[value] = argv[++index];
       if (global[value] === undefined) throw Error("grammar_invalid");
+    } else if (value === "--draft") {
+      if (flags.draft !== undefined) throw Error("grammar_invalid");
+      flags.draft = true;
     } else if (value === "--json") {
       if (global.json) throw Error("grammar_invalid");
       global.json = true;
@@ -175,35 +178,78 @@ function parse(argv) {
 }
 
 const operations = new Map([
-  ["create case", "case.create"], ["read case", "case.read"], ["commit case", "case.commit_revision"],
-  ["create frame", "frame.create"], ["read frame", "frame.read"], ["commit frame", "frame.commit_revision"],
+  ["create case", "case.create"], ["read case", "case.read"], ["commit case", "case.commit_revision"], ["delete case", "case.delete"],
+  ["create frame", "frame.create"], ["read frame", "frame.read"], ["commit frame", "frame.commit_revision"], ["delete frame", "frame.delete"],
   ["search", "query.search"], ["receipt read", "substrate.get_receipt"], ["operation status", "substrate.get_receipt"], ["operation recent", "operation.recent"],
 ]);
 const allowedFlags = {
-  "case.create": ["commit_basis", "namespace", "namespace_id"],
+  "case.create": ["commit_basis", "namespace", "namespace_id", "draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis"],
   "case.read": ["case_id", "owner_revision_id"],
-  "case.commit_revision": ["case_id", "expected_revision", "commit_basis", "namespace", "namespace_id"],
-  "frame.create": ["commit_basis", "namespace", "namespace_id"],
+  "case.commit_revision": ["case_id", "expected_revision", "commit_basis", "namespace", "namespace_id", "draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis"],
+  "case.delete": ["case_id", "expected_revision", "reason", "namespace", "namespace_id"],
+  "frame.create": ["commit_basis", "namespace", "namespace_id", "draft", "id", "title", "outcome", "discovery_title", "discovery_body", "discovery_category", "human_authority"],
   "frame.read": ["frame_id", "owner_revision_id"],
-  "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis", "namespace", "namespace_id"],
+  "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis", "namespace", "namespace_id", "draft", "id", "title", "outcome", "discovery_title", "discovery_body", "discovery_category", "human_authority"],
+  "frame.delete": ["frame_id", "expected_revision", "reason", "namespace", "namespace_id"],
   "query.search": ["query", "namespace", "namespace_id", "limit", "cursor"],
   "substrate.get_receipt": ["operation_id"],
   "operation.recent": ["limit", "before_operation_fence"],
 };
 function required(operation, flags, input) {
   const needed = {
-    "case.create": ["commit_basis"], "case.commit_revision": ["case_id", "expected_revision", "commit_basis"], "case.read": ["case_id"],
-    "frame.create": ["commit_basis"], "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis"], "frame.read": ["frame_id"],
+    "case.create": ["commit_basis"], "case.commit_revision": ["case_id", "expected_revision", "commit_basis"], "case.delete": ["case_id", "expected_revision", "reason"], "case.read": ["case_id"],
+    "frame.create": ["commit_basis"], "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis"], "frame.delete": ["frame_id", "expected_revision", "reason"], "frame.read": ["frame_id"],
     "query.search": ["query"], "substrate.get_receipt": ["operation_id"], "operation.recent": [],
   }[operation];
   if (!needed || needed.some((key) => flags[key] == null) || Object.keys(flags).some((key) => !allowedFlags[operation].includes(key))) throw Error("grammar_invalid");
   if (flags.namespace != null && flags.namespace_id != null) throw Error("namespace_selector_conflict");
   const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
-  if (mutation !== input) throw Error("aggregate_transport_required");
+  const deletion = ["case.delete", "frame.delete"].includes(operation);
+  if (mutation && input && flags.draft) throw Error("aggregate_transport_conflict");
+  if (mutation && !input && !flags.draft && !flags.id && !flags.title && !flags.discovery_title) throw Error("aggregate_or_direct_input_required");
+  const direct = mutation && !input && !flags.draft;
+  if (direct && operation.startsWith("case.") && ["title", "summary", "scope", "body", "acting_role"].some((key) => flags[key] == null || flags[key] === "")) throw Error("case_direct_fields_required");
+  if (direct && operation.startsWith("frame.") && ["title", "outcome", "discovery_title", "discovery_body"].some((key) => flags[key] == null || flags[key] === "")) throw Error("frame_direct_fields_required");
+  if (deletion && input) throw Error("aggregate_not_allowed");
+  if (flags.draft && !mutation) throw Error("draft_not_allowed");
   if ((operation === "query.search" && flags.limit != null && (!/^\d+$/.test(flags.limit) || +flags.limit < 1 || +flags.limit > 100))
     || (operation === "operation.recent" && flags.limit != null && (!/^\d+$/.test(flags.limit) || +flags.limit < 1 || +flags.limit > 20))
     || (flags.before_operation_fence != null && (!/^\d+$/.test(flags.before_operation_fence) || +flags.before_operation_fence < 1))
     || (flags.expected_revision != null && (!/^\d+$/.test(flags.expected_revision) || +flags.expected_revision < 1))) throw Error("grammar_invalid");
+  if (flags.draft && Object.keys(flags).some((key) => !["draft", "commit_basis", "namespace", "namespace_id"].includes(key))) throw Error("draft_direct_flags_conflict");
+  if (mutation && input && flags.draft) throw Error("draft_input_conflict");
+}
+
+function generatedId(prefix) { return `${prefix}:${randomUUID().toLowerCase()}`; }
+function knowledgeEntry(value, draft, index = 0) {
+  const item = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const body = item.body ?? draft.body;
+  const actingRole = item.acting_role ?? item.provenance?.acting_role ?? draft.acting_role ?? draft.provenance?.acting_role;
+  if (body == null || actingRole == null) throw Error("draft_knowledge_fields_required");
+  const provenance = item.provenance ?? { acting_role: actingRole, ...(item.authority_basis ?? draft.authority_basis ?? draft.provenance?.authority_basis ? { authority_basis: item.authority_basis ?? draft.authority_basis ?? draft.provenance.authority_basis } : {}) };
+  return { id: item.id && item.id !== draft.id ? item.id : generatedId("knowledge"), state: item.state ?? "active", version: { display_label: item.display_label ?? `K-${String(index + 1).padStart(3, "0")}`, title: item.title ?? draft.title, purpose: item.purpose ?? draft.summary, classification: item.classification ?? "provisional", body, ...(item.scope == null && draft.scope == null ? {} : { scope: item.scope ?? draft.scope }), visibility: item.visibility ?? "private", provenance, positions: item.positions ?? [], relationships: item.relationships ?? [], references: item.references ?? [] } };
+}
+function expandDiscovery(value, index) {
+  const item = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return { ...item, id: item.id ?? generatedId("discovery"), display_order: item.display_order ?? index, lifecycle: item.lifecycle ?? "active", category: item.category ?? "frontier", title: item.title, body: item.body, human_authority: item.human_authority ?? "unclear", dependencies: item.dependencies ?? [] };
+}
+function expandDraft(kind, draft, flags, namespace, existingId = null) {
+  if (!draft || typeof draft !== "object" || Array.isArray(draft)) throw Error("draft_object_required");
+  const id = draft.id ?? existingId ?? generatedId(kind);
+  if (kind === "case") {
+    const compact = draft.knowledge ?? (draft.body != null ? draft : null);
+    const entries = Array.isArray(draft.entries)
+      ? (draft.entries.length === 0 || draft.entries.every((entry) => entry?.version) ? draft.entries : draft.entries.map((entry, index) => knowledgeEntry(entry, draft, index)))
+      : compact ? (Array.isArray(compact) ? compact : [compact]).map((entry, index) => knowledgeEntry(entry, draft, index)) : [];
+    return { id, home_namespace_id: namespace, state: "active", title: draft.title, summary: draft.summary, scope: draft.scope, provenance: draft.provenance, aliases: draft.aliases ?? [], facets: draft.facets ?? [], entries, sources: draft.sources ?? [], relationships: draft.relationships ?? [], references: draft.references ?? [] };
+  }
+  const suppliedDiscovery = draft.discovery ?? (draft.discovery_title != null || draft.discovery_body != null ? [{ title: draft.discovery_title, body: draft.discovery_body, category: draft.discovery_category, human_authority: draft.human_authority }] : []);
+  const discovery = suppliedDiscovery.map(expandDiscovery);
+  return { id, home_namespace_id: namespace, status: draft.status ?? "active", ...(draft.title == null ? {} : { title: draft.title }), ...(draft.outcome == null ? {} : { outcome: draft.outcome }), ...(draft.included_scope == null ? {} : { included_scope: draft.included_scope }), ...(draft.excluded_scope == null ? {} : { excluded_scope: draft.excluded_scope }), ...(draft.limitations == null ? {} : { limitations: draft.limitations }), ...(draft.completion_condition == null ? {} : { completion_condition: draft.completion_condition }), discovery, case_links: draft.case_links ?? [], frame_links: draft.frame_links ?? [], downstream_links: draft.downstream_links ?? [], artifact_links: draft.artifact_links ?? [], ...(draft.authorization_provenance == null ? {} : { authorization_provenance: draft.authorization_provenance }), disposition_boundaries: draft.disposition_boundaries ?? [], case_dispositions: draft.case_dispositions ?? [] };
+}
+function directAggregate(kind, flags, namespace) {
+  if (kind === "case") return expandDraft(kind, { id: flags.id, title: flags.title, summary: flags.summary, scope: flags.scope, body: flags.body, acting_role: flags.acting_role, authority_basis: flags.authority_basis }, flags, namespace);
+  return expandDraft(kind, { id: flags.id, title: flags.title, outcome: flags.outcome, discovery_title: flags.discovery_title, discovery_body: flags.discovery_body, discovery_category: flags.discovery_category, human_authority: flags.human_authority }, flags, namespace);
 }
 
 async function bridgeCall(request, workspace) {
@@ -211,7 +257,7 @@ async function bridgeCall(request, workspace) {
   if (encoded.length > MAX) throw Error("bridge_request_too_large");
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [bridge.pathname], { cwd: workspace, shell: false, stdio: ["pipe", "pipe", "pipe"] });
-    const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(request.operation);
+    const mutation = ["case.create", "case.commit_revision", "case.delete", "frame.create", "frame.commit_revision", "frame.delete"].includes(request.operation);
     let output = Buffer.alloc(0), stderr = Buffer.alloc(0), stderrOverflow = false, transportSubmitted = false, settled = false, aborting = false;
     let timer;
     const terminal = new Promise((resolveTerminal) => child.once("close", (code, signal) => resolveTerminal({ code, signal })));
@@ -305,7 +351,7 @@ export async function run(argv) {
     if (localSettings?.store) throw Error("settings_store_authority_forbidden");
     let selectedNamespace = parsed.flags.namespace ?? parsed.flags.namespace_id ?? localSettings?.namespace ?? null;
     if (selectedNamespace != null) selectedNamespace = canonicalNamespace(selectedNamespace);
-    const namespaceRequired = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "query.search"].includes(operation);
+    const namespaceRequired = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete", "query.search"].includes(operation);
     if (namespaceRequired && !selectedNamespace) throw Error("namespace_required");
     if (selectedNamespace) { parsed.flags.namespace_id = selectedNamespace; delete parsed.flags.namespace; }
     if (!store) {
@@ -319,8 +365,15 @@ export async function run(argv) {
     authority = { ...authority, resolution_source: source };
     ctx.authority = authority;
     let aggregate = null;
-    const modes = [parsed.global["--input"] !== undefined, parsed.global["--input-file"] !== undefined].filter(Boolean).length;
+    const modes = [parsed.global["--input"] !== undefined, parsed.global["--input-file"] !== undefined, parsed.flags.draft === true].filter(Boolean).length;
     if (modes > 1) throw Error("input_transport_conflict");
+    if (parsed.flags.draft === true) {
+      const raw = await new Response(process.stdin).text();
+      if (!raw.trim()) throw Error("draft_empty");
+      if (Buffer.byteLength(raw) > MAX) throw Error("aggregate_too_large");
+      const draft = duplicateFreeJson(raw);
+      aggregate = expandDraft(operation.startsWith("case") ? "case" : "frame", draft, parsed.flags, selectedNamespace);
+    }
     if (parsed.global["--input"] !== undefined) {
       const raw = parsed.global["--input"] === "-" ? await new Response(process.stdin).text() : parsed.global["--input"];
       if (Buffer.byteLength(raw) > MAX) throw Error("aggregate_too_large");
@@ -333,7 +386,9 @@ export async function run(argv) {
       if (Buffer.byteLength(raw) > MAX) throw Error("aggregate_too_large");
       aggregate = duplicateFreeJson(raw);
     }
-    if (Boolean(aggregate) !== declaredInput) throw Error("aggregate_transport_required");
+    const direct = ["case.create", "frame.create", "case.commit_revision", "frame.commit_revision"].includes(operation) && !declaredInput && !parsed.flags.draft;
+    if (direct) aggregate = directAggregate(operation.startsWith("case") ? "case" : "frame", parsed.flags, selectedNamespace);
+    if (!aggregate && ["case.create", "frame.create", "case.commit_revision", "frame.commit_revision"].includes(operation)) throw Error("aggregate_transport_required");
     if (operation === "case.commit_revision" && aggregate?.id !== parsed.flags.case_id) throw Error("case_id_mismatch");
     if (operation === "frame.commit_revision" && aggregate?.id !== parsed.flags.frame_id) throw Error("frame_id_mismatch");
     const describe = await bridgeCall({ operation: "target.describe", workspace, store: canonicalCandidate }, workspace);
@@ -343,14 +398,18 @@ export async function run(argv) {
     const canonicalStore = await realpath(canonicalCandidate);
     authority = { status: "target_admitted", workspace, store: canonicalStore, resolution_source: source, store_id: target.store_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
     ctx = { authority };
-    const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
+    const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete"].includes(operation);
     const operationId = mutation ? `operation:${randomUUID().toLowerCase()}` : null;
     const answer = await bridgeCall({ operation, workspace, store: canonicalStore, target, flags: parsed.flags, aggregate, operation_id: operationId }, workspace);
     if (!answer || typeof answer.ok !== "boolean" || (answer.ok && (!answer.result || typeof answer.result !== "object")) || (!answer.ok && (!answer.failure || typeof answer.failure !== "object"))) throw Object.assign(Error("bridge_contradiction"), { delivery: mutation, operation_id: operationId, diagnostics: answer?.__bridgeDiagnostics });
     if (!answer.ok) return { result: refuse(operation, authority, answer.failure?.code ?? "provider_refused", answer.failure?.message ?? "Provider refused the operation."), exitCode: 2 };
     const raw = answer.result;
     let result;
-    if (mutation) result = { owner: { kind: operation.startsWith("case") ? "case" : "frame", id: (raw.case ?? raw.frame).id }, revision: { id: raw.revision.id, number: raw.revision.number }, operation_id: operationId };
+    if (mutation) {
+      const kind = operation.startsWith("case") ? "case" : "frame";
+      const ownerId = (raw.case ?? raw.frame)?.id ?? raw.owner?.id ?? parsed.flags[`${kind}_id`];
+      result = { owner: { kind, id: ownerId }, revision: { id: raw.revision.id, number: raw.revision.number }, operation_id: operationId };
+    }
     else if (operation === "query.search") result = { items: raw.matches, next_cursor: raw.next_cursor, result_completeness: raw.bounds.completeness, observed_operation_fence: target.observed_operation_fence };
     else if (operation === "substrate.get_receipt") result = { observation: raw.status === "settled" ? "settled" : "absent_at_fence", operation_id: parsed.flags.operation_id, receipt: raw.receipt ?? null, observed_operation_fence: raw.operation_fence ?? target.observed_operation_fence };
     else if (operation === "operation.recent") result = raw;

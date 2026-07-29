@@ -109,7 +109,7 @@ export async function organizationalSearch(request) {
       FROM owner_query_fts fts JOIN owner_query_current q ON q.owner_id=fts.owner_id AND q.revision_id=fts.revision_id
       JOIN owner_current owner ON owner.owner_id=fts.owner_id
       JOIN (SELECT owner_id,json_extract(projection_json,'$._mechanical_placement.namespace_id') namespace_id FROM owner_current) placement ON placement.owner_id=fts.owner_id
-      WHERE owner_query_fts MATCH ${sql(fts(terms))} AND ${scopeDefinition.clause} ${tagClause};`);
+      WHERE owner_query_fts MATCH ${sql(fts(terms))} AND json_extract(owner.projection_json,'$.identity_discoverable') IS NOT 0 AND ${scopeDefinition.clause} ${tagClause};`);
     const matches = rows.map((row) => { const text = docText(row); return { ...row, text, score: ranking(text, terms), proximity: proximity(row.namespace_id, scopeDefinition.ranking_origin, parents), snippet: snippet(text, terms) }; })
       .sort((a, b) => b.score - a.score || a.proximity.rank - b.proximity.rank || a.proximity.distance - b.proximity.distance || a.resource_kind.localeCompare(b.resource_kind) || a.resource_id.localeCompare(b.resource_id));
     const offset = cursor?.offset ?? 0;
