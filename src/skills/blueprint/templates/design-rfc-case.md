@@ -62,7 +62,7 @@ These are coupled Blueprint/Route checks, not a stage or separate artifact. Comp
 
 - **Design pruning (after architecture selection):** <unnecessary state, owners, seams, abstractions, contracts, custom machinery, duplicate responsibilities, and prototype scaffolding removed/deferred; existing mechanism retained; or `none — why each remains boundary-required`>
 - **Pruned-design walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
-- **Route simplification (after route definition, before fixed routeable revision):** <redundant movements/prerequisites, duplicate ownership/proof, and prototype scaffolding removed/deferred; non-boundary work deferred; or `none — why each remains outcome-required`>
+- **Route simplification (after route definition, before fixed routeable revision):** <redundant movements, handoffs, convergence points, or prerequisites; duplicate ownership/proof; and prototype scaffolding removed/deferred; non-boundary work deferred; or `none — why each remains outcome-required`, including every retained handoff/convergence point>
 - **Simplified-route walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
 
 ## Reconciliation log
