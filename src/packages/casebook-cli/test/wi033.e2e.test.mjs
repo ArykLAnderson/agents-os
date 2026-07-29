@@ -254,6 +254,32 @@ test("extracted package executes Candidate-4 Case, Frame, search cursor, receipt
   assert.deepEqual(await readFile(store), beforeRefusal);
 });
 
+test("commit authoring shortcuts are refused before provider dispatch", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-commit-authoring-safety-");
+  await runFile("git", ["init", "--quiet"], { cwd: workspace });
+
+  const directCase = await invoke(bin, workspace, ["commit", "case", "--case-id", id("case", 601), "--expected-revision", "1", "--commit-basis", "direct", "--title", "Case", "--summary", "Summary", "--scope", "Scope", "--body", "Body", "--acting-role", "author"]);
+  assert.equal(directCase.code, 1, directCase.stdout);
+  assert.equal(directCase.json.failure.code, "commit_aggregate_required");
+  assert.equal(directCase.json.failure.evidence.operation_id, null);
+
+  const draftCase = await invoke(bin, workspace, ["commit", "case", "--case-id", id("case", 602), "--expected-revision", "1", "--commit-basis", "draft", "--draft"], {}, JSON.stringify({ title: "Case", summary: "Summary", scope: "Scope", body: "Body", acting_role: "author" }));
+  assert.equal(draftCase.code, 1, draftCase.stdout);
+  assert.equal(draftCase.json.failure.code, "commit_aggregate_required");
+  assert.equal(draftCase.json.failure.evidence.operation_id, null);
+
+  const directFrame = await invoke(bin, workspace, ["commit", "frame", "--frame-id", id("frame", 603), "--expected-revision", "1", "--commit-basis", "direct", "--title", "Frame", "--outcome", "Outcome", "--discovery-title", "Question", "--discovery-body", "Body"]);
+  assert.equal(directFrame.code, 1, directFrame.stdout);
+  assert.equal(directFrame.json.failure.code, "commit_aggregate_required");
+  assert.equal(directFrame.json.failure.evidence.operation_id, null);
+
+  const draftFrame = await invoke(bin, workspace, ["commit", "frame", "--frame-id", id("frame", 604), "--expected-revision", "1", "--commit-basis", "draft", "--draft"], {}, JSON.stringify({ title: "Frame", outcome: "Outcome", discovery: [{ title: "Question", body: "Body" }] }));
+  assert.equal(draftFrame.code, 1, draftFrame.stdout);
+  assert.equal(draftFrame.json.failure.code, "commit_aggregate_required");
+  assert.equal(draftFrame.json.failure.evidence.operation_id, null);
+});
+
 test("extracted package preserves recovery identities for every possible-post-dispatch bridge fault", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace } = await initializedWorkspace(t, "wi033-e2e-fault-");

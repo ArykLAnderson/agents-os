@@ -12,13 +12,13 @@ The aggregate carries:
 - complete `disposition_boundaries` and `case_dispositions` arrays, including empty arrays for a new Frame with no accounted boundary; and
 - authorization provenance that records applicable scope and duration without converting authorization into an instruction to act.
 
-Statuses are descriptive: `active`, `completed`, `abandoned`, or `superseded`. They do not route work. A lifecycle change is a `casebook commit frame` of the complete aggregate after an exact CLI read; never patch a storage file or omit unchanged families.
+Statuses are descriptive: `active`, `completed`, `abandoned`, `superseded`, or whole-Frame terminal `tombstoned`. They do not route work. A lifecycle change is a `casebook commit frame` of the complete aggregate after an exact CLI read; never patch a storage file or omit unchanged families. Whole-Frame deletion is revision-checked logical tombstoning, not physical purge; current reads/search hide the Frame while history and receipts remain.
 
 ## Discovery state
 
 Every precise attention item has a stable `discovery:<uuid>` identity and Frame-local display label such as `AT-014`. Active categories are `fog`, `frontier`, `blocked`, `contested`, `deferred`, and `out_of_scope`. Each active item states one unresolved question, `human_authority` as `not_required`, `required`, or `unclear`, and material dependencies or blockers. Do not persist assignment, routing, priority, confidence, timestamps, operation results, history, or recommended next actions.
 
-Fog may remain unnumbered in working conversation until precise. Settled or tombstoned items retain stable identity and provenance in the authoritative aggregate; ordinary current-work views may omit them, while complete resume reads select all disposition accounting and all Discovery needed for semantic reconciliation. Reopening preserves the settled version reference and explicit reopening basis.
+Fog may remain unnumbered in working conversation until precise. Settled or individually tombstoned items retain stable identity and provenance in the authoritative aggregate; ordinary current-work views may omit them, while complete resume reads select all disposition accounting and all Discovery needed for semantic reconciliation. Tombstoning a knowledge/Discovery item does not delete its whole owner. Reopening preserves the settled version reference and explicit reopening basis.
 
 Keep resolved items in active Discovery only while they explain an active dependency. Their reusable meaning belongs in Cases; rich evidence remains in retained Artifacts or sources.
 
