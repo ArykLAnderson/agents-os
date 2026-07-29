@@ -45,6 +45,7 @@ For any irreversible external mutation exposed to interruption or restart, inclu
 - **Prototype/terrain result:** <claim supported/rejected/inconclusive, limits, consequence>
 - **Material alternatives (including defer/do-less):** <rejected/selected rationale>
 - **Human decision required:** <recommended choice, material alternative(s), trade-off, exact acceptance consequence; or `none — forced by accepted design/reversible realization`>
+- **Design pruning and route simplification:** <Case record: unnecessary state/owners/seams/abstractions/contracts/custom machinery/duplicate responsibility/prototype scaffolding and redundant movements/prerequisites removed or deferred; existing mechanisms retained; or why each remaining item is boundary/outcome-required; required consumer/failure/fresh-worker rerun results>
 - **Intentional simplifications or borrowed mechanism:** <observed failure it addresses; mechanism it replaces/simplifies; deletion trigger>
 
 ## 4. Consequential walkthroughs

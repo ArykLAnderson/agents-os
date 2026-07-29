@@ -56,6 +56,15 @@ Only consequential unresolved authority choices. Use `none` when accepted author
 - **Blocked/provisional claim IDs:**
 - **Architecture a fresh worker would still have to invent:** none | <exact gap>
 
+## Simplification record
+
+These are coupled Blueprint/Route checks, not a stage or separate artifact. Complete both in this Case before fixing a routeable revision.
+
+- **Design pruning (after architecture selection):** <unnecessary state, owners, seams, abstractions, contracts, custom machinery, duplicate responsibilities, and prototype scaffolding removed/deferred; existing mechanism retained; or `none — why each remains boundary-required`>
+- **Pruned-design walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
+- **Route simplification (after route definition, before fixed routeable revision):** <redundant movements/prerequisites, duplicate ownership/proof, and prototype scaffolding removed/deferred; non-boundary work deferred; or `none — why each remains outcome-required`>
+- **Simplified-route walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
+
 ## Reconciliation log
 
 Record only decision-changing reconciliation: finding/evidence locator, affected claim IDs, disposition, semantic change or `none`, authority when required, and rematerialization consequence.
@@ -68,5 +77,6 @@ Materialize the Production Design RFC only when:
 - evidence-dependent claims are supported within explicit limits;
 - owners, consumers, contracts, state/authority, failures, and route are closed;
 - a fresh-worker walkthrough identifies no architecture invention;
-- applicable advisory findings are reconciled; and
+- applicable advisory findings are reconciled;
+- the Design pruning and Route simplification record is complete, with their required walkthrough reruns showing no unresolved architecture invention; and
 - the exact Case revision is fixed as document provenance.
