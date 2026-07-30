@@ -2,304 +2,1230 @@
   "manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.11.0-candidate-6-final-review"
+    "version": "0.19.0-successor"
+  },
+  "runtime": {
+    "contract": "casebook-sqlite-wasm-runtime@1",
+    "ownership": "package-vendored-runtime-assets",
+    "node_engine": ">=22",
+    "sqlite": {
+      "package": "@sqlite.org/sqlite-wasm",
+      "package_version": "3.53.0-build1",
+      "module": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/node.mjs",
+      "wasm": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/sqlite3.wasm",
+      "license_notice": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt",
+      "assets": {
+        "node_mjs": "d74e4b74920d1499b0bf349ced70372c55ac9a9ea72af718e5f6b23b0c1b29c4",
+        "sqlite3_wasm": "02d7e48164395fa68f81c6ec33e9da5461be397dc57602ac0cd89b4bbba1d312",
+        "license_notice": "9f5f68675d98acdfaa5f21d26e02392834c799302fc73f3ebcaff82419a05efb"
+      },
+      "version": "3.53.0",
+      "source_id": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b",
+      "features": {
+        "json": true,
+        "strict": true,
+        "returning": true,
+        "fts5": true,
+        "foreign_keys": true,
+        "wal": true
+      },
+      "persistence": "bounded-package-lock-atomic-fsync-replace"
+    }
   },
   "protocol": {
     "id": "casebook-persistence-json",
-    "version": 1,
+    "version": 2,
     "compatible_versions": [
-      1
+      2
     ]
   },
   "schema": {
-    "id": "casebook-persistence-sqlite",
-    "version": 3,
+    "id": "sqlite_casebook",
+    "version": 2,
     "compatible_versions": [
-      3
+      2
     ],
-    "store_initialization": "explicit_human_authorized"
+    "store_initialization": "bootstrap-authorization@1"
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "8af70e146676e53b964e9c6a5401fe99cbc2162e8363cc1abb14dcf9af9f3696"
+    "sha256": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
   },
   "entrypoints": [
     {
       "id": "sqlite-connector",
       "interpreter": "node",
       "path": "variants/sqlite/bin/casebook-persistence.mjs"
-    },
-    {
-      "id": "markdown-connector",
-      "interpreter": "node",
-      "path": "variants/markdown/bin/casebook-persistence.mjs"
     }
   ],
   "supported_operations": [
     "diagnose",
     "initialize_store",
-    "migrate_store",
-    "snapshot_store",
-    "restore_store",
-    "get_store_operation_receipt",
-    "module.diagnose",
-    "module.install",
-    "module.retire",
+    "profile.create",
+    "profile.revise",
+    "profile.activate",
+    "profile.retire",
+    "profile.read",
+    "profile.history",
     "namespace.create",
-    "namespace.rename",
+    "namespace.revise",
     "namespace.retire",
-    "owner.rehome",
-    "identity.discover",
+    "namespace.read",
+    "namespace.history",
+    "namespace.resolve",
+    "project_default.create",
+    "project_default.revise",
+    "project_default.retire",
+    "project_default.read",
+    "chat.establish",
+    "chat.resume",
+    "chat.fork",
+    "chat.rebind",
+    "chat.read",
+    "chat.history",
+    "substrate.commit_revision",
+    "substrate.get_receipt",
+    "substrate.read_owner_current",
+    "substrate.read_owner_revision",
+    "substrate.resolve_family_binding",
+    "substrate.resolve_current_claim",
+    "integrity.observe",
+    "projection.rebuild",
     "case.create",
     "case.commit_revision",
+    "case.tombstone.commit",
     "case.read",
     "case.resolve",
-    "case.search",
-    "case.traverse",
+    "case.update",
+    "case.tombstone",
+    "case.knowledge.read",
+    "case.knowledge.create",
+    "case.knowledge.update",
+    "case.knowledge.tombstone",
+    "case.facet.read",
+    "case.facet.create",
+    "case.facet.update",
+    "case.facet.tombstone",
+    "case.source.read",
+    "case.source.create",
+    "case.source.update",
+    "case.source.tombstone",
+    "case.evidence.read",
+    "case.evidence.create",
+    "case.evidence.update",
+    "case.evidence.tombstone",
+    "case.relationship.read",
+    "case.relationship.create",
+    "case.relationship.update",
+    "case.relationship.tombstone",
     "frame.create",
     "frame.commit_revision",
-    "frame.resolve",
     "frame.read",
-    "frame.list",
-    "common.resolve",
-    "common.list",
-    "common.search",
-    "interchange.export",
-    "interchange.parse"
+    "frame.profile.read",
+    "frame.profile.update",
+    "frame.discovery.create",
+    "frame.discovery.read",
+    "frame.discovery.update",
+    "frame.discovery.settle",
+    "frame.discovery.tombstone",
+    "frame.discovery.reopen",
+    "frame.disposition_boundary.read",
+    "frame.disposition_boundary.create",
+    "frame.disposition_boundary.update",
+    "frame.disposition_boundary.close",
+    "frame.case_disposition.read",
+    "frame.case_disposition.create",
+    "frame.case_disposition.update",
+    "frame.case_disposition.classify",
+    "frame.case_disposition.settle",
+    "query.search",
+    "query.resolve",
+    "query.hydrate",
+    "graph.neighbors",
+    "graph.traverse",
+    "graph.path",
+    "events.page",
+    "query.snapshot_reconcile.begin",
+    "query.snapshot_reconcile.page",
+    "query.snapshot_reconcile.finish",
+    "query.snapshot_reconcile.checkpoint"
   ],
+  "ordinary_cli_capabilities": [
+    "sqlite_casebook@2",
+    "casebook-resolved-target@1",
+    "casebook-persistence-json@2",
+    "casebook-cli-result@2"
+  ],
+  "ordinary_cli_capability_contracts": {
+    "sqlite_casebook@2": {
+      "authority": "selected SQLite authority only"
+    },
+    "casebook-resolved-target@1": {
+      "authority": "per-invocation resolved target admission only",
+      "operations": [
+        "target.describe"
+      ]
+    },
+    "casebook-persistence-json@2": {
+      "authority": "verified connector transport only",
+      "operations": "supported_operations"
+    },
+    "casebook-cli-result@2": {
+      "authority": "closed terminal result only",
+      "operations": "supported_operations"
+    }
+  },
   "implemented_slice_constraints": {
-    "store_receipt_visible_operation_kinds": [
-      "initialize_store",
-      "migration",
-      "snapshot",
-      "restore",
-      "projection_rebuild",
-      "module_install",
-      "module_retire"
+    "successor_boundary": "fresh-store-only semantic Namespace authority; legacy UUID-backed stores are refused for ordinary access and inspected only by the disposable migration proof; no predecessor probe, migration, cutover, View, semantic callback, or standalone CLI; provider-local SQLite organizational lexical query/resolve/hydrate is the only supported global search boundary, and immutable owner placement is provided through Case and Frame provider-local adapters",
+    "bootstrap": "trusted-local retained-parent identity validation, no-follow/exclusive creation, hard-link no-replace grant/store publication, and exact same-operation atomic phase-record replacement",
+    "bootstrap_threat_model": "does not protect against a malicious concurrent same-UID actor able to replace trusted parent pathnames",
+    "substrate": "owner-neutral immutable versions/revisions/selections with CAS, idempotency, Profile-fenced exact current/revision/family binding and projected-claim reads, receipt, event, outbox, atomic Context placement guard, integrity, and rebuild",
+    "profile_admission": "one admission-slot selection; complete Namespace-free private Profile lifecycle; mandatory provider-derived profile-selection-fence@1; closed owner adapter/lifecycle/guard registration",
+    "context": "durable host-neutral Namespace hierarchy whose immutable IDs are namespace:<lowercase-kebab segments separated by /> with structural namespace:root, canonical name/alias path resolution, Project default, Chat binding/history, and immutable correlation claims with account_ref exactly redacted-account-ref:v1:sha256:<64 lowercase hex>; no Case/Frame root placement, implicit workspace fallback, host packaging, cwd fallback, Chat deletion, raw account/credential retention, or correlation release"
+  },
+  "operation_contracts": {
+    "manifest": "closed-provider-derived-operation-contract@1",
+    "profile_fence": "profile-selection-fence@1",
+    "optional_guards": [
+      "owner-policy-fence@1"
     ],
-    "optional_module_lifecycle": "versioned descriptor and exact digest-bound schema assets with non-mutating absent/healthy/incompatible/integrity-unsafe diagnosis, explicit atomic install, immutable idempotent receipts, and data-preserving logical retirement",
-    "migration_execution": "verified snapshot-first hard-cutover schema 1 to 3 migration on explicitly authorized disposable stores, or an explicitly human-confirmed live store",
-    "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store, or an explicitly human-confirmed live store, with durable receipt and explicit custody",
-    "restore_execution": "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
-    "local_access": "ordinary Case, Frame, common, and identity access is workspace-wide by default with optional namespace_ids query narrowing; no view context or policy admission is used",
-    "retired_operations": "export/disclosure, observation/checkpoint, impact, integrity, projection, and purge operations fail closed and are not admitted capabilities",
-    "typed_read_target": "stable_owner_id without visibility gating",
-    "case_revision_assembly": "complete canonical Case create and commit_revision",
-    "case_discovery": "exact ID or cross-namespace alias resolve, cohesive read, bounded scan lexical search and explicit-link traversal",
-    "frame_revision_assembly": "complete canonical Frame/Discovery/disposition-boundary/Case-disposition create and commit_revision",
-    "frame_statuses": [
-      "active",
-      "completed",
-      "abandoned",
-      "superseded"
-    ],
-    "discovery_lifecycles": [
-      "active",
-      "settled",
-      "tombstoned"
-    ],
-    "discovery_dependencies": "typed stable references",
-    "frame_query": "direct current/read/list queries with optional namespace_ids filtering and selector-bound fenced paging",
-    "common_subset": "typed resolve/list/bounded lexical search over case/frame normalized records",
-    "markdown_profile": "exclusive Markdown installation with full typed reduced common operations, digest-guarded atomic Case replacement, manifest-selected coherent Frame/Discovery/disposition generations, deterministic interchange, and explicit omitted SQLite guarantees",
-    "exact_identity": "UUID-based Case frontmatter plus authority-marker-bound digest-verified manifests; typed stable Frame, Discovery, disposition-boundary, Case-disposition, and base-version IDs with exact digest-verified manifest bindings",
-    "markdown_local_access": "v2 workspace marker without view; ordinary selected-workspace Case, Frame, and common operations do not require request context"
+    "operations": [
+      {
+        "operation": "profile.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "profile.manage",
+        "required_owner_kinds": [
+          "profile"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "profile.revise",
+        "capability_class": "human_operational",
+        "profile_purpose": "profile.manage",
+        "required_owner_kinds": [
+          "profile"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "profile.activate",
+        "capability_class": "human_operational",
+        "profile_purpose": "profile.manage",
+        "required_owner_kinds": [
+          "profile-selection"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "profile.retire",
+        "capability_class": "human_operational",
+        "profile_purpose": "profile.manage",
+        "required_owner_kinds": [
+          "profile",
+          "profile-selection"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "profile.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "profile.read",
+        "required_owner_kinds": [
+          "profile"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "profile.history",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "profile.read",
+        "required_owner_kinds": [
+          "profile"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.revise",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.retire",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.history",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "project_default.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "project-default"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "project_default.revise",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "project-default"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "project_default.retire",
+        "capability_class": "human_operational",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "project-default"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "project_default.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "project-default"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.establish",
+        "capability_class": "host_context",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.resume",
+        "capability_class": "host_context",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.fork",
+        "capability_class": "host_context",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.rebind",
+        "capability_class": "host_context",
+        "profile_purpose": "context.manage",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "chat.history",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "chat"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "substrate.commit_revision",
+        "capability_class": "internal",
+        "profile_purpose": "substrate.commit_revision",
+        "required_owner_kinds": [],
+        "optional_guards": [
+          "owner-policy-fence@1"
+        ]
+      },
+      {
+        "operation": "substrate.get_receipt",
+        "capability_class": "internal",
+        "profile_purpose": "receipt.read",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "substrate.read_owner_current",
+        "capability_class": "internal",
+        "profile_purpose": "substrate.read",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "substrate.read_owner_revision",
+        "capability_class": "internal",
+        "profile_purpose": "substrate.read",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "integrity.observe",
+        "capability_class": "internal",
+        "profile_purpose": "integrity.observe",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "projection.rebuild",
+        "capability_class": "internal",
+        "profile_purpose": "projection.rebuild",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.resolve",
+        "capability_class": "internal",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "substrate.resolve_family_binding",
+        "capability_class": "internal",
+        "profile_purpose": "substrate.read",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "substrate.resolve_current_claim",
+        "capability_class": "internal",
+        "profile_purpose": "substrate.read",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.commit_revision",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.tombstone.commit",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.resolve",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.knowledge.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.knowledge.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.knowledge.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.knowledge.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.facet.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.facet.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.facet.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.facet.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.source.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.source.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.source.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.source.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.evidence.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.evidence.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.evidence.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.evidence.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.relationship.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "case.read",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.relationship.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.relationship.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "case.relationship.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "case.manage",
+        "required_owner_kinds": [
+          "case"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.commit_revision",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "frame.read",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.profile.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "frame.read",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.profile.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "frame.read",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.settle",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.tombstone",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.discovery.reopen",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.disposition_boundary.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "frame.read",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.disposition_boundary.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.disposition_boundary.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.disposition_boundary.close",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.case_disposition.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "frame.read",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.case_disposition.create",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.case_disposition.update",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.case_disposition.classify",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "frame.case_disposition.settle",
+        "capability_class": "human_operational",
+        "profile_purpose": "frame.manage",
+        "required_owner_kinds": [
+          "frame"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "query.search",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "query.search",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "query.resolve",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "query.search",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      },
+      {
+        "operation": "query.hydrate",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "query.search",
+        "required_owner_kinds": [],
+        "optional_guards": []
+      }
+    ]
   },
   "unsupported_until_later_work_items": [
-    "case purge publication",
-    "case closed-list and broader include/filter/lifecycle-query breadth",
-    "frame broader filter/lifecycle-query/reconciliation-commit-writeback",
-    "global-search",
-    "general-purpose migration beyond an explicitly human-confirmed live store",
-    "non-disposable snapshot beyond an explicitly human-confirmed live store",
-    "non-disposable restore"
+    "aggregate semantics, computed edges, semantic and hybrid query",
+    "standalone CLI bridge",
+    "Markdown v2",
+    "migration and activation"
   ],
   "assets": [
-    {
-      "id": "skill-guidance",
-      "path": "SKILL.md",
-      "kind": "model_guidance",
-      "sha256": "d7d093c36df3b565daef368292c86f50b23172293b393e1aecb29d45b9d734cf"
-    },
-    {
-      "id": "human-install-guidance",
-      "path": "INSTALL.md",
-      "kind": "human_documentation",
-      "sha256": "a33856e6065033cf45fafb72e80c979aee304eecd5ac0eb6df652a9f54f583ee"
-    },
     {
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "23c152ff338ea635b0bdf220ea603a6a4a817cfa002f1571be1891acd0239a87"
+      "sha256": "1cb803c02a07677707fde73df97dd4d018e66e4d62058c8a3ecb8d64f99a321d"
     },
     {
       "id": "shared-configuration",
       "path": "shared/config.mjs",
       "kind": "module",
-      "sha256": "ea9300d1b511fe57ab1215872d1ef967521e817b86c009be94c7f6502315f143"
-    },
-    {
-      "id": "shared-locator-safety",
-      "path": "shared/locator.mjs",
-      "kind": "module",
-      "sha256": "8c49ae3014311c387beffa2ab57ec0095a0ab9b3e5be47c8e70c6f8a5ad5573a"
+      "sha256": "a1b8d3fc20e7407ad90c85fe567966ad39440ba53501daa1ef575076d7516bb5"
     },
     {
       "id": "shared-manifest",
       "path": "shared/manifest.mjs",
       "kind": "module",
-      "sha256": "2e743ac84c44ecaf01d4579dd6217b545e9f73e493c3509bc37685a08ee80c86"
-    },
-    {
-      "id": "l01-interchange",
-      "path": "shared/l01-interchange.mjs",
-      "kind": "module",
-      "sha256": "3629f4382fdd38b8b56f8b342328d137eeb92aa907d9557ffb57167350c9fdb1"
-    },
-    {
-      "id": "markdown-variant",
-      "path": "variants/markdown/variant.json",
-      "kind": "variant_manifest",
-      "sha256": "800096fdc9ed3badea80be499eea264be3990ad12b82f25cbb695c0c5be08658"
-    },
-    {
-      "id": "markdown-entrypoint",
-      "path": "variants/markdown/bin/casebook-persistence.mjs",
-      "kind": "entrypoint",
-      "sha256": "7047142c7e590e65571fe7b2d2dd06c705c58b4542b857c000eb30ce91469c4e"
-    },
-    {
-      "id": "markdown-workspace",
-      "path": "variants/markdown/lib/workspace.mjs",
-      "kind": "module",
-      "sha256": "2595b634b696c5e805949cb7f6c35267f9f5a9e237f1639255f229fc9adf4d80"
-    },
-    {
-      "id": "markdown-interchange",
-      "path": "variants/markdown/lib/interchange.mjs",
-      "kind": "module",
-      "sha256": "5f009309c2d9b9d2bdfc79bbdc87f7e0d697e98bdc61bfad40a8fc4e98559519"
+      "sha256": "21c469c7df83f0b9cc57d3f21ca4c2d560251098299fae4fb5f44b9489666d7e"
     },
     {
       "id": "sqlite-entrypoint",
       "path": "variants/sqlite/bin/casebook-persistence.mjs",
       "kind": "entrypoint",
-      "sha256": "d9383a5622713df294251549cd3fa2743cbcaa2abc3ab6bb13622ff14dc8f877"
+      "sha256": "7f4113d21d0ff6f28df0edaab6ffbfbdf15c1a581858e7b6f178d5d909224198"
     },
     {
       "id": "sqlite-diagnostics",
       "path": "variants/sqlite/lib/substrate/diagnostics.mjs",
       "kind": "module",
-      "sha256": "3a2541bdbaa3a777d2f5624c4b423f97268730aae1298513ee3070df09b5e093"
+      "sha256": "d4763acbbb00e2d2435faae2959cdb0ade71a1b7b30c51c76e601a3af430c021"
     },
     {
-      "id": "sqlite-substrate",
-      "path": "variants/sqlite/lib/substrate/index.mjs",
+      "id": "sqlite-embedded-engine",
+      "path": "variants/sqlite/lib/substrate/embedded-sqlite.mjs",
       "kind": "module",
-      "sha256": "90adbfeb3ddc38016508766ad9f4ea3b598eaf672b9114abc017124141980599"
+      "sha256": "762b398591879107d9bcd621d211622dcd205f1f64285e5133ef8373f3a40b78"
     },
     {
-      "id": "sqlite-identity-discovery",
-      "path": "variants/sqlite/lib/substrate/discovery.mjs",
+      "id": "sqlite-bootstrap",
+      "path": "variants/sqlite/lib/substrate/bootstrap.mjs",
       "kind": "module",
-      "sha256": "6f4ab58e6ff9e35474f0d3354e32bc85028236fe2a2da0bbb905d8f19259aca6"
+      "sha256": "2442e4675a5c065bdfef8a977d2f77ddb805aa95464e1995e9627835b03f6f99"
     },
     {
-      "id": "sqlite-observation",
-      "path": "variants/sqlite/lib/substrate/observation.mjs",
+      "id": "sqlite-cli-admission",
+      "path": "variants/sqlite/lib/cli/index.mjs",
       "kind": "module",
-      "sha256": "877394fbdb9e4fa6363bb1d9424c84e0e5ce278bcc7f1cac97a5a51091cf883c"
+      "sha256": "844446a5709cb8ea6eb5baca16e28bc57cdd3db1fbad18a0a90fbef8a417e63d"
     },
     {
-      "id": "sqlite-impact-projection",
-      "path": "variants/sqlite/lib/substrate/impact.mjs",
+      "id": "sqlite-profile-service",
+      "path": "variants/sqlite/lib/profile/index.mjs",
       "kind": "module",
-      "sha256": "b11b1f43a354061bcb82407718313a12d7327a7b1c8217d9035e00e01b78a860"
+      "sha256": "41215ba16196ec1fa8047500037aadd6d6e873e874682873bdb36325081dd8fe"
     },
     {
-      "id": "sqlite-integrity-observation",
-      "path": "variants/sqlite/lib/substrate/integrity.mjs",
+      "id": "sqlite-context-service",
+      "path": "variants/sqlite/lib/context/index.mjs",
       "kind": "module",
-      "sha256": "be54f975b296ac9a01c0175fd2371fa9a891cf797fec20a959a4a9eaa25020df"
+      "sha256": "16989fecef6ddb390ea4e81fa73926148ea07bfd10f115dd9157d9115f0af968"
     },
     {
-      "id": "sqlite-projection-rebuild",
-      "path": "variants/sqlite/lib/substrate/projection.mjs",
-      "kind": "module",
-      "sha256": "dd82500127ee9b80b325142a5d9a91c94fd9b3019f2d1ccc471cbc736f81ed5d"
-    },
-    {
-      "id": "sqlite-mechanical-envelope",
-      "path": "variants/sqlite/lib/substrate/mechanical.mjs",
-      "kind": "module",
-      "sha256": "44acb921f76177d5c8147e9e73629cd48fee342da7a55d4f2ab897633c619682"
-    },
-    {
-      "id": "case-facade",
+      "id": "sqlite-case-service",
       "path": "variants/sqlite/lib/case/index.mjs",
       "kind": "module",
-      "sha256": "3f9bed53e1e71d2de665484d77a885794a19c60c5bfde4a0bcd98c6fd6c6e152"
+      "sha256": "f9ce88c02950a5f349442c67195a58793d45a07a52f1524cd5297d3d6603086d"
     },
     {
-      "id": "frame-facade",
-      "path": "variants/sqlite/lib/frame/index.mjs",
+      "id": "sqlite-case-successor-adapter",
+      "path": "variants/sqlite/lib/case/successor.mjs",
       "kind": "module",
-      "sha256": "1c9536dad3c164639c91041c3ce4a98c4f01209a03ec65e681ce4c1283db5a73"
+      "sha256": "f6c6e82571a1728547bcc9afd11d9af5b366826187235aa2c901d4257011cf2e"
     },
     {
-      "id": "sqlite-common-subset",
-      "path": "variants/sqlite/lib/common/index.mjs",
+      "id": "sqlite-frame-successor-adapter",
+      "path": "variants/sqlite/lib/frame/successor.mjs",
       "kind": "module",
-      "sha256": "9b8ef16747e44d5cfc22d36cc9248263b0d0d49f14cdca6cfad1207e1755a133"
+      "sha256": "f8066e9988de7879c1b800b823a22f4b16479f3ab2fed40f3f74d28db198f3f1"
     },
     {
-      "id": "logical-export-preflight",
-      "path": "variants/sqlite/lib/export/index.mjs",
+      "id": "sqlite-placement-generation",
+      "path": "variants/sqlite/lib/placement/index.mjs",
       "kind": "module",
-      "sha256": "32339fb15b8750fec410b2e7728160244e12aec6ee48cc0006e775558486f7fe"
+      "sha256": "fda5ab4b1f995868c4ef8a673d9d6e2cccd9093bfecd47a2141064bd2978e008"
     },
     {
-      "id": "exceptional-operations",
-      "path": "variants/sqlite/lib/operations/index.mjs",
+      "id": "sqlite-organizational-query",
+      "path": "variants/sqlite/lib/query/search.mjs",
       "kind": "module",
-      "sha256": "f508433b70e9ce2694f5cf0a34cd54778aa6b4b81d519648442743c530c1a3e0"
+      "sha256": "b7db6003de10d07b6d2aa0a8d9ee30434b4d9d77fcc9fadb7cdc5d6c78f8b19a"
     },
     {
-      "id": "optional-module-operations",
-      "path": "variants/sqlite/lib/operations/modules.mjs",
+      "id": "sqlite-graph-query",
+      "path": "variants/sqlite/lib/query/graph.mjs",
       "kind": "module",
-      "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
+      "sha256": "fe6ce48198bde49ab13788c23f279923664d3f743579c9f416701250dc2bf2c9"
     },
     {
-      "id": "sqlite-schema",
-      "path": "variants/sqlite/sql/schema-v3.sql",
+      "id": "sqlite-snapshot-reconcile",
+      "path": "variants/sqlite/lib/query/snapshot-reconcile.mjs",
+      "kind": "module",
+      "sha256": "aae36e22f99f7f9ad7185fbd4bd3f2f8768116ea93594c46531053643d47748e"
+    },
+    {
+      "id": "sqlite-query-cursor",
+      "path": "variants/sqlite/lib/query/cursor.mjs",
+      "kind": "module",
+      "sha256": "9e947675215f241a747c461c09010bf38c2118c97fd5a17aa57cfe011602ea92"
+    },
+    {
+      "id": "sqlite-query-handoff",
+      "path": "variants/sqlite/lib/query/handoff.mjs",
+      "kind": "module",
+      "sha256": "7ab14ff2ba2ca81660d15196e87f05641ea10948018fe036343b5fb574a3e862"
+    },
+    {
+      "id": "sqlite-admission-guards",
+      "path": "variants/sqlite/lib/resource/admission-guards.mjs",
+      "kind": "module",
+      "sha256": "017b4188ce98361b7a73306b026e4e186cee95611dd6641a6e94b37fccdd32e9"
+    },
+    {
+      "id": "sqlite-frame-resource-complete",
+      "path": "variants/sqlite/lib/frame/resources/complete.mjs",
+      "kind": "module",
+      "sha256": "d6b69432db4b045434a93cda8259355db5394c16efe635d04e6fe93af2140f40"
+    },
+    {
+      "id": "sqlite-exact-normalization",
+      "path": "variants/sqlite/lib/resource/normalization.mjs",
+      "kind": "module",
+      "sha256": "b01739f5d449503c6bbfb0bb8d9f37dba5d9cf0cfeae0bf2a79848ebc43267f7"
+    },
+    {
+      "id": "sqlite-owner-neutral-substrate",
+      "path": "variants/sqlite/lib/substrate/mechanical-successor.mjs",
+      "kind": "module",
+      "sha256": "38da2bc59fad237212405933a4902ebee6c610cbd63655ae14e16b499b0dc560"
+    },
+    {
+      "id": "sqlite-successor-schema",
+      "path": "variants/sqlite/sql/schema-successor.sql",
       "kind": "sql",
-      "sha256": "c3df3b4b20537c30900e474601ae9623d15aaac3565420542418acf72f523200"
-    },
-    {
-      "id": "sqlite-legacy-schema-v1",
-      "path": "variants/sqlite/sql/schema-v1.sql",
-      "kind": "sql",
-      "sha256": "c718e43f576de0235df5ea23f023bef5e904af1c14844bfaa74dd16f4fece42d"
-    },
-    {
-      "id": "sqlite-migration-v3",
-      "path": "variants/sqlite/migrations/0003-namespace-foundation.sql",
-      "kind": "sql",
-      "sha256": "b1cdb2c367e968ab7318a054e44f0c11ffdcc16367fd5fe98082a6902973c4b2"
-    },
-    {
-      "id": "sqlite-migrations",
-      "path": "variants/sqlite/migrations/manifest.json",
-      "kind": "migration_manifest",
-      "sha256": "4239edd8128c2ba1ebb98b94703e649e70489959a57b8a2b29d1d8b6a423f051"
+      "sha256": "8323cf56674dedee7e7d10dab0605097fd19425db4578342fe6b9c02f26bb1bb"
     },
     {
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "3b0afa716318c00a2b6077d570eeaf9fe1741049484f92b72d31e104f2ec87a0"
+      "sha256": "e6a785a5c4972d4530dbd13c6df6f7ba169d01d017392ea48dd8a3fab8b35716"
+    },
+    {
+      "id": "sqlite-wasm-node-module",
+      "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/node.mjs",
+      "kind": "vendored_runtime",
+      "sha256": "d74e4b74920d1499b0bf349ced70372c55ac9a9ea72af718e5f6b23b0c1b29c4"
+    },
+    {
+      "id": "sqlite-wasm-binary",
+      "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/sqlite3.wasm",
+      "kind": "vendored_runtime",
+      "sha256": "02d7e48164395fa68f81c6ec33e9da5461be397dc57602ac0cd89b4bbba1d312"
+    },
+    {
+      "id": "sqlite-wasm-license-notice",
+      "path": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt",
+      "kind": "license_notice",
+      "sha256": "9f5f68675d98acdfaa5f21d26e02392834c799302fc73f3ebcaff82419a05efb"
+    },
+    {
+      "id": "asset-28",
+      "path": "shared/l01-interchange.mjs",
+      "kind": "module",
+      "sha256": "3629f4382fdd38b8b56f8b342328d137eeb92aa907d9557ffb57167350c9fdb1"
+    },
+    {
+      "id": "asset-29",
+      "path": "shared/locator.mjs",
+      "kind": "module",
+      "sha256": "8c49ae3014311c387beffa2ab57ec0095a0ab9b3e5be47c8e70c6f8a5ad5573a"
+    },
+    {
+      "id": "asset-30",
+      "path": "variants/sqlite/lib/case/resources/complete.mjs",
+      "kind": "module",
+      "sha256": "cbf6e440a94faa9f1227a4fb51a4c1694f3561a803df64cc4f087ad748740d9e"
+    },
+    {
+      "id": "asset-31",
+      "path": "variants/sqlite/lib/common/index.mjs",
+      "kind": "module",
+      "sha256": "a4c1fec38b65a3299591ecd39c796a92e9da9441d25d067e59dce08db72fecd8"
+    },
+    {
+      "id": "asset-32",
+      "path": "variants/sqlite/lib/context/namespace.mjs",
+      "kind": "module",
+      "sha256": "ccd493f1e6c26ca72283fde19db7cc3322cfeec6ea1fc0fe37c5f2af424dcfd1"
+    },
+    {
+      "id": "asset-33",
+      "path": "variants/sqlite/lib/export/index.mjs",
+      "kind": "module",
+      "sha256": "b7b91c30abe6e9e1762b4ab42749ceb4801bd0ece1d27ecd53330933ed876c3c"
+    },
+    {
+      "id": "asset-34",
+      "path": "variants/sqlite/lib/frame/index.mjs",
+      "kind": "module",
+      "sha256": "6acb7e83f484cdce829ba2d06f269bf7f26cda60fab7145f1cbcf4a5e13a2a2d"
+    },
+    {
+      "id": "asset-35",
+      "path": "variants/sqlite/lib/frame/restricted-legacy-authority-evidence.mjs",
+      "kind": "module",
+      "sha256": "7da431869f70101669d08900a63a24bda0a3d4a29db8afc73da9f6ebba4db144"
+    },
+    {
+      "id": "asset-36",
+      "path": "variants/sqlite/lib/operations/index.mjs",
+      "kind": "module",
+      "sha256": "d747db149342e92ab64aa1fe246d55f09a77eea2c9bbe6fbd123ec145cde5bff"
+    },
+    {
+      "id": "asset-37",
+      "path": "variants/sqlite/lib/operations/modules.mjs",
+      "kind": "module",
+      "sha256": "8012b911589ede9e4b31d11b85c84d06c033da2d30d3850c00e28a4f9b5cd117"
+    },
+    {
+      "id": "asset-38",
+      "path": "variants/sqlite/lib/resource/foundation.mjs",
+      "kind": "module",
+      "sha256": "de91b5203799aa74e1b53b825cf04ab934faf793ead6ef217a4f0748a5257ba2"
+    },
+    {
+      "id": "asset-39",
+      "path": "variants/sqlite/lib/resource/graph-query.mjs",
+      "kind": "module",
+      "sha256": "dd1403e81e02b012ffb0803a97a3e034794fe261ba773715af57a6f1eb9162a4"
+    },
+    {
+      "id": "asset-40",
+      "path": "variants/sqlite/lib/resource/historical-visibility.mjs",
+      "kind": "module",
+      "sha256": "050d27ccac50df7dcb430ac7a86eb2775297cf5114bebdc0b70bcf5dbaaa8b64"
+    },
+    {
+      "id": "asset-41",
+      "path": "variants/sqlite/lib/resource/owner-lifecycle.mjs",
+      "kind": "module",
+      "sha256": "703a02a4eda25cf60b46f7fb5de21eff3ca8ffa0fa6674c2a3a351d367a1fa3f"
+    },
+    {
+      "id": "asset-42",
+      "path": "variants/sqlite/lib/resource/registry.mjs",
+      "kind": "module",
+      "sha256": "40cf5d55c8161983cf4a5fc7e3fd9700cae43b86d350b8750968774706efe00b"
+    },
+    {
+      "id": "asset-43",
+      "path": "variants/sqlite/lib/substrate/cutover.mjs",
+      "kind": "module",
+      "sha256": "af7734c5bd23bf896e7bf54608cdf761c8d804e2caf85147fc6d671f0245bc0d"
+    },
+    {
+      "id": "asset-44",
+      "path": "variants/sqlite/lib/substrate/discovery.mjs",
+      "kind": "module",
+      "sha256": "dc7b0c67b965172700251de4415a36ab59097aa8ba33895de349e5774e25533c"
+    },
+    {
+      "id": "asset-45",
+      "path": "variants/sqlite/lib/substrate/impact.mjs",
+      "kind": "module",
+      "sha256": "73b8ed2b7daad7c133f3b405b5d105cab3321d78edb977cc551bfcc07f38f680"
+    },
+    {
+      "id": "asset-46",
+      "path": "variants/sqlite/lib/substrate/index.mjs",
+      "kind": "module",
+      "sha256": "54adc4fe112b51e658da5dde6c576ff8ce644c644c170313776297c187d0e52c"
+    },
+    {
+      "id": "asset-47",
+      "path": "variants/sqlite/lib/substrate/integrity.mjs",
+      "kind": "module",
+      "sha256": "4345fcb395f1317516f93a9e06c1de34724d4b3901d9b252d0cd040a648e69ef"
+    },
+    {
+      "id": "asset-48",
+      "path": "variants/sqlite/lib/substrate/mechanical.mjs",
+      "kind": "module",
+      "sha256": "9dc46311e76964defa37a226a0b9fcb979990735285e3843fb2de840a66f6e93"
+    },
+    {
+      "id": "asset-49",
+      "path": "variants/sqlite/lib/substrate/observation.mjs",
+      "kind": "module",
+      "sha256": "4f0e2d93c2b0856cbd08d85fe20b71561f6e0298d98b35dff386bed646b5ff85"
+    },
+    {
+      "id": "asset-50",
+      "path": "variants/sqlite/lib/substrate/projection.mjs",
+      "kind": "module",
+      "sha256": "e66a1e28f5ba668047b3ebec9f3589d2d5649ee5c404af392a58ad30024ab356"
     }
+  ],
+  "result": {
+    "id": "casebook-cli-result",
+    "version": 2
+  },
+  "selection": {
+    "id": "casebook-resolved-target",
+    "version": 1,
+    "authority": "per-invocation resolved target admission only"
+  },
+  "ordinary_cli_operations": [
+    "target.describe",
+    "case.create",
+    "case.read",
+    "case.commit_revision",
+    "frame.create",
+    "frame.read",
+    "frame.commit_revision",
+    "query.search",
+    "substrate.get_receipt",
+    "operation.recent"
   ]
 }

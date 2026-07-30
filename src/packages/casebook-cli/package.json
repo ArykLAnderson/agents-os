@@ -1,0 +1,59 @@
+{
+  "name": "@agents-os/casebook-cli",
+  "version": "0.7.0",
+  "description": "Trusted-local standalone Casebook operator CLI",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "casebook": "bin/casebook.mjs"
+  },
+  "files": [
+    "bin",
+    "bridge",
+    "lib",
+    "schemas",
+    "manifest.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check bin/casebook.mjs && node --check lib/wi033.mjs && node --check lib/package-assets.mjs && node --check bridge/persistence-bridge.mjs",
+    "package": "node build/package-assembly.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "casebookCli": {
+    "result_schema": "casebook-cli-result@2",
+    "capabilities": [
+      "sqlite_casebook@2",
+      "casebook-resolved-target@1",
+      "casebook-persistence-json@2",
+      "casebook-cli-result@2"
+    ],
+    "operations": [
+      "target.describe",
+      "case.create",
+      "case.read",
+      "case.commit_revision",
+      "case.delete",
+      "frame.create",
+      "frame.read",
+      "frame.commit_revision",
+      "frame.delete",
+      "query.search",
+      "substrate.get_receipt",
+      "operation.recent"
+    ],
+    "bridge": {
+      "id": "casebook-persistence-bridge@1",
+      "path": "bridge/persistence-bridge.mjs",
+      "sha256": "cddb7f27e9b798fabce14644b5384738f5cfc9f6e3bea6d1c45ce7aa45e32f4a"
+    },
+    "provider": {
+      "id": "casebook-persistence@0.19.0-successor",
+      "manifest": "bridge/runtime/casebook-persistence/manifest.json",
+      "manifest_sha256": "bbe78493d6fd72313d7d5315d0e0b0b2ae92ab78d75fe281619eb70192f8c5a7",
+      "content_digest": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
+    }
+  }
+}

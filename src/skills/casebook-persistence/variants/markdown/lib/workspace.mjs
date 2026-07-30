@@ -67,7 +67,7 @@ const CATEGORY = Object.freeze({
   "Out of Scope": "out_of_scope",
   "Settled": "settled",
 });
-const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "configuration"]);
+const BASE_FIELDS = new Set(["protocol", "operation", "request_version", "store_id", "context", "configuration"]);
 const DIGEST = /^[0-9a-f]{64}$/;
 const CURRENT_CASE_VERSION_EVIDENCE_NAMESPACE = Buffer.from("46532d2ab6af44c296d514c9ed9f64eb", "hex");
 const CASE_FIELDS = new Set(["id", "home_namespace_id", "state", "title", "summary", "scope", "provenance", "aliases", "facets", "entries", "sources", "relationships", "references"]);
@@ -123,15 +123,6 @@ function ownerKinds(value) {
     throw new MarkdownError("markdown.invalid_request", "owner_kinds", "owner_kinds_invalid", "Only unique case/frame owner kinds are supported.");
   }
   return unique.sort();
-}
-
-function namespaceFilter(value) {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 64) {
-    throw new MarkdownError("markdown.invalid_request", "namespace_ids", "bounded_namespace_ids_required", "namespace_ids must contain one to 64 namespace IDs.");
-  }
-  const ids = value.map((item, index) => requiredId(item, `namespace_ids[${index}]`, "namespace"));
-  if (new Set(ids).size !== ids.length) throw new MarkdownError("markdown.invalid_request", "namespace_ids", "namespace_filter_duplicate", "namespace_ids must be unique.");
-  return ids.sort();
 }
 
 function assertChild(root, candidate, label) {
@@ -429,7 +420,7 @@ function parseDispositionSection(map, label) {
 function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const { fields, body } = parseFrontmatter(frameBytes, manifestRecord.frame_path);
   exactKeys(fields, new Set([
-    "type", "schema_version", "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title",
+    "type", "schema_version", "id", "home_namespace_id", "status", "title",
   ]), "frontmatter");
   if (fields.type !== "frame" || fields.schema_version !== 1) {
     throw new MarkdownError("markdown.parse_invalid", manifestRecord.frame_path, "frame_schema_incompatible", "The minimal Frame schema is incompatible.");
@@ -437,11 +428,6 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const id = requiredId(fields.id, "frontmatter.id", "frame");
   if (id !== manifestRecord.id) throw new MarkdownError("markdown.identity_unverified", "frontmatter.id", "manifest_identity_mismatch", "Frame identity differs from the verified manifest.");
   const home = requiredId(fields.home_namespace_id, "frontmatter.home_namespace_id", "namespace");
-  if (!Array.isArray(fields.authority_scope_namespace_ids) || fields.authority_scope_namespace_ids.length < 1 || fields.authority_scope_namespace_ids.length > 64) {
-    throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "bounded_scope_required", "A bounded explicit authority scope is required.");
-  }
-  const authorityScope = fields.authority_scope_namespace_ids.map((namespaceId, index) => requiredId(namespaceId, `frontmatter.authority_scope_namespace_ids[${index}]`, "namespace"));
-  if (new Set(authorityScope).size !== authorityScope.length || !authorityScope.includes(home)) throw new MarkdownError("markdown.parse_invalid", "frontmatter.authority_scope_namespace_ids", "home_namespace_required", "Authority scope must uniquely include the home namespace.");
   if (!FRAME_STATUSES.has(fields.status)) throw new MarkdownError("markdown.parse_invalid", "frontmatter.status", "frame_status_invalid", "The Frame status is unsupported.");
   const frameHeadings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Links", "Authorization", "Discovery", "Case Dispositions"];
   const map = sections(body, manifestRecord.frame_path, frameHeadings, { required: ["Discovery"] });
@@ -451,7 +437,6 @@ function parseFrame(frameBytes, discoveryBytes, manifestRecord) {
   const record = {
     id,
     home_namespace_id: home,
-    authority_scope_namespace_ids: authorityScope,
     status: fields.status,
     discovery: parseDiscovery(discoveryBytes, manifestRecord),
   };
@@ -507,7 +492,7 @@ async function loadAuthorityWorkspace(request) {
   const markerBytes = await readFile(markerPath, "utf8");
   let marker;
   try { marker = JSON.parse(markerBytes); } catch { throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "authority_marker_invalid", "The authority marker is invalid."); }
-  exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "interchange_manifest_sha256"]), "workspace_marker");
+  exactKeys(marker, new Set(["configuration_version", "authority_mode", "profile", "workspace_id", "view", "interchange_manifest_sha256"]), "workspace_marker");
   if (marker.authority_mode == null) {
     throw new MarkdownError("authority_state_missing", `${WORKSPACE_MARKER}.authority_mode`, "installed_authority_required", "The workspace has no explicit installed authority; no fallback is attempted.");
   }
@@ -517,17 +502,31 @@ async function loadAuthorityWorkspace(request) {
   if (marker.authority_mode !== "markdown") {
     throw new MarkdownError("authority_state_ambiguous", `${WORKSPACE_MARKER}.authority_mode`, "one_installed_authority_required", "The workspace authority marker must select exactly one Markdown authority.");
   }
-  if (marker.configuration_version !== 2) {
+  if (marker.configuration_version !== 1) {
     throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "workspace_profile_incompatible", "The Markdown authority workspace profile is incompatible.");
   }
   requiredId(marker.workspace_id, "workspace_marker.workspace_id", "store");
   if (request.store_id !== marker.workspace_id) throw new MarkdownError("markdown.not_visible", "store_id", "workspace_identity_mismatch", "The requested workspace is not visible.");
-  return { configuration, root, marker, markerPath };
+  if (!object(marker.view)) throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view", "view_marker_required", "A private workspace view marker is required.");
+  exactKeys(marker.view, new Set(["id", "policy_revision_id", "audience_ceiling"]), "workspace_marker.view");
+  const viewId = requiredId(marker.view.id, "workspace_marker.view.id", "view");
+  const policyId = requiredId(marker.view.policy_revision_id, "workspace_marker.view.policy_revision_id", "view-policy");
+  if (marker.view.audience_ceiling !== "private") throw new MarkdownError("markdown.workspace_unavailable", "workspace_marker.view.audience_ceiling", "private_view_required", "Only a private view is supported.");
+  if (!object(request.context)) {
+    throw new MarkdownError("markdown.not_visible", "context", "exact_active_view_required", "The exact selected private view is required.");
+  }
+  exactKeys(request.context, new Set(["view_id", "view_policy_revision_id", "purpose", "requested_audience_ceiling"]), "context");
+  if (request.context.view_id !== viewId || request.context.view_policy_revision_id !== policyId
+    || request.context.requested_audience_ceiling !== "private" || typeof request.context.purpose !== "string"
+    || !request.context.purpose.trim() || request.context.purpose.length > 512) {
+    throw new MarkdownError("markdown.not_visible", "context", "exact_active_view_required", "The exact selected private view is required.");
+  }
+  return { configuration, root, marker, markerPath, appliedView: { view_id: viewId, view_policy_revision_id: policyId } };
 }
 
 async function loadWorkspace(request, { allowEmpty = false } = {}) {
   const authority = await loadAuthorityWorkspace(request);
-  const { configuration, root, marker, markerPath } = authority;
+  const { configuration, root, marker, markerPath, appliedView } = authority;
   if (marker.profile !== L01_WORKSPACE_PROFILE) {
     throw new MarkdownError("markdown.workspace_unavailable", WORKSPACE_MARKER, "synthetic_profile_required", "This operation requires the explicitly selected L-01 synthetic Markdown profile.");
   }
@@ -550,7 +549,7 @@ async function loadWorkspace(request, { allowEmpty = false } = {}) {
     || manifest.records.length > MAX_RECORDS) {
     throw new MarkdownError("markdown.manifest_incompatible", INTERCHANGE_MANIFEST, "manifest_schema_incompatible", "The L-01 identity manifest is incompatible.");
   }
-  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath };
+  return { configuration, root, marker, markerPath, manifest, manifestBytes, manifestPath, appliedView };
 }
 
 async function parseRecords(workspace) {
@@ -950,15 +949,12 @@ function normalizeFrameAuthorization(value) {
 function normalizeFrame(value, { requireDispositions = false } = {}) {
   if (!object(value)) throw new MarkdownError("frame.invalid_representation", "frame", "object_required", "frame must be an object.");
   exactKeys(value, new Set([
-    "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title", "outcome",
+    "id", "home_namespace_id", "status", "title", "outcome",
     "included_scope", "excluded_scope", "limitations", "completion_condition", "case_links", "frame_links",
     "downstream_links", "artifact_links", "authorization_provenance", "discovery",
     "disposition_boundaries", "case_dispositions",
   ]), "frame");
   const home = requiredId(value.home_namespace_id, "frame.home_namespace_id", "namespace");
-  if (!Array.isArray(value.authority_scope_namespace_ids) || value.authority_scope_namespace_ids.length < 1 || value.authority_scope_namespace_ids.length > 64) throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "bounded_scope_required", "A bounded explicit Frame authority scope is required.");
-  const authorityScope = value.authority_scope_namespace_ids.map((item, index) => requiredId(item, `frame.authority_scope_namespace_ids[${index}]`, "namespace"));
-  if (new Set(authorityScope).size !== authorityScope.length || !authorityScope.includes(home)) throw new MarkdownError("frame.invalid_representation", "frame.authority_scope_namespace_ids", "home_namespace_required", "Frame authority scope must uniquely include its home namespace.");
   if (!FRAME_STATUSES.has(value.status) || !Array.isArray(value.discovery) || value.discovery.length < 1 || value.discovery.length > 128) throw new MarkdownError("frame.invalid_representation", "frame", "complete_frame_required", "A supported Frame with complete Discovery is required.");
   const discovery = value.discovery.map((item, index) => {
     const itemPath = `frame.discovery[${index}]`;
@@ -990,7 +986,7 @@ function normalizeFrame(value, { requireDispositions = false } = {}) {
   const dispositions = value.case_dispositions?.map(normalizeCaseDisposition);
   if ((boundaries?.length ?? 0) > 64 || (dispositions?.length ?? 0) > 128) throw new MarkdownError("frame.invalid_representation", "frame.case_dispositions", "bounded_array_required", "Disposition selections exceed their bounds.");
   if (boundaries != null) validateDispositionSelection(boundaries, dispositions, value.status);
-  const record = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: home, authority_scope_namespace_ids: authorityScope, status: value.status, discovery };
+  const record = { id: requiredId(value.id, "frame.id", "frame"), home_namespace_id: home, status: value.status, discovery };
   for (const key of ["title", "outcome", "limitations", "completion_condition"]) if (value[key] != null) record[key] = requiredString(value[key], `frame.${key}`, key === "title" ? 512 : 4_096);
   for (const key of ["included_scope", "excluded_scope"]) {
     if (value[key] != null) {
@@ -1108,7 +1104,7 @@ function match(item, tokens) {
   return { ...item, matched_fields: matchedFields.sort(), lexical_score: score };
 }
 
-function commonResult(workspace, items, stableSort, completeness = "complete_within_bounds", namespaceIds = []) {
+function commonResult(workspace, items, stableSort, completeness = "complete_within_bounds") {
   return {
     status: "found",
     items,
@@ -1117,7 +1113,7 @@ function commonResult(workspace, items, stableSort, completeness = "complete_wit
     stable_sort: stableSort,
     snapshot_query_fence: `markdown:${sha256(workspace.manifestBytes)}`,
     capabilities: capabilities(),
-    ...(namespaceIds.length ? { applied_namespace_filter: namespaceIds } : {}),
+    applied_view: workspace.appliedView,
   };
 }
 
@@ -1383,7 +1379,7 @@ function legacyDiscoveryCandidates(bytes, label) {
 
 function legacyFrameCandidate(bytes, label) {
   const { fields, body } = parseFrontmatter(bytes, label);
-  exactKeys(fields, new Set(["type", "schema_version", "id", "home_namespace_id", "authority_scope_namespace_ids", "status", "title"]), "frontmatter");
+  exactKeys(fields, new Set(["type", "schema_version", "id", "home_namespace_id", "status", "title"]), "frontmatter");
   if (fields.type !== "frame" || fields.schema_version !== 1) throw new MarkdownError("markdown.parse_invalid", label, "frame_schema_incompatible", "The legacy Frame schema is incompatible.");
   const headings = ["Outcome", "Included Scope", "Excluded Scope", "Limitations", "Completion Condition", "Discovery", "Case Dispositions"];
   const map = sections(body, label, headings, { required: ["Discovery"] });
@@ -1391,11 +1387,9 @@ function legacyFrameCandidate(bytes, label) {
   const record = {
     id: requiredId(fields.id, `${label}.id`, "frame"),
     home_namespace_id: requiredId(fields.home_namespace_id, `${label}.home_namespace_id`, "namespace"),
-    authority_scope_namespace_ids: fields.authority_scope_namespace_ids,
     status: fields.status,
   };
   if (!FRAME_STATUSES.has(record.status)) throw new MarkdownError("markdown.parse_invalid", `${label}.status`, "frame_status_invalid", "The legacy Frame status is invalid.");
-  if (!Array.isArray(record.authority_scope_namespace_ids) || record.authority_scope_namespace_ids.length !== 1 || record.authority_scope_namespace_ids[0] !== record.home_namespace_id) throw new MarkdownError("markdown.parse_invalid", `${label}.authority_scope_namespace_ids`, "cross_namespace_scope_unsupported", "Only the home namespace is supported.");
   if (fields.title != null) record.title = requiredString(fields.title, `${label}.title`, 512);
   for (const [key, heading] of [["outcome", "Outcome"], ["limitations", "Limitations"], ["completion_condition", "Completion Condition"]]) {
     const value = optionalSection(map, heading); if (value != null) record[key] = requiredString(value, `${label}.${key}`, 4_096);
@@ -1809,12 +1803,11 @@ async function commonWorkspace(request, kinds = ["case", "frame"]) {
 }
 
 async function frameList(request) {
-  validateBase(request, ["namespace_ids"]);
-  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
+  validateBase(request, []);
   const workspace = await commonWorkspace(request, ["frame"]);
-  const records = workspace.records.filter((item) => item.owner_kind === "frame" && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id)));
+  const records = workspace.records.filter((item) => item.owner_kind === "frame");
   return success("frame.list", {
-    ...commonResult(workspace, records.map((item) => ({ id: item.id, ...item.record })), "owner_id_asc", "complete_within_bounds", namespaceIds),
+    ...commonResult(workspace, records.map((item) => ({ id: item.id, ...item.record })), "owner_id_asc"),
     applied_lifecycle_scope: "active_only", capabilities: capabilities(),
   });
 }
@@ -1830,28 +1823,26 @@ async function commonResolve(request) {
 }
 
 async function commonList(request) {
-  validateBase(request, ["owner_kinds", "namespace_ids"]);
+  validateBase(request, ["owner_kinds"]);
   const kinds = ownerKinds(request.owner_kinds);
-  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
   const workspace = await commonWorkspace(request, kinds);
-  const records = workspace.records.filter((item) => kinds.includes(item.owner_kind) && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id))).map(publicItem);
-  return success("common.list", commonResult(workspace, records, "owner_kind_asc_id_asc", "complete_within_bounds", namespaceIds));
+  const records = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map(publicItem);
+  return success("common.list", commonResult(workspace, records, "owner_kind_asc_id_asc"));
 }
 
 async function commonSearch(request) {
-  validateBase(request, ["owner_kinds", "query", "limit", "namespace_ids"]);
+  validateBase(request, ["owner_kinds", "query", "limit"]);
   const kinds = ownerKinds(request.owner_kinds);
-  const namespaceIds = request.namespace_ids == null ? [] : namespaceFilter(request.namespace_ids);
   const tokens = queryTokens(request.query);
   if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > MAX_SEARCH_LIMIT) {
     throw new MarkdownError("markdown.invalid_request", "limit", "bounded_search_limit_required", "Search limit must be 1 through 50.");
   }
   const workspace = await commonWorkspace(request, kinds);
-  const matches = workspace.records.filter((item) => kinds.includes(item.owner_kind) && (!namespaceIds.length || namespaceIds.includes(item.record.home_namespace_id))).map((item) => match(publicItem(item), tokens)).filter(Boolean);
+  const matches = workspace.records.filter((item) => kinds.includes(item.owner_kind)).map((item) => match(publicItem(item), tokens)).filter(Boolean);
   matches.sort((left, right) => right.lexical_score - left.lexical_score || left.owner_kind.localeCompare(right.owner_kind) || left.id.localeCompare(right.id));
   const completeness = matches.length > request.limit ? "truncated" : "complete_within_bounds";
   return success("common.search", {
-    ...commonResult(workspace, matches.slice(0, request.limit), "lexical_score_desc_owner_kind_asc_id_asc", completeness, namespaceIds),
+    ...commonResult(workspace, matches.slice(0, request.limit), "lexical_score_desc_owner_kind_asc_id_asc", completeness),
     normalized_query_tokens: tokens,
     applied_limit: request.limit,
   });
