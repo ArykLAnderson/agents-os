@@ -74,6 +74,64 @@ async function initializedWorkspace(t, prefix = "wi033-e2e-workspace-") {
 // Every invocation below starts a fresh extracted-package process. The only fault
 // selector is an explicit test-hook environment value; no CLI argument or aggregate
 // field can select it.
+test("extracted packaged CLI normalizes unambiguous bare read identities before provider dispatch", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-bare-read-identities-");
+  await runFile("git", ["init", "--quiet"], { cwd: workspace });
+  const caseValue = caseAggregate(710, "Bare Case", "bare case phrase");
+  const frameValue = { ...frameAggregate("Bare Frame"), id: id("frame", 711) };
+  const createdCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "create", "--input", JSON.stringify(caseValue)]);
+  const createdFrame = await invoke(bin, workspace, ["create", "frame", "--commit-basis", "create", "--input", JSON.stringify(frameValue)]);
+  assert.equal(createdCase.code, 0, createdCase.stdout);
+  assert.equal(createdFrame.code, 0, createdFrame.stdout);
+
+  const bare = (value) => value.slice(value.indexOf(":") + 1);
+  const reads = [
+    { command: ["read", "case", "--case-id"], bareId: bare(caseValue.id), canonicalId: caseValue.id, revision: createdCase.json.result.revision.id },
+    { command: ["read", "frame", "--frame-id"], bareId: bare(frameValue.id), canonicalId: frameValue.id, revision: createdFrame.json.result.revision.id },
+  ];
+  for (const read of reads) {
+    const bareCurrent = await invoke(bin, workspace, [...read.command, read.bareId]);
+    assert.equal(bareCurrent.code, 0, bareCurrent.stdout);
+    assert.equal(bareCurrent.json.result.owner.id, read.canonicalId);
+    assert.equal(bareCurrent.json.result.aggregate.id, read.canonicalId);
+    assert.equal(bareCurrent.json.result.revision.id, read.revision);
+
+    const canonicalCurrent = await invoke(bin, workspace, [...read.command, read.canonicalId]);
+    assert.equal(canonicalCurrent.code, 0, canonicalCurrent.stdout);
+    assert.equal(canonicalCurrent.json.result.owner.id, read.canonicalId);
+    assert.equal(canonicalCurrent.json.result.revision.id, read.revision);
+
+    const bareHistorical = await invoke(bin, workspace, [...read.command, read.canonicalId, "--owner-revision-id", bare(read.revision)]);
+    assert.equal(bareHistorical.code, 0, bareHistorical.stdout);
+    assert.equal(bareHistorical.json.result.owner.id, read.canonicalId);
+    assert.equal(bareHistorical.json.result.revision.id, read.revision);
+
+    const canonicalHistorical = await invoke(bin, workspace, [...read.command, read.canonicalId, "--owner-revision-id", read.revision]);
+    assert.equal(canonicalHistorical.code, 0, canonicalHistorical.stdout);
+    assert.equal(canonicalHistorical.json.result.owner.id, read.canonicalId);
+    assert.equal(canonicalHistorical.json.result.revision.id, read.revision);
+  }
+
+  const invalidReads = [
+    { args: ["read", "case", "--case-id", frameValue.id], code: "case_id_invalid", flag: "--case-id" },
+    { args: ["read", "frame", "--frame-id", caseValue.id], code: "frame_id_invalid", flag: "--frame-id" },
+    { args: ["read", "case", "--case-id", caseValue.id, "--owner-revision-id", createdFrame.json.result.revision.id], code: "owner_revision_id_invalid", flag: "--owner-revision-id" },
+    { args: ["read", "frame", "--frame-id", frameValue.id, "--owner-revision-id", createdCase.json.result.revision.id], code: "owner_revision_id_invalid", flag: "--owner-revision-id" },
+    { args: ["read", "case", "--case-id", "not-a-uuid"], code: "case_id_invalid", flag: "--case-id" },
+    { args: ["read", "frame", "--frame-id", "not-a-uuid"], code: "frame_id_invalid", flag: "--frame-id" },
+    { args: ["read", "case", "--case-id", caseValue.id, "--owner-revision-id", "not-a-uuid"], code: "owner_revision_id_invalid", flag: "--owner-revision-id" },
+    { args: ["read", "frame", "--frame-id", frameValue.id, "--owner-revision-id", "not-a-uuid"], code: "owner_revision_id_invalid", flag: "--owner-revision-id" },
+  ];
+  for (const invalid of invalidReads) {
+    const refusal = await invoke(bin, workspace, ["--workspace", workspace, "--store", path.join(workspace, "not-a-store.sqlite"), ...invalid.args]);
+    assert.equal(refusal.code, 1, refusal.stdout);
+    assert.equal(refusal.json.status, "refused");
+    assert.equal(refusal.json.failure.code, invalid.code);
+    assert.match(refusal.json.failure.message, new RegExp(invalid.flag));
+    assert.equal(refusal.json.authority.status, "unresolved");
+  }
+});
 test("packaged CLI delete regression covers the candidate Case and Frame representation failures", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace } = await initializedWorkspace(t, "wi033-delete-repro-");
