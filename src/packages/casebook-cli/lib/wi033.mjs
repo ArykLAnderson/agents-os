@@ -40,6 +40,25 @@ const refuse = (operation, authority, code, message, delivery = false, evidence 
 const absolute = (value) => typeof value === "string" && path.isAbsolute(value) && !value.includes("\0") && !value.includes("~") && path.normalize(value) === value ? value : null;
 const NAMESPACE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const NAMESPACE_UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const LOWERCASE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const cliRefusal = (code, message, evidence = {}) => Object.assign(Error(message), { code, evidence });
+function canonicalReadIdentity(value, { flag, prefix, operation, code }) {
+  if (LOWERCASE_UUID.test(value)) return `${prefix}:${value}`;
+  if (new RegExp(`^${prefix}:${LOWERCASE_UUID.source.slice(1, -1)}$`).test(value)) return value;
+  throw cliRefusal(code, `${flag} must be a lowercase UUID or a ${prefix}:<lowercase UUID> identity for ${operation}.`, { flag, expected_prefix: prefix, operation });
+}
+function normalizeReadIdentities(operation, flags) {
+  const owner = operation === "case.read" ? { key: "case_id", flag: "--case-id", prefix: "case", code: "case_id_invalid" }
+    : operation === "frame.read" ? { key: "frame_id", flag: "--frame-id", prefix: "frame", code: "frame_id_invalid" } : null;
+  if (!owner) return;
+  flags[owner.key] = canonicalReadIdentity(flags[owner.key], { ...owner, operation });
+  if (flags.owner_revision_id != null) flags.owner_revision_id = canonicalReadIdentity(flags.owner_revision_id, {
+    flag: "--owner-revision-id",
+    prefix: operation === "case.read" ? "case-revision" : "frame-revision",
+    operation,
+    code: "owner_revision_id_invalid",
+  });
+}
 function canonicalNamespace(value, field = "namespace") {
   if (typeof value !== "string" || !value.trim() || value.length > 1024) throw Error(`${field}_invalid`);
   const raw = value.normalize("NFKC").trim(), pathValue = raw.startsWith("namespace:") ? raw.slice("namespace:".length) : raw;
@@ -343,6 +362,7 @@ export async function run(argv) {
     if (!operation) throw Error("grammar_invalid");
     const declaredInput = parsed.global["--input"] !== undefined || parsed.global["--input-file"] !== undefined;
     required(operation, parsed.flags, declaredInput);
+    normalizeReadIdentities(operation, parsed.flags);
     const workspace = await resolveWorkspace(parsed.global["--workspace"]);
     let authority = baseAuthority(workspace);
     ctx = { authority };
@@ -421,6 +441,6 @@ export async function run(argv) {
   } catch (error) {
     const authority = ctx?.authority ?? baseAuthority();
     const delivery = Boolean(error.delivery);
-    return { result: refuse(operation, authority, error.message ?? "cli_refusal", delivery ? "Bridge delivery may have occurred." : "CLI invocation was refused.", delivery, { commit_may_have_occurred: delivery, operation_id: error.operation_id ?? null }), exitCode: delivery ? 3 : 1 };
+    return { result: refuse(operation, authority, error.code ?? error.message ?? "cli_refusal", delivery ? "Bridge delivery may have occurred." : error.message ?? "CLI invocation was refused.", delivery, { commit_may_have_occurred: delivery, operation_id: error.operation_id ?? null, ...(error.evidence ?? {}) }), exitCode: delivery ? 3 : 1 };
   }
 }
