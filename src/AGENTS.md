@@ -24,6 +24,6 @@ Test observable behavior through an executable public interface. When a change i
 
 ## Casebook and Feature Atlas authority
 
-Resolve Case and Frame persistence first from the environment: when `CASEBOOK_DATABASE_URL` is set, its SQLite database is authoritative; otherwise use the current project's `.casebook` Markdown workspace. Raise a Case/Frame configuration complaint only after applying that rule.
+For ordinary Case and Frame persistence, use the packaged `casebook` CLI and its Git/XDG workspace and store resolution. Read the [Casebook CLI reference](skills/casebook-persistence/references/cli.md); do not select a database, invoke a provider, use direct SQL, or treat Markdown as a fallback. `CASEBOOK_DATABASE_URL` and `CASEBOOK_SQLITE_BIN` are direct-provider or maintenance concerns, not ordinary CLI inputs.
 
 Feature Atlas is separate. `CASEBOOK_DATABASE_URL` does not select or override Atlas storage. Unless an explicit Atlas destination is provided, use the current project's `.casebook/atlas` through the local filesystem adapter. If no dedicated Atlas adapter executable is installed, the Feature Atlas skill may perform adapter-owned filesystem reads and integrity checks; do not reject a valid local Atlas solely because a CLI is absent.

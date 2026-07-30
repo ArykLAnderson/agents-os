@@ -2,19 +2,50 @@
   "runtime_manifest_version": 1,
   "package": {
     "id": "casebook-persistence",
-    "version": "0.11.0-candidate-6-final-review"
+    "version": "0.19.0-successor"
+  },
+  "runtime": {
+    "contract": "casebook-sqlite-wasm-runtime@1",
+    "ownership": "package-vendored-runtime-assets",
+    "node_engine": ">=22",
+    "sqlite": {
+      "package": "@sqlite.org/sqlite-wasm",
+      "package_version": "3.53.0-build1",
+      "module": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/node.mjs",
+      "wasm": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/dist/sqlite3.wasm",
+      "license_notice": "variants/sqlite/vendor/sqlite-wasm-3.53.0-build1/LICENSE-NOTICE.txt",
+      "assets": {
+        "node_mjs": "d74e4b74920d1499b0bf349ced70372c55ac9a9ea72af718e5f6b23b0c1b29c4",
+        "sqlite3_wasm": "02d7e48164395fa68f81c6ec33e9da5461be397dc57602ac0cd89b4bbba1d312",
+        "license_notice": "9f5f68675d98acdfaa5f21d26e02392834c799302fc73f3ebcaff82419a05efb"
+      },
+      "version": "3.53.0",
+      "source_id": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b",
+      "features": {
+        "json": true,
+        "strict": true,
+        "returning": true,
+        "fts5": true,
+        "foreign_keys": true,
+        "wal": true
+      },
+      "persistence": "bounded-package-lock-atomic-fsync-replace"
+    }
   },
   "protocol": {
     "id": "casebook-persistence-json",
-    "version": 1
+    "version": 2,
+    "compatible_versions": [
+      2
+    ]
   },
   "schema": {
-    "id": "casebook-persistence-sqlite",
-    "version": 3,
+    "id": "sqlite_casebook",
+    "version": 2,
     "compatible_versions": [
-      3
+      2
     ],
-    "store_initialization": "explicit_human_authorized"
+    "store_initialization": "bootstrap-authorization@1"
   },
   "entrypoint": {
     "interpreter": "node",
@@ -25,47 +56,148 @@
   "supported_operations": [
     "diagnose",
     "initialize_store",
-    "migrate_store",
-    "snapshot_store",
-    "restore_store",
-    "get_store_operation_receipt",
+    "profile.create",
+    "profile.revise",
+    "profile.activate",
+    "profile.retire",
+    "profile.read",
+    "profile.history",
     "namespace.create",
-    "namespace.rename",
+    "namespace.revise",
     "namespace.retire",
-    "owner.rehome",
+    "namespace.read",
+    "namespace.history",
+    "namespace.resolve",
+    "project_default.create",
+    "project_default.revise",
+    "project_default.retire",
+    "project_default.read",
+    "chat.establish",
+    "chat.resume",
+    "chat.fork",
+    "chat.rebind",
+    "chat.read",
+    "chat.history",
+    "substrate.commit_revision",
+    "substrate.get_receipt",
+    "substrate.read_owner_current",
+    "substrate.read_owner_revision",
+    "substrate.resolve_family_binding",
+    "substrate.resolve_current_claim",
+    "integrity.observe",
+    "projection.rebuild",
     "case.create",
     "case.commit_revision",
+    "case.tombstone.commit",
     "case.read",
     "case.resolve",
-    "case.search",
-    "case.traverse",
+    "case.update",
+    "case.tombstone",
+    "case.knowledge.read",
+    "case.knowledge.create",
+    "case.knowledge.update",
+    "case.knowledge.tombstone",
+    "case.facet.read",
+    "case.facet.create",
+    "case.facet.update",
+    "case.facet.tombstone",
+    "case.source.read",
+    "case.source.create",
+    "case.source.update",
+    "case.source.tombstone",
+    "case.evidence.read",
+    "case.evidence.create",
+    "case.evidence.update",
+    "case.evidence.tombstone",
+    "case.relationship.read",
+    "case.relationship.create",
+    "case.relationship.update",
+    "case.relationship.tombstone",
     "frame.create",
     "frame.commit_revision",
-    "frame.resolve",
     "frame.read",
-    "frame.list",
-    "common.resolve",
-    "common.list",
-    "common.search"
+    "frame.profile.read",
+    "frame.profile.update",
+    "frame.discovery.create",
+    "frame.discovery.read",
+    "frame.discovery.update",
+    "frame.discovery.settle",
+    "frame.discovery.tombstone",
+    "frame.discovery.reopen",
+    "frame.disposition_boundary.read",
+    "frame.disposition_boundary.create",
+    "frame.disposition_boundary.update",
+    "frame.disposition_boundary.close",
+    "frame.case_disposition.read",
+    "frame.case_disposition.create",
+    "frame.case_disposition.update",
+    "frame.case_disposition.classify",
+    "frame.case_disposition.settle",
+    "query.search",
+    "query.resolve",
+    "query.hydrate",
+    "graph.neighbors",
+    "graph.traverse",
+    "graph.path",
+    "events.page",
+    "query.snapshot_reconcile.begin",
+    "query.snapshot_reconcile.page",
+    "query.snapshot_reconcile.finish",
+    "query.snapshot_reconcile.checkpoint"
+  ],
+  "ordinary_cli_capabilities": [
+    "sqlite_casebook@2",
+    "casebook-resolved-target@1",
+    "casebook-persistence-json@2",
+    "casebook-cli-result@2"
   ],
   "implemented_slice_constraints": {
-    "store_receipt_visible_operation_kinds": [
-      "initialize_store",
-      "migration",
-      "snapshot",
-      "restore",
-      "namespace.create",
-      "namespace.rename",
-      "namespace.retire",
-      "owner.rehome"
-    ],
-    "migration_execution": "verified snapshot-first hard-cutover schema 1 to 3 migration on explicitly authorized disposable stores only",
-    "snapshot_execution": "L08-W01 exact verified snapshot of one explicitly authorized named disposable store with durable receipt and explicit custody",
-    "restore_execution": "L08-W02 exact verified replacement of one explicitly authorized disposable target with retained verified prior copy and truthful terminal classification",
-    "namespace_lifecycle": "human-authorized create, rename, and retire with exact store identity, idempotent receipts, and operation-fence admission; retirement refuses namespaces that still home owners",
-    "owner_rehome": "human-authorized administrative owner placement change requiring exact active source and target namespaces; immutable placement event and receipt only, without semantic owner revision, version, selection, current-projection, or owner-event mutation",
-    "local_access": "ordinary Case, Frame, common, and identity access is workspace-wide by default with optional namespace_ids query narrowing; no view context or policy admission is used",
-    "retired_operations": "view-policy, export, observation/checkpoint/reconciliation, Case purge, impact, integrity, and projection operations fail closed before authority admission and are not admitted capabilities",
-    "legacy_archive": "schema 1 hard-cutover archives retired view-policy, consumer checkpoint, and receipt-policy association state before active schema removal"
-  }
+    "successor_boundary": "fresh-store-only; no predecessor probe, migration, cutover, View, semantic callback, graph/semantic/hybrid query, or standalone CLI; provider-local SQLite organizational lexical query/resolve/hydrate is the only supported global search boundary, and immutable owner placement is provided through Case and Frame provider-local adapters",
+    "bootstrap": "trusted-local retained-parent identity validation, no-follow/exclusive creation, hard-link no-replace grant/store publication, and exact same-operation atomic phase-record replacement",
+    "bootstrap_threat_model": "does not protect against a malicious concurrent same-UID actor able to replace trusted parent pathnames",
+    "substrate": "owner-neutral immutable versions/revisions/selections with CAS, idempotency, receipt, event, outbox, integrity, and rebuild",
+    "profile_admission": "one admission-slot selection; complete Namespace-free private Profile lifecycle; mandatory provider-derived profile-selection-fence@1; closed owner adapter/lifecycle/guard registration",
+    "graph_reconciliation": "provider-local explicit edges only; profile-first scoped graph disclosure and immutable paged snapshot/event reconciliation with opaque H/P/R checkpoint evidence"
+  },
+  "result": {
+    "id": "casebook-cli-result",
+    "version": 2
+  },
+  "selection": {
+    "id": "casebook-resolved-target",
+    "version": 1,
+    "authority": "per-invocation resolved target admission only"
+  },
+  "ordinary_cli_capability_contracts": {
+    "sqlite_casebook@2": {
+      "authority": "selected SQLite authority only"
+    },
+    "casebook-resolved-target@1": {
+      "authority": "per-invocation resolved target admission only",
+      "operations": [
+        "target.describe"
+      ]
+    },
+    "casebook-persistence-json@2": {
+      "authority": "verified connector transport only",
+      "operations": "supported_operations"
+    },
+    "casebook-cli-result@2": {
+      "authority": "closed terminal result only",
+      "operations": "supported_operations"
+    }
+  },
+  "unsupported_until_later_work_items": [],
+  "ordinary_cli_operations": [
+    "target.describe",
+    "case.create",
+    "case.read",
+    "case.commit_revision",
+    "frame.create",
+    "frame.read",
+    "frame.commit_revision",
+    "query.search",
+    "substrate.get_receipt",
+    "operation.recent"
+  ]
 }

@@ -1,36 +1,53 @@
 {
-  "migration_manifest_version": 1,
-  "schema_id": "casebook-persistence-sqlite",
-  "schema_version": 3,
-  "compatible_schema_versions": [3],
-  "protocol": {
-    "id": "casebook-persistence-json",
-    "compatible_versions": [
-      1
-    ]
+  "migration_manifest_version": 2,
+  "schema_id": "casebook-persistence-sqlite-final",
+  "schema_version": 1,
+  "compatible_schema_versions": [1],
+  "protocol": { "id": "casebook-persistence-json", "compatible_versions": [1] },
+  "implementation_status": "final_direct_initialization_and_exact_predecessor_cutover_with_disposable_semantic_namespace_proof",
+  "semantic_namespace_proof": {
+    "asset": "semantic-namespace-proof.mjs",
+    "schema": "casebook-semantic-namespace-migration-proof@1",
+    "ordinary_access_allowed": false,
+    "source_is_immutable_input": true,
+    "destination_database_mutation": false,
+    "mapping": "old personal Namespace -> namespace:personal",
+    "preserves": ["stable Case/Frame owner IDs", "current aggregate count", "current aggregate placement"],
+    "repartitioning": "deferred"
   },
-  "implementation_status": "snapshot_first_migration_available",
-  "migrations": [
-    {
-      "id": "0001-initialize-store",
-      "from_version": 0,
-      "to_version": 1,
-      "asset": "../sql/schema-v1.sql",
+  "initialization": {
+    "id": "0001-initialize-final-store",
+    "from_version": 0,
+    "to_version": 1,
+    "asset": "../sql/schema-final.sql",
+    "application_id": 1128416817,
+    "ordinary_access_allowed": false,
+    "requires_human_authority_claim": true,
+    "transactional": true
+  },
+  "cutover": {
+    "id": "cutover-schema1-predecessor-to-final",
+    "operation": "cutover_store",
+    "ordinary_access_allowed": false,
+    "source_must_be_separately_authorized_copy": true,
+    "source_is_immutable_input": true,
+    "destination_must_be_distinct_and_absent": true,
+    "snapshot_first": true,
+    "publication": "validated-temp-hard-link-atomic-no-replace",
+    "source_selection_switch_performed": false,
+    "exact_receipt_replay": true,
+    "receipt_recovery_operation_kind": "cutover",
+    "retained_prior_copy_and_receipt": true,
+    "predecessor": {
+      "schema_id": "casebook-persistence-sqlite",
+      "schema_version": 1,
       "application_id": 1128419377,
-      "ordinary_access_allowed": false,
-      "requires_human_authority_claim": true
-    },
-    {
-      "id": "0003-namespace-foundation",
-      "from_version": 1,
-      "to_version": 3,
-      "asset": "0003-namespace-foundation.sql",
-      "application_id": 1128419377,
-      "ordinary_access_allowed": false,
-      "requires_human_authority_claim": true,
-      "requires_human_confirmation_reference": true,
-      "requires_verified_pre_snapshot": true,
-      "transactional": true
+      "user_version": 1,
+      "schema_asset_sha256": "ff967013cb01d4df5f29a34ee32da2561cebeedb4cf7a2029fe81773b16c3343",
+      "migration_manifest_sha256": "05f93ed0aaf46586c7f9656a30409f843691243382ccf4defbcb1c9503b0a0dd",
+      "logical_schema_sha256": "9e11b06d6247e3c93ba9076e0c2025f9c09ecf124749509dd94c72dddfa22b25",
+      "binds_internal_schema_cookie": false,
+      "binds_content_or_operation_fence": false
     }
-  ]
+  }
 }

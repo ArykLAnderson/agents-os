@@ -1,0 +1,93 @@
+import { randomUUID } from "node:crypto";
+import { verifyPackageAssets } from "../lib/package-assets.mjs";
+const protocol = { id: "casebook-persistence-json", version: 2 };
+const TEST_HOOK = "casebook-cli-e2e@1";
+const testFault = () => process.env.CASEBOOK_CLI_TEST_HOOK === TEST_HOOK
+  ? process.env.CASEBOOK_CLI_TEST_BRIDGE_FAULT
+  : null;
+const failure = (code, message) => ({ ok: false, failure: { code, message } });
+const config = (store) => ({ authority_mode: "sqlite", sqlite: { database_url: store } });
+const provenance = { acting_role: "casebook-cli", authority_basis: "trusted-local standalone CLI invocation" };
+
+async function runtime() {
+  await verifyPackageAssets();
+  const [{ describeTarget, recentOperations }, { invokeSuccessorCaseOperation }, { invokeSuccessorFrameOperation }, { invokeSuccessorMechanicalOperation }, { invokeContextOperation }, { organizationalSearch }] = await Promise.all([
+    import("./runtime/casebook-persistence/variants/sqlite/lib/cli/index.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/case/successor.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/frame/successor.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/substrate/mechanical-successor.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs"),
+    import("./runtime/casebook-persistence/variants/sqlite/lib/query/search.mjs"),
+  ]);
+  return { describeTarget, recentOperations, invokeSuccessorCaseOperation, invokeSuccessorFrameOperation, invokeSuccessorMechanicalOperation, invokeContextOperation, organizationalSearch };
+}
+async function resolveNamespace(provider, request, base, value) {
+  const path = value.slice("namespace:".length).split("/");
+  const context = { ...base, operation: "namespace.resolve", path };
+  const { canonicalContextRequestDigest } = await import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs");
+  context.request_digest = canonicalContextRequestDigest(base.store_id, context);
+  const result = await provider.invokeContextOperation(context);
+  if (!result?.ok || result.result.status !== "found") return failure(result?.result?.status === "ambiguous" ? "namespace_ambiguous" : "namespace_unavailable", "The requested semantic Namespace is unavailable or ambiguous.");
+  return result.result.namespace.id;
+}
+function common(request) {
+  const target = request.target;
+  return { protocol, request_version: 1, store_id: target.store_id, admission_slot_id: target.admission_slot_id, admission: { kind: "sqlite_profile", binding: { selection_id: target.profile_selection_id, selection_revision_id: target.profile_selection_revision_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence } }, configuration: config(request.store) };
+}
+async function dispatch(request) {
+  const provider = await runtime();
+  if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: config(request.store) });
+  const base = common(request), flags = request.flags ?? {};
+  const selectedNamespace = flags.namespace_id ? await resolveNamespace(provider, request, base, flags.namespace_id) : null;
+  if (selectedNamespace?.ok === false) return selectedNamespace;
+  const placement = selectedNamespace ? { placement: { namespace_id: selectedNamespace } } : {};
+  if (request.operation === "case.create" || request.operation === "case.commit_revision") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "case.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, case: request.aggregate, ...placement });
+  if (request.operation === "case.delete") {
+    const current = await provider.invokeSuccessorCaseOperation({ ...base, operation: "case.read", case_id: flags.case_id });
+    if (!current?.ok) return current;
+    if (current.result.revision.number !== Number(flags.expected_revision)) return failure("case.revision_conflict", "The expected Case revision is no longer current.");
+    return provider.invokeSuccessorCaseOperation({ ...base, operation: "case.tombstone", operation_id: request.operation_id, resource_id: flags.case_id, if_match_revision_id: current.result.revision.id, commit_basis: flags.reason, reason: flags.reason, provenance, ...placement });
+  }
+  if (request.operation === "frame.create" || request.operation === "frame.commit_revision") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "frame.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, frame: request.aggregate, ...(request.operation === "frame.commit_revision" ? { frame_id: flags.frame_id } : {}), ...placement });
+  if (request.operation === "frame.delete") {
+    const current = await provider.invokeSuccessorFrameOperation({ ...base, operation: "frame.read", frame_id: flags.frame_id });
+    if (!current?.ok) return current;
+    const frame = { ...current.result.frame, status: "tombstoned" };
+    return provider.invokeSuccessorFrameOperation({ ...base, operation: "frame.commit_revision", operation_id: request.operation_id, frame_id: flags.frame_id, expected_revision: Number(flags.expected_revision), commit_basis: flags.reason, provenance, frame, ...placement });
+  }
+  if (request.operation === "case.read") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, case_id: flags.case_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
+  if (request.operation === "frame.read") return provider.invokeSuccessorFrameOperation({ ...base, operation: request.operation, frame_id: flags.frame_id, ...(flags.owner_revision_id ? { revision_id: flags.owner_revision_id } : {}) });
+  if (request.operation === "query.search") {
+    if (!selectedNamespace) return failure("namespace_required", "Search requires an explicit or project-local semantic Namespace.");
+    return provider.organizationalSearch({ ...base, operation: "query.search", query: flags.query, scope: "exact_namespace", namespace_id: selectedNamespace, ...(flags.limit ? { limit: Number(flags.limit) } : {}), ...(flags.cursor ? { cursor: flags.cursor } : {}) });
+  }
+  if (request.operation === "substrate.get_receipt") return provider.invokeSuccessorMechanicalOperation({ ...base, operation: "substrate.get_receipt", operation_id: flags.operation_id });
+  if (request.operation === "operation.recent") return provider.recentOperations({ ...base, operation: "operation.recent", limit: Number(flags.limit ?? 20), ...(flags.before_operation_fence ? { before_operation_fence: Number(flags.before_operation_fence) } : {}) });
+  return failure("operation_unsupported", "Operation is not admitted.");
+}
+let bytes = Buffer.alloc(0);
+for await (const chunk of process.stdin) {
+  bytes = Buffer.concat([bytes, chunk]);
+  if (bytes.length > 1024 * 1024) {
+    process.stdout.write(JSON.stringify(failure("bridge_request_too_large", "Bridge input exceeded its public bound.")));
+    process.exit(0);
+  }
+}
+try {
+  const request = JSON.parse(bytes.toString("utf8"));
+  const fault = request.operation === "target.describe" ? null : testFault();
+  const response = await dispatch(request);
+  if (fault === "exit") process.exitCode = 1;
+  else if (fault === "signal") process.kill(process.pid, "SIGTERM");
+  else if (fault === "timeout") await new Promise((resolve) => setTimeout(resolve, 60_000));
+  else if (fault === "malformed") process.stdout.write("not-json");
+  else if (fault === "overflow") process.stdout.write("x".repeat(1024 * 1024 + 1));
+  else if (fault === "contradictory") process.stdout.write(JSON.stringify({ ok: true, result: null }));
+  else {
+    if (fault === "stderr_overflow") process.stderr.write(`bridge-private-stderr:${"x".repeat(64 * 1024)}`);
+    process.stdout.write(JSON.stringify(response));
+  }
+} catch (error) {
+  if (error?.message === "bridge_asset_invalid") process.exitCode = 1;
+  else process.stdout.write(JSON.stringify(failure("bridge_request_invalid", "Bridge request is invalid.")));
+}

@@ -55,37 +55,41 @@ export function resolveDatabaseLocation(value) {
 }
 
 export function validateAuthorityConfiguration(configuration) {
-  exactObjectKeys(configuration, new Set(["source", "authority_mode", "sqlite", "markdown"]), "configuration");
+  exactObjectKeys(configuration, new Set(["authority_mode", "sqlite", "markdown", "source"]), "configuration");
   const { source, authority_mode: authorityMode } = configuration;
-  exactObjectKeys(source, new Set(["kind", "locator"]), "configuration.source");
-  if (!nonEmpty(source.kind) || source.kind.length > 128 || !nonEmpty(source.locator) || source.locator.length > 4_096) {
-    throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required bounded strings.");
-  }
-  const canonicalSource = { kind: source.kind.trim(), locator: source.locator.trim() };
   if (!new Set(["sqlite", "markdown"]).has(authorityMode)) {
     throw new ConfigurationError("authority_mode_invalid", "authority_mode must be exactly sqlite or markdown.");
   }
 
   if (authorityMode === "sqlite") {
+    exactObjectKeys(configuration, new Set(["authority_mode", "sqlite", "source"]), "configuration");
+    if (source != null) {
+      exactObjectKeys(source, new Set(["kind", "locator"]), "configuration.source");
+      if (!nonEmpty(source.kind) || source.kind.length > 128 || !nonEmpty(source.locator) || source.locator.length > 4_096) throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required bounded strings.");
+    }
     if (configuration.markdown != null) {
       throw new ConfigurationError("dual_authority_rejected", "Markdown configuration cannot accompany sqlite authority.");
     }
     if (!configuration.sqlite || typeof configuration.sqlite !== "object") {
       throw new ConfigurationError("configuration_missing", "sqlite authority requires sqlite configuration.");
     }
-    exactObjectKeys(configuration.sqlite, new Set(["database_url", "sqlite_bin"]), "configuration.sqlite");
+    exactObjectKeys(configuration.sqlite, new Set(["database_url"]), "configuration.sqlite");
     return {
-      source: canonicalSource,
+      ...(source ? { source: { kind: source.kind.trim(), locator: source.locator.trim() } } : {}),
       authority_mode: authorityMode,
       sqlite: {
         database_url: configuration.sqlite.database_url,
         store_path: resolveDatabaseLocation(configuration.sqlite.database_url),
-        sqlite_bin: configuration.sqlite.sqlite_bin == null
-          ? null
-          : absoluteLocalPath(configuration.sqlite.sqlite_bin, "sqlite.sqlite_bin"),
       },
     };
   }
+
+  exactObjectKeys(configuration, new Set(["authority_mode", "source", "markdown"]), "configuration");
+  exactObjectKeys(source, new Set(["kind", "locator"]), "configuration.source");
+  if (!nonEmpty(source.kind) || source.kind.length > 128 || !nonEmpty(source.locator) || source.locator.length > 4_096) {
+    throw new ConfigurationError("configuration_source_missing", "configuration.source.kind and locator are required bounded strings.");
+  }
+  const canonicalSource = { kind: source.kind.trim(), locator: source.locator.trim() };
 
   if (configuration.sqlite != null) {
     throw new ConfigurationError("dual_authority_rejected", "SQLite configuration cannot accompany markdown authority.");
