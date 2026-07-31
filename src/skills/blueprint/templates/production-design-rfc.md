@@ -69,6 +69,7 @@ State `N/A` only with a reason; unknowns are findings, not N/A.
 - **Applicable advisory mandates/results:**
 - **Advisory findings:** <observed condition, evidence/confidence, affected claim, proposed classification; reviewers do not accept/reject>
 - **Design reconciliation:** <for every consequential finding: reconcile into source Case claims first; list affected claim IDs and disposition, then rematerialize; current readiness consequence or `none`; deferral trigger where applicable>
+- **Requirement-Killer Pass:** <source Case reconciliation locator; current after material expansion; retained/simplified/removed/deferred/blocked claim consequences>
 - **Acceptance authority/provenance:**
 - **Known limitations / invalidation triggers:**
 
