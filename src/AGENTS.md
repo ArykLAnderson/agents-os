@@ -12,7 +12,7 @@ A response authorizes every mechanical consequence explicitly listed in the prom
 
 Do not make a semantic decision for the user when material behavior, scope, architecture, policy, migration, acceptance criteria, or trade-offs remain unresolved. Inspect and recommend when possible, then ask one bounded question when the answer requires human knowledge, preference, or authority.
 
-Commits, pushes, pull requests, merges, deployments, releases, shared document or tracker writes, credentialed provider actions, spending, and destructive operations require explicit authority unless an owning workflow has already bundled the exact operation into a visible accepted question. Ask again only when intent, target, scope, constraints, destination, visibility, review topology, or risk materially changes.
+Commits, pushes, pull requests, merges, deployments, releases, shared document or tracker writes, credentialed provider actions, spending, and destructive operations require explicit authority unless an owning workflow defines the named accepted request as a visible scoped grant for exact listed operations. A workflow-specific grant may intentionally exceed this default within that named scope. Ask again only when intent, target, scope, constraints, destination, visibility, review topology, or risk materially changes.
 
 Before high-risk or hard-to-reverse effects, obtain explicit confirmation even when broader work is authorized. These include deleting or overwriting existing data, force-pushing, destructive infrastructure changes, production or shared-system mutation, irreversible migrations, permission or visibility changes, and actions with material financial, security, or user impact.
 

@@ -18,7 +18,7 @@ The optional `--owner-revision-id` on `read case` reads that named revision. Res
 
 A stale revision or other refusal requires a fresh CLI read and explicit semantic reconciliation. Never auto-merge, retry blindly, fall back, dual-write, or bypass the CLI. On exit `3`, use `casebook operation status --operation-id <exact-id>` before another mutation; do not resubmit first.
 
-The CLI accepts one complete aggregate through `--input`, standard input via `--input -`, or compatibility/fallback `--input-file`; use exactly one mode for a full-aggregate mutation and none for a read or search. Prefer `--input -` or a pipeline-compatible transport in reconciliation examples. Creation may instead use direct flags or compact stdin `--draft`. Let the CLI resolve workspace and store unless an explicit user-provided workspace or store is already in scope. It is SQLite-only, does not initialize stores, and has no Markdown fallback.
+The CLI accepts one complete aggregate through `--input`, standard input via `--input -`, or compatibility/fallback `--input-file`; use exactly one mode for a full-aggregate create/commit mutation and none for a read, search, or delete. Prefer `--input -` or a pipeline-compatible transport in reconciliation examples. Creation may instead use direct flags or compact stdin `--draft`. Let the CLI resolve workspace and store unless an explicit user-provided workspace or store is already in scope. It is SQLite-only, does not initialize stores, and has no Markdown fallback.
 
 ## Preserve semantic ownership
 

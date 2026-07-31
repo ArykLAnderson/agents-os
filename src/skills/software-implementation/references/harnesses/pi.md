@@ -18,7 +18,7 @@ Do not use temporary patch-return worktrees as delivery worktrees. Workspace Ope
 
 ## Validation
 
-A validator receives the accepted Contract, candidate worktree, writer evidence, and exact public proof commands. It excludes direct edit/write tools. Because Bash can mutate, this is `tool_restricted_shell_mutable`, not filesystem enforcement. Use a dedicated verification checkout when stronger isolation is required and inspect candidate state afterward.
+A validator receives the accepted Contract, candidate worktree, writer evidence, and exact public proof commands. It excludes direct edit/write tools. Because Bash can mutate, this is `tool_restricted_shell_mutable`, not filesystem enforcement. Coordinated certification uses a dedicated verification checkout and inspects candidate state afterward. A same-worktree read-only review is advisory only.
 
 Claim `filesystem_enforced` only when an actual filesystem boundary was prepared and observed.
 

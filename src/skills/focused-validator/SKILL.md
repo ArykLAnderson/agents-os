@@ -17,6 +17,7 @@ Require:
 - the Task Contract, or a Convergence Contract naming the integrated branch/worktree, prerequisite baseline, included tasks, consumers, seam behaviors, commands, cleanup, and pass condition;
 - assigned candidate checkout/worktree and branch identity;
 - worker or integration evidence;
+- an exact Effect Binding for every required external/live command, or an explicit statement that such commands are prohibited;
 - relevant accepted design excerpts and immediate consumers; and
 - the adapter's truthful enforcement tier: `filesystem_enforced`, `tool_restricted_shell_mutable`, or `instruction_only`.
 
@@ -77,6 +78,19 @@ Result: findings
   Smallest required correction: <behavioral correction, not implementation design>
 Enforcement tier: <exact supplied tier>
 Candidate state: <identity>
+```
+
+### `authority_blocked`
+
+Use when an allocated proof action lacks the exact authority or Effect Binding needed to execute it. This is non-certifying, not a product finding.
+
+```markdown
+Result: authority_blocked
+Scope: <task | convergence>
+Candidate state: <identity>
+Missing authority: <exact command, provider/action/target>
+Unaffected observations: <commands/results or none>
+Enforcement tier: <exact supplied tier>
 ```
 
 ### `material_contradiction`
