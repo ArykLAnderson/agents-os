@@ -9,6 +9,15 @@ A skill exists to wrangle determinism out of a stochastic system. **Predictabili
 
 **Bold terms** are defined in [`GLOSSARY.md`](GLOSSARY.md); look them up there for the full meaning.
 
+## Opposing pressures
+
+An audit holds two questions against the same skill:
+
+- **Predictability:** what prevents a fresh agent from taking the intended process?
+- **Pruning:** what can disappear without changing that process?
+
+Use independent reviewers when the stakes justify them, or ask both questions in one review. Reconcile their findings against concrete skill use; neither reviewer is an authority, and a clean review is not the goal. More explicit is not inherently more predictable, and shorter is not inherently clearer. Make the smallest coherent change whose steering value exceeds its load, then stop.
+
 ## Invocation
 
 Two choices, trading different costs:

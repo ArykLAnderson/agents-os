@@ -1,81 +1,55 @@
 # Configured Private GitHub Issues Adapter
 
-Use this adapter only when private GitHub Issues is the configured canonical Feature Atlas. It conforms to [the storage adapter contract](storage-adapters.md); domain identity, ownership, Decision authority, currentness, handoff, and projection semantics remain defined by [the canonical representations](issue-representations.md).
+Use this adapter only when private GitHub Issues is the explicitly configured canonical Feature Atlas. It conforms to [the storage adapter contract](storage-adapters.md); [canonical representations](issue-representations.md) remain the semantic authority.
 
-`gh` examples below are adapter-owned mechanics, and this instruction resource is itself the executable configured adapter when no separate runtime wrapper is exposed. Blueprint, Software Implementation, and other domain consumers may invoke these direct reads only while performing an exact named Feature Atlas domain operation. They must execute the operation's complete identity/currentness/integrity checks and return its semantic classification and adapter receipt; raw Issue records or `gh` output never become the semantic interface or authority by themselves.
+`gh` commands are adapter mechanics, never domain results by themselves. Consumers invoke them only as part of one named Feature Atlas operation and receive a semantic classification plus an adapter receipt.
 
-## Fail-Closed Capability And Destination Preflight
+## Destination preflight
 
-Before any accepted publication, a separately authorized bounded provider prototype must already prove:
-
-- authenticated actor and bounded human-authority provenance can be retained and verified;
-- external accepted snapshots, when needed, are immutable/versioned, lifetime-retained, audience-compatible, and cryptographically content-bound;
-- open/closed Issue and comment identity searches can be exhaustive enough for find-before-create;
-- accepted Decision history and current projections can be reread without treating editable display text as authority;
-- uncertain create/edit/comment results can be recovered by exhaustive reread before retry.
-
-Until that evidence exists for the exact configured provider/account/repository, Map publication is unsupported. Stop; do not weaken trusted acceptance, infer provenance from comment prose, invent external storage, or fall back to Feature-first publication.
-
-Obtain the exact `<owner>/<repository>` and expected visibility from explicit adapter configuration. Never infer the Atlas destination from the current Git remote, working directory, existing Issues, or convenience; do not create or substitute a destination, broaden visibility, or substitute another account. The configured repository must be `PRIVATE` with Issues enabled. It may be a dedicated Atlas repository or, when a trusted human/destination decision explicitly selects it, a private source repository hosting its own Atlas. Repository separation is an optional blast-radius and visibility choice, not a semantic requirement. A cross-product or shared Atlas destination still requires an explicit ownership and destination decision.
-
-Same-repository placement changes only the storage location. It does not make source branches, code Issues, pull requests, or other repository state Atlas authority. Use an adapter-owned dedicated namespace, branch where applicable, labels, and records, and preserve Atlas identity, ownership, Decision, currentness, and handoff boundaries without ambiguity with source-work records.
-
-Inside the configured adapter, before every authorized mutation session:
+Obtain the exact `<owner>/<repository>` and expected visibility from explicit configuration. Never infer or substitute a destination, account, or visibility. Before a read session:
 
 ```sh
 gh repo view <owner>/<repository> --json nameWithOwner,visibility,hasIssuesEnabled,url
 ```
 
-Proceed only when identity is exact, visibility is `PRIVATE`, Issues are enabled, access succeeds, and the capability evidence above applies. Use `--repo <owner>/<repository>` on every Issue command.
+Proceed only when identity is exact, visibility is `PRIVATE`, Issues are enabled, and access succeeds. Use `--repo <owner>/<repository>` on every command. Repository branches, pull requests, labels, native parentage, and code Issues never become Atlas authority.
 
-Blueprint composition and human discussion authorize no tracker mutation. Only a verified exact Map Acceptance Package authorizes the narrow Publisher's configured Atlas projection. That authority does not extend to another destination, visibility change, implementation dispatch, source mutation, PR, merge, or deployment.
+## Supported reads
 
-## Exhaustive Find Before Create
-
-Search open and closed Issues and comments for the Atlas-qualified stable ID, unqualified stable ID, Map Decision identity, and candidate-local label. For example:
+Read exact known Atlas, Map, Feature, Work Item, and Decision Issue locators with explicit repository and Issue number:
 
 ```sh
-gh issue list --repo <owner>/<repository> --state all --limit 1000 --search '"FA-001 / F-014" in:title,body,comments'
-gh issue list --repo <owner>/<repository> --state all --limit 1000 --search '"F-014" in:title,body,comments'
+gh issue view <issue-number> --repo <owner>/<repository> --comments --json number,title,body,state,url,comments
 ```
 
-A truncated empty result is not exhaustive. Narrow/continue the search and inspect every plausible match with comments. Reuse exactly one record only when stable identity, owner, current Map Decision, and accepted local-label meaning agree. Stop on ambiguity, owner mismatch, duplicate identity, durable-binding conflict, or contradictory accepted content. Repeat search immediately before creation.
+Follow only exact locators found in the configured record or accepted snapshot; do not discover a different destination. Verify the stable identity, owner, bound Map Decision, accepted local-label meaning, visibility, and any immutable snapshot/content binding named by that Decision. Editable bodies and comments are projections unless the canonical representation explicitly makes an immutable content-bound record authoritative.
 
-An allocated number remains tentative until successful create/reuse plus post-write reread establishes its binding. If another actor wins a race before binding, reread exhaustively and select a different collision-free value. Never recycle an established identity or silently remap an accepted label.
+Search may locate candidates and detect visible conflicts, but GitHub's indexed/eventually consistent search cannot prove global uniqueness or exhaustive currentness. A search result is never sufficient by itself to establish that one identity or Decision is the sole current record.
 
-## Narrow Recoverable Publisher
+Return a receipt containing the named domain operation, repository identity/visibility, exact Issue and comment URLs read, observation time, content-binding checks, conflicts/limitations, and semantic classification. Raw JSON is retained only as provider evidence.
 
-The Publisher calls Feature Atlas domain mutation operations; this adapter implements them with prepared bodies/comments derived mechanically from the exact accepted Map Decision:
+Return the strongest truthful domain result:
 
-```sh
-gh issue create --repo <owner>/<repository> --title '<ID> — <name>' --body-file <prepared-body>
-gh issue edit <issue-number> --repo <owner>/<repository> --body-file <prepared-body>
-gh issue comment <issue-number> --repo <owner>/<repository> --body-file <prepared-comment>
-```
+- exact historical or known-record reads may succeed when their identity and content binding verify;
+- currentness, uniqueness, publication completeness, and implementation handoff succeed only when the configured Atlas includes an authoritative immutable index/snapshot or other accepted mechanism that proves those properties;
+- otherwise return the applicable typed limitation, ambiguity, integrity failure, or `HandoffRefusal` rather than claiming completeness.
 
-For a new Map, create a minimum shell only if needed to host its Decision. It must say `no accepted candidate`, reveal no proposed semantics, and remain non-authoritative if Decision recording fails.
+This preserves access to existing GitHub-backed Atlas authority without manufacturing guarantees from provider search.
 
-Recoverable order:
+## Unsupported mutations
 
-1. Reread destination, capability evidence, authority provenance, exact bindings, expected predecessor, provider Decisions, and collisions.
-2. Create/recover the minimum Map shell and record the immutable current `Decision — Map candidate` with verified authority provenance and required external content binding.
-3. Create/reuse Feature and Work Item identities from exact accepted local labels. Legs remain Feature-contained by default.
-4. Reread all created records; resolve every owner, self, dependency, Decision, and provider endpoint locator; update child projections in a second pass.
-5. Refresh Feature bodies and the Map body last, including current Decision, label mappings, graph/proof/history, publication state, limitations, and next action. Update Atlas/Index navigation only as needed.
-6. Reread rendered bodies and comments. Verify identity, exact owner, Decision/currentness, accepted meaning, edge direction, locator completeness, visibility, and one-current-Decision status.
+Ordinary `gh issue create/edit/comment` does not provide Atlas-wide identity allocation, expected-predecessor compare-and-swap, or mutation-time fencing against a superseded publisher. Therefore this adapter does not publish Maps, allocate identities, append authoritative Decisions, repair projections, or recover partial writes through those commands.
 
-Native sub-Issue relationships may mirror Atlas → Map → Feature → Work Item for navigation. They never define ownership or authority. A Leg need not become an Issue. Never put a Map under an Index Segment as semantic parent, or a Work Item under a dependency instead of its Feature owner.
+A future write-capable adapter requires a separately accepted design and provider proof for:
 
-Keep bodies current and concise. Preserve append-only semantic history through new Decision/correction/observation comments rather than silently rewriting accepted history. Do not persist a mutable reverse `Blocks` field; derived reverse views cite their source consumer and observation time.
+- global identity-allocation serialization;
+- expected-predecessor CAS and mutation-time fencing;
+- immutable, lifetime-retained, audience-compatible Decision snapshots;
+- complete post-write currentness/integrity verification; and
+- recoverable partial/uncertain writes without duplicate authority.
 
-## Partial Failure And Uncertain Results
+Until then, mutation returns `capability_unproven`; do not weaken the contract, use advisory leases or reread-before-write as substitutes, or fall back to another destination.
 
-GitHub mutations are non-transactional. If any operation fails or has an uncertain result, stop and return the Map Decision locator, successful record locators, exact failed operation, incomplete/pending projections, and safe resume action. Search/reread before retry.
+## Observations and source links
 
-Do not repost the Decision, delete successful records, roll back/recycle IDs, create replacements to hide partial state, choose semantic conflict resolution, or follow a newer Decision silently. Resume from the exact Decision and established bindings. When possible, project `publication incomplete`; normal execution handoff remains refused until stable references and current projection are complete.
-
-## Observations And Source Links
-
-GitHub text does not make a source fact true. Retain an observation only when the owning workflow/source authority initiates the bounded operation and the adapter verifies identity, authorization, provenance, locator/environment, audience, and integrity. Unverifiable results are `unknown`. Link to Git, tests, PRs, reports, deployments, and runtime/provider evidence rather than copying detailed facts or secrets.
-
-The adapter returns exact domain identities, immutable Decision comment/snapshot locators, rendered reread results, and receipts. Issue numbers, labels, native parentage, editable bodies, and `gh` output remain provider mechanics and never become the interface consumed by Blueprint or Software Implementation.
+GitHub text does not make a source fact true. Retain an observation only when its owning source/workflow supplies verifiable provenance, locator/environment, audience, observation time, integrity, limitations, and invalidators. Unverifiable facts remain `unknown`. Link to Git, tests, reports, deployments, and provider evidence rather than copying detailed facts or secrets.

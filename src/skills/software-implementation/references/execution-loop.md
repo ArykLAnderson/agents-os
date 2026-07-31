@@ -19,19 +19,19 @@ Send each Coding Worker:
 - exact proof responsibility and effect limits; and
 - commit authority when its branch will enter coordinated integration.
 
-One worker owns one worktree. Children execute; they do not coordinate. Await correlated, compact result envelopes and update only map state/locators.
+One worker owns one worktree. Children execute; they do not coordinate. Await correlated, compact result envelopes and update only map state/locators. An `effect_blocked` result preserves completed local work and blocks only the named external action and its dependents.
 
 ## Task Verification
 
 A worker reaches `verify` only after reporting successful applicable build, lint, test, and task behavioral checks required by its admitted proof obligation. When the admitted allocation requires task-scope independent validation, launch Focused Validator against a dedicated verification checkout and state the truthful enforcement tier. When it requires writer-owned focused proof only, preserve that exact evidence and do not add a generic independent task gate; the task advances to its next accepted integration/proof node.
 
-On independent `findings`, set `repair` and return the bounded evidence to the original worker if it is available and safe. Otherwise launch a fresh Coding Worker with the Task Contract, current safe branch/worktree, prior evidence, and findings. Revalidate the corrected candidate under the same admitted allocation.
+On `authority_blocked`, preserve unaffected observations as non-certifying and keep the allocated gate blocked until the exact authority is supplied or dispositioned. On independent `findings`, set `repair` and return the bounded evidence to the original worker if it is available and safe. Otherwise launch a fresh Coding Worker with the Task Contract, current safe branch/worktree, prior evidence, and findings. Revalidate the corrected candidate under the same admitted allocation.
 
 A `material_contradiction` requires concrete evidence. Route it to accepted design authority; do not treat reviewer preference as a contradiction. In Atlas mode, a proposed identity, dependency, convergence, limitation, or proof change requires owning Atlas/Blueprint authority and normally a current successor handoff.
 
 ## Integrate A Wave
 
-After every task in a writer wave passes, delegate one Integration Worker as the sole writer for the applicable integration destination. In `single_pr`, this is the global integration worktree. In `stacked_feature_prs`, integrate each Work Item into its owning Feature worktree/branch; a Feature branch starts from the declared base or predecessor Feature branch and is the candidate for that Feature's draft PR. Supply validated branches, accepted dependency order, accepted seam behavior, convergence checks, permitted repairs, and the inherited envelope boundary.
+A passing `direct_task` uses its validated task branch as the delivery candidate and skips integration unless its admitted proof allocation explicitly requires it. For `coordinated_change`, after every task in a writer wave passes, delegate one Integration Worker as the sole writer for the applicable integration destination. In `single_pr`, this is the global integration worktree. In `stacked_feature_prs`, integrate each Work Item into its owning Feature worktree/branch; a Feature branch starts from the declared base or predecessor Feature branch and is the candidate for that Feature's draft PR. Supply validated branches, accepted dependency order, accepted seam behavior, convergence checks, permitted repairs, and the inherited envelope boundary.
 
 Then launch Focused Validator in `convergence` scope when the admitted allocation requires it at this point. Route:
 
