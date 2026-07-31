@@ -56,14 +56,15 @@ Only consequential unresolved authority choices. Use `none` when accepted author
 - **Blocked/provisional claim IDs:**
 - **Architecture a fresh worker would still have to invent:** none | <exact gap>
 
-## Simplification record
+## Requirement-Killer reconciliation
 
-These are coupled Blueprint/Route checks, not a stage or separate artifact. Complete both in this Case before fixing a routeable revision.
+This is one adversarial operation applied through the coupled Blueprint and Route lenses, not a stage or separate artifact. Complete both applications in this Case before fixing a routeable revision.
 
-- **Design pruning (after architecture selection):** <unnecessary state, owners, seams, abstractions, contracts, custom machinery, duplicate responsibilities, and prototype scaffolding removed/deferred; existing mechanism retained; or `none — why each remains boundary-required`>
+- **Design application (after architecture selection):** <post-admission inventory and retain/simplify/remove/defer/human-decision dispositions for requirements, state, owners, seams, abstractions, contracts, custom machinery, failure/configuration/security/migration/proof burdens, duplicate responsibilities, and prototype scaffolding; authority/evidence or absence; existing mechanism reuse>
 - **Pruned-design walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
-- **Route simplification (after route definition, before fixed routeable revision):** <redundant movements, handoffs, convergence points, or prerequisites; duplicate ownership/proof; and prototype scaffolding removed/deferred; non-boundary work deferred; outcome-required justification for every retained handoff/convergence point, whether or not other route elements were removed/deferred>
+- **Route application (after route definition, before fixed routeable revision):** <dispositions for redundant movements, handoffs, convergence points, prerequisites, duplicate ownership/proof, non-blocking work, and prototype scaffolding; outcome-required justification for every retention>
 - **Simplified-route walkthrough rerun:** <immediate-consumer, representative applicable-failure, and fresh-worker walkthrough locators/results; architecture invention `none` or exact gap>
+- **Pass identity/currentness:** <fresh-context identity/mandate; affected claim IDs and dependency/route consequences; material expansion since pass `none` or exact invalidation requiring rerun>
 
 ## Reconciliation log
 
@@ -78,5 +79,5 @@ Materialize the Production Design RFC only when:
 - owners, consumers, contracts, state/authority, failures, and route are closed;
 - a fresh-worker walkthrough identifies no architecture invention;
 - applicable advisory findings are reconciled;
-- the Design pruning and Route simplification record is complete, with their required walkthrough reruns showing no unresolved architecture invention; and
+- the current Requirement-Killer reconciliation has dispositioned every post-admission addition through its Design and Route applications, no unresolved human decision is hidden in a selected claim, and required walkthrough reruns show no unresolved architecture invention; and
 - the exact Case revision is fixed as document provenance.
