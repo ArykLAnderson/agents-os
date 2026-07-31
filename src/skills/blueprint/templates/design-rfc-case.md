@@ -60,6 +60,8 @@ Only consequential unresolved authority choices. Use `none` when accepted author
 
 Record only decision-changing reconciliation: finding/evidence locator, affected claim IDs, disposition, semantic change or `none`, authority when required, and rematerialization consequence.
 
+For each Requirement-Killer Pass, record its fresh-context identity/mandate, admitted-to-current scope, every affected claim ID, authority/evidence or absence, retain/simplify/remove/defer/human-decision disposition, dependency/route consequence, and whether a later material expansion invalidated the pass. Keep this atomic reconciliation here; do not create a parallel simplification artifact.
+
 ## Materialization readiness
 
 Materialize the Production Design RFC only when:
@@ -68,5 +70,6 @@ Materialize the Production Design RFC only when:
 - evidence-dependent claims are supported within explicit limits;
 - owners, consumers, contracts, state/authority, failures, and route are closed;
 - a fresh-worker walkthrough identifies no architecture invention;
-- applicable advisory findings are reconciled; and
+- applicable advisory findings are reconciled;
+- a current Requirement-Killer Pass has dispositioned every post-admission addition, with no unresolved human decision hidden in a selected claim; and
 - the exact Case revision is fixed as document provenance.

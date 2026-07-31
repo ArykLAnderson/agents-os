@@ -29,8 +29,10 @@ During exploration, curate one Design/RFC Case using `templates/design-rfc-case.
 
 Track readiness on the Case:
 
-- **Route-selected:** the current semantic design and route are inspectable, but named evidence, ownership, authority, or no-invention claims remain provisional/blocked.
-- **Fresh-worker executable candidate:** every consequential claim is selected, evidence-dependent claims are supported, owners/consumers/failures are closed, and a fresh worker walkthrough finds no architecture invention.
+- **Route-selected:** the current semantic design and route are inspectable, but named evidence, ownership, authority, simplification, or no-invention claims remain provisional/blocked.
+- **Fresh-worker executable candidate:** every consequential claim is selected, evidence-dependent claims are supported, owners/consumers/failures are closed, the current [Requirement-Killer Pass](references/requirement-killer.md) is reconciled, and a fresh worker walkthrough finds no architecture invention.
+
+Before the Case becomes `fresh-worker executable candidate`, run the Requirement-Killer Pass as a fresh-context adversarial deletion operation. Rerun it whenever later evidence, review, or reconciliation materially expands requirements, mechanisms, seams, failures, configuration, security/trust controls, migration/compatibility burdens, or proof obligations. Reconcile every disposition into atomic Case claims and dependencies; unresolved consequential additions remain blocked and use `decision-card` when human authority is required. This simplification gate is distinct from correctness review and cannot be satisfied by general advice, the fresh-worker walkthrough, or an RFC prose edit.
 
 Only after routeability, invoke `../document/SKILL.md` to materialize `templates/production-design-rfc.md` as a **lossless reader-facing projection** from one fixed Design/RFC Case revision. In this bounded invocation, the Case remains the sole semantic design authority: Document may govern editorial organization, prose, trace, review, and representation, but may not add, select, reinterpret, or change a semantic design claim. Any semantic discrepancy or requested semantic change returns to the Case first; fix and re-reconcile its claims, fix a new revision, then rematerialize. Review findings reconcile into Case claims, never directly into the RFC. Only an accepted fresh-worker-executable RFC projection may proceed to Atlas.
 
@@ -43,7 +45,7 @@ Before changing production source, require all of:
 1. when decision-changing consequential uncertainty remains, the smallest disposable evidence that can resolve it (a thin recognizable outcome across those uncertain seams when that is the discriminating shape), reusing prior evidence or skeletal fixtures for settled seams; when no such uncertainty remains, no prototype or tracer is required;
 2. targeted stress evidence only where the selected real seam and accepted boundary make it decision-relevant;
 3. analytical immediate-consumer and representative applicable failure walkthroughs, plus closed contracts, owners, failures, and route with no worker invention;
-4. applicable advisory findings reconciled and resulting current blockers resolved;
+4. applicable advisory findings reconciled, the current Requirement-Killer Pass reconciled after any material expansion, and resulting current blockers resolved;
 5. a fixed routeable Case revision is materialized as an RFC and accepted as `fresh-worker executable`;
 6. an exact current accepted and configured-adapter-published Atlas Map Decision bound to that RFC/Case, and an explicit current production dispatch naming that Decision and production movement.
 
@@ -56,10 +58,11 @@ It is ready to accept only when it provides:
 - analytical immediate-consumer and representative applicable failure walkthroughs for the accepted boundary;
 - disposable evidence for each decision-changing consequential uncertainty, while settled seams are explicitly bounded by prior evidence or fixed fixtures;
 - clear state and authority ownership;
-- one selected design with material alternatives/rejections and limitations visible; and
+- one selected design with material alternatives/rejections and limitations visible;
+- a current reconciled Requirement-Killer Pass showing that every post-admission addition is supported, simplified, removed, deferred, or blocked for human decision; and
 - a vertical route that a fresh worker can follow without architecture invention.
 
-Apply the proportional review ladder in `README.md`. Early prototypes default to self-check or one `review-mandates/prototype-light.md` generalist; add a focused specialist only for a named material seam. At RFC readiness use `review-mandates/rfc-design.md`; add `boundary-envelope.md` only when the selected route crosses external process/API, persistence/restart, security/privilege, or comparable material boundary. When security review is concretely warranted, use an exhaustive finder only with `review-mandates/security-disposition.md` or an equivalent contextual disposition step. Do not make the final-RFC review set the default for earlier prototype rungs.
+Apply the proportional review ladder in `README.md`. Early prototypes default to self-check or one `review-mandates/prototype-light.md` generalist; add a focused specialist only for a named material seam. At RFC readiness run the independent Requirement-Killer Pass, then use `review-mandates/rfc-design.md`; add `boundary-envelope.md` only when the selected route crosses external process/API, persistence/restart, security/privilege, or comparable material boundary. When security review is concretely warranted, use an exhaustive finder only with `review-mandates/security-disposition.md` or an equivalent contextual disposition step. Do not make the final-RFC review set the default for earlier prototype rungs.
 
 Reviewers report advisory findings; they do not accept, reject, or set readiness. After all applicable reviews, Design must run one explicit reconciliation against the accepted Frame, current goals, phase, threat model, evidence, selected architecture, and prototype proposition. For every consequential finding, record one disposition: immediate boundary violation/conformance repair; seam required now; evidence required now; deferred enforcement/hardening; design or behavior proposal; or irrelevant/invented requirement. State the resulting Case-claim consequence or `none`. Only this reconciliation—and human authority where the disposition changes a consequential guarantee or design choice—may alter Case meaning, route, readiness, or acceptance. Rematerialize any RFC projection after Case meaning changes; never patch the projection as a competing authority. Preserve unresolved evidence conflicts without allowing reviewer preference to become a requirement.
 
