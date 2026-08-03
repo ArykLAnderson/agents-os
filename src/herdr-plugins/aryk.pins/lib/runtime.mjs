@@ -1,6 +1,6 @@
 import path from "node:path";
-import { appendPin, identifyCurrentSession, parsePins, planProjectActivation, resolveOfficialSession, validateRegistry } from "./model.mjs";
-import { atomicWriteJson, loadPins, loadRegistry, statePaths, transactionalHistory, transactionalPins } from "./storage.mjs";
+import { appendPin, identifyCurrentSession, parsePins, PINNED_PROTOCOL, planProjectActivation, reconcileCurrentAgent, resolveOfficialSession, validateRegistry } from "./model.mjs";
+import { atomicWriteJson, loadPins, loadRegistry, statePaths, transactionalHistory, transactionalPins, transactionalRegistry } from "./storage.mjs";
 import { createHerdrClient } from "./herdr-client.mjs";
 
 function contextFrom(env) {
@@ -36,20 +36,31 @@ export async function invokeAction(action, options = {}) {
   const historyTransaction = options.historyTransaction ?? transactionalHistory;
   let client = options.client;
   if (["manage-projects", "manage-locals"].includes(action)) {
-    if (!client) client = createHerdrClient({ env, route: { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: 17 } });
+    if (!client) client = createHerdrClient({ env, route: { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: PINNED_PROTOCOL } });
     await client.openPopup(action === "manage-projects" ? "project-manager" : "local-manager"); return { status: "opened" };
   }
   let registry;
+  const registryTransaction = options.registryTransaction ?? transactionalRegistry;
   try { registry = validateRegistry(await readRegistry()); }
   catch (error) {
-    if (!client) client = createHerdrClient({ env, route: { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: 17 } });
+    if (["pin-project", "pin-local"].includes(action) && error.code === "ENOENT") registry = null;
+    else {
+    if (!client) client = createHerdrClient({ env, route: { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: PINNED_PROTOCOL } });
     return visibleRefusal(`Authoritative registry unavailable: ${error.message}`, { client, writeResult });
+    }
   }
   try {
-    if (!client) client = createHerdrClient({ env, route: registry.route });
+    if (!client) client = createHerdrClient({ env, route: registry?.route ?? { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: PINNED_PROTOCOL } });
     const context = contextFrom(env);
     if (["pin-project", "pin-local"].includes(action)) {
       const agents = await client.listAgents();
+      const focused = agents.filter(agent => agent.pane_id === env.HERDR_PANE_ID && context.focused_pane_id === env.HERDR_PANE_ID);
+      if (focused.length !== 1) return visibleRefusal(`Canonical current session unavailable (${focused.length ? "ambiguous" : "missing"}).`, { client, writeResult });
+      const reconciled = await registryTransaction(paths.registry, async current => {
+        const next = reconcileCurrentAgent(current, focused[0], registry?.route ?? { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: PINNED_PROTOCOL }, agents);
+        return { registry: next.registry, result: next };
+      });
+      registry = reconciled.registry;
       const current = identifyCurrentSession({ registry, agents, context, paneId: env.HERDR_PANE_ID });
       if (current.status !== "unique") return visibleRefusal(`Canonical current session unavailable (${current.status}).`, { client, writeResult });
       const scope = action === "pin-project" ? "project" : "local";
@@ -97,9 +108,23 @@ export async function handlePaneFocusedEvent(options = {}) {
     if (envelope?.event !== "pane_focused" || envelope?.data?.type !== "pane_focused") throw new Error("invalid pane.focused envelope");
     const paneId = envelope.data.pane_id; const workspaceId = envelope.data.workspace_id;
     if (typeof paneId !== "string" || !paneId || typeof workspaceId !== "string" || !workspaceId) throw new Error("missing focus locators");
-    const registry = validateRegistry(await (options.readRegistry ?? (() => loadRegistry(paths.registry)))());
-    const client = options.client ?? createHerdrClient({ env, route: registry.route });
+    let registry;
+    try { registry = validateRegistry(await (options.readRegistry ?? (() => loadRegistry(paths.registry)))()); } catch (error) { if (error.code !== "ENOENT") throw error; }
+    const route = registry?.route ?? { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: PINNED_PROTOCOL };
+    const client = options.client ?? createHerdrClient({ env, route });
     const agents = await client.listAgents();
+    const focused = agents.filter(agent => agent.pane_id === paneId && agent.workspace_id === workspaceId && agent.focused === true);
+    if (focused.length !== 1) throw new Error("focused official agent unavailable");
+    const existing = registry?.sessions.filter(record => record.binding.paneId === paneId)
+      .map(record => resolveOfficialSession(record.canonicalId, registry, agents))
+      .filter(result => result.status === "unique");
+    if (existing?.length !== 1) {
+      const reconciled = await (options.registryTransaction ?? transactionalRegistry)(paths.registry, async current => {
+        const next = reconcileCurrentAgent(current, focused[0], route, agents);
+        return { registry: next.registry, result: next };
+      });
+      registry = reconciled.registry;
+    }
     const candidates = registry.sessions.filter(record => record.binding.paneId === paneId && record.binding.workspaceId === workspaceId)
       .map(record => resolveOfficialSession(record.canonicalId, registry, agents))
       .filter(result => result.status === "unique" && result.agent.focused === true);

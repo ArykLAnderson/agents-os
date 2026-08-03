@@ -79,3 +79,16 @@ export async function transactionalHistory(file, transform, lockOptions) {
     await atomicWriteJson(file, outcome.history); return outcome.result;
   }, lockOptions);
 }
+
+export async function transactionalRegistry(file, transform, lockOptions) {
+  return withFileLock(file, async () => {
+    let registry = null;
+    try { registry = await loadRegistry(file); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+    const outcome = await transform(registry);
+    if (!outcome?.registry) throw new TypeError("registry transaction must return registry");
+    const validated = validateRegistry(outcome.registry);
+    await atomicWriteJson(file, validated);
+    return { registry: validated, result: outcome.result };
+  }, lockOptions);
+}
