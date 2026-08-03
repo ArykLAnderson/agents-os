@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHerdrClient, parseAgentListResponse, parseFocusResponse } from "../lib/herdr-client.mjs";
+import { reconcileCurrentAgent } from "../lib/model.mjs";
 import { handlePaneFocusedEvent, recordSuccessfulFocus, invokeAction } from "../lib/runtime.mjs";
 
 const env = { HERDR_BIN_PATH: "/opt/herdr", HERDR_CONFIG_PATH: "/home/a/.config/herdr/trials/casebook/config.toml", HERDR_SOCKET_PATH: "/tmp/casebook.sock", HERDR_PANE_ID: "pane-a", HERDR_PLUGIN_CONTEXT_JSON: '{"focused_pane_id":"pane-a"}' };
-const route = { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: 17 };
+const route = { sessionName: "casebook-trial", configPath: env.HERDR_CONFIG_PATH, socketPath: env.HERDR_SOCKET_PATH, protocol: 19 };
 const focusRecord = {
   canonicalId: "session-a", projectCanonicalId: "project-a", generation: 1, reconciliationState: "current", role: "interaction",
   officialAgentSession: { source:"herdr:pi", agent: "pi", kind: "id", value: "official-a" },
@@ -108,4 +109,49 @@ test("missing registry action fails visibly through result popup", async () => {
   const opened = [];
   const result = await invokeAction("pin-local", { stateRoot: "/absent", env, client: { openPopup: async id => opened.push(id) }, readRegistry: async () => { const e = new Error("missing registry"); e.code = "ENOENT"; throw e; }, writeResult: async () => {} });
   assert.equal(result.status, "refused"); assert.deepEqual(opened, ["result"]);
+});
+
+test("explicit pin self-registers the focused official session and later reconciles changed locators", async () => {
+  const first = focusedAgent({ cwd: "/work/project", foreground_cwd: "/work/project", focused: true });
+  const registered = reconcileCurrentAgent(null, first, route);
+  assert.equal(registered.project.declaredRoot, "/work/project");
+  assert.equal(registered.session.generation, 1);
+
+  const moved = { ...first, workspace_id: "workspace-b", tab_id: "tab-b", pane_id: "pane-b", terminal_id: "terminal-b" };
+  const reconciled = reconcileCurrentAgent(registered.registry, moved, route);
+  assert.equal(reconciled.session.canonicalId, registered.session.canonicalId);
+  assert.equal(reconciled.project.canonicalId, registered.project.canonicalId);
+  assert.equal(reconciled.session.generation, 2);
+  assert.deepEqual(reconciled.session.binding, { workspaceId: "workspace-b", tabId: "tab-b", paneId: "pane-b", terminalId: "terminal-b" });
+});
+
+test("reconciliation stales a missing steward and promotes the focused live session", () => {
+  const stale = structuredClone(focusRecord);
+  const registry = {
+    schemaVersion: 1,
+    route,
+    projects: [{ canonicalId: "project-a", declaredRoot: "/work/project", generation: 1, reconciliationState: "current", stewardSessionCanonicalId: "session-a" }],
+    sessions: [stale],
+  };
+  const current = focusedAgent({ cwd: "/work/project", foreground_cwd: "/work/project", pane_id: "pane-b", tab_id: "tab-b", terminal_id: "terminal-b", agent_session: { source: "herdr:opencode", agent: "opencode", kind: "id", value: "new-session" } });
+  const result = reconcileCurrentAgent(registry, current, route, [current]);
+  assert.equal(result.registry.sessions.find(item => item.canonicalId === "session-a").reconciliationState, "stale");
+  assert.equal(result.session.role, "steward");
+  assert.equal(result.project.stewardSessionCanonicalId, result.session.canonicalId);
+});
+
+test("pin-local can create a missing registry before writing the canonical pin", async () => {
+  const pinWrites = [];
+  let published;
+  const result = await invokeAction("pin-local", {
+    env,
+    readRegistry: async () => { const error = new Error("missing"); error.code = "ENOENT"; throw error; },
+    client: { listAgents: async () => [focusedAgent({ cwd: "/work/project", foreground_cwd: "/work/project" })], openPopup: async () => assert.fail("no refusal expected") },
+    registryTransaction: async (_file, mutate) => { const outcome = await mutate(null); published = outcome.registry; return { registry: outcome.registry, result: outcome.result }; },
+    pinTransaction: async (_file, mutate) => { const outcome = await mutate({ schemaVersion: 1, slots: [null, null, null, null] }); pinWrites.push(outcome.pins); return outcome.result; },
+    writeResult: async () => {},
+  });
+  assert.equal(result.status, "pinned");
+  assert.equal(published.sessions.length, 1);
+  assert.equal(pinWrites[0].slots[0], published.sessions[0].canonicalId);
 });

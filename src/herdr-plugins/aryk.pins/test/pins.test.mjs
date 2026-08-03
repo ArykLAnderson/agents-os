@@ -10,7 +10,7 @@ import {
 import { parseNvimPins } from "../lib/ui.mjs";
 import { atomicWriteJson, loadPins, savePins, transactionalPins } from "../lib/storage.mjs";
 
-const route = { sessionName: "casebook-trial", configPath: "/home/a/.config/herdr/trials/casebook/config.toml", socketPath: "/tmp/casebook.sock", protocol: 17 };
+const route = { sessionName: "casebook-trial", configPath: "/home/a/.config/herdr/trials/casebook/config.toml", socketPath: "/tmp/casebook.sock", protocol: 19 };
 const session = (canonicalId, projectCanonicalId, paneId, role = "interaction", generation = 1) => ({
   canonicalId, projectCanonicalId, generation, reconciliationState: "current", role,
   officialAgentSession: { source:"herdr:pi", agent: "pi", kind: "id", value: `${canonicalId}-official` },

@@ -1,10 +1,11 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { resolveDestination } from "./resolver.mjs";
 
 export const SCHEMA_VERSION = 1;
 export const SLOT_COUNT = 4;
 export const TRIAL_SESSION = "casebook-trial";
-export const PINNED_PROTOCOL = 17;
+export const PINNED_PROTOCOL = 19;
 
 function text(value, field) {
   if (typeof value !== "string" || value.trim() === "") throw new TypeError(`${field} is required`);
@@ -31,6 +32,64 @@ function validateOfficialAgentSession(value, field) {
 }
 function sameOfficial(a, b) {
   return a?.source === b?.source && a?.agent === b?.agent && a?.kind === b?.kind && a?.value === b?.value;
+}
+
+function stableId(prefix, value) {
+  return `${prefix}:${createHash("sha256").update(value).digest("base64url").slice(0, 24)}`;
+}
+
+export function reconcileCurrentAgent(registryValue, agent, route, liveAgents = [agent]) {
+  validateOfficialAgentSession(agent?.agent_session, "agent.agent_session");
+  for (const key of ["workspace_id", "tab_id", "pane_id", "terminal_id"]) text(agent?.[key], `agent.${key}`);
+  const root = path.resolve(text(agent?.foreground_cwd ?? agent?.cwd, "agent.cwd"));
+  const registry = registryValue == null ? { schemaVersion: SCHEMA_VERSION, route, projects: [], sessions: [] } : validateRegistry(registryValue);
+  for (const record of registry.sessions) {
+    const live = liveAgents.some(item => sameOfficial(item?.agent_session, record.officialAgentSession));
+    if (!live) record.reconciliationState = "stale";
+  }
+  const official = agent.agent_session;
+  const officialClaims = registry.sessions.filter(record => sameOfficial(record.officialAgentSession, official));
+  if (officialClaims.length > 1) throw new Error("official agent session is ambiguous");
+
+  let project = registry.projects.find(item => item.declaredRoot === root);
+  if (!project) {
+    const workspaceProjects = new Set(registry.sessions.filter(item => item.binding.workspaceId === agent.workspace_id).map(item => item.projectCanonicalId));
+    if (workspaceProjects.size > 1) throw new Error("workspace project identity is ambiguous");
+    const projectId = [...workspaceProjects][0];
+    project = projectId ? registry.projects.find(item => item.canonicalId === projectId) : null;
+  }
+  if (!project) {
+    project = { canonicalId: stableId("herdr-project", root), displayName: path.basename(root), declaredRoot: root, generation: 1, reconciliationState: "current", stewardSessionCanonicalId: "pending" };
+    registry.projects.push(project);
+  }
+
+  let session = officialClaims[0];
+  if (!session) {
+    session = {
+      canonicalId: stableId("agent-conversation", JSON.stringify([official.source, official.agent, official.kind, official.value])),
+      projectCanonicalId: project.canonicalId,
+      generation: 1,
+      reconciliationState: "current",
+      role: project.stewardSessionCanonicalId === "pending" ? "steward" : "interaction",
+      officialAgentSession: structuredClone(official),
+      binding: { workspaceId: agent.workspace_id, tabId: agent.tab_id, paneId: agent.pane_id, terminalId: agent.terminal_id },
+    };
+    registry.sessions.push(session);
+  } else if (session.projectCanonicalId !== project.canonicalId) {
+    throw new Error("official agent session changed projects");
+  }
+  const binding = { workspaceId: agent.workspace_id, tabId: agent.tab_id, paneId: agent.pane_id, terminalId: agent.terminal_id };
+  if (JSON.stringify(session.binding) !== JSON.stringify(binding)) session.generation += 1;
+  session.binding = binding;
+  session.reconciliationState = "current";
+  project.reconciliationState = "current";
+  const steward = registry.sessions.find(item => item.canonicalId === project.stewardSessionCanonicalId && item.reconciliationState === "current");
+  if (project.stewardSessionCanonicalId === "pending" || !steward) {
+    for (const item of registry.sessions.filter(item => item.projectCanonicalId === project.canonicalId)) item.role = "interaction";
+    session.role = "steward";
+    project.stewardSessionCanonicalId = session.canonicalId;
+  }
+  return { registry: validateRegistry(registry), project, session };
 }
 
 export function emptyPins() { return { schemaVersion: SCHEMA_VERSION, slots: Array(SLOT_COUNT).fill(null) }; }
