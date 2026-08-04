@@ -1,7 +1,7 @@
 ---
 name: image-generation
-description: Create, select, inspect, and return an optional visual asset or a truthful non-generation fallback. Use when a caller needs an illustration, atmospheric image, visual variant, or cross-skill image-form recommendation; do not use generated imagery as factual evidence or for exact semantic diagrams.
-user-invocable: true
+description: Use when the user or another skill needs an optional visual for an illustration, atmospheric or conceptual image, visual variant, or image-form recommendation, including visual materialization in Document, Blueprint, Frontend Design, research, reporting, or content work. Keep generated imagery out of factual evidence and exact semantic diagrams.
+user-invocable: false
 argument-hint: <visual need, audience, and any permitted references>
 ---
 
@@ -45,8 +45,8 @@ When generation is permitted:
 1. Create a candidate from the provider-neutral brief, with explicit role, composition-safe areas, constraints, and forbidden implications.
 2. Treat it as a candidate, never presumed satisfactory. Inspect the actual rendered visual at a representative intended size using visual capability.
 3. Check role fit, must-show and must-not-imply meaning, composition, readability of unavoidable visible text, obvious defects, crop/scaling, and gross style mismatch.
-4. Make another focused pass only for a named, correctable material deficiency that is improving. Change one named concern at a time where practical; create variants only for a named choice or explicit caller request.
-5. Stop on verified role satisfaction, repeated non-improvement, diminishing decision value, missing taste authority, or provider/spend limits. Return the best usable outcome and its remaining limitation; do not enforce a fixed pass count or loop indefinitely.
+4. Repeat a focused pass only while a named, correctable material deficiency is improving and value, authority, and provider/spend limits remain. On each pass, name the deficiency, change one concern at a time where practical, and create variants only for a named choice or explicit caller request.
+5. Stop on verified role satisfaction, non-improvement, diminishing decision value, missing taste authority, or provider/spend limits. Return the best usable outcome and its remaining limitation; the loop has no fixed pass cap but must never continue indefinitely.
 
 Every visual returned as satisfactory must have been visually inspected in its rendered form. For SVG or another code-authored visual, render it into a viewable image and view that image with visual capability. Reading XML/source, parsing, linting, or successful rendering alone is not visual inspection. Pay particular attention to clipping, overlap, broken layout, unreadable labels, viewBox/cropping, scaling, and whether the rendered relationships convey the intended semantics.
 
