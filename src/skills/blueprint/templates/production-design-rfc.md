@@ -130,4 +130,4 @@ State `N/A` only with a reason; unknowns are findings, not N/A.
 
 **Required visuals:** Blueprint → accepted RFC → Atlas Map Decision → implementation handoff chain, including the authority transition at each boundary.
 
-Before acceptance, use `../contracts/atlas-handoff.md` to produce a non-authoritative draft handoff candidate for routeability review, with every missing acceptance, owner, decision, and evidence input named as a blocker. After acceptance and blocker resolution, Feature Atlas records the exact current Map Decision and publishes that fixed package through the configured adapter. Atlas holds the authoritative current delivery plan; this RFC is its pinned design source.
+Before acceptance, use `../contracts/atlas-handoff.md` to produce a non-authoritative draft handoff candidate for routeability review, with every missing acceptance, owner, decision, and evidence input named as a blocker. After acceptance and blocker resolution, Feature Atlas records the exact current Map Decision and publishes that fixed package through the project-selected guide. Atlas holds the authoritative current delivery plan; this RFC is its pinned design source.

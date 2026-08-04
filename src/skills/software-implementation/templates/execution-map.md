@@ -20,18 +20,13 @@
 Use `not applicable` outside Atlas mode. Preserve exact values rather than a prose summary.
 
 - **Handoff disposition:** `<HandoffReady | HandoffWithLimitations>`
-- **Atlas / Map / current Decision:** `<stable IDs and domain/immutable locators>`
-- **Accepted snapshot / publication integrity:** `<binding verification and adapter receipt>`
-- **Blueprint bindings / coverage:** `<exact revisions and locators>`
-- **Feature bindings:** `<local labels ↔ F-* IDs, owners, locators>`
-- **Leg bindings:** `<snapshot labels ↔ Feature owners/meaning>`
-- **Work Item bindings:** `<local labels ↔ WI-* IDs, Feature/Leg owners, locators>`
-- **Prerequisites / convergence:** `<accepted direct edges/endpoints and owners>`
-- **Transition / compatibility / cleanup:** `<accepted obligations>`
-- **Proof / E2E / security allocation:** `<accepted gates, order, owners and claims>`
-- **Invalidators / qualified evidence:** `<exact rules, source locators, freshness and revalidation>`
-- **Typed limitations:** `<type, affected claim/work, forbidden claim, allowed boundary, owner>`
-- **Atlas authority boundary:** `<explicit present/absent implementation/effect/PR/merge/deploy/landing authority>`
+- **Publication:** `<method, destination, Map and current Decision locators>`
+- **Blueprint:** `<accepted RFC/Blueprint revision and locator>`
+- **Selected work:** `<Feature and Work Item IDs, locators, owners and outcomes>`
+- **Order:** `<direct prerequisites and convergence points>`
+- **Obligations:** `<compatibility, cleanup, proof responsibilities and owners>`
+- **Limitations:** `<affected work, forbidden claims, invalidators and source links>`
+- **Authority boundary:** `<present/absent implementation/effect/PR/merge/deploy/landing authority>`
 
 ## Currentness
 
@@ -39,17 +34,17 @@ Store the latest check and material stop only; do not mirror Atlas history.
 
 - **Checkpoint / observation time:** `<admission | resume | dependency_frontier | effectful_gate | result — time>`
 - **Bound / observed current Decision:** `<exact identities>`
-- **Adapter / reread receipt:** `<configured adapter and domain receipt>`
-- **Publication / binding / invalidator result:** `<concise result and source locators>`
+- **Records read:** `<Map, Feature and Work Item paths or Issue URLs>`
+- **Publication / limitation result:** `<concise result>`
 - **Disposition / affected execution:** `<clear | exact_admitted_limitation | stop — boundary>`
 
 ## Tasks
 
 States: `todo | working | verify | repair | ready_to_integrate | integrated | blocked | done`.
 
-| Task | Atlas WI / local label / Feature / Leg | Outcome | Depends on | Starting baseline | Module/files | Wave | Role/session | Worktree/branch | State | Evidence/findings |
+| Task | Atlas WI / Feature | Outcome | Depends on | Starting baseline | Module/files | Wave | Role/session | Worktree/branch | State | Evidence/findings |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `<T-01>` | `<WI-* / label / F-* / leg, or n/a>` | `<observable result>` | `<accepted direct prerequisites>` | `<base name>` | `<owned boundary>` | `<1>` | `<worker/id>` | `<path/branch>` | `todo` | `<locators>` |
+| `<T-01>` | `<WI-* / F-*, or n/a>` | `<observable result>` | `<accepted direct prerequisites>` | `<base name>` | `<owned boundary>` | `<1>` | `<worker/id>` | `<path/branch>` | `todo` | `<locators>` |
 
 ## Feature / PR Stack
 
@@ -107,4 +102,4 @@ A bounded-live proof between two Work Items is represented as an ordinary gate n
 - **Assumptions/exact typed limitations:** `<items>`
 - **Execution map:** `<repeat stable locator>`
 
-Do not add commit-hash ledgers, event transcripts, transactional ownership machinery, or mirrored Atlas/tracker state. Git, Feature Atlas domain records, and external systems remain authoritative.
+Do not add commit-hash ledgers, event transcripts, transactional ownership machinery, or mirrored Atlas/tracker state. Git, published Feature Atlas records, and external systems remain authoritative.
