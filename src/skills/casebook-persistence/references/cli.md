@@ -37,13 +37,17 @@ casebook read frame --frame-id <id> [--owner-revision-id <id>]
 casebook commit frame --namespace <semantic-id> --frame-id <id> --expected-revision <positive-integer> \
   --commit-basis <text> --input -
 
+casebook create namespace --namespace <semantic-id> [--display-name <text>]
+casebook read namespace --namespace <semantic-id>
+casebook list namespaces
+
 casebook search --namespace <semantic-id> --query <text> [--limit 1..100] [--cursor <cursor>]
 casebook receipt read --operation-id <id>
 casebook operation status --operation-id <id>
 casebook operation recent [--limit 1..20] [--before-operation-fence <positive-integer>]
 ```
 
-For a commit, the aggregate ID must exactly equal its `--case-id` or `--frame-id`. A successful mutation returns its generated operation ID and revision. Search returns bounded candidates and a continuation cursor; it does not establish identity. `receipt read` and `operation status` are equivalent exact-operation observations.
+For a commit, the aggregate ID must exactly equal its `--case-id` or `--frame-id`. Namespace creation derives its parent from the canonical path: top-level Namespaces use `namespace:root`; nested Namespaces require their exact semantic parent to already be active. A successful mutation returns its generated operation ID and revision. Namespace reads and lists return active Namespace identities, current revisions, parents, display names, and aliases. Search returns bounded candidates and a continuation cursor; it does not establish identity. `receipt read` and `operation status` are equivalent exact-operation observations.
 
 Delete Case/Frame is revision-checked logical tombstoning, not physical purge: ordinary current reads/search hide the whole owner while durable history and receipts remain. Tombstoning an individual knowledge/Discovery item does not mean its whole owner was deleted. There is no ordinary public command for Frame list, resolve, Discovery, disposition, or history; direct initialization; migration; or storage-file editing. For a supported approximation, search for candidates and then read a stable returned ID. State an unavailable operation as a limitation rather than reaching around the CLI.
 

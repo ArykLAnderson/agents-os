@@ -197,11 +197,15 @@ function parse(argv) {
 }
 
 const operations = new Map([
+  ["create namespace", "namespace.create"], ["read namespace", "namespace.read"], ["list namespaces", "namespace.list"],
   ["create case", "case.create"], ["read case", "case.read"], ["commit case", "case.commit_revision"], ["delete case", "case.delete"],
   ["create frame", "frame.create"], ["read frame", "frame.read"], ["commit frame", "frame.commit_revision"], ["delete frame", "frame.delete"],
   ["search", "query.search"], ["receipt read", "substrate.get_receipt"], ["operation status", "substrate.get_receipt"], ["operation recent", "operation.recent"],
 ]);
 const allowedFlags = {
+  "namespace.create": ["namespace", "display_name"],
+  "namespace.read": ["namespace"],
+  "namespace.list": [],
   "case.create": ["commit_basis", "namespace", "namespace_id", "draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis"],
   "case.read": ["case_id", "owner_revision_id"],
   "case.commit_revision": ["case_id", "expected_revision", "commit_basis", "namespace", "namespace_id", "draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis"],
@@ -216,20 +220,21 @@ const allowedFlags = {
 };
 function required(operation, flags, input) {
   const needed = {
+    "namespace.create": ["namespace"], "namespace.read": ["namespace"], "namespace.list": [],
     "case.create": ["commit_basis"], "case.commit_revision": ["case_id", "expected_revision", "commit_basis"], "case.delete": ["case_id", "expected_revision", "reason"], "case.read": ["case_id"],
     "frame.create": ["commit_basis"], "frame.commit_revision": ["frame_id", "expected_revision", "commit_basis"], "frame.delete": ["frame_id", "expected_revision", "reason"], "frame.read": ["frame_id"],
     "query.search": ["query"], "substrate.get_receipt": ["operation_id"], "operation.recent": [],
   }[operation];
   if (!needed || needed.some((key) => flags[key] == null) || Object.keys(flags).some((key) => !allowedFlags[operation].includes(key))) throw Error("grammar_invalid");
   if (flags.namespace != null && flags.namespace_id != null) throw Error("namespace_selector_conflict");
-  const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
+  const mutation = ["namespace.create", "case.create", "case.commit_revision", "frame.create", "frame.commit_revision"].includes(operation);
   const deletion = ["case.delete", "frame.delete"].includes(operation);
   const commit = ["case.commit_revision", "frame.commit_revision"].includes(operation);
   const authoringFlags = new Set(["draft", "id", "title", "summary", "scope", "body", "acting_role", "authority_basis", "outcome", "discovery_title", "discovery_body", "discovery_category", "human_authority"]);
   if (commit && Object.keys(flags).some((key) => authoringFlags.has(key))) throw Error("commit_aggregate_required");
   if (mutation && input && flags.draft) throw Error("aggregate_transport_conflict");
-  if (mutation && !input && !flags.draft && !flags.id && !flags.title && !flags.discovery_title) throw Error("aggregate_or_direct_input_required");
-  const direct = mutation && !input && !flags.draft;
+  if (mutation && operation !== "namespace.create" && !input && !flags.draft && !flags.id && !flags.title && !flags.discovery_title) throw Error("aggregate_or_direct_input_required");
+  const direct = mutation && operation !== "namespace.create" && !input && !flags.draft;
   if (direct && operation.startsWith("case.") && ["title", "summary", "scope", "body", "acting_role"].some((key) => flags[key] == null || flags[key] === "")) throw Error("case_direct_fields_required");
   if (direct && operation.startsWith("frame.") && ["title", "outcome", "discovery_title", "discovery_body"].some((key) => flags[key] == null || flags[key] === "")) throw Error("frame_direct_fields_required");
   if (deletion && input) throw Error("aggregate_not_allowed");
@@ -374,7 +379,7 @@ export async function run(argv) {
     if (localSettings?.store) throw Error("settings_store_authority_forbidden");
     let selectedNamespace = parsed.flags.namespace ?? parsed.flags.namespace_id ?? localSettings?.namespace ?? null;
     if (selectedNamespace != null) selectedNamespace = canonicalNamespace(selectedNamespace);
-    const namespaceRequired = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete", "query.search"].includes(operation);
+    const namespaceRequired = ["namespace.create", "case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete", "query.search"].includes(operation);
     if (namespaceRequired && !selectedNamespace) throw Error("namespace_required");
     if (selectedNamespace) { parsed.flags.namespace_id = selectedNamespace; delete parsed.flags.namespace; }
     if (!store) {
@@ -421,7 +426,7 @@ export async function run(argv) {
     const canonicalStore = await realpath(canonicalCandidate);
     authority = { status: "target_admitted", workspace, store: canonicalStore, resolution_source: source, store_id: target.store_id, admission_slot_id: target.admission_slot_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence };
     ctx = { authority };
-    const mutation = ["case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete"].includes(operation);
+    const mutation = ["namespace.create", "case.create", "case.commit_revision", "frame.create", "frame.commit_revision", "case.delete", "frame.delete"].includes(operation);
     const operationId = mutation ? `operation:${randomUUID().toLowerCase()}` : null;
     const answer = await bridgeCall({ operation, workspace, store: canonicalStore, target, flags: parsed.flags, aggregate, operation_id: operationId }, workspace);
     if (!answer || typeof answer.ok !== "boolean" || (answer.ok && (!answer.result || typeof answer.result !== "object")) || (!answer.ok && (!answer.failure || typeof answer.failure !== "object"))) throw Object.assign(Error("bridge_contradiction"), { delivery: mutation, operation_id: operationId, diagnostics: answer?.__bridgeDiagnostics });
@@ -429,10 +434,13 @@ export async function run(argv) {
     const raw = answer.result;
     let result;
     if (mutation) {
-      const kind = operation.startsWith("case") ? "case" : "frame";
-      const ownerId = (raw.case ?? raw.frame)?.id ?? raw.owner?.id ?? parsed.flags[`${kind}_id`];
-      result = { owner: { kind, id: ownerId }, revision: { id: raw.revision.id, number: raw.revision.number }, operation_id: operationId };
+      const kind = operation.startsWith("namespace") ? "namespace" : operation.startsWith("case") ? "case" : "frame";
+      const ownerId = raw.namespace?.id ?? (raw.case ?? raw.frame)?.id ?? raw.owner?.id ?? parsed.flags[`${kind}_id`];
+      const revision = raw.revision ?? (kind === "namespace" ? { id: raw.namespace?.revision_id, number: raw.namespace?.revision_number ?? 1 } : null);
+      result = { owner: { kind, id: ownerId }, revision: { id: revision.id, number: revision.number }, operation_id: operationId };
     }
+    else if (operation === "namespace.read") result = raw.namespace;
+    else if (operation === "namespace.list") result = { namespaces: raw.namespaces, observed_operation_fence: raw.operation_fence ?? target.observed_operation_fence };
     else if (operation === "query.search") result = { items: raw.matches, next_cursor: raw.next_cursor, result_completeness: raw.bounds.completeness, observed_operation_fence: target.observed_operation_fence };
     else if (operation === "substrate.get_receipt") result = { observation: raw.status === "settled" ? "settled" : "absent_at_fence", operation_id: parsed.flags.operation_id, receipt: raw.receipt ?? null, observed_operation_fence: raw.operation_fence ?? target.observed_operation_fence };
     else if (operation === "operation.recent") result = raw;

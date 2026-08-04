@@ -160,12 +160,12 @@ const PROFILE_LIFECYCLES = Object.freeze(["profile", "profile-selection"].map((o
 })));
 
 export const CONTEXT_OPERATION_ROWS = Object.freeze([
-  ["namespace.create", "context.manage", ["namespace"], "human_operational"], ["namespace.revise", "context.manage", ["namespace"], "human_operational"], ["namespace.retire", "context.manage", ["namespace"], "human_operational"], ["namespace.read", "context.read", ["namespace"], "ordinary_cli"], ["namespace.history", "context.read", ["namespace"], "ordinary_cli"], ["namespace.resolve", "context.read", ["namespace"], "internal"],
+  ["namespace.create", "context.manage", ["namespace"], "ordinary_cli"], ["namespace.revise", "context.manage", ["namespace"], "human_operational"], ["namespace.retire", "context.manage", ["namespace"], "human_operational"], ["namespace.read", "context.read", ["namespace"], "ordinary_cli"], ["namespace.list", "context.read", ["namespace"], "ordinary_cli"], ["namespace.history", "context.read", ["namespace"], "ordinary_cli"], ["namespace.resolve", "context.read", ["namespace"], "internal"],
   ["project_default.create", "context.manage", ["project-default"], "human_operational"], ["project_default.revise", "context.manage", ["project-default"], "human_operational"], ["project_default.retire", "context.manage", ["project-default"], "human_operational"], ["project_default.read", "context.read", ["project-default"], "ordinary_cli"],
   ["chat.establish", "context.manage", ["chat"], "host_context"], ["chat.resume", "context.read", ["chat"], "host_context"], ["chat.fork", "context.manage", ["chat"], "host_context"], ["chat.rebind", "context.manage", ["chat"], "host_context"], ["chat.read", "context.read", ["chat"], "ordinary_cli"], ["chat.history", "context.read", ["chat"], "ordinary_cli"],
 ].map(([operation, purpose, owner_kinds, capability_class]) => Object.freeze({ operation, capability_class, purpose, owner_kinds, profile_fence: "profile-selection-fence@1", guard_kinds: [] })));
 const CONTEXT_ADAPTERS = Object.freeze([
-  ["namespace", ["context-namespace@1"], ["namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.history", "namespace.resolve"]],
+  ["namespace", ["context-namespace@1"], ["namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.list", "namespace.history", "namespace.resolve"]],
   ["project-default", ["context-project-default@1"], ["project_default.create", "project_default.revise", "project_default.retire", "project_default.read"]],
   ["chat", ["context-chat@1"], ["chat.establish", "chat.resume", "chat.fork", "chat.rebind", "chat.read", "chat.history"]],
 ].map(([owner_kind, schemas, operations]) => Object.freeze({ owner_kind, adapter_version: 1, schemas, operations, complete_owner: true, resource_deltas: true, events: true, results: true, projections: true, supported_guards: [] })));

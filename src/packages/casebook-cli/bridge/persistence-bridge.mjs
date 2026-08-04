@@ -38,6 +38,33 @@ async function dispatch(request) {
   const provider = await runtime();
   if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: config(request.store) });
   const base = common(request), flags = request.flags ?? {};
+  if (request.operation === "namespace.create") {
+    const namespace = flags.namespace_id;
+    const path = namespace.slice("namespace:".length).split("/");
+    const parent_namespace_id = path.length === 1 ? "namespace:root" : `namespace:${path.slice(0, -1).join("/")}`;
+    if (parent_namespace_id !== "namespace:root") {
+      const parent = await resolveNamespace(provider, request, base, parent_namespace_id);
+      if (parent?.ok === false) return parent;
+    }
+    const context = {
+      ...base,
+      operation: "namespace.create",
+      operation_id: request.operation_id,
+      namespace_id: namespace,
+      namespace_revision_id: `owner-revision:${randomUUID().toLowerCase()}`,
+      version_id: `version:${randomUUID().toLowerCase()}`,
+      event_id: `event:${randomUUID().toLowerCase()}`,
+      expected_revision: 0,
+      parent_namespace_id,
+      display_name: flags.display_name ?? path.at(-1),
+      aliases: [],
+    };
+    const { canonicalContextRequestDigest } = await import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs");
+    context.request_digest = canonicalContextRequestDigest(base.store_id, context);
+    return provider.invokeContextOperation(context);
+  }
+  if (request.operation === "namespace.read") return provider.invokeContextOperation({ ...base, operation: "namespace.read", namespace_id: flags.namespace_id });
+  if (request.operation === "namespace.list") return provider.invokeContextOperation({ ...base, operation: "namespace.list" });
   const selectedNamespace = flags.namespace_id ? await resolveNamespace(provider, request, base, flags.namespace_id) : null;
   if (selectedNamespace?.ok === false) return selectedNamespace;
   const placement = selectedNamespace ? { placement: { namespace_id: selectedNamespace } } : {};

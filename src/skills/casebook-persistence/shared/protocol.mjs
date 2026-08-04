@@ -10,7 +10,7 @@ export const TARGET_VERSION = 1;
 export const SELECTION_ID = TARGET_ID;
 export const SELECTION_VERSION = TARGET_VERSION;
 export const ORDINARY_CLI_OPERATIONS = Object.freeze([
-  "target.describe", "case.create", "case.read", "case.commit_revision",
+  "target.describe", "namespace.create", "namespace.read", "namespace.list", "case.create", "case.read", "case.commit_revision",
   "frame.create", "frame.read", "frame.commit_revision", "query.search",
   "substrate.get_receipt", "operation.recent",
 ]);
@@ -27,7 +27,7 @@ export const SUPPORTED_OPERATIONS = Object.freeze([
   "profile.retire",
   "profile.read",
   "profile.history",
-  "namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.history", "namespace.resolve",
+  "namespace.create", "namespace.revise", "namespace.retire", "namespace.read", "namespace.list", "namespace.history", "namespace.resolve",
   "project_default.create", "project_default.revise", "project_default.retire", "project_default.read",
   "chat.establish", "chat.resume", "chat.fork", "chat.rebind", "chat.read", "chat.history",
   "substrate.commit_revision",

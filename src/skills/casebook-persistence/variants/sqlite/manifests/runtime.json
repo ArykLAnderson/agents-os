@@ -66,6 +66,7 @@
     "namespace.revise",
     "namespace.retire",
     "namespace.read",
+    "namespace.list",
     "namespace.history",
     "namespace.resolve",
     "project_default.create",
@@ -190,6 +191,9 @@
   "unsupported_until_later_work_items": [],
   "ordinary_cli_operations": [
     "target.describe",
+    "namespace.create",
+    "namespace.read",
+    "namespace.list",
     "case.create",
     "case.read",
     "case.commit_revision",
