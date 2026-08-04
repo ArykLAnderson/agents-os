@@ -151,8 +151,8 @@ export function createSuccessorSqlitePlacementAdapter(binding) {
     async readReceipt({ operation_id }) { const result = await read("substrate.get_receipt", { operation_id }); return result.status === "settled" ? { ...result.result, receipt: result.receipt, idempotent_replay: true } : null; },
     async readRevision({ owner, revision_id }) { const result = await read("substrate.read_owner_revision", { owner, revision_id }); if (result.status === "not_visible") return null; const h = result.placement_history ?? {}; return { revision_id: result.revision_id, revision_number: result.revision_number, placement: h.placement ?? null, placement_selection: h.placement_selection ?? null }; },
     async readChatBinding({ chat_id, chat_revision_id }) { const result = await context("chat.history", { chat_id }); const row = result.revisions?.find((value) => value.chat_revision_id === chat_revision_id); return row ? { namespace_id: row.namespace_id } : null; },
-    async resolveNamespace({ namespace_id }) { const result = await context("namespace.read", { namespace_id }); const row = result.revisions?.[0]; if (!row || row.lifecycle !== "active") return null;
-      return { namespace_id, namespace_revision_id: row.namespace_revision_id, lifecycle: row.lifecycle };
+    async resolveNamespace({ namespace_id }) { const result = await context("namespace.read", { namespace_id }); const row = result.namespace ?? result.revisions?.[0]; const revision = row?.namespace_revision_id ?? row?.revision_id; if (!row || row.lifecycle !== "active" || !revision) return null;
+      return { namespace_id, namespace_revision_id: revision, lifecycle: row.lifecycle };
     },
     async commit(envelope) {
       const raw = { envelope_version: 1, operation_id: envelope.operation_id, store_id: base.store_id, admission_slot_id: base.admission_slot_id, admission: base.admission, owner: envelope.owner, expected_revision: envelope.expected_revision,

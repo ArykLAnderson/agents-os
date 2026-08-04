@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
+    "sha256": "e4913e4ec7418e36c47450e369c11da6904f0c9819e1df8dfd45db05ab98f8f9"
   },
   "entrypoints": [
     {
@@ -71,6 +71,7 @@
     "namespace.revise",
     "namespace.retire",
     "namespace.read",
+    "namespace.list",
     "namespace.history",
     "namespace.resolve",
     "project_default.create",
@@ -247,7 +248,7 @@
       },
       {
         "operation": "namespace.create",
-        "capability_class": "human_operational",
+        "capability_class": "ordinary_cli",
         "profile_purpose": "context.manage",
         "required_owner_kinds": [
           "namespace"
@@ -274,6 +275,15 @@
       },
       {
         "operation": "namespace.read",
+        "capability_class": "ordinary_cli",
+        "profile_purpose": "context.read",
+        "required_owner_kinds": [
+          "namespace"
+        ],
+        "optional_guards": []
+      },
+      {
+        "operation": "namespace.list",
         "capability_class": "ordinary_cli",
         "profile_purpose": "context.read",
         "required_owner_kinds": [
@@ -904,7 +914,7 @@
       "id": "shared-protocol",
       "path": "shared/protocol.mjs",
       "kind": "module",
-      "sha256": "1cb803c02a07677707fde73df97dd4d018e66e4d62058c8a3ecb8d64f99a321d"
+      "sha256": "07755d48325602a7f53449d5a56ede50016ec773aec448b5ed8fe0152ccb6067"
     },
     {
       "id": "shared-configuration",
@@ -916,7 +926,7 @@
       "id": "shared-manifest",
       "path": "shared/manifest.mjs",
       "kind": "module",
-      "sha256": "21c469c7df83f0b9cc57d3f21ca4c2d560251098299fae4fb5f44b9489666d7e"
+      "sha256": "416e6caceda5b84450a40b9fcf72f6a73860bb3ff131acc882617bda7389ead9"
     },
     {
       "id": "sqlite-entrypoint",
@@ -958,7 +968,7 @@
       "id": "sqlite-context-service",
       "path": "variants/sqlite/lib/context/index.mjs",
       "kind": "module",
-      "sha256": "16989fecef6ddb390ea4e81fa73926148ea07bfd10f115dd9157d9115f0af968"
+      "sha256": "9238c566262f7ee720cc008a0f08f9d48cf15d7d387f378c917a46c843a6f4ca"
     },
     {
       "id": "sqlite-case-service",
@@ -982,7 +992,7 @@
       "id": "sqlite-placement-generation",
       "path": "variants/sqlite/lib/placement/index.mjs",
       "kind": "module",
-      "sha256": "fda5ab4b1f995868c4ef8a673d9d6e2cccd9093bfecd47a2141064bd2978e008"
+      "sha256": "bf19f2c0459ce33e3fce499247df2fb3bf92ba756f8365f68e031b76b29d1281"
     },
     {
       "id": "sqlite-organizational-query",
@@ -1018,7 +1028,7 @@
       "id": "sqlite-admission-guards",
       "path": "variants/sqlite/lib/resource/admission-guards.mjs",
       "kind": "module",
-      "sha256": "017b4188ce98361b7a73306b026e4e186cee95611dd6641a6e94b37fccdd32e9"
+      "sha256": "f3390f3a18571a0f1622f5405e2fb93a0b6472117e223cdffb66b9426b9dfc93"
     },
     {
       "id": "sqlite-frame-resource-complete",
@@ -1048,7 +1058,7 @@
       "id": "sqlite-runtime",
       "path": "variants/sqlite/manifests/runtime.json",
       "kind": "runtime_manifest",
-      "sha256": "e6a785a5c4972d4530dbd13c6df6f7ba169d01d017392ea48dd8a3fab8b35716"
+      "sha256": "a5147f79600571af8dfea68897aea7a72e99cc69af8f9aa44a25caf6a4c72177"
     },
     {
       "id": "sqlite-wasm-node-module",
@@ -1218,6 +1228,9 @@
   },
   "ordinary_cli_operations": [
     "target.describe",
+    "namespace.create",
+    "namespace.read",
+    "namespace.list",
     "case.create",
     "case.read",
     "case.commit_revision",

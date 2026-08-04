@@ -132,6 +132,57 @@ test("extracted packaged CLI normalizes unambiguous bare read identities before 
     assert.equal(refusal.json.authority.status, "unresolved");
   }
 });
+test("extracted packaged CLI creates, reads, and lists canonical Namespaces", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-namespace-");
+
+  const topLevel = await invoke(bin, workspace, ["create", "namespace", "--namespace", "namespace:teams", "--display-name", "Teams"]);
+  assert.equal(topLevel.code, 0, topLevel.stdout);
+  assert.equal(topLevel.json.result.owner.kind, "namespace");
+  assert.equal(topLevel.json.result.owner.id, "namespace:teams");
+  assert.equal(topLevel.json.result.revision.number, 1);
+  assert.match(topLevel.json.result.operation_id, /^operation:[0-9a-f-]{36}$/);
+
+  const nested = await invoke(bin, workspace, ["create", "namespace", "--namespace", "namespace:teams/alpha"]);
+  assert.equal(nested.code, 0, nested.stdout);
+  assert.equal(nested.json.result.owner.id, "namespace:teams/alpha");
+  assert.equal(nested.json.result.revision.number, 1);
+
+  const read = await invoke(bin, workspace, ["read", "namespace", "--namespace", "namespace:teams/alpha"]);
+  assert.equal(read.code, 0, read.stdout);
+  assert.deepEqual(read.json.result, {
+    id: "namespace:teams/alpha",
+    revision_id: nested.json.result.revision.id,
+    parent_namespace_id: "namespace:teams",
+    lifecycle: "active",
+    display_name: "alpha",
+    aliases: [],
+    revision_number: 1,
+  });
+
+  const listed = await invoke(bin, workspace, ["list", "namespaces"]);
+  assert.equal(listed.code, 0, listed.stdout);
+  assert.deepEqual(listed.json.result.namespaces.map((namespace) => namespace.id), ["namespace:personal", "namespace:root", "namespace:teams", "namespace:teams/alpha"]);
+  assert.equal(listed.json.result.namespaces.every((namespace) => Array.isArray(namespace.aliases)), true);
+  assert.equal(listed.json.result.namespaces.every((namespace) => !("aliases_json" in namespace)), true);
+  assert.deepEqual(listed.json.result.namespaces.find((namespace) => namespace.id === "namespace:teams").aliases, []);
+
+  const duplicate = await invoke(bin, workspace, ["create", "namespace", "--namespace", "namespace:teams"]);
+  assert.equal(duplicate.code, 2, duplicate.stdout);
+  assert.equal(duplicate.json.failure.code, "revision_conflict");
+
+  const missingParent = await invoke(bin, workspace, ["create", "namespace", "--namespace", "namespace:missing/child"]);
+  assert.equal(missingParent.code, 2, missingParent.stdout);
+  assert.equal(missingParent.json.failure.code, "namespace_unavailable");
+
+  const knownRefusal = await invoke(bin, workspace, ["create", "namespace", "--namespace", "namespace:fault"], {
+    CASEBOOK_CLI_TEST_HOOK: "casebook-cli-e2e@1",
+    CASEBOOK_CLI_TEST_BRIDGE_FAULT: "exit",
+  });
+  assert.equal(knownRefusal.code, 1, knownRefusal.stdout);
+  assert.equal(knownRefusal.json.status, "refused");
+  assert.equal(knownRefusal.json.failure.evidence.commit_may_have_occurred, false);
+});
 test("packaged CLI delete regression covers the candidate Case and Frame representation failures", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace } = await initializedWorkspace(t, "wi033-delete-repro-");
@@ -154,6 +205,8 @@ test("packaged CLI supports direct and draft creation plus revision-checked Case
 
   const directCase = await invoke(bin, workspace, ["create", "case", "--commit-basis", "direct", "--id", id("case", 301), "--title", "Direct Case", "--summary", "Direct summary", "--scope", "Direct scope", "--body", "Direct reusable knowledge", "--acting-role", "e2e-author"]);
   assert.equal(directCase.code, 0, directCase.stdout);
+  assert.equal(directCase.json.result.owner.id, id("case", 301));
+  assert.equal(directCase.json.result.revision.number, 1);
   const directCaseRead = await invoke(bin, workspace, ["read", "case", "--case-id", id("case", 301)]);
   assert.equal(directCaseRead.json.result.aggregate.title, "Direct Case");
   assert.equal(directCaseRead.json.result.aggregate.entries.length, 1);

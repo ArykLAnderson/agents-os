@@ -32,6 +32,9 @@
     ],
     "operations": [
       "target.describe",
+      "namespace.create",
+      "namespace.read",
+      "namespace.list",
       "case.create",
       "case.read",
       "case.commit_revision",
@@ -47,13 +50,13 @@
     "bridge": {
       "id": "casebook-persistence-bridge@1",
       "path": "bridge/persistence-bridge.mjs",
-      "sha256": "cddb7f27e9b798fabce14644b5384738f5cfc9f6e3bea6d1c45ce7aa45e32f4a"
+      "sha256": "a8033aa397c6c3e7146ba266c276629edf0e8489458ae2c751dc8cc2bb75c45b"
     },
     "provider": {
       "id": "casebook-persistence@0.19.0-successor",
       "manifest": "bridge/runtime/casebook-persistence/manifest.json",
-      "manifest_sha256": "bbe78493d6fd72313d7d5315d0e0b0b2ae92ab78d75fe281619eb70192f8c5a7",
-      "content_digest": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
+      "manifest_sha256": "75bbfea9023c1da290d037915bffdfe4f4f9c83460b0bf962251782d663e30a9",
+      "content_digest": "e4913e4ec7418e36c47450e369c11da6904f0c9819e1df8dfd45db05ab98f8f9"
     }
   }
 }
