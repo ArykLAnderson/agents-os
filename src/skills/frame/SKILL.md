@@ -28,13 +28,21 @@ Do **not** put internal machinery here: modules, persistence tables, queues, ret
 - Revisit the boundary when evidence invalidates an assumption. Revision is reconciliation, not failure.
 - Surface a bounded human decision when external guarantees, scope, accepted risk, authority, or a hard-to-reverse compatibility commitment remains materially open. Recommend one choice and state its exact consequence. Do not ask the human to choose internal machinery or restate evidence the system can inspect.
 
+## Guide the human boundary
+
+Continuously advance toward Frame sufficiency. When evidence and supplied authority already converge, record that convergence without manufacturing an interview. When boundary-changing questions require human knowledge, judgment, preference, or authority, explicitly enter a guided interview unless the user pauses or opts out. Read [references/interview.md](references/interview.md), orient the user to the interview objective and current estimate, then ask one decision-card question at a time in dependency order.
+
+Research synthesis is the interview input, not its substitute. Do not present a recommendation, persisted revision, or visible question list as though the Frame has converged while human-authority questions remain unanswered. State that the Frame is still active, distinguish established evidence from proposed boundary, and continue the interview until its natural persistence boundary.
+
+Completion criterion: every boundary-changing human question is accepted, rejected, deliberately deferred, preserved as contested, or returned to evidence work; the accepted batch is reconciled into Frame state before changing operations.
+
 ## Route rigor
 
 Select direct/focused/full using `../blueprint/README.md` criteria. State the trigger when escalating. Do not require a Frame database, Casebook state, review, or prototype merely because this skill was invoked.
 
 ## Completion for this lens
 
-Frame is sufficient for Design when the outcome, immediate consumer, external guarantees, exclusions, material uncertainties, evidence limits, and authority-dependent decisions are visible. It is not “complete” by producing internal design or a delivery plan.
+Frame is sufficient for Design when the outcome, immediate consumer, external guarantees, exclusions, material uncertainties, evidence limits, and authority-dependent decisions are visible, and every required human decision has completed the guided interview disposition above. An interview is not independently required when no human-owned uncertainty remains. Evidence coverage alone cannot resolve authority-dependent questions. It is not “complete” by producing internal design or a delivery plan.
 
 Keep Frame in the effort's single boundary/evidence notebook by default. Do not create separate discovery, terrain, question, decision, and review files unless one independently meets the retention rule in `../blueprint/README.md`.
 
