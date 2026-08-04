@@ -12,7 +12,7 @@ Delegate Workspace Operator setup only when a writer task is ready to dispatch. 
 
 Send each Coding Worker:
 
-- its complete Task Contract, including exact WI/local-label/Feature/Leg/Map Decision binding in Atlas mode;
+- its complete Task Contract, including exact Work Item, Feature, and Map Decision binding in Atlas mode;
 - explicit persistent worktree and branch;
 - named integrated prerequisite baseline;
 - governing design excerpts and repository instructions;
