@@ -25,7 +25,7 @@ There is no generic `route` admission mode. A legacy Route package, candidate, t
 
 For `atlas`, persist the exact Delivery Binding defined in [Portable Contracts](references/contracts.md): Atlas, Map, current Decision and accepted snapshot integrity; Blueprint revisions; Feature/Leg/Work Item identities and local-label bindings; ownership; direct prerequisites and convergence; transition/compatibility/cleanup; imported proof/E2E/security allocation; invalidators; qualified evidence; typed limitations; publication integrity; and explicit absent/present authorities. Refuse a summary, historical Decision, `HandoffRefusal`, incomplete/conflicted projection, omitted authority, or unverifiable binding. A `HandoffWithLimitations` is admissible only to the exact boundary its typed limitations and separately explicit implementation authority allow; affected work remains blocked.
 
-For every mode, bind the repository, named integration base, stable execution-map locator, delivery shape, one Execution Authorization Envelope, constraints, proof profile, and external Effect Bindings. Normalize the requester's explicit implementation intent once rather than asking again for every routine mechanic. A request to implement authorizes bounded local edits and verification plus ordinary scoped worktrees, owned branches, commits, non-force push, and matching draft PR creation/update for a verified non-protected single-PR delivery unless the requester excludes PR delivery or requests local-only work. An explicit stacked draft-PR request authorizes those same mechanics across the declared stack graph. Prototype and read-only requests do not inherit implementation or PR authority. Omission of Atlas in `ad_hoc`/`prototype` does not reduce fidelity; those modes must not claim Atlas realization.
+For every mode, select `direct_task` when one bounded task needs no cross-task integration, otherwise `coordinated_change`; then bind the repository, named integration base, stable execution-map locator, delivery shape, one Execution Authorization Envelope, constraints, proof profile, and external Effect Bindings. Normalize the requester's explicit implementation intent once rather than asking again for every routine mechanic. A request to implement authorizes bounded local edits and verification plus ordinary scoped worktrees, owned branches, commits, non-force push, and matching draft PR creation/update for a verified non-protected single-PR delivery unless the requester excludes PR delivery or requests local-only work. An explicit stacked draft-PR request authorizes those same mechanics across the declared stack graph. Prototype and read-only requests do not inherit implementation or PR authority. Omission of Atlas in `ad_hoc`/`prototype` does not reduce fidelity; those modes must not claim Atlas realization.
 
 An explicit human request to **implement** grants the ordinary delivery authority needed to commit the bounded change, push its exact non-protected feature branch, and open a PR against the verified base; do not ask again merely to push that exact branch and open its PR. This default does **not** grant merge, protected-branch mutation, deployment, production configuration, credentials, external/live effects, landing, or Work Item/Atlas closure. Force push, ready conversion, reviewer/label/project mutation, release, and unrelated effects likewise remain absent unless separately granted.
 
@@ -51,9 +51,9 @@ Follow [the execution loop](references/execution-loop.md):
 2. await compact worker evidence;
 3. dispatch sibling [`focused-validator`](../focused-validator/SKILL.md) after successful worker build/lint/test evidence when the admitted allocation requires task-scope independent validation;
 4. return bounded findings to the original worker when available, otherwise a fresh worker with a complete compact handoff;
-5. delegate each validated wave to one Integration Worker on the global integration branch in `single_pr` mode or the owning Feature branch in `stacked_feature_prs` mode;
-6. dispatch convergence-scope focused validation over the integrated result; and
-7. advance the named integration baseline before creating or refreshing dependent worktrees.
+5. for `direct_task`, promote the validated task branch directly to delivery; otherwise delegate each validated wave to one Integration Worker on the global integration branch in `single_pr` mode or the owning Feature branch in `stacked_feature_prs` mode;
+6. run convergence-scope focused validation only when the admitted profile or proof allocation requires integration proof; and
+7. for coordinated work, advance the named integration baseline before creating or refreshing dependent worktrees.
 
 The coordinator records only compact state, exact Atlas bindings, gate state, and locators in the map. Git, Atlas Decisions, repository state, accepted design, review artifacts, providers, and external systems remain authoritative.
 
@@ -81,7 +81,7 @@ Perform the result Currentness Check before claiming completion. Delegate push p
 Return:
 
 ```markdown
-Mode/outcome: <atlas | ad_hoc | prototype — delivered result>
+Mode/profile/outcome: <atlas | ad_hoc | prototype — direct_task | coordinated_change — delivered result>
 Return reason: <authorized_boundary_reached | graph_complete | authority_blocker | technical_blocker | human_decision_required | user_requested_checkpoint>
 Atlas binding/currentness: <exact Decision and result check, or not applicable>
 Execution map: <stable locator>

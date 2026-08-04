@@ -10,7 +10,7 @@ A prototype answers **one** question. It is not an early production branch, foun
 
 Write: question; proposition; evaluator; observable discriminator; smallest rung; disposable location; permitted effects; stop condition. Split independent questions. Use synthetic/local resources unless separately authorized.
 
-Choose only the needed evidence shape:
+Choose only the needed evidence shape. For a logic/state experiment, load [LOGIC_STATE.md](LOGIC_STATE.md); for genuinely competing UI hypotheses, load [UI_VARIANTS.md](UI_VARIANTS.md) and build only the credible variants needed to discriminate the question:
 
 - **Question probe:** prove/refute one API, state, process, or failure assumption.
 - **Consequential seam probe:** exercise the smallest real ownership/process/state boundary whose interaction remains uncertain.

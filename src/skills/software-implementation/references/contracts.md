@@ -6,6 +6,7 @@ These schemas carry semantics across harnesses. Keep target launch syntax in ada
 
 ```markdown
 Mode: atlas | ad_hoc | prototype
+Delivery profile: direct_task | coordinated_change
 Outcome: <bounded software result or prototype question>
 Why/consumer: <value and fidelity context>
 Atlas Delivery Binding: <complete binding below, or not applicable>
@@ -21,7 +22,7 @@ Proof allocation: <imported Atlas allocation and ordering | explicit ad hoc/prot
 Stopping conditions: <binding failures, authority blockers, limits>
 ```
 
-Git resolves exact source revisions transiently. The map retains the named baseline, not a revision ledger. Atlas planning authority does not imply execution authority. Once an explicit implementation request is normalized into an Execution Authorization Envelope, every operation inside that envelope proceeds without repeated confirmation until an invalidator fires. Unknown authority blocks only the operation that needs it; explicitly absent and not-applicable authorities do not block unrelated work.
+Use `direct_task` only when one bounded task can be delivered and validated on its owned branch without cross-task integration; that branch is the delivery candidate. Use `coordinated_change` when tasks, destinations, or convergence must be combined. Git resolves exact source revisions transiently. The map retains the named baseline, not a revision ledger. Atlas planning authority does not imply execution authority. Once an explicit implementation request is normalized into an Execution Authorization Envelope, every operation inside that envelope proceeds without repeated confirmation until an invalidator fires. Unknown authority blocks only the operation that needs it; explicitly absent and not-applicable authorities do not block unrelated work.
 
 ### Execution Authorization Envelope
 
@@ -176,11 +177,11 @@ Never fall back to unverified credentials, substitute a provider/account/model, 
 
 ### Worker
 
-`complete` carries outcome, exact Atlas task binding when applicable, deep interfaces, assumptions/refactoring, behavioral tests, commands/results, focused-verifier instructions, residual limits, worktree/branch, and commit disposition. `technically_blocked` is reserved for impossible continuation and carries evidence plus one discriminating question.
+`complete` carries outcome, exact Atlas task binding when applicable, deep interfaces, assumptions/refactoring, behavioral tests, commands/results, focused-verifier instructions, residual limits, worktree/branch, and commit disposition. `effect_blocked` carries locally completed evidence plus the exact external action whose authority is absent. `technically_blocked` is reserved for impossible continuation and carries evidence plus one discriminating question.
 
 ### Focused validator
 
-Exactly `pass | findings | material_contradiction`, including candidate identity, bound Atlas obligation when applicable, and enforcement tier. Findings carry observed evidence, violated Contract clause, affected interface/consumer, and smallest behavioral correction.
+Exactly `pass | findings | authority_blocked | material_contradiction`, including candidate identity, bound Atlas obligation when applicable, and enforcement tier. `authority_blocked` names the required proof action whose Effect Binding or authority is absent and carries no certification. Findings carry observed evidence, violated Contract clause, affected interface/consumer, and smallest behavioral correction.
 
 ### Integration worker
 

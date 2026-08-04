@@ -4,7 +4,7 @@ Validate structural and traceability integrity, not objective truth.
 
 Check every Case for:
 
-- required frontmatter and sections;
+- required canonical aggregate fields and content families from the Case contract, independent of whether transport was JSON, draft, or direct flags;
 - unique and stable Case, entry, and source IDs;
 - entry purpose, classification, substantive content, and support;
 - pinpoint support where the source is not short and uniformly supportive;

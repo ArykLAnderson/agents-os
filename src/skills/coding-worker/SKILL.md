@@ -78,6 +78,19 @@ Residual limitations: <bounded limitations or none>
 Commit disposition: <committed under granted authority | left uncommitted>
 ```
 
+### `effect_blocked`
+
+Use when local implementation and proof are complete but an external action was excluded or lacks its exact Effect Binding.
+
+```markdown
+Status: effect_blocked
+Task: <identity and locally completed outcome>
+Worktree/branch: <identity>
+Commands: <local proof actually run>
+Blocked effect: <provider/action/target and missing authority>
+Commit disposition: <committed under granted authority | left uncommitted>
+```
+
 ### `technically_blocked`
 
 Use only when execution as a whole is technically impossible, not merely for ambiguity, reviewer preference, or a missing optional effect.

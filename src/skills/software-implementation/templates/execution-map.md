@@ -6,11 +6,11 @@
 
 - **Map locator:** `<stable path>`
 - **Delivery Contract:** `<locator or compact inline contract>`
-- **Mode/outcome:** `<atlas | ad_hoc | prototype — result>`
+- **Mode/profile/outcome:** `<atlas | ad_hoc | prototype — direct_task | coordinated_change — result>`
 - **Repository:** `<identity>`
 - **Named integration base:** `<branch/ref name>`
 - **Delivery shape:** `<single_pr | stacked_feature_prs>`
-- **Integration worktree/branch:** `<path — branch>`
+- **Integration worktree/branch:** `<path — branch | direct task delivery branch; no separate integration>`
 - **Execution Authorization Envelope:** `<stable grant locator and concise allowed/absent boundary>`
 - **Effect Bindings:** `<locators or none>`
 - **Proof allocation:** `<imported Atlas allocation | explicit ad hoc/prototype profile>`
