@@ -27,14 +27,14 @@ Never let an uncertain session and replacement writer share a worktree.
 
 Open the stable execution-map locator, then reconcile:
 
-- the persisted Atlas Delivery Binding against a fresh resume Currentness Check through Feature Atlas domain operations;
+- the persisted Atlas Delivery Binding against a fresh reread through the publication guide selected by `.casebook/atlas-method.md`;
 - task/gate states against the admitted graph, Git branches, and worktrees;
 - role/session notes against adapter inspection;
 - evidence locators, qualifications, and invalidators against candidate source/external state;
 - effects against their bound external systems and cleanup records; and
 - PR state against the bound provider/repository.
 
-Correct stale map text rather than treating it as authority. Do not use ad hoc provider CLI/path discovery as a substitute for the configured Atlas domain adapter. Direct provider reads are allowed only when the configured executable adapter instructions prescribe them as mechanics of a complete named domain operation with fail-closed classification and receipt. Concurrent coordinator ownership is unsupported.
+Correct stale execution-map text rather than treating it as authority. Reread Atlas through its configured Markdown or GitHub Issues guide; do not infer a different destination or reconstruct accepted meaning from raw paths/search results. Concurrent coordinator ownership is unsupported.
 
 ## Atlas Successor, Invalidator, Or Integrity Stop
 

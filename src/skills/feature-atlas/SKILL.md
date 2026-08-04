@@ -1,19 +1,26 @@
 ---
 name: feature-atlas
-description: Define provider-neutral domain and storage-adapter contracts for accepted Feature Map planning, with configured private GitHub Issues and local filesystem/Git-backed realizations.
+description: Define and publish the accepted current delivery plan from Blueprint, using the project's configured Markdown or private GitHub Issues representation.
 ---
 
-# Feature Atlas Representations And Storage
+# Feature Atlas
 
-Feature Atlas is the sole durable accepted planning authority after an exact trusted-human Map Decision. Blueprint's coupled routeability work and candidate labels are ephemeral; current Map/Feature/Work Item records are projections of the immutable current Map Decision, not competing authorities.
+Feature Atlas is the durable accepted delivery plan. It records what was accepted, how work is divided, what depends on what, and what evidence each part must produce. It is not a workflow engine, transaction protocol, or second architecture authority.
 
-Feature Atlas storage authority is independent of Case and Frame persistence. `CASEBOOK_DATABASE_URL` never selects or overrides an Atlas adapter. Unless an explicit Atlas destination is configured or supplied, select the local filesystem adapter rooted at the current project's `.casebook/atlas` directory. Only report Atlas destination ambiguity after applying that default.
+## Use it
 
-1. Read [the canonical representations](references/issue-representations.md) for identity, ownership, Map Decision authority, current projections, history, dependencies, observations, and successors.
-2. Read [the storage adapter contract](references/storage-adapters.md). Feature Atlas domain callers use its semantic operations; provider commands, repositories, paths, issue numbers, commits, and blobs stay behind the configured adapter.
-3. When private GitHub Issues is configured, follow [the private GitHub adapter](references/configured-private-github.md), including its fail-closed provider-capability gate.
-4. When local filesystem records are configured or selected by the project-local default, follow [the local filesystem/Git-backed adapter](references/configured-local-filesystem.md), including immutable Decision/content locators, expected-predecessor writes, reread, receipts, and recovery.
-5. Treat Map, Feature, Leg, and Work Item ownership as semantic: Map owns Blueprint coverage and cross-Feature/cross-Map planning; Feature owns its contained Legs and Work Item DAG; every implementation Work Item belongs to exactly one Feature and Leg.
-6. Preserve source-system authority. Git, tests, reports, PRs, deployments, runtimes, and providers own their facts; Atlas records minimum qualified locators and verified observations. Git may durably carry local records but never becomes acceptance, currentness, or semantic authority by itself.
+1. Confirm that a trusted human accepted the exact Map candidate and that it names the accepted RFC/Blueprint revision it realizes. A draft or accepted RFC alone is not an accepted Map.
+2. Read and follow [Choose the publication guide](references/storage-adapters.md). `CASEBOOK_DATABASE_URL` is unrelated.
+3. Read [Representations](references/issue-representations.md), then follow only the selected publication guide:
+   - [Markdown/local filesystem](references/configured-local-filesystem.md)
+   - [Private GitHub Issues](references/configured-private-github.md)
+4. Publish the accepted Map faithfully, then reread the result and report whether it is complete and consistent with what was accepted.
+5. Return the typed handoff defined in Representations. It is ready only when a fresh reader can recover the current accepted Map, ownership, dependencies, proof responsibilities, limitations, authority boundary, and source links without inventing missing meaning.
 
-This skill defines durable representation, domain-operation, adapter, and projection invariants. Ephemeral composition belongs to Blueprint's coupled routeability lens; exact semantic acceptance belongs to the verified human Map Decision; recoverable mutation belongs to the narrow Publisher through one configured adapter; implementation/effects belong to separately authorized workflows. Atlas representation does not itself define Map completion/abandonment, migration of legacy records, execution dispatch, PR landing, or deployment.
+## Boundaries
+
+- A publication guide tells the agent how to use ordinary available tools; publication does not require a separate writer.
+- Follow the guide directly. If it cannot safely represent the change, return `capability_unproven` rather than inventing new publication machinery.
+- Only exact Map acceptance grants Atlas publication. Atlas publication grants no implementation, commit, PR, merge, deployment, provider, credential, or production authority.
+- Atlas owns planning facts. Git, tests, PRs, deployments, and providers remain authoritative for their own facts; Atlas links to them rather than copying or reinterpreting them.
+- Never keep a parallel accepted plan. A changed design or materially changed delivery plan requires the appropriate new acceptance before Atlas is updated.
