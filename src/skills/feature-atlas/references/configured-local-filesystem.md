@@ -1,90 +1,25 @@
-# Configured Local Filesystem / Git-Backed Adapter
+# Markdown publication
 
-Use this adapter when a local filesystem root is the explicitly configured canonical Feature Atlas destination or when no explicit Atlas destination exists and the current project's `.casebook/atlas` default resolves safely. It conforms to [the storage adapter contract](storage-adapters.md) and preserves [canonical representation semantics](issue-representations.md). A Git repository may retain and transport the records; Git does not accept Maps, select the current Decision, establish ownership, or satisfy prerequisites.
+Use the destination in `.casebook/atlas-method.md` with ordinary file tools.
 
-## Configuration And Preflight
+## Bootstrap
 
-Bind outside the Atlas records:
-
-- exact canonical root identity and normalized absolute root path;
-- adapter and representation-codec version;
-- expected local audience, access/permission policy, backup/retention policy, and—if Git-backed—exact repository/worktree and allowed publication/remotes;
-- trusted human authority/provenance verifier; and
-- concurrency/serialization mechanism, hash algorithm/content-type rules, and receipt location.
-
-Atlas selection is separate from Case and Frame persistence. Ignore `CASEBOOK_DATABASE_URL` when selecting this adapter. An explicit Atlas root or exact Atlas Map/Decision/receipt locator confirms the named destination; otherwise derive the root from the current project root as `<project>/.casebook/atlas`. Do not require the Case/Frame `.casebook-authority.json` marker unless the selected Atlas codec independently defines it. Stop for configuration ambiguity only if the explicit destination conflicts or the project-local root cannot be resolved safely.
-
-Before reads or mutations, resolve the configured root without symlink/path escape, verify it is the expected destination, verify access and audience/permissions, and verify immutable Decision retention plus write-recovery capability. A Unix username, file author, Git author/signature, commit, or file ownership alone does not prove bounded Map acceptance authority. If private records are Git-backed, also verify configured remote visibility/access before any authorized publication; a local commit does not authorize a push.
-
-Do not infer a different root from a nested source repository or create a nearby `.atlas` directory as fallback. Resolve the current project root first, then use its `.casebook/atlas` default. Source repositories and Atlas storage may be separate even when both use Git.
-
-## Local Read Execution
-
-When no dedicated Feature Atlas adapter executable is installed, the Feature Atlas skill may implement the adapter's read-only domain operations with ordinary filesystem tools against the already selected root. It must read the exact Map, immutable Decision, Feature, Work Item, and receipt records required by the operation; verify declared content digests and cross-record identity, owner, edge, currentness, and projection consistency; and return the same typed domain result described by the storage adapter contract.
-
-This fallback does not permit callers to choose a provider layout, scan unrelated `.casebook` roots, follow an unqualified `latest`, reinterpret mutable projections as authority, or bypass integrity checks. A missing executable alone is not `unverifiable` when the selected filesystem records contain enough information to execute and verify the domain operation.
-
-## Representation Without A Universal Schema
-
-The adapter's configured codec maps the existing canonical semantic representations to readable local records. Preserve all identity, owner, current Decision, local-label binding, dependency, convergence, proof, limitation, invalidator, evidence, and authority-boundary meaning. Do not invent a second JSON ontology or require callers to know mutation order.
-
-A practical codec may keep mutable current projections by stable identity and append-only immutable Decisions/qualified observations separately, for example:
+Preserve an existing readable layout. For an empty Atlas, use:
 
 ```text
-<root>/atlas.<codec-extension>
-<root>/maps/FM-*/current.<codec-extension>
-<root>/maps/FM-*/decisions/<decision-content-id>.<codec-extension>
-<root>/features/F-*.<codec-extension>
-<root>/work-items/WI-*.<codec-extension>
-<root>/receipts/<operation-id>.<receipt-extension>
+<destination>/map.md                 # `# FM-001 — <Map name>`
+<destination>/decisions/D-001.md
+<destination>/features/F-001.md
+<destination>/work-items/WI-001.md
 ```
 
-This layout is illustrative, not canonical. Existing local codecs may use other names, split/combined records, or Markdown with frontmatter. The conformance test is whether domain operations recover the canonical semantics and exact current immutable Decision without path knowledge. Stable IDs are record content; filenames are navigation.
+Create only the directories and records needed by the accepted Map. `map.md` is the `FM-*` Map record and carries that ID in its heading. Allocate the next unused numeric ID for each kind, starting at `001`: `D-*`, `FM-*`, `F-*`, and `WI-*`.
 
-## Immutable Decisions And Locators
+## Read and publish
 
-Write accepted Decision bytes once under the configured canonical content-type/byte rules. Verify them immediately after write and on every read. A bare mutable path is never an immutable Decision locator.
+1. Inspect the selected destination for its readable Map entry point and current Decision. In an empty store use the bootstrap layout above; in an established store follow its existing links and naming. Stop if more than one record plausibly claims to be current or no exact current Decision can be resolved.
+2. Stop on duplicate IDs, contradictory current Decisions, or changed ownership that the accepted Map does not explain.
+3. Write the accepted Decision as a new file. Then create or update `map.md`, Feature files, and Work Item files to match it. Preserve prior Decision files and established IDs whose meaning is unchanged.
+4. Reread every changed record and compare it with the accepted Map. Report the exact files changed and any incomplete or conflicting part.
 
-The adapter returns an adapter-qualified locator with enough retained information to reread exact bytes and verify integrity:
-
-- filesystem-only: destination identity, durable record key/version, canonical content type, algorithm and content digest;
-- Git-backed: exact repository identity plus commit and blob/object locator for the bytes, canonical content type and content digest; and
-- externally referenced snapshot: its already required immutable/versioned locator and Decision-contained content binding.
-
-Use a collision-resistant configured digest such as SHA-256 for new filesystem content bindings. A digest proves byte integrity, not human acceptance or semantic currentness. A Git commit/blob is immutable by content identity but remains usable only while the configured retention/audience guarantees keep it resolvable; branches, tags, `HEAD`, working-tree paths, commit messages, and Git authors are mutable/navigation/provenance inputs, not Atlas authority.
-
-## Identity, Expected Predecessor, And Writes
-
-Before creation or allocation, search all active records and retained immutable Decisions/observations under the configured codec for qualified/unqualified stable IDs, Decision identities, and candidate-local bindings. Search again inside the serialized mutation boundary. Stop on duplicates, owner mismatch, durable-binding conflict, unreadable retained history, or ambiguous codec results.
-
-The adapter must serialize one root's semantic mutation or provide equivalent expected-predecessor/CAS behavior. Within that boundary:
-
-1. reread the exact Map and verify the expected current predecessor, destination, authority package, accepted bytes/content binding, and identity collisions;
-2. write and sync the immutable Decision to a temporary/staged object, verify digest/content type, then make it durably addressable without overwrite;
-3. durably bind accepted local labels to stable identities;
-4. write child current projections in two passes so every owner/edge locator resolves;
-5. replace Feature then Map current projections atomically per record, with the Map last;
-6. reread through the codec, compare exact Decision/owners/bindings/edges/currentness, and emit a durable receipt.
-
-For a Git-backed codec, the adapter may use one or more commits as its mechanical transaction/retention vehicle. It still verifies the semantic expected predecessor before writing. A clean commit or fast-forward does not replace that check, and a merge never resolves semantic conflict automatically.
-
-Never overwrite an immutable Decision/observation object, recycle an established ID, silently remap a label, or repair meaning by editing a projection. Same-filesystem rename plus file/directory sync (where supported) is the ordinary atomic current-projection replacement mechanism; the adapter must report the weaker observed guarantee when the filesystem cannot provide it.
-
-## Receipts And Recovery
-
-Every mutation receipt records adapter/destination identity, operation identity, exact expected/current Decision, acceptance/mutation authority locator, written content digests and durable locators, established label bindings, projection versions, reread result, Git commit/blob locators when applicable, and terminal state `complete | partial | uncertain`.
-
-After interruption or an uncertain write:
-
-1. reacquire the configured serialization boundary;
-2. inspect the receipt/staged objects, immutable Decision store, current projections, and Git object/working-tree state when applicable;
-3. verify bytes by digest and search all identities/bindings before retry;
-4. if the exact Decision already exists, reuse it—never append/recommit a semantic duplicate merely to get a new receipt;
-5. resume only pending mechanical projections from established bindings, refreshing Feature then Map last; and
-6. reread through domain operations and emit a recovery receipt naming prior/superseding receipt relation.
-
-If exact state cannot be distinguished, return `write_uncertain` or `publication_incomplete` with known successes and stop. Do not delete successful records, reset Git history, force-push, choose a conflict winner, or fabricate rollback. Restore from backups is a separately authorized integrity operation and must preserve exact immutable Decisions and locators.
-
-## Consumer Boundary
-
-Only this adapter reads paths or invokes Git. Blueprint and Software Implementation consume `readCurrentMap`, `verifyPublication`, and `exportExecutionHandoff` domain results. When the Feature Atlas skill performs the local read fallback above, it is acting as this adapter and returns those domain results before Blueprint or Software Implementation consumes them. Consumers do not independently parse the directory, inspect `HEAD`, or treat a commit as the current Map Decision.
+Use direct, understandable file edits. If that cannot safely represent the accepted change, return `capability_unproven` rather than creating a helper publisher or new persistence design. Git operations require their own authority.
