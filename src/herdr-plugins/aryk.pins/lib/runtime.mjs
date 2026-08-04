@@ -23,6 +23,8 @@ function projectStatus(canonicalId, registry) {
   if (claims.length !== 1) return claims.length ? "ambiguous" : "missing";
   return claims[0].reconciliationState === "current" ? "unique" : "stale";
 }
+const workspacePinId = workspaceId => `herdr-workspace:${workspaceId}`;
+const workspaceIdFromPin = pin => pin.startsWith("herdr-workspace:") ? pin.slice("herdr-workspace:".length) : null;
 function resolvedPaths(options, env) {
   const paths = options.paths ?? statePaths(env); const stateRoot = options.stateRoot ?? paths.root;
   return options.paths ?? { ...paths, root: stateRoot, registry: path.join(stateRoot, "bindings", "registry.json"), projects: path.join(stateRoot, "project-pins.json"), locals: path.join(stateRoot, "local-pins.json"), history: path.join(stateRoot, "focus-history.json"), result: path.join(stateRoot, "action-result.json") };
@@ -64,8 +66,7 @@ export async function invokeAction(action, options = {}) {
       const current = identifyCurrentSession({ registry, agents, context, paneId: env.HERDR_PANE_ID });
       if (current.status !== "unique") return visibleRefusal(`Canonical current session unavailable (${current.status}).`, { client, writeResult });
       const scope = action === "pin-project" ? "project" : "local";
-      const canonicalId = scope === "project" ? current.record.projectCanonicalId : current.record.canonicalId;
-      if (scope === "project" && projectStatus(canonicalId, registry) !== "unique") return visibleRefusal("Canonical current project binding unavailable.", { client, writeResult });
+      const canonicalId = scope === "project" ? workspacePinId(current.agent.workspace_id) : current.record.canonicalId;
       const result = await pinTransaction(pinPath(scope, paths), async pins => {
         const appended = appendPin(pins, canonicalId); return { pins: appended.pins, result: appended };
       });
@@ -78,20 +79,22 @@ export async function invokeAction(action, options = {}) {
     const pins = parsePins(await (options.loadPins ?? loadPins)(pinPath(scope, paths)));
     const pinned = pins.slots[slot - 1];
     if (!pinned) return visibleRefusal(`${scope === "project" ? "Project" : "Local"} pin ${slot} is empty.`, { client, writeResult });
+    if (scope === "project") {
+      const workspaceId = workspaceIdFromPin(pinned);
+      if (!workspaceId) return visibleRefusal(`Project pin ${slot} uses the obsolete project format; clear and pin the space again.`, { client, writeResult });
+      const workspaces = await client.listWorkspaces();
+      if (workspaces.filter(workspace => workspace.workspace_id === workspaceId).length !== 1) return visibleRefusal(`Project pin ${slot} unavailable (stale).`, { client, writeResult });
+      await client.focusWorkspace(workspaceId);
+      return { status: "focused", workspaceId };
+    }
     const agents = await client.listAgents();
     const current = identifyCurrentSession({ registry, agents, context, paneId: env.HERDR_PANE_ID });
     if (current.status !== "unique") return visibleRefusal(`Canonical current session unavailable (${current.status}).`, { client, writeResult });
     return await historyTransaction(paths.history, async history => {
       let canonicalSessionId, projectCanonicalId, resolution;
-      if (scope === "local") {
-        resolution = resolveOfficialSession(pinned, registry, agents);
-        if (resolution.status !== "unique") throw new Error(`Local pin ${slot} unavailable (${resolution.status}).`);
-        canonicalSessionId = pinned; projectCanonicalId = resolution.record.projectCanonicalId;
-      } else {
-        const plan = planProjectActivation({ targetProjectCanonicalId: pinned, currentSessionCanonicalId: current.record.canonicalId, registry, agents, history });
-        if (plan.status !== "ready") throw new Error(`Project pin ${slot} unavailable (${plan.status}).`);
-        ({ canonicalSessionId, projectCanonicalId, resolution } = plan);
-      }
+      resolution = resolveOfficialSession(pinned, registry, agents);
+      if (resolution.status !== "unique") throw new Error(`Local pin ${slot} unavailable (${resolution.status}).`);
+      canonicalSessionId = pinned; projectCanonicalId = resolution.record.projectCanonicalId;
       await client.focusSession(resolution); // exact verified pane id; exit-0 body must attest the same official tuple and locators
       const next = recordSuccessfulFocus(history, { projectCanonicalId, canonicalSessionId, cause: "human", success: true });
       return { history: next, result: { status: "focused", canonicalSessionId, projectCanonicalId } };

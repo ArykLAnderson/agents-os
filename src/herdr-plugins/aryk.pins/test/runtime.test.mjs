@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHerdrClient, parseAgentListResponse, parseFocusResponse } from "../lib/herdr-client.mjs";
+import { createHerdrClient, parseAgentListResponse, parseFocusResponse, parseWorkspaceListResponse } from "../lib/herdr-client.mjs";
 import { reconcileCurrentAgent } from "../lib/model.mjs";
 import { handlePaneFocusedEvent, recordSuccessfulFocus, invokeAction } from "../lib/runtime.mjs";
 
@@ -154,4 +154,28 @@ test("pin-local can create a missing registry before writing the canonical pin",
   assert.equal(result.status, "pinned");
   assert.equal(published.sessions.length, 1);
   assert.equal(pinWrites[0].slots[0], published.sessions[0].canonicalId);
+});
+
+test("project pins identify and focus the exact Herdr workspace", async () => {
+  assert.deepEqual(parseWorkspaceListResponse(JSON.stringify({ result: { type: "workspace_list", workspaces: [{ workspace_id: "workspace-a" }] } })), [{ workspace_id: "workspace-a" }]);
+  const registry = { schemaVersion: 1, route, projects: [{ canonicalId: "project-a", generation: 1, reconciliationState: "current", stewardSessionCanonicalId: "session-a" }], sessions: [structuredClone(focusRecord)] };
+  const agent = focusedAgent({ cwd: "/work/project", foreground_cwd: "/work/project" });
+  const focused = [];
+  const pinResult = await invokeAction("pin-project", {
+    env, readRegistry: async () => registry,
+    client: { listAgents: async () => [agent], openPopup: async () => assert.fail("no refusal expected") },
+    registryTransaction: async (_file, mutate) => { const outcome = await mutate(registry); return { registry: outcome.registry, result: outcome.result }; },
+    pinTransaction: async (_file, mutate) => (await mutate({ schemaVersion: 1, slots: [null, null, null, null] })).result,
+    writeResult: async () => {},
+  });
+  assert.equal(pinResult.canonicalId, "herdr-workspace:workspace-a");
+
+  const activateResult = await invokeAction("activate-project-1", {
+    env, readRegistry: async () => registry,
+    client: { listWorkspaces: async () => [{ workspace_id: "workspace-a" }], focusWorkspace: async id => focused.push(id), openPopup: async () => assert.fail("no refusal expected") },
+    loadPins: async () => ({ schemaVersion: 1, slots: ["herdr-workspace:workspace-a", null, null, null] }),
+    writeResult: async () => {},
+  });
+  assert.equal(activateResult.status, "focused");
+  assert.deepEqual(focused, ["workspace-a"]);
 });

@@ -101,6 +101,13 @@ test("manager renders four states, reorders, clears, and exits", () => {
   assert.equal(reduceManagerState(state, "exit").exit, true);
 });
 
+test("project manager renders workspace labels instead of opaque pin ids", () => {
+  const pins = { schemaVersion: 1, slots: ["herdr-workspace:w5", "herdr-workspace:gone", null, null] };
+  const output = renderManager("project", pins, registry, [{ workspace_id: "w5", label: "materialize" }]);
+  assert.match(output, /1  materialize  \[current\]/);
+  assert.match(output, /2  herdr-workspace:gone  \[unavailable\]/);
+});
+
 test("nvim pin manager accepts only a reorder or clearing of existing opaque pins", () => {
   const original={schemaVersion:1,slots:["a","b",null,"c"]};
   assert.deepEqual(parseNvimPins("b\na\nempty\nc\n",original),{schemaVersion:1,slots:["b","a",null,"c"]});

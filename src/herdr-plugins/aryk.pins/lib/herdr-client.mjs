@@ -15,6 +15,11 @@ export function parseAgentListResponse(output) {
   if (response?.result?.type !== "agent_list" || !Array.isArray(response.result.agents)) throw new Error("agent list returned an unexpected response");
   return response.result.agents;
 }
+export function parseWorkspaceListResponse(output) {
+  const response = jsonResponse(output, "workspace list");
+  if (response?.result?.type !== "workspace_list" || !Array.isArray(response.result.workspaces)) throw new Error("workspace list returned an unexpected response");
+  return response.result.workspaces;
+}
 function sameOfficial(a, b) { return a?.source === b?.source && a?.agent === b?.agent && a?.kind === b?.kind && a?.value === b?.value; }
 export function parseFocusResponse(output, expectedRecord) {
   const response = jsonResponse(output, "agent focus");
@@ -39,6 +44,13 @@ export function createHerdrClient({ env = process.env, route, executor = default
   };
   return {
     async listAgents() { return parseAgentListResponse(await call(["agent", "list"])); },
+    async listWorkspaces() { return parseWorkspaceListResponse(await call(["workspace", "list"])); },
+    async focusWorkspace(workspaceId) {
+      if (typeof workspaceId !== "string" || !workspaceId) throw new TypeError("workspace target is required");
+      const response = jsonResponse(await call(["workspace", "focus", workspaceId]), "workspace focus");
+      if (response?.result?.type !== "workspace_info" || response.result.workspace?.workspace_id !== workspaceId || response.result.workspace?.focused !== true) throw new Error("workspace focus response target mismatch");
+      return response.result.workspace;
+    },
     async focusSession(resolution) {
       const record = resolution?.record; const paneId = record?.binding?.paneId;
       if (typeof paneId !== "string" || !paneId) throw new TypeError("verified pane target is required");
