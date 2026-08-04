@@ -1,0 +1,23 @@
+# Source plugin for Herdr 0.8.0.
+id = "aryk.urls"
+name = "Aryk URLs"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Select and open URLs from the current pane"
+platforms = ["macos"]
+
+[[actions]]
+id = "open-urls"
+title = "Open URL from pane"
+description = "Select an HTTP(S) URL from the current pane's recent output"
+contexts = ["pane"]
+command = ["node", "index.mjs", "action"]
+
+[[panes]]
+id = "urls"
+title = "URLs"
+description = "Select a URL to open in the default browser"
+placement = "popup"
+width = 96
+height = 18
+command = ["node", "index.mjs", "picker"]

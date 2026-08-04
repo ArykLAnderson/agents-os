@@ -211,15 +211,21 @@ export function planProjectActivation({ targetProjectCanonicalId, currentSession
   return { status: "ready", canonicalSessionId, projectCanonicalId: targetProjectCanonicalId, resolution };
 }
 
-export function renderManager(scope, pinsValue, registryValue) {
+export function renderManager(scope, pinsValue, registryValue, workspaces = []) {
   const pins = parsePins(pinsValue); let registry;
   try { registry = validateRegistry(registryValue); } catch { registry = null; }
   const collection = scope === "project" ? registry?.projects : registry?.sessions;
   const lines = [`${scope === "project" ? "Project" : "Local"} pins`];
   pins.slots.forEach((id, index) => {
     let state = "empty";
-    if (id) { const claims = (collection ?? []).filter((item) => item.canonicalId === id); state = claims.length === 1 ? claims[0].reconciliationState : "unavailable"; }
-    lines.push(`${index + 1}  ${id ?? "—"}  [${state}]`);
+    let displayName = id;
+    if (id && scope === "project" && id.startsWith("herdr-workspace:")) {
+      const workspaceId = id.slice("herdr-workspace:".length);
+      const matches = workspaces.filter(workspace => workspace.workspace_id === workspaceId);
+      if (matches.length === 1) { displayName = matches[0].label || workspaceId; state = "current"; }
+      else state = "unavailable";
+    } else if (id) { const claims = (collection ?? []).filter((item) => item.canonicalId === id); state = claims.length === 1 ? claims[0].reconciliationState : "unavailable"; }
+    lines.push(`${index + 1}  ${displayName ?? "—"}  [${state}]`);
   });
   lines.push("j/k select  J/K reorder  c clear  q/Esc exit"); return lines.join("\n");
 }
