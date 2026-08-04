@@ -7,7 +7,7 @@ The Workspace Operator performs repository administration, not product implement
 ### Operations
 
 - discover repository topology, project instructions, named integration base, and cleanliness;
-- allocate a global integration worktree in `single_pr` mode or one Feature integration worktree/branch per accepted Feature in `stacked_feature_prs`, plus one explicit persistent writer worktree/branch per ready task from its current integrated prerequisite baseline;
+- for `direct_task`, allocate one persistent task/delivery worktree from the named base; for `coordinated_change`, allocate a global integration worktree in `single_pr` mode or one Feature integration worktree/branch per accepted Feature in `stacked_feature_prs`, plus one explicit persistent writer worktree/branch per ready task from its current integrated prerequisite baseline;
 - bootstrap required dependencies without modifying product source, or report any unavoidable source mutation;
 - verify that coordinated writer and Feature branches stay inside the inherited Execution Authorization Envelope and declared stack graph;
 - create dedicated/disposable validator checkouts and report `filesystem_enforced | tool_restricted_shell_mutable | instruction_only`;

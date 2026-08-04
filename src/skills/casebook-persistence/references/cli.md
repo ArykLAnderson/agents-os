@@ -14,7 +14,7 @@ Use an explicit workspace or store only when it is already part of the user's re
 
 ## Commands and input
 
-All commands emit exactly one `casebook-cli-result@2` JSON value on stdout. Mutations accept one complete Case or Frame aggregate through exactly one input mode:
+All commands emit exactly one `casebook-cli-result@2` JSON value on stdout. Create and commit mutations accept one Case or Frame authoring/canonical aggregate through exactly one input mode:
 
 - `--input '<JSON>'`; use `--input -` to read that JSON from standard input.
 - `--input-file <absolute-normalized-path>` is a compatibility/fallback transport, not the recommended normal authoring path.
@@ -22,7 +22,7 @@ All commands emit exactly one `casebook-cli-result@2` JSON value on stdout. Muta
 
 Create commands also accept concise direct flags; these are creation-only. Case creation requires `--title`, `--summary`, `--scope`, `--body`, and `--acting-role`; `--authority-basis` is optional, and `--id` is optional. Frame creation requires `--title`, `--outcome`, `--discovery-title`, and `--discovery-body`; `--id` is optional. These flags expand only mechanical IDs, labels, arrays, provisional/private knowledge, and active/frontier/unclear Discovery defaults; they never invent semantic claims, sources, or provenance. Commit commands require one complete canonical aggregate through `--input`, `--input -`, or compatibility `--input-file`; direct authoring flags and `--draft` are refused before provider dispatch.
 
-Do not supply either input mode to reads, search, receipt, or recent-operation commands. The available public commands are:
+Do not supply an input mode to reads, search, delete, receipt, or recent-operation commands. The available public commands are:
 
 ```sh
 casebook create case --namespace <semantic-id> --commit-basis <text> [--input <json> | --draft | direct flags]

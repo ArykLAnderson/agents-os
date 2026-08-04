@@ -8,13 +8,13 @@ A complete Case aggregate includes:
 - Knowledge entries with stable IDs and display labels such as `CK-001`, classification, purpose, support, conditional authority, examination objective, scope, relationships, and substantive content; and
 - Sources with stable IDs and display labels such as `SRC-001`, locators, examination objective, scope, and evidence fragments.
 
-`title`, `summary`, Scope, Knowledge, and Sources are mandatory semantic content. Assemble and submit the complete aggregate through the CLI; it is not a direct-file interface. Every family has a stable typed ID; preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
+`title`, `summary`, Scope, and Knowledge are mandatory semantic content. Sources are mandatory for knowledge claiming source support; a simple direct-created provisional entry may begin with no Source and therefore makes no source-supported claim until later reconciliation. Assemble and submit the complete aggregate through the CLI; it is not a direct-file interface. Every family has a stable typed ID; preserve old titles as typed aliases when useful, private visibility unless explicitly authorized otherwise, and every unchanged family during reconciliation.
 
-The CLI may enforce stricter normalized fields than this semantic outline. For creation, concise direct flags or compact stdin JSON with valueless `--draft` may expand only the documented mechanical defaults; a complete aggregate remains valid. Read the current aggregate with `casebook read case`, validate it here, then use `casebook create case` or the full-aggregate-only `casebook commit case` as specified by the persistence procedure. Never reconstruct an update from a partial excerpt or use creation shortcuts for reconciliation.
+The CLI may enforce stricter normalized fields than this semantic outline. For creation, concise direct flags or compact stdin JSON with valueless `--draft` may expand only the documented mechanical defaults; a complete aggregate remains valid. For reconciliation, read the current aggregate with `casebook read case` and validate it here before full-aggregate commit. For creation, validate the new candidate aggregate or supported compact/direct authoring input without attempting to read a nonexistent Case, then use `casebook create case` as specified by the persistence procedure. Never reconstruct an update from a partial excerpt or use creation shortcuts for reconciliation.
 
 ## Knowledge Integrity
 
-Split entries when support, authority, classification, scope, contestability, or supersession differs. Every entry needs an ID, title, classification, purpose, support, examination objective, and substantive content.
+Split entries when support, authority, classification, scope, contestability, or supersession differs. Every reconciled entry needs an ID, title, classification, purpose, support, examination objective, and substantive content. For direct-created provisional knowledge, the absence of Sources means unsupported until reconciliation.
 
 - `accepted`: support establishes the current meaning; applicable authority is also required when the meaning depends on a decision, policy, approval, ownership, or delegated judgment.
 - `provisional`: useful current meaning remains qualified by uncertainty.

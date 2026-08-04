@@ -53,7 +53,7 @@ return await agent(prompt(
 
 ## Persistent engineering slice
 
-Use one writer per worktree and validate after deterministic gates pass.
+Use one writer per worktree and run an advisory same-worktree review after deterministic gates pass. Coordinated certification instead uses Software Implementation's separately allocated verification checkout.
 
 ```js
 return await withWorktree("slice", async ({ path, branch }) => {
@@ -64,15 +64,15 @@ return await withWorktree("slice", async ({ path, branch }) => {
   });
   const tests = await shell("npm test", { env: { CI: "1" } });
   if (tests.exitCode !== 0) return { path, branch, implementation, tests };
-  const validation = await agent(prompt(
-    "Independently validate the implemented contract through its public interface. Do not edit files. Writer report: {implementation}",
+  const review = await agent(prompt(
+    "Review the implemented contract through its public interface. Remain advisory and do not edit files. Writer report: {implementation}",
     { implementation },
-  ), { label: "Focused validation", model: "review", tools: ["read", "bash"] });
-  return { path, branch, implementation, tests, validation };
+  ), { label: "Advisory review", model: "review", tools: ["read", "bash"] });
+  return { path, branch, implementation, tests, review };
 });
 ```
 
-A validation failure returns to a writer in the same owned worktree; the validator does not fix its candidate.
+A review finding returns to the writer in the same owned worktree; the reviewer does not fix its candidate.
 
 ## Proportional multi-area review
 
