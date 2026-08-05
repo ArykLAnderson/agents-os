@@ -83,7 +83,7 @@ Default to at most two living working design artifacts for one effort:
 1. a compact **boundary/evidence notebook** containing the current Frame boundary, decisive terrain, open human decisions, prototype verdicts, invalidations, and next action; and
 2. one **Design/RFC Case** containing atomic semantic design claims and their status/provenance.
 
-Do not maintain a prose RFC beside the Case during exploration. After the Case passes routeability, invoke `../document/SKILL.md` to materialize the reader-facing Production Design RFC as a lossless projection of the fixed Case revision. In this invocation Document may govern editorial representation, never semantic design meaning: any semantic change returns to the Case, then fixes a new revision and rematerializes. Review findings reconcile into the Case; never patch RFC prose independently. The accepted RFC may then remain as the pinned architecture publication.
+Do not maintain a prose RFC beside the Case during exploration. After the Case passes routeability, invoke `../document/SKILL.md` to materialize the reader-facing Production Design RFC as a lossless semantic projection of the fixed Case revision, including a Presentation handoff when a rendered surface is requested. Document governs editorial projection, semantic hierarchy, meaning-bearing visual specifications, content accessibility, and editorial readiness; Presentation owns rendered visual and interactive realization, presentational accessibility, inspection, and render readiness. Art Direction is an optional Presentation lens. Any semantic change returns to the Case, then fixes a new revision and rematerializes. Review findings reconcile into the Case; never patch RFC prose or a rendered surface as an independent authority. The accepted RFC may then remain as the pinned architecture publication.
 
 Atlas remains the current delivery-plan authority; do not create a competing task artifact. Raw research, scout output, test transcripts, review drafts, generated pre-acceptance RFC previews, and prototype logs stay temporary unless they support an operative decision and would be costly or impossible to reconstruct. Promote only their conclusion, limitation, and stable locator into a living artifact.
 
@@ -140,6 +140,8 @@ Start with `../frame/SKILL.md`, then load the skill selected by the current ques
 - `../prototype/SKILL.md` — disposable evidence ladder
 - `../implementation-invalidation/SKILL.md` — no-silent-redesign protocol
 - `../feature-atlas/SKILL.md` — exact Map acceptance/currentness and publication through the project-selected guide
+- `../presentation/SKILL.md` — optional rendered visual and interactive realization from a semantic handoff or other governed input
+- `../art-direction/SKILL.md` — optional Presentation lens for visual point of view
 - `references/requirement-killer.md` — adversarial anti-ratchet simplification gate
 - `templates/production-design-rfc.md` — compact accepted design template
 - `contracts/atlas-handoff.md` — Atlas materialization contract

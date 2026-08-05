@@ -1,9 +1,9 @@
 # Publish
 
-Publication mutates an external destination. Keep it separate from representation.
+Publication mutates an external destination. Keep it separate from semantic representation and Presentation realization. It is optional, separately authorized, and publication mechanics never become semantic authority.
 
 1. Confirm publication is requested and identify destination, stage or release action, collaborators, data classification, attachments, and authorization scope. Staging and release each require explicit authorization before their external mutation.
-2. Check semantic acceptance, target inspection, trace coverage, unresolved findings, links, attachment readiness, and rollback feasibility. Unsupported material assertions, reader-action-relevant stale support, authority or classification conflicts, missing material trace coverage, and untraced material visual or table assertions block both staging and release.
+2. Check semantic acceptance, any required Presentation render-readiness evidence, trace coverage, unresolved findings, links, attachment readiness, and rollback feasibility. Unsupported material assertions, reader-action-relevant stale support, authority or classification conflicts, missing material trace coverage, and untraced material visual or table assertions block both staging and release. Publication mechanics may verify the destination, but cannot alter or settle source meaning.
 3. Fetch the existing remote artifact when supported and compare it with the session's last observed revision. Preserve unfamiliar collaborator changes and remote identifiers; prefer append or targeted updates over replacement. Stop on semantic conflict rather than overwriting it.
 4. With explicit stage authorization, stage a preview or draft when the destination supports it.
 5. Obtain explicit release authorization before release.
