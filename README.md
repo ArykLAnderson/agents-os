@@ -15,7 +15,3 @@ Run from the Agent OS root:
 node scripts/agents-os.mjs sync
 node scripts/agents-os.mjs doctor
 ```
-
-## Optional Herdr trial scaffolding
-
-The offline, opt-in Herdr navigation seam is documented in [`src/skills/herdr-session-navigation/README.md`](src/skills/herdr-session-navigation/README.md). Its setup stages an example only; it does not install/run Herdr or change tmux/Pi. Source plugins include fail-closed pins and the self-contained [`aryk.spaces`](src/herdr-plugins/aryk.spaces/README.md) unified semantic/live/folder picker. Run their Node source tests directly; generated adapters are intentionally untouched.
