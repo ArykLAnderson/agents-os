@@ -10,7 +10,7 @@ Canonical executable guidance remains in:
 - `src/skills/frame/`
 - `src/skills/document/`
 - `src/skills/presentation/`
-- `src/skills/art-direction/`
+- `src/skills/presentation/references/art-direction.md`
 - `src/skills/prototype/`
 - `src/skills/deliberate/`
 

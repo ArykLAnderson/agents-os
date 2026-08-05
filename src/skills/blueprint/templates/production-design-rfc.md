@@ -1,6 +1,6 @@
 # Production Design RFC: <outcome>
 
-> Lossless reader-facing semantic projection from one fixed Design/RFC Case revision. The Case remains sole semantic design authority. Document governs editorial projection, semantic hierarchy, meaning-bearing visual specifications, and content accessibility; Presentation owns any rendered visual or interactive realization. Semantic change returns to the Case before rematerialization.
+> Lossless reader-facing semantic projection from one fixed Design/RFC Case revision. The Case remains sole semantic design authority. A requested rendered surface retains linked Presentation realization evidence. Semantic change returns to the Case before rematerialization.
 
 **Status:** materialized-review | accepted | superseded
 **Readiness:** fresh-worker executable candidate | fresh-worker executable — <blockers/evidence>
@@ -91,7 +91,7 @@ Commission the smallest set that carries the spine. Common anchors are one proje
 
 Each retained visual has a declarative title, takeaway, self-sufficient labels and legend where needed, a concise caption or nearby explanation, trace, and consistent current/selected/deferred/failure grammar. Integrate these quietly through captions, nearby prose, and appendices—never repeat a large metadata shell around every figure.
 
-Keep the visual specification medium-neutral and include a concise text fallback. Presentation chooses the visual medium and, when requested, realizes and inspects it at ordinary desktop and phone widths for comfortable reading, obvious clipping, and broken visuals or navigation. Scrolling or reflow is acceptable when the relationship remains discoverable and legible. Presentation scales accessibility, zoom, print/PDF, browser, and publication checks to the requested surface and audience boundary.
+Keep the visual specification medium-neutral and include a concise text fallback. For rendered realization, invoke [Presentation](../../presentation/SKILL.md) with the reader question, specification, source revision, and requested surface boundary. Scrolling or reflow is acceptable when the relationship remains discoverable and legible.
 
 ## Coverage ledger and appendices
 

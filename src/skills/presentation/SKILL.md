@@ -9,23 +9,22 @@ Own the rendered visual and interactive quality of a surface. Presentation is a 
 
 ## Enter
 
-Presentation may begin from any of these governed inputs:
+Presentation starts from a Document handoff, Cases or Frames, an existing product surface, or a supplied brief. Document is not mandatory upstream. Apply [the handoff guide's entry routing table](references/handoff.md#entry-routing) first; it establishes the meaning authority, revision or provenance, required inputs, and return path for that route.
 
-- a Document revision and its presentation handoff;
-- Cases or Frames directly, when they are the current meaning authority;
-- an existing product surface whose behavior or fidelity is being improved; or
-- a supplied brief that defines the requested outcome.
+Establish the audience, task, medium, implementation boundary, constraints, required states, and inspection boundary. Then choose one mode:
 
-Document is not mandatory upstream. Establish the audience, task, medium, implementation boundary, constraints, required states, and inspection boundary before changing the surface. If the input is ambiguous, preserve the ambiguity or return to the owning Case, Frame, Document, product authority, or brief rather than inventing meaning.
+- **Check:** inspect an existing realization without modifying it.
+- **Refine:** improve an existing realization within its established semantic and implementation boundary.
+- **Implement:** build the requested realization.
 
-Use [the handoff guide](references/handoff.md) to separate semantic requirements from presentational choices. Add the optional [Art Direction](../art-direction/SKILL.md) lens only when a deliberate visual point of view would change the quality of the surface.
+Use [the handoff guide](references/handoff.md) to separate semantic requirements from presentational choices. Add the optional [Art Direction lens](references/art-direction.md) only when a deliberate visual point of view would change the quality of the surface.
 
 ## Realize
 
 1. **Read the source.** Identify the intended reader or user journey, content hierarchy, must-preserve claims, meaning-bearing visual specifications, text equivalents, interaction semantics, and constraints.
-2. **Set the visual system.** Choose composition, hierarchy, typography, layout, color, imagery, motion, and density that serve the task and medium. Make the signature move purposeful; do not add decorative structure that competes with the outcome.
-3. **Implement the surface.** Build the actual medium, including states, transitions, responsive or adaptive behavior, empty and error states, and interaction feedback. Keep implementation detail inside Presentation.
-4. **Realize diagrams and imagery.** Preserve the source's nodes, edges, labels, emphasis, chronology, values, omissions, and text fallback. Decorative treatment may vary; meaning-bearing topology may not.
+2. **Set or assess the visual system.** In Refine or Implement mode, choose composition, hierarchy, typography, layout, color, imagery, motion, and density that serve the task and medium. In Check mode, assess the existing system against those same concerns.
+3. **Realize only when the mode permits.** Refine or Implement the actual medium, including applicable required states, transitions, responsive or adaptive behavior, empty and error states when in scope, and interaction feedback. In Check mode, retain the existing surface and gather inspection evidence only. Keep implementation detail inside Presentation.
+4. **Realize or assess diagrams and imagery when in scope.** Preserve the source's nodes, edges, labels, emphasis, chronology, values, omissions, and text fallback. Decorative treatment may vary; meaning-bearing topology may not.
 5. **Inspect the rendered result.** Use [the inspection guide](references/inspection.md) in the real medium. Check ordinary and constrained sizes, interaction states, presentational accessibility, and reduced-motion behavior where relevant. Record what was inspected, not just what was implemented.
 
 ## Boundary loop
@@ -38,4 +37,4 @@ Presentation findings that are purely visual or interactive stay here. Findings 
 
 ## Finish
 
-A Presentation result is a current realized surface plus concise evidence of its source, medium, implementation boundary, inspection, unresolved limitations, and any returned semantic questions. Render readiness is not publication, and a polished screenshot is not proof that the source meaning or every requested state is correct.
+A Presentation result is a current realized surface plus concise evidence of its source, medium, implementation boundary, inspection, unresolved limitations, and any returned semantic questions. Claim render readiness only when the source and implementation revisions or provenance are recorded, every applicable inspection branch is evidenced or explicitly excluded, visual and meaning-changing findings are separated, and no meaning-changing issue remains unreturned. Render readiness is not publication, and a polished screenshot is not proof that the source meaning or every requested state is correct.
