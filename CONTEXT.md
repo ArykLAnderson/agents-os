@@ -10,7 +10,7 @@
 | Retained artifact | A readable research, prototype, deliberation, review, or modeling artifact kept when reducing it to Case entries would lose important argument, method, context, or reproducibility. | Requiring Prototype or Deliberate to implement a Case-specific return interface. |
 | Frame | One resumable effort to guide a consequential, under-specified outcome from uncertainty toward human acceptance. It owns the outcome boundary, Frame Discovery, active authorization facts, limitations, and stable downstream-work references. | Treating Frame as a task scheduler, event log, fixed phase sequence, or substitute for human judgment. |
 | Discovery map | A compact projection of unresolved fog, frontier questions, blockers, contestation, deferrals, and exclusions for one Frame. | Persisting assignments, routing instructions, operation history, confidence scores, or recommended next actions. |
-| Document | One resumable effort to create an accepted durable reader-facing artifact from Case-backed or directly supplied evidence. It owns editorial intent, one authoritative semantic draft, artifact-local findings, representations, acceptance, and factual publication state. | Storing reusable subject meaning in the Document or treating a target file as proof of completion. |
+| Document | One resumable effort to create an accepted durable reader-facing semantic artifact from Case-backed or directly supplied evidence. It owns editorial intent, one authoritative semantic draft, artifact-local semantic findings, semantic representations, realization handoffs, acceptance, and factual publication state. | Storing reusable subject meaning in the Document, claiming rendered readiness, or treating a target file as proof of completion. |
 | Prototype | A disposable artifact built to answer one explicit question through observable evidence and exactly one verdict: supported, rejected, or inconclusive. | Treating runnable prototype code as production-ready or requiring prototypes to persist through Casebook. |
 | Deliberation | A bounded comparison of two or three credible alternatives through decision-specific forced perspectives, preserving consequential disagreement and remaining human judgment. | Voting, confidence averaging, fixed debate theater, or treating a recommendation as a decision. |
 
@@ -28,7 +28,8 @@
 
 - Cases own reusable subject meaning.
 - Frames own active uncertainty and the route toward a bounded accepted outcome.
-- Documents own reader-facing semantic artifacts and their factual representation, acceptance, and publication state.
+- Documents own reader-facing semantic artifacts, semantic representation requirements, acceptance, and factual publication state.
+- Presentations own rendered visual and interactive realization, presentational accessibility, rendered inspection, and render readiness; Art Direction is an optional Presentation lens.
 - Prototype and Deliberate are standalone capabilities that Frame may invoke when useful; neither requires a Casebook-specific integration contract.
 - Feature Atlas owns accepted delivery intent, Feature and Work Item identity, named Decisions, and canonical tracker representation.
 - Workflow Runtime owns live execution, participants, operations, cancellation, recovery, and journal truth.
@@ -38,12 +39,14 @@
 
 | Term | Definition | Avoid |
 |---|---|---|
-| Semantic draft | The authoritative meaning-bearing Document revision from which target representations are produced. | Editing a target representation as an independent semantic authority. |
+| Semantic draft | The authoritative meaning-bearing Document revision from which semantic representations and Presentation handoffs are produced. | Editing a target representation or rendered surface as an independent semantic authority. |
 | Genre | The semantic obligations and reader outcome expected of a document, such as an RFC, PRD, research report, change brief, implementation report, explanation, or blog post. | Treating genre as a fixed visual template. |
 | Reader-facing reference | A citation or evidence locator the intended audience can resolve. Internal Case IDs and private paths remain provenance by default. | Publishing private workflow locators as citations. |
 | Stage | Write a non-final representation to a destination for faithful preview or revision. | Treating staging authorization as release authorization. |
 | Release | Authorize a staged destination representation as final for its intended audience. | Assuming document acceptance authorizes publication. |
-| Publication | The separately authorized destination-facing work of staging or releasing a representation and verifying the resulting remote state. | Treating a successful API response as verified publication. |
+| Publication | The separately authorized destination-facing work of staging or releasing a semantic or realized representation and verifying the resulting remote state. | Treating a successful API response as verified publication or as authority to change meaning. |
+| Presentation handoff | The source revision and semantic realization requirements passed to Presentation, with any returned meaning-changing question. | Treating a visual brief as permission to rewrite content or a rendered surface as a semantic source. |
+| Render readiness | Evidence that a realized surface was inspected in its intended medium and meets its presentational boundary. | Treating a screenshot, source build, or publication response as proof of render readiness. |
 
 ## Context Classification
 
