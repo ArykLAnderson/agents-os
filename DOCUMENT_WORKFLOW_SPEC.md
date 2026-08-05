@@ -9,6 +9,8 @@ Canonical executable guidance remains in:
 - `src/skills/case/`
 - `src/skills/frame/`
 - `src/skills/document/`
+- `src/skills/presentation/`
+- `src/skills/presentation/references/art-direction.md`
 - `src/skills/prototype/`
 - `src/skills/deliberate/`
 
@@ -44,13 +46,21 @@ Frame
   └─ optional Document
 
 Document
-  reader-facing semantic artifact
+  reader-facing semantic artifact and content handoff
   ├─ Compose
   ├─ Shape
   ├─ Trace
   ├─ Review
   ├─ Format
-  └─ Publish
+  └─ optional Publish
+
+Presentation
+  rendered visual and interactive surface
+  ├─ realization
+  ├─ rendered accessibility
+  ├─ real-medium inspection
+  └─ render readiness
+       └─ optional Art Direction lens
 ```
 
 These are capability relationships, not a fixed pipeline. A Frame chooses the smallest operation fitting the current uncertainty. A Document iterates among its internal playbooks according to unmet artifact needs. Prototype and Deliberate are standalone model-invoked capabilities that Frame may use without requiring a Casebook-specific return interface.
@@ -117,18 +127,20 @@ Frame may use Prototype for one discriminating empirical question and Deliberate
 
 ## Document
 
-A Document develops one accepted durable reader-facing artifact from Case-backed or directly supplied evidence.
+A Document develops one accepted durable reader-facing semantic artifact from Case-backed or directly supplied evidence.
 
 It owns:
 
-- intent, audience, reader action, genre, and artifact boundary;
+- intent, audience, reader action, genre, and semantic artifact boundary;
 - pinned Case states and direct sources;
 - one authoritative semantic draft;
-- knowledge gaps and artifact-local findings;
-- trace state;
-- target representations;
+- knowledge gaps and artifact-local semantic findings;
+- trace state and meaning-bearing visual specifications;
+- semantic target representations and Presentation handoffs;
 - conversational acceptance;
 - factual publication state.
+
+Presentation may enter from a Document handoff, Cases or Frames directly, an existing product surface, or a supplied brief. It owns rendered visual and interactive realization, presentational accessibility, diagram realization, real-medium inspection, and render readiness. Art Direction is an optional Presentation lens and has no independent semantic authority.
 
 Cases own reusable subject meaning. Frames own broader uncertainty. Workflow Runtime owns execution mechanics.
 
@@ -137,11 +149,11 @@ Document uses internal playbooks rather than separate public operation skills:
 - **Compose:** establish a supported semantic basis satisfying one primary genre.
 - **Shape:** organize meaning around the reader journey without inventing unsupported substance.
 - **Trace:** connect consequential semantic units to Case support and accessible reader references where needed.
-- **Review:** select fresh lenses according to current risk and return consolidated findings.
-- **Format:** produce and inspect faithful target representations without hidden semantic authorship.
-- **Publish:** perform separately authorized external staging or release and verify remote state.
+- **Review:** select fresh semantic/editorial lenses according to current risk and return consolidated findings.
+- **Format:** produce faithful semantic target representations, meaning-bearing visual specifications, and Presentation handoffs.
+- **Publish:** perform separately authorized external staging or release and verify remote state; publication mechanics do not own meaning.
 
-The playbooks may repeat, be omitted, or run in another order. A material semantic change invalidates affected trace, review, representation, acceptance, and publication conclusions.
+Presentation performs rendered realization and inspection outside this Document playbook set. The playbooks may repeat, be omitted, or run in another order. A material semantic change invalidates affected trace, review, representation, handoff, acceptance, and publication conclusions.
 
 Document status is descriptive: `active`, `completed`, `abandoned`, or `superseded`. A completed Document returns to `active` after a material edit. Optional publication remaining pending does not reopen it unless publication belongs to the requested artifact boundary.
 
@@ -152,9 +164,9 @@ Creating a file is not completion.
 A Document may recommend completion when:
 
 - the requested artifact boundary is met;
-- applicable trace, review, representation, and publication obligations are complete or explicitly not applicable;
+- applicable trace, semantic review, representation, and publication obligations are complete or explicitly not applicable;
 - no unresolved blocking finding remains without human disposition;
-- every requested representation has been inspected in its rendered medium;
+- every requested semantic representation and Presentation handoff is current; linked Presentation render-readiness evidence is current when that surface is in scope;
 - material changes have not made relevant evidence stale;
 - current state is persisted;
 - the human accepts the current revision conversationally.
@@ -207,7 +219,7 @@ At minimum:
 - Prototype records actual observation and one bounded verdict;
 - Deliberate evaluates every credible alternative without false consensus;
 - Frame completion agrees with persisted Frame and linked Document state;
-- Document completion includes current trace/review evidence and rendered-representation inspection;
+- Document completion includes current semantic trace/review evidence and complete realization handoffs; Presentation completion includes rendered-representation inspection and render-readiness evidence;
 - publication success includes post-write verification.
 
 ## Out Of Scope
@@ -218,4 +230,5 @@ At minimum:
 - Workflow runtime journals, scheduling, leases, callbacks, or recovery state inside Cases, Frames, or Documents.
 - Cryptographic manifests as proof of semantic correctness.
 - Automatic publication or delegated human judgment.
+- Treating Presentation or Art Direction as a replacement semantic authority.
 - Treating current built-in genres or destinations as a mature plugin contract.

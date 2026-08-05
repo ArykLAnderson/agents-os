@@ -9,6 +9,6 @@ Arrange the semantic basis into one primary reader journey. Choose by reader nee
 
 Ground every concept before later passages depend on it. Keep one idea per beat, preserve causal links, and use headings as navigation rather than decoration.
 
-Add a visual anchor only when spatial, temporal, structural, or comparative relationships are materially clearer visually. Give it a stable ID and define its placement, reader question, one-sentence takeaway, prerequisites, must-show meaning, source claims, selected semantic form, prose-retained meaning, material omissions, forbidden implications, and text fallback before choosing Mermaid, SVG, HTML/CSS, a table, or generated imagery.
+Add a visual anchor only when spatial, temporal, structural, or comparative relationships are materially clearer visually. Give it a stable ID and define its placement, reader question, one-sentence takeaway, prerequisites, must-show meaning, source claims, prose-retained meaning, material omissions, forbidden implications, and text fallback. This is a meaning-bearing visual specification for Presentation; do not choose its framework, implementation, or finished aesthetic here.
 
 Shaping completes when a fresh reader can follow the intended action without relying on hidden context or encountering concepts before grounding.
