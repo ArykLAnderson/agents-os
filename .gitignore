@@ -67,3 +67,6 @@ plugins/**/.next/
 plugins/**/coverage/
 plugins/**/*.tsbuildinfo
 plugins/**/.DS_Store
+
+# Disposable generated design/explainer artifacts.
+artifacts/

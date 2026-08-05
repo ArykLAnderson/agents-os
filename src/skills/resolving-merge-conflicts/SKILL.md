@@ -16,7 +16,7 @@ Resolve intentions, not merely conflict markers.
 
 ## Architectural stop condition
 
-Do not bury a redesign inside lightweight conflict resolution. If a correct result requires crossing a module boundary, breaking a contract, duplicating domain rules, or substantial refactoring, invoke `zoom-out` and return a conflict brief to the caller containing:
+Do not bury a redesign inside lightweight conflict resolution. If a correct result requires crossing a module boundary, breaking a contract, duplicating domain rules, or substantial refactoring, stop resolution and return a conflict brief to the caller containing:
 
 - the intentions being reconciled;
 - the blocking contract or seam;
@@ -25,4 +25,4 @@ Do not bury a redesign inside lightweight conflict resolution. If a correct resu
 - affected specification and ticket criteria;
 - the reproducible merge state.
 
-When called by a Software Implementation Integration Worker, return the brief to the coordinator for writer routing under the Convergence Contract. For a standalone merge with no coordinator, surface the brief to the human. Do not abort merely because the conflict is difficult.
+When the conflict contradicts accepted design, route the brief through `implementation-invalidation`. When called by a Software Implementation Integration Worker, return it to the coordinator for writer routing under the Convergence Contract. For a standalone merge with no coordinator, surface it to the human. Do not abort merely because the conflict is difficult.

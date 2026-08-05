@@ -44,19 +44,19 @@ Ordinary ownership is task-defined in the prompt, not installed as a role. Keep 
 
 Use configured model aliases from [model-selection.md](references/model-selection.md). Prefer aliases over concrete provider names so routing can change without rewriting workflows.
 
-For unroled agents, set only what differs from the parent default:
+For every unroled agent, select an explicit semantic model alias so the parent model cannot leak into workflow routing; then set only the remaining execution policy that differs:
 
 ```js
 agent("<bounded task contract>", {
   label: "<observable responsibility>",
-  model: "execution",
+  model: "workhorse",
   tools: ["read", "write", "edit", "bash"],
 })
 ```
 
 Do not use installed workflow roles for ordinary work. When specialist doctrine matters, tell the agent to load the named skill or provide the exact review mandate, while still selecting model and tools at the call site.
 
-Completion criterion: model cost/capability, thinking depth, tools, and behavioral instructions are independently justified.
+Use `workhorse` for basic review and repair loops, `involved` for intermediate higher-order checkpoints, and `exceptional` for final higher-order checkpoints only when that judgment is admitted and consequential. The alias selects capability only; the task contract and loaded skills define behavior. Completion criterion: every agent has an explicit model alias, and model capability, tools, and behavioral instructions are independently justified.
 
 ## 4. Compose Deterministic Topology
 

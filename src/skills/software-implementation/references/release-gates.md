@@ -15,7 +15,7 @@ Capability limitations do not silently lower a declared gate. Generic release-ga
 
 ## Model Routing
 
-Use the `normal` tier for Coding Workers, task-scope Focused Validators, convergence-scope Focused Validators, and focused repair validation. Use the `smart` tier for each independent specialist in an admitted whole-deliverable deep review suite, including architecture, security, code-quality, performance, and design-fidelity review when applicable. A targeted review remains at the tier declared by its owning Contract; absent an explicit declaration, use `normal` unless it exercises whole-deliverable judgment comparable to the full suite. Use `deep` only for exceptional architecture, diagnosis, or reconciliation. A stronger model does not gain authority to redesign, expand scope, alter accepted proof allocation, or convert advisory findings into blockers.
+Use the `normal` tier for Coding Workers, task-scope Focused Validators, convergence-scope Focused Validators, targeted checks, and basic review/repair loops. Use the `smart` tier for an admitted intermediate higher-order checkpoint or other involved cross-cutting review. Use `deep` for an admitted final whole-deliverable checkpoint; outside that final position, reserve it for exceptional ambiguous and consequential architecture, diagnosis, or reconciliation. A targeted review remains at the tier declared by its owning Contract and otherwise uses `normal`. Review timing or the word “final” alone does not justify escalation: the Contract must assign the higher-order checkpoint. A stronger model does not gain authority to redesign, expand scope, alter accepted proof allocation, or convert advisory findings into blockers.
 
 ## Atlas Gate Preservation
 
@@ -33,7 +33,7 @@ If execution discovers a risk that makes the accepted allocation materially insu
 
 ## Whole-Deliverable Review
 
-Run only the specializations and timing admitted by the Delivery Contract. When a full suite is admitted, launch each independent architecture, security, code-quality, performance, and design-fidelity reviewer at the `smart` tier against the same integrated state, accepted design, and current evidence, omitting any specialization not admitted by the Contract. When only a targeted security or other review is admitted, run only that exact review at its accepted graph position and apply the Model Routing rule above.
+Run only the specializations and timing admitted by the Delivery Contract. Basic specialist passes inside review and repair loops use `normal`. When an intermediate whole-deliverable suite is admitted, launch each applicable independent architecture, security, code-quality, performance, and design-fidelity reviewer at `smart` against the same integrated state, accepted design, and current evidence. When the Contract assigns the terminal whole-deliverable suite as the final higher-order checkpoint, use `deep`. Omit any specialization not admitted by the Contract. When only a targeted security or other review is admitted, run only that exact review at its accepted graph position and apply the Model Routing rule above.
 
 Classify each finding:
 

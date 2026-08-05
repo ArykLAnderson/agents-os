@@ -11,7 +11,7 @@ Add design-compatible remediation tasks autonomously only when they preserve acc
 Track only compact attempt summaries and the current blocker in the execution map.
 
 1. After repeated evidence of the same no-progress approach, require a materially different worker approach.
-2. If an independent attempt reaches the same blocker, delegate one bounded read-only diagnosis focused on the discriminating technical question.
+2. If an independent attempt reaches the same blocker, delegate one bounded read-only diagnosis focused on the discriminating technical question. It restates the governing outcome, maps the relevant modules, callers, domain ownership, and accepted constraints, and distinguishes those constraints from assumptions introduced by the failed approach.
 3. Convert a diagnosis into a bounded writer task only when it is design-compatible and authorized.
 4. Return a concrete material contradiction to the governing human/Frame/Blueprint/Atlas authority. Do not reopen design for difficulty, preference, or a speculative alternative.
 
