@@ -1,6 +1,6 @@
 # Production Design RFC: <outcome>
 
-> Lossless reader-facing projection from one fixed Design/RFC Case revision. The Case remains sole semantic design authority. Document governs editorial projection and representation; semantic change returns to the Case before rematerialization.
+> Lossless reader-facing semantic projection from one fixed Design/RFC Case revision. The Case remains sole semantic design authority. A requested rendered surface retains linked Presentation realization evidence. Semantic change returns to the Case before rematerialization.
 
 **Status:** materialized-review | accepted | superseded
 **Readiness:** fresh-worker executable candidate | fresh-worker executable — <blockers/evidence>
@@ -8,7 +8,8 @@
 **Materialization receipt:** <document identity/editorial revision>
 **Frame boundary:** <locator/revision>
 **Evidence considered:** <locators and limits>
-**Exact HTML representation:** <identity/path/revision/checksum/browser state>
+**Presentation realization (if requested):** <surface identity/source revision/implementation revision/medium/inspection state>
+**Exact semantic representation:** <identity/path/revision/checksum>
 **Draft Atlas handoff:** non-authoritative/non-materializable — <blockers>
 
 > This is an architecture explanation for a reader returning cold—not a Case dump, compliance form, or Markdown file placed inside HTML.
@@ -72,11 +73,11 @@ Include the non-authoritative draft Atlas handoff as part of this realization bo
 
 ### Close on the decision
 
-The final primary beat states the selected design, material rejected alternatives, remaining gates and invalidation triggers, exact HTML identity, and the precise consequence of acceptance. It explicitly withholds implementation, Atlas publication, provider effects, credentials, source edits, commits, deployment, release, and any other ungranted authority. The reader reaches this question with the complete architecture already in mind.
+The final primary beat states the selected design, material rejected alternatives, remaining gates and invalidation triggers, exact semantic representation identity and any Presentation realization identity, and the precise consequence of acceptance. It explicitly withholds implementation, Atlas publication, provider effects, credentials, source edits, commits, deployment, release, and any other ungranted authority. The reader reaches this question with the complete architecture already in mind.
 
 ## Commission visuals; do not fill visual quotas
 
-Create a visual only when spatial, temporal, structural, or comparative relationships are materially clearer than prose. Before rendering it, record:
+Create a visual only when spatial, temporal, structural, or comparative relationships are materially clearer than prose. Before handing the specification to Presentation, record:
 
 - **Reader question** it answers;
 - one-sentence **takeaway**;
@@ -90,7 +91,7 @@ Commission the smallest set that carries the spine. Common anchors are one proje
 
 Each retained visual has a declarative title, takeaway, self-sufficient labels and legend where needed, a concise caption or nearby explanation, trace, and consistent current/selected/deferred/failure grammar. Integrate these quietly through captions, nearby prose, and appendices—never repeat a large metadata shell around every figure.
 
-Prefer sharp inline SVG or semantic HTML/CSS. For the default private founder-review artifact, open the HTML and inspect one ordinary desktop width and one phone width for comfortable reading, obvious clipping, and broken visuals or navigation. Scrolling or reflow is acceptable when the relationship remains discoverable and legible. Add bespoke ARIA, accessibility audits, zoom matrices, full print/PDF inspection, multi-browser testing, or publication hardening only when explicitly requested or materially required by the audience or distribution boundary.
+Keep the visual specification medium-neutral and include a concise text fallback. For rendered realization, invoke [Presentation](../../presentation/SKILL.md) with the reader question, specification, source revision, and requested surface boundary. Scrolling or reflow is acceptable when the relationship remains discoverable and legible.
 
 ## Coverage ledger and appendices
 
@@ -107,9 +108,9 @@ Use appendices for contract/schema lookup, secondary failures, evidence limits, 
 
 The exact artifact is ready to present only when all are true:
 
-1. A cold-reader pass using only the HTML can accurately retell the situation, tension, decisive move, consequent shape, complete story, stress story, realization route, and acceptance boundary without inventing architecture.
+1. A cold-reader pass using the current semantic representation and, when requested, the identified Presentation realization can accurately retell the situation, tension, decisive move, consequent shape, complete story, stress story, realization route, and acceptance boundary without inventing architecture.
 2. No primary section has an unclear purpose or causal connection.
 3. Every primary passage and visual advances the explanatory spine; non-advancing coverage is removed or demoted.
 4. The coverage ledger accounts for every consequential Case claim without changing meaning.
-5. The HTML opens and remains comfortably readable at ordinary desktop and phone widths, with no obvious clipping, broken visuals, or broken navigation. Additional accessibility, zoom, print, browser-matrix, or publication QA applies only when requested or material to the stated audience/distribution boundary.
-6. Human acceptance binds to the presented HTML representation, never a chat summary.
+5. The semantic RFC and its meaning-bearing visual specifications are faithful to the fixed Case. When a rendered surface is requested, Presentation supplies current inspection and render-readiness evidence for the stated medium and boundary.
+6. Human acceptance binds to the presented semantic revision and, when included, the identified Presentation realization—not a chat summary.

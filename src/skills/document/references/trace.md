@@ -16,6 +16,6 @@ Trace coverage is risk-weighted, not sentence-counted. Account for selected mate
 
 Compare later Case meaning against the pinned state. Mark a unit stale only when accepted meaning changes its assertion, authority, scope, support, or reader action; otherwise mark it unchanged or review-needed. Preserve the original pin. A stale unit requires a new trace revision and affected-lens review before the revised artifact can be accepted.
 
-Visuals inherit the same support obligations as prose. Trace labels, values, topology, chronology, and emphasized relationships; generated decoration must not imply unsupported facts.
+Meaning-bearing visual specifications inherit the same support obligations as prose. Trace labels, values, topology, chronology, and emphasized relationships; generated decoration must not imply unsupported facts. Presentation traces realized choices back to this specification during rendered inspection; Document does not certify those visual results.
 
 Trace completes when every consequential unit is supported or visibly qualified and known Case changes can be mapped to affected artifact state.
