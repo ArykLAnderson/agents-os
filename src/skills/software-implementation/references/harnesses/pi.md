@@ -10,10 +10,12 @@ Do not use temporary patch-return worktrees as delivery worktrees. Workspace Ope
 
 ## Execution policy
 
-- Ordinary implementation uses the `execution` model alias.
-- Independent validation normally uses `review` with read and Bash/project-command capability.
-- Architecture-level planning or reconciliation uses `planning` only when the task actually needs it.
-- Research collection uses `research`; synthesis is a separate owner using `aggregation` when needed.
+- Every workflow agent selects an explicit alias; never inherit the parent model.
+- Ordinary implementation, research collection, synthesis, independent validation, and basic review/repair loops use `workhorse`.
+- Genuinely mechanical work may use `mechanical`.
+- Involved architecture-level planning, reconciliation, and admitted intermediate higher-order checkpoints use `involved`.
+- An admitted final higher-order checkpoint uses `exceptional`; reserve it otherwise for exceptional ambiguous and consequential judgment.
+- These aliases select model capability only. Task contracts define ownership and behavior; explicitly loaded skills provide durable methodology.
 - Writers own fixes. Reviewers and validators return findings and never repair or finalize their candidate.
 
 ## Validation

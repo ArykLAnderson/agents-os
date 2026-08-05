@@ -11,7 +11,7 @@ Turn one Delivery Contract into completed software evidence. You coordinate writ
 
 The portable role semantics in this skill and its references are authoritative. Select target syntax only through [Harness Adapters](references/harness-adapters.md).
 
-Route ordinary coding work and focused task/convergence validation through the `normal` model tier. Reserve the `smart` tier for an admitted whole-deliverable deep review suite and other explicitly deep evaluative work; model capability never broadens a role's authority. Use `deep` only for exceptional architecture, diagnosis, or reconciliation rather than routine implementation or validation. Detailed review routing lives in [Release Gates](references/release-gates.md).
+Route ordinary coding work, focused task/convergence validation, and basic review/repair loops through the `normal` model tier. Use `smart` for an admitted intermediate higher-order checkpoint or other involved cross-cutting evaluation. Reserve `deep` for an admitted final whole-deliverable checkpoint or exceptional ambiguous and consequential architecture, diagnosis, or reconciliation. Model capability never broadens a role's authority. Detailed review routing lives in [Release Gates](references/release-gates.md).
 
 ## 1. Admit A Delivery Contract
 

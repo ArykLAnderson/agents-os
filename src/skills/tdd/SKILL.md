@@ -31,7 +31,7 @@ Rerun the focused batch and inspect its output. Then run ordinary affected-proje
 
 ## REFACTOR — Deepen Without Changing The Contract
 
-Improve naming, locality, encapsulation, duplication, and module depth while the behavioral batch stays green. If repeated cycles require shallow special cases, leaky seams, or accepted-contract violations, use `zoom-out` and return the resulting bounded design issue to the owning workflow.
+Improve naming, locality, encapsulation, duplication, and module depth while the behavioral batch stays green. If repeated cycles require shallow special cases or leaky seams, stop and return the bounded seam problem to the owning workflow. Route an accepted-contract violation through `implementation-invalidation` rather than patching around it.
 
 Rerun the focused batch after refactoring. Run broader checks in proportion to the affected surface; TDD does not mandate an unrelated full-repository suite.
 

@@ -25,7 +25,6 @@ Choose the smallest workflow that matches the current uncertainty. This skill ro
 - Settled conversation needing a durable artifact → `document`.
 - Settled ad hoc spec with no governing accepted Atlas Map and separately authorized ticket publication → `to-tickets`. Accepted Blueprint/Map delivery stays in `blueprint` for coupled architecture and routeability; only its current accepted Atlas plan may enter implementation.
 - Architectural health survey → `improve-architecture`; selected module/interface design → `codebase-design`.
-- Coordinator trapped in repeated local fixes or incompatible intentions → `zoom-out`, then return to the owning workflow.
 
 ## Normal Flow
 

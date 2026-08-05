@@ -27,7 +27,7 @@ Produce 3–5 ranked, falsifiable hypotheses. Each must state a prediction. Show
 
 Test one prediction at a time. Prefer debugger/REPL inspection, then narrowly targeted logs. Tag temporary instrumentation with a unique `[DEBUG-...]` prefix. For performance, establish a measured baseline and profile or bisect rather than adding broad logs.
 
-If repeated local fixes move the problem, require special cases across callers, or reveal incompatible architectural intentions, invoke `zoom-out` before choosing another patch.
+If repeated local fixes move the problem or require special cases across callers, stop patching and use `codebase-design` to identify the governing seam. Route evidence that conflicts with accepted design through `implementation-invalidation`.
 
 ## 5. Fix at the correct seam
 

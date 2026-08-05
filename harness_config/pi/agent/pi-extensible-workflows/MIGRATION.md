@@ -25,7 +25,7 @@ Global workflow settings live at:
 
 `~/.pi/agent/pi-extensible-workflows/settings.json`
 
-Aliases currently available are `research`, `fast`, `execution`, `review`, `planning`, `aggregation`, and `coordination`. Workflows should prefer these aliases over concrete provider model names.
+Aliases currently available are `mechanical`, `workhorse`, `involved`, and `exceptional`. They select model capability only; task contracts and explicitly loaded skills define behavior. Workflows should prefer these aliases over concrete provider model names.
 
 ## Guidance
 

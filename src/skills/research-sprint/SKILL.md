@@ -50,7 +50,7 @@ Completion criterion: every track has a distinct evidence owner and common hando
 
 ## 3. Execute Independently
 
-On Pi, load `pi-workflow-orchestration` and use a named workflow with parallel unroled agents. Select the `research` model alias for evidence collection and appropriate tools per track. Other harnesses use their native bounded parallel facility; do not copy Pi workflow syntax where unsupported.
+On Pi, load `pi-workflow-orchestration` and use a named workflow with parallel unroled agents. Select the `workhorse` capability alias and appropriate tools per track; the track contract, not the alias, defines research behavior. Other harnesses use their native bounded parallel facility; do not copy Pi workflow syntax where unsupported.
 
 Agents collect evidence and expose uncertainty. They do not make the final consequential recommendation.
 
@@ -71,7 +71,7 @@ Completion criterion: every consequential contradiction is either resolved by ev
 
 ## 5. Synthesize With A Stronger Owner
 
-On Pi, use the `aggregation` alias for ordinary synthesis and `coordination` only for genuinely difficult cross-system judgment. The synthesizer receives all track outputs and owns integration, not source collection.
+On Pi, use `workhorse` for ordinary synthesis, `involved` for cross-cutting synthesis, and `exceptional` only when ambiguity and consequence make the final judgment exceptional. The synthesizer receives all track outputs and owns integration, not source collection.
 
 Produce:
 
