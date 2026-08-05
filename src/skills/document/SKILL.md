@@ -1,6 +1,6 @@
 ---
 name: document
-description: Develops and governs a persistent reader-facing semantic artifact from Case-backed or supplied evidence. Use when creating an RFC, PRD, report, brief, explanation, or publication, and when major editorial feedback, restructuring, compression, new claims, visuals, appendices, or publication changes materially revise an artifact already in progress.
+description: Develops and governs a persistent reader-facing semantic artifact from Case-backed or supplied evidence. Use when creating an RFC, PRD, report, brief, explanation, or publication, and when major editorial feedback, restructuring, compression, new claims, meaning-bearing visual specifications, appendices, or publication changes materially revise an artifact already in progress.
 ---
 
 # Document
@@ -22,7 +22,9 @@ Progress iteratively rather than treating these as mandatory one-pass phases:
 3. [Trace](references/trace.md) consequential semantic units to Case support.
 4. [Review](references/review.md) with lenses selected from current risk.
 5. [Format](references/format.md) one or more faithful semantic representations or realization handoffs.
-6. [Publish](references/publish.md) only when publication is requested and separately authorized. Invoke Presentation when a rendered visual or interactive surface is part of the requested boundary; it may also begin directly from Cases, Frames, an existing surface, or a supplied brief.
+6. [Publish](references/publish.md) only when publication is requested and separately authorized.
+
+[Presentation](../presentation/SKILL.md) is a separate optional realization branch, not a Format or Publish phase. Invoke it when a rendered visual or interactive surface is part of the requested boundary; it may also begin directly from Cases, Frames, an existing surface, or a supplied brief.
 
 Maintain one authoritative semantic draft. A target issue that changes meaning returns to that draft and invalidates affected semantic representations, realization handoffs, review conclusions, and acceptance. A purely visual or interactive issue belongs to Presentation.
 
