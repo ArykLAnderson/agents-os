@@ -147,7 +147,7 @@ test("direct Intake capture CASes the Space revision before changing its manifes
   assert.deepEqual(manifest.body.result.matters.map((matter) => matter.id), [captured.body.result.matter.id]);
 });
 
-test("unplaced Intakes can be placed later and Questions retain owner-only closure with immutable answers", async (t) => {
+test("unplaced Intakes can be placed later while default Question closure refuses without its owner endpoint", async (t) => {
   const store = await fixture(t);
   const identity = await invoke(store, "identity.resolve");
   const space = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:docs", name: "Docs" } });
@@ -164,8 +164,8 @@ test("unplaced Intakes can be placed later and Questions retain owner-only closu
   assert.equal(answer.code, 0);
   const closedBySteward = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: answer.body.result.matter.revision, owner: { kind: "steward", id: "steward:global" }, result_locator: "result:one" });
   assert.equal(closedBySteward.code, 2);
-  assert.equal(closedBySteward.body.failure.code, "question_owner_required");
-  const closed = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: answer.body.result.matter.revision, owner: { kind: "blueprint", id: "blueprint:one" }, result_locator: "result:one" });
-  assert.equal(closed.code, 0);
-  assert.equal(closed.body.result.matter.question.state, "resolved");
+  assert.equal(closedBySteward.body.failure.code, "question_owner_unavailable");
+  const spoofedOwner = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: answer.body.result.matter.revision, owner: { kind: "blueprint", id: "blueprint:one" }, disposition: "resolved", result_locator: "result:one" });
+  assert.equal(spoofedOwner.code, 2);
+  assert.equal(spoofedOwner.body.failure.code, "question_owner_unavailable");
 });
