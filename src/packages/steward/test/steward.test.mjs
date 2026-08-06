@@ -50,6 +50,25 @@ test("the public facade preserves one Global Steward and custody across independ
   assert.equal(resolved.body.result.matter.relevance_reason, "The accepted route still needs delivery");
 });
 
+test("concurrent Space creation preserves the directory or returns a typed revision conflict", async (t) => {
+  const store = await fixture(t);
+  const identity = await invoke(store, "identity.resolve");
+  const expectedDirectoryRevision = identity.body.result.directory.revision;
+  const attempts = await Promise.all(Array.from({ length: 100 }, (_, index) => invoke(store, "spaces.create", {
+    expected_directory_revision: expectedDirectoryRevision,
+    space: { id: `space:race-${index}`, name: `Race ${index}` },
+  })));
+
+  const successful = attempts.filter((attempt) => attempt.code === 0);
+  const conflicts = attempts.filter((attempt) => attempt.code === 2 && attempt.body.failure.code === "directory_revision_conflict");
+  assert.equal(successful.length, 1);
+  assert.equal(conflicts.length, 99);
+
+  const manifest = await invoke(store, "spaces.manifest", { space_id: successful[0].body.result.space.id });
+  assert.equal(manifest.code, 0);
+  assert.equal(manifest.body.result.space.id, successful[0].body.result.space.id);
+});
+
 test("the facade rejects stale writes, bad deferrals, root associations, and retired placement without partial mutation", async (t) => {
   const store = await fixture(t);
   const identity = await invoke(store, "identity.resolve");
