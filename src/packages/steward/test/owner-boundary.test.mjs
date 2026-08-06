@@ -90,7 +90,8 @@ function conformers({ handoff = { disposition: "HandoffWithLimitations", current
       },
     },
   };
-  return { facade: createStewardFacade(`/tmp/steward-owner-boundary-test-${process.pid}-${++facadeSequence}.json`, owners), bindings, calls };
+  const databasePath = `/tmp/steward-owner-boundary-test-${process.pid}-${++facadeSequence}.json`;
+  return { facade: createStewardFacade(databasePath, owners), databasePath, owners, bindings, calls };
 }
 
 function invoke(facade, operation, request = {}) {
@@ -183,7 +184,8 @@ test("OwnerBoundaryService delegates admission and recovery only to Software Imp
   const unknownPrepared = invoke(unknown.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope });
   const unknownResult = invoke(unknown.facade, "implementation.admission.submit", unknownPrepared.result);
   assert.equal(unknownResult.result.admission.disposition, "unknown");
-  const blindRetry = invoke(unknown.facade, "implementation.admission.submit", unknownPrepared.result);
+  const restartedFacade = createStewardFacade(unknown.databasePath, unknown.owners);
+  const blindRetry = invoke(restartedFacade, "implementation.admission.submit", unknownPrepared.result);
   assert.equal(blindRetry.failure.code, "admission_recovery_required");
   assert.equal(unknown.calls.admit, 1);
   const recovered = invoke(unknown.facade, "implementation.admission.recover", { correlation_id: "si:unknown" });
