@@ -39,7 +39,7 @@ function canonical(value) {
 }
 const portfolioDigest = (value) => createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
 function defaultState() {
-  return { schema, revision: 0, singleton: null, directory: { revision: 0, spaces: {} }, intakes: {}, replay: {}, matters: {}, baselines: {}, observations: {} };
+  return { schema, revision: 0, singleton: null, directory: { revision: 0, spaces: {} }, intakes: {}, replay: {}, matters: {}, baselines: {}, observations: {}, admissions: {} };
 }
 
 /** Durable database-scoped persistence boundary. Its file path is the selected
@@ -168,13 +168,19 @@ export class StewardStore {
       if (existingId) {
         const intake = state.intakes[existingId];
         if (intake.digest !== contentDigest) throw new StewardFailure("intake_replay_conflict", "The replay identity has different immutable Intake content.");
-        return { intake, matter: Object.values(state.matters).find((matter) => matter.intake_id === intake.id) ?? null, replayed: true };
+        const matter = Object.values(state.matters).find((candidate) => candidate.intake_id === intake.id) ?? null;
+        return { intake, matter, space: matter ? this.#space(state, matter.home_space_id) : null, replayed: true };
       }
       const intake = { id: `intake:${randomUUID()}`, replay_key: replayKey, content: input.content, provenance: clone(input.provenance), digest: contentDigest, captured_at: now() };
-      state.intakes[intake.id] = intake; state.replay[replayKey] = intake.id;
       let matter = null;
-      if (input.space_id != null) matter = this.#newMatter(state, intake.id, input.space_id, input.relevance_reason, input.owner_references, input.return_condition);
-      return { intake, matter, replayed: false };
+      let space = null;
+      if (input.space_id != null) {
+        space = this.#space(state, input.space_id);
+        exactRevision(input.expected_space_revision, space.revision, "space_revision_conflict");
+        matter = this.#newMatter(state, intake.id, space.id, input.relevance_reason, input.owner_references, input.return_condition);
+      }
+      state.intakes[intake.id] = intake; state.replay[replayKey] = intake.id;
+      return { intake, matter, space, replayed: false };
     });
   }
   place(input) {
@@ -182,11 +188,11 @@ export class StewardStore {
       const intake = state.intakes[requiredText(input.intake_id, "intake_id")];
       if (!intake) throw new StewardFailure("intake_not_found", "The Intake is not available.");
       const existing = Object.values(state.matters).find((matter) => matter.intake_id === intake.id);
-      if (existing) return { intake, matter: existing, replayed: true };
+      if (existing) return { intake, matter: existing, space: this.#space(state, existing.home_space_id), replayed: true };
       const space = this.#space(state, input.space_id);
       exactRevision(input.expected_space_revision, space.revision, "space_revision_conflict");
       const matter = this.#newMatter(state, intake.id, space.id, input.relevance_reason, input.owner_references, input.return_condition);
-      return { intake, matter, replayed: false };
+      return { intake, matter, space, replayed: false };
     });
   }
   readMatter(id) { const state = this.read(); const matter = state.matters[requiredText(id, "matter_id")]; if (!matter) throw new StewardFailure("matter_not_found", "The Matter is not available."); return { matter }; }
@@ -209,7 +215,7 @@ export class StewardStore {
       if (transition === "restored" || transition === "return") { matter.lifecycle = "active"; matter.relevant = true; }
       else { matter.lifecycle = transition === "release" ? "released" : transition; matter.relevant = matter.lifecycle !== "released"; }
       matter.relevance_reason = requiredText(input.relevance_reason, "relevance_reason"); matter.revision += 1; matter.updated_at = now();
-      return { matter };
+      return { matter, space: this.#touchMatterSpace(state, matter) };
     });
   }
   linkQuestion(input) {
@@ -219,7 +225,7 @@ export class StewardStore {
       requiredText(owner.kind, "question.owner.kind"); requiredText(owner.id, "question.owner.id");
       if (matter.question) throw new StewardFailure("question_already_linked", "A Matter may retain one active Question link.");
       matter.question = { owner: clone(owner), locator: requiredText(question.locator, "question.locator"), revision: requiredText(question.revision, "question.revision"), state: "open", answer: null, result_locator: null };
-      matter.revision += 1; return { matter };
+      matter.revision += 1; return { matter, space: this.#touchMatterSpace(state, matter) };
     });
   }
   submitAnswer(input) {
@@ -231,7 +237,7 @@ export class StewardStore {
         if (matter.question.answer.id === normalized.id && matter.question.answer.body === normalized.body) return { matter, replayed: true };
         throw new StewardFailure("answer_immutable_conflict", "An Answer submission is immutable.");
       }
-      matter.question.answer = normalized; matter.revision += 1; return { matter, replayed: false };
+      matter.question.answer = normalized; matter.revision += 1; return { matter, space: this.#touchMatterSpace(state, matter), replayed: false };
     });
   }
   closeQuestion(input) {
@@ -241,16 +247,17 @@ export class StewardStore {
       const owner = requiredObject(input.owner, "owner");
       if (owner.kind !== matter.question.owner.kind || owner.id !== matter.question.owner.id) throw new StewardFailure("question_owner_required", "Only the requesting owner can resolve, supersede, or withdraw its Question.");
       matter.question.state = "resolved"; matter.question.result_locator = requiredText(input.result_locator, "result_locator"); matter.revision += 1;
-      return { matter };
+      return { matter, space: this.#touchMatterSpace(state, matter) };
     });
   }
   #space(state, id) { const space = state.directory.spaces[requiredText(id, "space_id")]; if (!space) throw new StewardFailure("space_not_found", "The Space is not available."); return space; }
   #matter(state, id) { const matter = state.matters[requiredText(id, "matter_id")]; if (!matter) throw new StewardFailure("matter_not_found", "The Matter is not available."); return matter; }
+  #touchMatterSpace(state, matter) { const space = this.#space(state, matter.home_space_id); space.revision += 1; return space; }
   #newMatter(state, intakeId, spaceId, relevanceReason, ownerReferences, returnCondition = undefined) {
     const space = this.#space(state, spaceId); if (space.lifecycle !== "active") throw new StewardFailure("space_retired", "A retired Space cannot receive new Matter placement.");
     if (!Array.isArray(ownerReferences)) throw new StewardFailure("owner_references_invalid", "owner_references must be an array of exact locators.");
     const matter = { id: `matter:${randomUUID()}`, intake_id: intakeId, home_space_id: space.id, lifecycle: "active", relevant: true, relevance_reason: requiredText(relevanceReason, "relevance_reason"), owner_references: clone(ownerReferences), return_condition: returnCondition == null ? { kind: "none" } : clone(returnCondition), deferral_reason: null, question: null, revision: 1, created_at: now(), updated_at: now() };
-    state.matters[matter.id] = matter; return matter;
+    state.matters[matter.id] = matter; this.#touchMatterSpace(state, matter); return matter;
   }
 }
 
@@ -409,7 +416,7 @@ export class PortfolioService {
 }
 
 export class OwnerBoundaryService {
-  constructor(owners = {}) { this.owners = owners; }
+  constructor(store, owners = {}) { this.store = store; this.owners = owners; }
   orient(kind, request) {
     const artifact = this.#artifact(request.artifact);
     const result = this.#call(kind, "orient", { artifact }, `${kind}_orientation_unavailable`);
@@ -481,15 +488,34 @@ export class OwnerBoundaryService {
   submitAdmission(request) {
     const endpoint = this.#endpoint("softwareImplementation", "software_implementation_unavailable");
     const candidate = this.#envelope(request.envelope);
-    if (requiredText(request.envelope_digest, "envelope_digest") !== portfolioDigest(candidate)) throw new StewardFailure("authority_envelope_digest_mismatch", "The admission envelope was changed after authorization.");
-    const admission = endpoint.admit({ envelope: clone(candidate), envelope_digest: request.envelope_digest });
-    if (!admission || typeof admission !== "object") throw new StewardFailure("software_implementation_invalid", "Software Implementation returned no admission result.");
-    if (admission.disposition === "admitted" && JSON.stringify(admission.authorized_routine_mechanics) !== JSON.stringify(candidate.routine_mechanics)) throw new StewardFailure("software_implementation_envelope_mismatch", "The admitted routine mechanics do not match the authorized envelope.");
-    return { admission: clone(admission) };
+    const envelopeDigest = requiredText(request.envelope_digest, "envelope_digest");
+    if (envelopeDigest !== portfolioDigest(candidate)) throw new StewardFailure("authority_envelope_digest_mismatch", "The admission envelope was changed after authorization.");
+    return this.store.transact((state) => {
+      const admissions = state.admissions ??= {};
+      const prior = admissions[envelopeDigest];
+      if (prior?.disposition === "unknown") throw new StewardFailure("admission_recovery_required", "The prior admission outcome is unknown; recover its exact owner correlation before submitting again.");
+      if (prior) return withoutWrite({ admission: prior.admission, replayed: true });
+      const admission = requiredObject(endpoint.admit({ envelope: clone(candidate), envelope_digest: envelopeDigest }), "software implementation admission");
+      const disposition = requiredText(admission.disposition, "admission.disposition");
+      const correlationId = requiredText(admission.correlation_id, "admission.correlation_id");
+      if (disposition === "admitted" && JSON.stringify(admission.authorized_routine_mechanics) !== JSON.stringify(candidate.routine_mechanics)) throw new StewardFailure("software_implementation_envelope_mismatch", "The admitted routine mechanics do not match the authorized envelope.");
+      admissions[envelopeDigest] = { envelope_digest: envelopeDigest, correlation_id: correlationId, disposition, admission: clone(admission) };
+      return { admission: clone(admission) };
+    });
   }
   recoverAdmission(request) {
-    const result = this.#call("softwareImplementation", "recover", { correlation_id: requiredText(request.correlation_id, "correlation_id") }, "software_implementation_unavailable");
-    return { recovery: clone(requiredObject(result, "recovery result")) };
+    const endpoint = this.#endpoint("softwareImplementation", "software_implementation_unavailable");
+    const correlationId = requiredText(request.correlation_id, "correlation_id");
+    return this.store.transact((state) => {
+      const admissions = state.admissions ??= {};
+      const entry = Object.values(admissions).find((candidate) => candidate.correlation_id === correlationId);
+      if (!entry || entry.disposition !== "unknown") throw new StewardFailure("admission_recovery_unavailable", "No unknown admission is awaiting recovery for that owner correlation.");
+      const recovery = requiredObject(endpoint.recover({ correlation_id: correlationId }), "recovery result");
+      if (requiredText(recovery.correlation_id, "recovery.correlation_id") !== correlationId) throw new StewardFailure("admission_recovery_mismatch", "The owner recovery does not match the unknown admission correlation.");
+      entry.disposition = requiredText(recovery.disposition, "recovery.disposition");
+      entry.admission = clone(recovery);
+      return { recovery: clone(recovery) };
+    });
   }
   projectAdmission(request) {
     const admission = requiredObject(request.admission, "admission");
@@ -583,7 +609,7 @@ export function createStewardFacade(databasePath, owners = {}) {
   const store = new StewardStore(databasePath);
   const portfolio = new PortfolioService(store);
   const custody = new CustodyService(store);
-  const boundary = new OwnerBoundaryService(owners);
+  const boundary = new OwnerBoundaryService(store, owners);
   return {
     invoke(request) {
       const operation = request?.operation;

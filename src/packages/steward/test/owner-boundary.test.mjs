@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createStewardFacade } from "../lib/steward.mjs";
 
+let facadeSequence = 0;
+
 const envelope = {
   outcome: "deliver-owner-boundary",
   action: "software-implementation.admit",
@@ -24,7 +26,7 @@ const envelope = {
   effect_bindings: [{ effect: "local-test", binding: "approval:one" }],
 };
 
-function conformers({ handoff = { disposition: "HandoffWithLimitations", current: true, limitations: ["endpoint-unavailable"], forbidden_claims: ["real-endpoint-integration"], required_effects: ["local-test"] }, authorization = "authorized", admission = "admitted" } = {}) {
+function conformers({ handoff = { disposition: "HandoffWithLimitations", current: true, limitations: ["endpoint-unavailable"], forbidden_claims: ["real-endpoint-integration"], required_effects: ["local-test"] }, authorization = "authorized", admission = "admitted", recovery = "unknown" } = {}) {
   const answers = new Map();
   const bindings = new Map([
     ["binding:one", { id: "binding:one", focused: false }],
@@ -83,11 +85,12 @@ function conformers({ handoff = { disposition: "HandoffWithLimitations", current
       },
       recover: ({ correlation_id }) => {
         calls.recover += 1;
+        if (recovery === "refused") return { disposition: "refused", correlation_id, blocker: { code: "base-stale", owner: "software-implementation" } };
         return { disposition: "unknown", correlation_id, currentness: "unknown" };
       },
     },
   };
-  return { facade: createStewardFacade("/tmp/steward-owner-boundary-test.json", owners), bindings, calls };
+  return { facade: createStewardFacade(`/tmp/steward-owner-boundary-test-${process.pid}-${++facadeSequence}.json`, owners), bindings, calls };
 }
 
 function invoke(facade, operation, request = {}) {
@@ -180,10 +183,24 @@ test("OwnerBoundaryService delegates admission and recovery only to Software Imp
   const unknownPrepared = invoke(unknown.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope });
   const unknownResult = invoke(unknown.facade, "implementation.admission.submit", unknownPrepared.result);
   assert.equal(unknownResult.result.admission.disposition, "unknown");
+  const blindRetry = invoke(unknown.facade, "implementation.admission.submit", unknownPrepared.result);
+  assert.equal(blindRetry.failure.code, "admission_recovery_required");
+  assert.equal(unknown.calls.admit, 1);
   const recovered = invoke(unknown.facade, "implementation.admission.recover", { correlation_id: "si:unknown" });
   assert.equal(recovered.result.recovery.disposition, "unknown");
+  const unresolvedRetry = invoke(unknown.facade, "implementation.admission.submit", unknownPrepared.result);
+  assert.equal(unresolvedRetry.failure.code, "admission_recovery_required");
   assert.equal(unknown.calls.admit, 1);
   assert.equal(unknown.calls.recover, 1);
+
+  const settled = conformers({ admission: "unknown", recovery: "refused" });
+  const settledPrepared = invoke(settled.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope });
+  invoke(settled.facade, "implementation.admission.submit", settledPrepared.result);
+  const settlement = invoke(settled.facade, "implementation.admission.recover", { correlation_id: "si:unknown" });
+  assert.equal(settlement.result.recovery.disposition, "refused");
+  const settledReplay = invoke(settled.facade, "implementation.admission.submit", settledPrepared.result);
+  assert.equal(settledReplay.result.admission.disposition, "refused");
+  assert.equal(settled.calls.admit, 1);
 
   const blocked = conformers({ admission: "refused" });
   const blockedPrepared = invoke(blocked.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope });
