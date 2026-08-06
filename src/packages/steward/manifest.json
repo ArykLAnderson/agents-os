@@ -1,0 +1,22 @@
+{
+  "schema": "agents-os-steward-manifest@1",
+  "package": {
+    "name": "@agents-os/steward",
+    "version": "1.0.0"
+  },
+  "protocol": {
+    "schema": "steward-result@1",
+    "version": 1
+  },
+  "capability_groups": [
+    "identity",
+    "spaces",
+    "intakes",
+    "matters"
+  ],
+  "limitations": [
+    "interaction_binding_unavailable",
+    "standing_directive_unavailable",
+    "software_implementation_unavailable"
+  ]
+}
