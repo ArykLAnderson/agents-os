@@ -369,6 +369,7 @@ export class PortfolioService {
       if (!new Set(["urgent", "next-conversation", "briefing", "quiet"]).has(band)) throw new StewardFailure("attention_band_invalid", "Attention bands are limited to the accepted advisory vocabulary.");
       const evidenceIds = requiredArray(recommendation.evidence_ids, "attention.evidence_ids").map((id) => requiredText(id, "attention.evidence_id"));
       if (!evidenceIds.length || evidenceIds.some((id) => !byId.has(id))) throw new StewardFailure("attention_evidence_required", "Every attention recommendation requires represented attributable evidence.");
+      if (evidenceIds.some((id) => byId.get(id).matter_id !== matterId)) throw new StewardFailure("attention_evidence_matter_mismatch", "Attention evidence must belong to its recommended Matter.");
       const axes = requiredObject(recommendation.axes, "attention.axes");
       for (const axis of ["human_needed", "independently_progressing", "observation_limited"]) if (typeof axes[axis] !== "boolean") throw new StewardFailure("attention_axes_invalid", "Each independent attention axis must be explicit.");
       const smallest = requiredObject(recommendation.smallest_action, "attention.smallest_action");
