@@ -30,6 +30,18 @@ async function waitForFile(file) {
   }
 }
 
+async function waitForAnyFile(files) {
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    for (const file of files) {
+      try { await readFile(file); return file; }
+      catch (error) { if (error?.code !== "ENOENT") throw error; }
+    }
+    if (Date.now() >= deadline) throw new Error(`Timed out waiting for one of ${files.join(", ")}`);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 async function fixture(t) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "steward-f007-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
@@ -81,7 +93,7 @@ test("concurrent Space creation preserves the directory or returns a typed revis
   assert.equal(manifest.body.result.space.id, successful[0].body.result.space.id);
 });
 
-test("an earlier transaction claim is visible before a later process can publish stale state", async (t) => {
+test("a delayed earlier transaction claim cannot enter after a later writer has read stale state", async (t) => {
   const store = await fixture(t);
   const markerDirectory = path.join(path.dirname(store), "barrier");
   const control = path.join(path.dirname(store), "transaction-barrier.mjs");
@@ -96,6 +108,7 @@ const originalWrite = fs.writeFileSync.bind(fs);
 const originalRename = fs.renameSync.bind(fs);
 const originalExists = fs.existsSync.bind(fs);
 const waiter = new Int32Array(new SharedArrayBuffer(4));
+let legacyClaim = false;
 const mark = (name) => originalWrite(path.join(markers, name), "ready\\n", { flag: "w" });
 const wait = (name) => {
   const target = path.join(markers, name);
@@ -108,22 +121,30 @@ const wait = (name) => {
 fs.mkdirSync(markers, { recursive: true });
 fs.writeFileSync = function (target, ...args) {
   const destination = String(target);
+  if (role === "a" && destination.endsWith(".claim")) {
+    mark("a-before-claim");
+    wait("b-before-publish");
+  }
   const result = originalWrite(target, ...args);
-  if (role === "a" && destination.endsWith(".pending")) { mark("a-ready"); wait("b-before-publish"); }
   if (destination.endsWith(".claim")) {
-    if (role === "a") { mark("a-ready"); wait("b-claim-published"); }
-    if (role === "b") mark("b-claim-published");
+    legacyClaim = true;
+    if (role === "a") mark("a-claim-published");
+  }
+  if (role === "a" && destination.endsWith(".lock")) mark("a-lock-acquired");
+  if (legacyClaim && role === "a" && destination.endsWith(".tmp")) {
+    mark("a-before-publish");
+    wait("b-published");
+  }
+  if (legacyClaim && role === "b" && destination.endsWith(".tmp")) {
+    mark("b-before-publish");
+    wait("a-before-publish");
   }
   return result;
 };
 fs.renameSync = function (source, target, ...args) {
   const destination = path.resolve(String(target));
-  if (role === "b" && destination === store && String(source).endsWith(".tmp")) {
-    mark("b-before-publish");
-    wait("a-published");
-  }
   const result = originalRename(source, target, ...args);
-  if (role === "a" && destination === store && String(source).endsWith(".tmp")) mark("a-published");
+  if (legacyClaim && role === "b" && destination === store && String(source).endsWith(".tmp")) mark("b-published");
   return result;
 };
 syncBuiltinESMExports();
@@ -132,8 +153,12 @@ syncBuiltinESMExports();
   const request = (id) => ({ expected_directory_revision: identity.body.result.directory.revision, space: { id: `space:${id}`, name: id.toUpperCase() } });
   const environment = { NODE_OPTIONS: `--import=${control}`, LOCK_TEST_MARKERS: markerDirectory };
   const first = invoke(store, "spaces.create", request("a"), { ...environment, LOCK_TEST_ROLE: "a" });
-  await waitForFile(path.join(markerDirectory, "a-ready"));
+  const firstMarker = await waitForAnyFile([path.join(markerDirectory, "a-before-claim"), path.join(markerDirectory, "a-lock-acquired")]);
   const second = invoke(store, "spaces.create", request("b"), { ...environment, LOCK_TEST_ROLE: "b" });
+  if (firstMarker.endsWith("a-before-claim")) {
+    await waitForFile(path.join(markerDirectory, "b-before-publish"));
+    await waitForFile(path.join(markerDirectory, "a-before-publish"));
+  }
   const attempts = await Promise.all([first, second]);
 
   const successful = attempts.filter((attempt) => attempt.code === 0);
