@@ -35,12 +35,12 @@ test("the public facade preserves one Global Steward and custody across independ
   assert.equal(created.code, 0);
   assert.equal(created.body.result.space.lifecycle, "active");
 
-  const captured = await invoke(store, "intakes.capture", { replay_key: "capture:one", content: "Keep the successor intent", provenance: { source: "architect" }, space_id: "space:agent-os", relevance_reason: "The accepted route still needs delivery", owner_references: [{ kind: "frame", id: "frame:abc" }] });
+  const captured = await invoke(store, "intakes.capture", { replay_key: "capture:one", content: "Keep the successor intent", provenance: { source: "architect" }, space_id: "space:agent-os", expected_space_revision: created.body.result.space.revision, relevance_reason: "The accepted route still needs delivery", owner_references: [{ kind: "frame", id: "frame:abc" }] });
   assert.equal(captured.code, 0);
   assert.equal(captured.body.result.matter.home_space_id, "space:agent-os");
   assert.equal(captured.body.result.matter.return_condition.kind, "none");
 
-  const replay = await invoke(store, "intakes.capture", { replay_key: "capture:one", content: "Keep the successor intent", provenance: { source: "architect" }, space_id: "space:agent-os", relevance_reason: "The accepted route still needs delivery", owner_references: [{ kind: "frame", id: "frame:abc" }] });
+  const replay = await invoke(store, "intakes.capture", { replay_key: "capture:one", content: "Keep the successor intent", provenance: { source: "architect" }, space_id: "space:agent-os", expected_space_revision: created.body.result.space.revision, relevance_reason: "The accepted route still needs delivery", owner_references: [{ kind: "frame", id: "frame:abc" }] });
   assert.equal(replay.code, 0);
   assert.equal(replay.body.result.intake.id, captured.body.result.intake.id);
   assert.equal(replay.body.result.matter.id, captured.body.result.matter.id);
@@ -73,7 +73,7 @@ test("the facade rejects stale writes, bad deferrals, root associations, and ret
   const store = await fixture(t);
   const identity = await invoke(store, "identity.resolve");
   const space = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:tanego", name: "Tanego" } });
-  const capture = await invoke(store, "intakes.capture", { replay_key: "capture:two", content: "Review vocabulary", provenance: { source: "architect" }, space_id: "space:tanego", relevance_reason: "A learner-facing change is pending", owner_references: [] });
+  const capture = await invoke(store, "intakes.capture", { replay_key: "capture:two", content: "Review vocabulary", provenance: { source: "architect" }, space_id: "space:tanego", expected_space_revision: space.body.result.space.revision, relevance_reason: "A learner-facing change is pending", owner_references: [] });
   const matter = capture.body.result.matter;
 
   const badDeferral = await invoke(store, "matters.transition", { matter_id: matter.id, expected_revision: matter.revision, transition: "deferred", relevance_reason: matter.relevance_reason, deferral_reason: "Waiting for review" });
@@ -88,10 +88,10 @@ test("the facade rejects stale writes, bad deferrals, root associations, and ret
   assert.equal(stale.code, 2);
   assert.equal(stale.body.failure.code, "matter_revision_conflict");
 
-  const root = await invoke(store, "spaces.associations.set", { space_id: "space:tanego", expected_revision: space.body.result.space.revision, association: { namespace_id: "namespace:root", include_descendants: false } });
+  const root = await invoke(store, "spaces.associations.set", { space_id: "space:tanego", expected_revision: deferred.body.result.space.revision, association: { namespace_id: "namespace:root", include_descendants: false } });
   assert.equal(root.code, 2);
   assert.equal(root.body.failure.code, "root_namespace_forbidden");
-  const associated = await invoke(store, "spaces.associations.set", { space_id: "space:tanego", expected_revision: space.body.result.space.revision, association: { namespace_id: "namespace:agent-platform", include_descendants: false, expected_association_revision: 0 } });
+  const associated = await invoke(store, "spaces.associations.set", { space_id: "space:tanego", expected_revision: deferred.body.result.space.revision, association: { namespace_id: "namespace:agent-platform", include_descendants: false, expected_association_revision: 0 } });
   assert.equal(associated.code, 0);
   const removed = await invoke(store, "spaces.associations.remove", { space_id: "space:tanego", expected_revision: associated.body.result.space.revision, namespace_id: "namespace:agent-platform" });
   assert.equal(removed.code, 0);
@@ -103,9 +103,9 @@ test("the facade rejects stale writes, bad deferrals, root associations, and ret
   const restored = await invoke(store, "matters.transition", { matter_id: matter.id, expected_revision: released.body.result.matter.revision, transition: "restored", relevance_reason: matter.relevance_reason });
   assert.equal(restored.body.result.matter.lifecycle, "active");
 
-  const retire = await invoke(store, "spaces.retire", { space_id: "space:tanego", expected_revision: removed.body.result.space.revision });
+  const retire = await invoke(store, "spaces.retire", { space_id: "space:tanego", expected_revision: restored.body.result.space.revision });
   assert.equal(retire.code, 0);
-  const placement = await invoke(store, "intakes.capture", { replay_key: "capture:retired", content: "Cannot enter", provenance: { source: "architect" }, space_id: "space:tanego", relevance_reason: "No", owner_references: [] });
+  const placement = await invoke(store, "intakes.capture", { replay_key: "capture:retired", content: "Cannot enter", provenance: { source: "architect" }, space_id: "space:tanego", expected_space_revision: retire.body.result.space.revision, relevance_reason: "No", owner_references: [] });
   assert.equal(placement.code, 2);
   assert.equal(placement.body.failure.code, "space_retired");
 
@@ -115,6 +115,38 @@ test("the facade rejects stale writes, bad deferrals, root associations, and ret
   assert.equal(complete.body.result.matters[0].id, matter.id);
 });
 
+test("Space custody manifests advance their Space revision and reject stale placement", async (t) => {
+  const store = await fixture(t);
+  const identity = await invoke(store, "identity.resolve");
+  const space = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:currentness", name: "Currentness" } });
+  const first = await invoke(store, "intakes.capture", { replay_key: "capture:currentness-one", content: "First custody item", provenance: { source: "architect" } });
+  const second = await invoke(store, "intakes.capture", { replay_key: "capture:currentness-two", content: "Second custody item", provenance: { source: "architect" } });
+
+  const placed = await invoke(store, "matters.place", { intake_id: first.body.result.intake.id, space_id: "space:currentness", expected_space_revision: space.body.result.space.revision, relevance_reason: "First custody mutation", owner_references: [] });
+  assert.equal(placed.code, 0);
+  assert.equal(placed.body.result.space.revision, space.body.result.space.revision + 1);
+  const stale = await invoke(store, "matters.place", { intake_id: second.body.result.intake.id, space_id: "space:currentness", expected_space_revision: space.body.result.space.revision, relevance_reason: "Second custody mutation", owner_references: [] });
+  assert.equal(stale.code, 2);
+  assert.equal(stale.body.failure.code, "space_revision_conflict");
+  const manifest = await invoke(store, "spaces.manifest", { space_id: "space:currentness" });
+  assert.equal(manifest.body.result.space.revision, placed.body.result.space.revision);
+  assert.deepEqual(manifest.body.result.matters.map((matter) => matter.id), [placed.body.result.matter.id]);
+});
+
+test("direct Intake capture CASes the Space revision before changing its manifest", async (t) => {
+  const store = await fixture(t);
+  const identity = await invoke(store, "identity.resolve");
+  const space = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:direct-capture", name: "Direct capture" } });
+  const captured = await invoke(store, "intakes.capture", { replay_key: "capture:direct-one", content: "First direct custody item", provenance: { source: "architect" }, space_id: "space:direct-capture", expected_space_revision: space.body.result.space.revision, relevance_reason: "First direct custody mutation", owner_references: [] });
+  assert.equal(captured.code, 0);
+  assert.equal(captured.body.result.space.revision, space.body.result.space.revision + 1);
+  const stale = await invoke(store, "intakes.capture", { replay_key: "capture:direct-two", content: "Second direct custody item", provenance: { source: "architect" }, space_id: "space:direct-capture", expected_space_revision: space.body.result.space.revision, relevance_reason: "Second direct custody mutation", owner_references: [] });
+  assert.equal(stale.code, 2);
+  assert.equal(stale.body.failure.code, "space_revision_conflict");
+  const manifest = await invoke(store, "spaces.manifest", { space_id: "space:direct-capture" });
+  assert.deepEqual(manifest.body.result.matters.map((matter) => matter.id), [captured.body.result.matter.id]);
+});
+
 test("unplaced Intakes can be placed later and Questions retain owner-only closure with immutable answers", async (t) => {
   const store = await fixture(t);
   const identity = await invoke(store, "identity.resolve");
@@ -122,6 +154,7 @@ test("unplaced Intakes can be placed later and Questions retain owner-only closu
   const intake = await invoke(store, "intakes.capture", { replay_key: "capture:unplaced", content: "Ask the design owner", provenance: { source: "architect" } });
   assert.equal(intake.body.result.matter, null);
   const placed = await invoke(store, "matters.place", { intake_id: intake.body.result.intake.id, space_id: "space:docs", expected_space_revision: space.body.result.space.revision, relevance_reason: "The owner needs an answer", owner_references: [{ kind: "blueprint", id: "blueprint:one" }] });
+  assert.equal(placed.body.result.space.revision, space.body.result.space.revision + 1);
   assert.equal(placed.code, 0);
   const matter = placed.body.result.matter;
 

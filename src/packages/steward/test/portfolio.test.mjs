@@ -42,6 +42,7 @@ async function portfolioFixture(t) {
   const identity = await invoke(store, "identity.resolve");
   const alpha = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:alpha", name: "Alpha" } });
   const beta = await invoke(store, "spaces.create", { expected_directory_revision: alpha.body.result.directory.revision, space: { id: "space:beta", name: "Beta" } });
+  const revisions = new Map([["space:alpha", alpha.body.result.space.revision], ["space:beta", beta.body.result.space.revision]]);
   const captures = [];
   for (const [index, spaceId] of ["space:alpha", "space:alpha", "space:alpha", "space:beta"].entries()) {
     const captured = await invoke(store, "intakes.capture", {
@@ -49,9 +50,11 @@ async function portfolioFixture(t) {
       content: `Intent ${index}`,
       provenance: { source: "architect", ordinal: index },
       space_id: spaceId,
+      expected_space_revision: revisions.get(spaceId),
       relevance_reason: `Intent ${index} remains relevant`,
       owner_references: [{ kind: "frame", id: `frame:owner-${index}` }],
     });
+    revisions.set(spaceId, captured.body.result.space.revision);
     captures.push(captured.body.result.matter);
   }
   const deferred = await invoke(store, "matters.transition", {
@@ -62,11 +65,12 @@ async function portfolioFixture(t) {
     deferral_reason: "Await owner event",
     return_condition: { kind: "owner_event", value: "implementation-result" },
   });
+  revisions.set("space:beta", deferred.body.result.space.revision);
   captures[3] = deferred.body.result.matter;
-  const retired = await invoke(store, "spaces.retire", { space_id: "space:beta", expected_revision: beta.body.result.space.revision });
+  const retired = await invoke(store, "spaces.retire", { space_id: "space:beta", expected_revision: revisions.get("space:beta") });
   const association = await invoke(store, "spaces.associations.set", {
     space_id: "space:alpha",
-    expected_revision: alpha.body.result.space.revision,
+    expected_revision: revisions.get("space:alpha"),
     association: { namespace_id: "namespace:agent-platform", include_descendants: false, expected_association_revision: 0 },
   });
   return { store, alpha: association.body.result.space, beta: retired.body.result.space, matters: captures };
@@ -104,7 +108,7 @@ test("Portfolio composes reproducible complete active and retired Space manifest
 });
 
 test("Portfolio preserves evidence-cited bands, independent axes, ties, indeterminacy, return limits, and Search/Namespace context", async (t) => {
-  const { store, matters } = await portfolioFixture(t);
+  const { store, alpha, beta, matters } = await portfolioFixture(t);
   const observations = matters.map((matter, index) => observation(`attention:${index}`, matter.id, index === 3 ? "satisfied" : "current", `2026-08-0${index + 1}T00:00:00.000Z`));
   const attention = ["urgent", "next-conversation", "briefing", "quiet"].map((band, index) => ({
     matter_id: matters[index].id,
@@ -131,13 +135,13 @@ test("Portfolio preserves evidence-cited bands, independent axes, ties, indeterm
   assert.equal(view.search.completeness, "not_established");
   assert.equal(view.namespace.association.namespace_id, "namespace:agent-platform");
 
-  const betaAssociation = await invoke(store, "spaces.associations.set", { space_id: "space:beta", expected_revision: 2, association: { namespace_id: "namespace:agent-platform", include_descendants: true, expected_association_revision: 0 } });
+  const betaAssociation = await invoke(store, "spaces.associations.set", { space_id: "space:beta", expected_revision: beta.revision, association: { namespace_id: "namespace:agent-platform", include_descendants: true, expected_association_revision: 0 } });
   assert.equal(betaAssociation.code, 0);
   const contradictory = await invoke(store, "portfolio.compose", { scope: { kind: "global" }, observations, namespace_context: { namespace_id: "namespace:agent-platform", mode: "rank" } });
   assert.equal(contradictory.code, 0);
   assert.equal(contradictory.body.result.view.namespace.conflicting, true);
   assert.equal(contradictory.body.result.view.namespace.associations.length, 2);
-  const removedAssociation = await invoke(store, "spaces.associations.remove", { space_id: "space:alpha", expected_revision: 2, namespace_id: "namespace:agent-platform" });
+  const removedAssociation = await invoke(store, "spaces.associations.remove", { space_id: "space:alpha", expected_revision: alpha.revision, namespace_id: "namespace:agent-platform" });
   assert.equal(removedAssociation.code, 0);
   const retiredNamespace = await invoke(store, "portfolio.compose", { scope: { kind: "space", space_id: "space:alpha" }, observations, namespace_context: { namespace_id: "namespace:agent-platform", mode: "filter" } });
   assert.equal(retiredNamespace.code, 0);

@@ -48,7 +48,7 @@ test("the packed Steward facade installs and serves custody from an unrelated cw
   assert.equal(unavailableAdmission.code, 2);
   assert.equal(unavailableAdmission.body.failure.code, "software_implementation_unavailable");
   const space = await invoke({ operation: "spaces.create", expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:installed", name: "Installed" } });
-  const capture = await invoke({ operation: "intakes.capture", replay_key: "installed:portfolio", content: "Verify installed orientation", provenance: { source: "consumer" }, space_id: "space:installed", relevance_reason: "Installed consumer proof", owner_references: [{ kind: "frame", id: "frame:installed" }] });
+  const capture = await invoke({ operation: "intakes.capture", replay_key: "installed:portfolio", content: "Verify installed orientation", provenance: { source: "consumer" }, space_id: "space:installed", expected_space_revision: space.body.result.space.revision, relevance_reason: "Installed consumer proof", owner_references: [{ kind: "frame", id: "frame:installed" }] });
   const viewRequest = { scope: { kind: "global" }, observations: [{ id: "observation:installed", matter_id: capture.body.result.matter.id, owner: { kind: "frame", id: "frame:installed" }, artifact: { id: "frame:installed", revision: "frame-revision:1" }, represented_revision: "frame-revision:1", currentness: "current", observed_at: "2026-08-06T00:00:00.000Z", condition: "current", limitations: [] }] };
   const portfolio = await invoke({ operation: "portfolio.compose", ...viewRequest });
   assert.equal(portfolio.code, 0);
