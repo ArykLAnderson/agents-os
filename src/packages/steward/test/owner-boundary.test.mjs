@@ -53,7 +53,7 @@ function conformers({ handoff = validHandoff(), authorization = "authorized", ad
     ["binding:one", { id: "binding:one", focused: false }],
     ["binding:two", { id: "binding:two", focused: false }],
   ]);
-  const calls = { directive: 0, admit: 0, recover: 0 };
+  const calls = { directive: 0, admit: 0, recover: 0, answerSubmissions: [] };
   const commonOrientation = (artifact, condition = "stale") => ({ artifact: { ...artifact }, represented_revision: artifact.revision, currentness: `${artifact.id}:currentness`, condition, observed_at: "2026-08-06T00:00:00.000Z", evidence: [`evidence:${artifact.id}`], limitations: ["synthetic"] });
   const owners = {
     case: { orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "active", knowledge: ["knowledge:one"], sources: ["source:one"] }) },
@@ -82,11 +82,26 @@ function conformers({ handoff = validHandoff(), authorization = "authorized", ad
     },
     question: {
       project: ({ question_locator }) => ({ question: { locator: question_locator, owner: { kind: "frame", id: "frame:one" }, represented_revision: "question-revision:one", currentness: "question-currentness:one", condition: "open", observed_at: "2026-08-06T00:00:00.000Z", evidence: ["question-receipt:one"], limitations: [] } }),
-      submitAnswer: ({ question_locator, answer }) => {
-        const prior = answers.get(question_locator);
+      submitAnswer: ({ question, answer }) => {
+        calls.answerSubmissions.push(structuredClone({ question, answer }));
+        const prior = answers.get(question.locator);
         if (prior && (prior.id !== answer.id || prior.body !== answer.body)) return { disposition: "refused", code: "answer_immutable_conflict" };
-        answers.set(question_locator, { ...answer });
-        return { disposition: "accepted", question: { locator: question_locator, condition: "open" }, answer: { ...answer } };
+        answers.set(question.locator, { ...answer });
+        return {
+          disposition: "accepted",
+          replayed: prior != null,
+          question: {
+            locator: question.locator,
+            owner: structuredClone(question.owner),
+            represented_revision: question.revision,
+            currentness: "question-currentness:answer-one",
+            condition: "answer-submitted",
+            observed_at: "2026-08-06T00:00:01.000Z",
+            answer_id: answer.id,
+            evidence: ["answer-receipt:one"],
+            limitations: [],
+          },
+        };
       },
     },
     directive: {
@@ -121,6 +136,25 @@ function invoke(facade, operation, request = {}) {
   return response.envelope;
 }
 
+function createLinkedQuestion(facade) {
+  const identity = invoke(facade, "identity.resolve");
+  const space = invoke(facade, "spaces.create", { expected_directory_revision: identity.result.directory.revision, space: { id: "space:owner-answer", name: "Owner Answer" } });
+  const capture = invoke(facade, "intakes.capture", {
+    replay_key: "capture:owner-answer",
+    content: "Ask the exact owner",
+    provenance: { source: "owner-boundary-test" },
+    space_id: space.result.space.id,
+    expected_space_revision: space.result.space.revision,
+    relevance_reason: "The exact Question owner needs the Answer",
+    owner_references: [{ kind: "frame", id: "frame:one" }],
+  });
+  return invoke(facade, "matters.questions.link", {
+    matter_id: capture.result.matter.id,
+    expected_revision: capture.result.matter.revision,
+    question: { owner: { kind: "frame", id: "frame:one" }, locator: "question:one", revision: "question-revision:one" },
+  }).result.matter;
+}
+
 test("OwnerBoundaryService preserves exact artifact orientation, binding-local focus, and owner Question state", () => {
   const { facade, bindings } = conformers();
   for (const kind of ["case", "frame", "blueprint", "rfc", "atlas"]) {
@@ -147,14 +181,48 @@ test("OwnerBoundaryService preserves exact artifact orientation, binding-local f
 
   const question = invoke(facade, "owner.questions.project", { question_locator: "question:one" });
   assert.equal(question.result.question.condition, "open");
-  const answer = invoke(facade, "owner.answers.submit", { question_locator: "question:one", answer: { id: "answer:one", body: "Keep it open" } });
-  assert.equal(answer.result.question.condition, "open");
-  const replay = invoke(facade, "owner.answers.submit", { question_locator: "question:one", answer: { id: "answer:one", body: "Keep it open" } });
-  assert.equal(replay.status, "success");
-  const conflicting = invoke(facade, "owner.answers.submit", { question_locator: "question:one", answer: { id: "answer:two", body: "Close it" } });
-  assert.equal(conflicting.failure.code, "answer_immutable_conflict");
   const closure = invoke(facade, "owner.questions.close", { question_locator: "question:one" });
   assert.equal(closure.failure.code, "operation_unavailable");
+});
+
+test("Matter Answer submission relays the exact linked Question and retains no Answer content or owner closure", () => {
+  const { facade, calls } = conformers();
+  const linked = createLinkedQuestion(facade);
+  const answer = invoke(facade, "matters.answers.submit", {
+    matter_id: linked.id,
+    expected_revision: linked.revision,
+    question_locator: "question:caller-spoof",
+    answer: { id: "answer:one", body: "Keep it with the owner" },
+  });
+  assert.equal(answer.status, "success");
+  assert.deepEqual(calls.answerSubmissions[0], {
+    question: { owner: { kind: "frame", id: "frame:one" }, locator: "question:one", revision: "question-revision:one" },
+    answer: { id: "answer:one", body: "Keep it with the owner" },
+  });
+  assert.equal(answer.result.matter.question.state, "answer-submitted");
+  assert.equal(answer.result.matter.question.submission.answer_id, "answer:one");
+  assert.equal(answer.result.matter.question.submission.owner_result.owner.id, "frame:one");
+  assert.equal(Object.hasOwn(answer.result.matter.question, "answer"), false);
+  assert.equal(JSON.stringify(answer).includes("Keep it with the owner"), false);
+
+  const read = invoke(facade, "matters.read", { matter_id: linked.id });
+  assert.equal(JSON.stringify(read).includes("Keep it with the owner"), false);
+  const replay = invoke(facade, "owner.answers.submit", {
+    matter_id: linked.id,
+    expected_revision: answer.result.matter.revision,
+    question_locator: "question:another-spoof",
+    answer: { id: "answer:one", body: "Keep it with the owner" },
+  });
+  assert.equal(replay.status, "success");
+  assert.equal(replay.result.replayed, true);
+  assert.equal(calls.answerSubmissions[1].question.locator, "question:one");
+  const conflicting = invoke(facade, "matters.answers.submit", {
+    matter_id: linked.id,
+    expected_revision: replay.result.matter.revision,
+    answer: { id: "answer:two", body: "Close it locally" },
+  });
+  assert.equal(conflicting.failure.code, "answer_immutable_conflict");
+  assert.equal(JSON.stringify(invoke(facade, "matters.read", { matter_id: linked.id })).includes("Close it locally"), false);
 });
 
 test("OwnerBoundaryService permits only legal Atlas handoffs with a complete exact authority envelope", () => {

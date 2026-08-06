@@ -70,6 +70,7 @@ export class StewardStore {
     try {
       const parsed = JSON.parse(readFileSync(this.databasePath, "utf8"));
       if (parsed?.schema !== schema || !parsed.directory || !parsed.intakes || !parsed.matters) throw Error("invalid");
+      for (const matter of Object.values(parsed.matters)) if (matter?.question && Object.hasOwn(matter.question, "answer")) delete matter.question.answer;
       return parsed;
     } catch { throw new StewardFailure("store_corrupt", "The Steward store cannot be read safely."); }
   }
@@ -102,12 +103,9 @@ export class StewardStore {
     const createdNs = process.hrtime.bigint().toString().padStart(24, "0");
     const claimName = `${createdNs}-${process.pid}-${token}.claim`;
     const claimPath = path.join(lockPath, claimName);
-    const pendingPath = `${lockPath}.${token}.pending`;
     try {
-      writeFileSync(pendingPath, `${JSON.stringify({ pid: process.pid, token, created_ns: createdNs })}\n`, { flag: "wx", mode: 0o600 });
-      renameSync(pendingPath, claimPath);
+      writeFileSync(claimPath, `${JSON.stringify({ pid: process.pid, token, created_ns: createdNs })}\n`, { flag: "wx", mode: 0o600 });
     } catch {
-      if (existsSync(pendingPath)) try { unlinkSync(pendingPath); } catch { /* best effort */ }
       throw new StewardFailure("store_unavailable", "The Steward transaction claim cannot be published safely.");
     }
     const deadline = Date.now() + 60_000;
@@ -117,12 +115,11 @@ export class StewardStore {
       catch { try { unlinkSync(claimPath); } catch { /* best effort */ } throw new StewardFailure("store_unavailable", "The Steward transaction lock cannot be inspected safely."); }
       for (const name of claims) {
         const candidatePath = path.join(lockPath, name);
-        let candidate;
-        try { candidate = JSON.parse(readFileSync(candidatePath, "utf8")); }
-        catch { continue; }
-        if (!Number.isInteger(candidate?.pid) || candidate.pid <= 0 || typeof candidate.token !== "string") continue;
+        const match = /^\d{24}-(\d+)-[0-9a-f-]+\.claim$/i.exec(name);
+        const candidatePid = match ? Number(match[1]) : null;
+        if (!Number.isInteger(candidatePid) || candidatePid <= 0) continue;
         let alive = true;
-        try { process.kill(candidate.pid, 0); }
+        try { process.kill(candidatePid, 0); }
         catch (error) { alive = error?.code === "EPERM"; }
         if (!alive) try { unlinkSync(candidatePath); } catch { /* another waiter may have removed this exact unique claim */ }
       }
@@ -267,20 +264,33 @@ export class StewardStore {
       const question = exactKeys(requiredObject(input.question, "question"), ["owner", "locator", "revision"], "question");
       const owner = ownerLocator(question.owner, "question.owner");
       if (matter.question) throw new StewardFailure("question_already_linked", "A Matter may retain one active Question link.");
-      matter.question = { owner, locator: requiredText(question.locator, "question.locator"), revision: requiredText(question.revision, "question.revision"), state: "open", answer: null, result_locator: null };
+      matter.question = { owner, locator: requiredText(question.locator, "question.locator"), revision: requiredText(question.revision, "question.revision"), state: "open", submission: null, result_locator: null };
       matter.revision += 1; return { matter, space: this.#touchMatterSpace(state, matter) };
     });
   }
-  submitAnswer(input) {
+  prepareAnswerSubmission(input) {
+    const matter = this.#matter(this.read(), input.matter_id);
+    exactRevision(input.expected_revision, matter.revision, "matter_revision_conflict");
+    if (!matter.question) throw new StewardFailure("question_not_linked", "The Matter has no Question link.");
+    const answer = requiredObject(input.answer, "answer");
+    return {
+      question: { owner: clone(matter.question.owner), locator: matter.question.locator, revision: matter.question.revision },
+      answer: { id: requiredText(answer.id, "answer.id"), body: requiredText(answer.body, "answer.body") },
+    };
+  }
+  recordAnswerSubmission(input, ownerSubmission) {
     return this.transact((state) => {
-      const matter = this.#matter(state, input.matter_id); exactRevision(input.expected_revision, matter.revision, "matter_revision_conflict");
+      const matter = this.#matter(state, input.matter_id);
+      exactRevision(input.expected_revision, matter.revision, "matter_revision_conflict");
       if (!matter.question) throw new StewardFailure("question_not_linked", "The Matter has no Question link.");
-      const answer = requiredObject(input.answer, "answer"); const normalized = { id: requiredText(answer.id, "answer.id"), body: requiredText(answer.body, "answer.body"), submitted_at: now() };
-      if (matter.question.answer) {
-        if (matter.question.answer.id === normalized.id && matter.question.answer.body === normalized.body) return { matter, replayed: true };
-        throw new StewardFailure("answer_immutable_conflict", "An Answer submission is immutable.");
+      const submission = { answer_id: ownerSubmission.answer_id, owner_result: clone(ownerSubmission.owner_result) };
+      if (JSON.stringify(canonical(matter.question.submission)) === JSON.stringify(canonical(submission))) {
+        return withoutWrite({ matter, space: this.#space(state, matter.home_space_id), submission, replayed: ownerSubmission.replayed });
       }
-      matter.question.answer = normalized; matter.revision += 1; return { matter, space: this.#touchMatterSpace(state, matter), replayed: false };
+      matter.question.state = "answer-submitted";
+      matter.question.submission = submission;
+      matter.revision += 1;
+      return { matter, space: this.#touchMatterSpace(state, matter), submission, replayed: ownerSubmission.replayed };
     });
   }
   closeQuestion(input, closure) {
@@ -565,13 +575,11 @@ export class OwnerBoundaryService {
     return this.store.closeQuestion(request, closure);
   }
   submitAnswer(request) {
-    const answer = requiredObject(request.answer, "answer");
-    const result = this.#call("question", "submitAnswer", {
-      question_locator: requiredText(request.question_locator, "question_locator"),
-      answer: { id: requiredText(answer.id, "answer.id"), body: requiredText(answer.body, "answer.body") },
-    }, "question_owner_unavailable");
+    const prepared = this.store.prepareAnswerSubmission(request);
+    const result = this.#call("question", "submitAnswer", { question: prepared.question, answer: prepared.answer }, "question_owner_unavailable");
     if (result?.disposition === "refused") throw new StewardFailure(requiredText(result.code, "answer refusal code"), "The requesting owner refused the Answer submission.");
-    return clone(requiredObject(result, "answer result"));
+    const submission = this.#answerSubmissionResult(result, prepared.question, prepared.answer.id);
+    return this.store.recordAnswerSubmission(request, submission);
   }
   authorize(request) {
     const endpoint = this.#endpoint("directive", "standing_directive_unavailable");
@@ -711,6 +719,15 @@ export class OwnerBoundaryService {
       return clone(result);
     }, `The ${kind} owner did not return its exact identity, revision/currentness, condition, evidence, limits, and owner-defined fields.`);
   }
+  #answerSubmissionResult(value, expectedQuestion, expectedAnswerId) {
+    return this.#ownerResult(() => {
+      const root = exactKeys(requiredObject(value, "answer submission result"), ["disposition", "replayed", "question"], "answer submission result", "owner_result_invalid");
+      if (requiredText(root.disposition, "answer submission disposition") !== "accepted" || typeof root.replayed !== "boolean") throw Error("submission acknowledgement invalid");
+      const ownerResult = this.#questionResult({ question: root.question }, expectedQuestion);
+      if (ownerResult.condition !== "answer-submitted" || ownerResult.answer_id !== expectedAnswerId) throw Error("submission identity mismatch");
+      return { answer_id: ownerResult.answer_id, owner_result: ownerResult, replayed: root.replayed };
+    }, "The Question owner did not return an exact attributable non-content Answer submission result.");
+  }
   #questionResult(value, expected = {}) {
     return this.#ownerResult(() => {
       const root = requiredObject(value, "question result");
@@ -733,6 +750,7 @@ export class OwnerBoundaryService {
       if (expected.owner && (normalized.owner.kind !== expected.owner.kind || normalized.owner.id !== expected.owner.id)) throw Error("owner mismatch");
       if (expected.revision && normalized.represented_revision !== expected.revision) throw Error("revision mismatch");
       if (["resolved", "superseded", "withdrawn"].includes(normalized.condition)) normalized.result_locator = requiredText(question.result_locator, "question.result_locator");
+      if (normalized.condition === "answer-submitted") normalized.answer_id = requiredText(question.answer_id, "question.answer_id");
       if (normalized.condition === "resolved") { normalized.resolution_basis = requiredText(question.resolution_basis, "question.resolution_basis"); if (question.answer_id != null) normalized.answer_id = requiredText(question.answer_id, "question.answer_id"); }
       if (normalized.condition === "superseded") { normalized.successor_question_id = requiredText(question.successor_question_id, "question.successor_question_id"); normalized.supersession_basis = requiredText(question.supersession_basis, "question.supersession_basis"); }
       if (normalized.condition === "withdrawn") normalized.withdrawal_basis = requiredText(question.withdrawal_basis, "question.withdrawal_basis");
@@ -849,7 +867,6 @@ export class CustodyService {
       "spaces.manifest": () => this.store.manifest(request.space_id),
       "matters.transition": () => this.store.transition(request),
       "matters.questions.link": () => this.store.linkQuestion(request),
-      "matters.answers.submit": () => this.store.submitAnswer(request),
     };
     if (operation === "capabilities") return { protocol: resultSchema, version: 1, groups: ["identity", "spaces", "intakes", "matters", "portfolio", "orientation", "acknowledgement", "owner-boundaries", "implementation-admission"] };
     if (!actions[operation]) throw new StewardFailure("operation_unavailable", "This capability is unavailable in the F-007 Steward facade.");
@@ -881,6 +898,7 @@ export function createStewardFacade(databasePath, owners = {}) {
           "owner.bindings.resolve": () => boundary.resolveBinding(request),
           "owner.questions.project": () => boundary.projectQuestion(request),
           "owner.answers.submit": () => boundary.submitAnswer(request),
+          "matters.answers.submit": () => boundary.submitAnswer(request),
           "matters.questions.close": () => boundary.closeQuestion(request),
           "owner.directives.authorize": () => boundary.authorize(request),
           "implementation.admission.prepare": () => boundary.prepareAdmission(request),
