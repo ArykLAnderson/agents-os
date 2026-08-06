@@ -15,7 +15,9 @@
     "matters",
     "portfolio",
     "orientation",
-    "acknowledgement"
+    "acknowledgement",
+    "owner-boundaries",
+    "implementation-admission"
   ],
   "limitations": [
     "interaction_binding_unavailable",
