@@ -408,6 +408,152 @@ export class PortfolioService {
   }
 }
 
+export class OwnerBoundaryService {
+  constructor(owners = {}) { this.owners = owners; }
+  orient(kind, request) {
+    const artifact = this.#artifact(request.artifact);
+    const result = this.#call(kind, "orient", { artifact }, `${kind}_orientation_unavailable`);
+    return { orientation: clone(requiredObject(result, `${kind} orientation`)) };
+  }
+  createBinding(request) {
+    const purpose = requiredText(request.purpose, "purpose");
+    const focus = requiredObject(request.focus, "focus");
+    const focusKind = requiredText(focus.kind, "focus.kind");
+    if (focusKind === "space") requiredText(focus.space_id, "focus.space_id");
+    else if (focusKind !== "cross-space") throw new StewardFailure("focus_invalid", "Binding focus must be Space or cross-Space.");
+    const result = this.#call("interactionBinding", "create", { purpose, focus: clone(focus), artifact: this.#artifact(request.artifact) }, "interaction_binding_unavailable");
+    return clone(requiredObject(result, "binding result"));
+  }
+  focusBinding(request) {
+    const result = this.#call("interactionBinding", "focus", { binding_id: requiredText(request.binding_id, "binding_id") }, "interaction_binding_unavailable");
+    if (result?.disposition === "refused") throw new StewardFailure(requiredText(result.code, "binding refusal code"), "The binding owner refused this focus request.");
+    return clone(requiredObject(result, "binding result"));
+  }
+  resolveBinding(request) {
+    const result = this.#call("interactionBinding", "resolve", { binding_id: requiredText(request.binding_id, "binding_id") }, "interaction_binding_unavailable");
+    if (result?.disposition === "refused") throw new StewardFailure(requiredText(result.code, "binding refusal code"), "The binding owner refused this resolve request.");
+    return clone(requiredObject(result, "binding result"));
+  }
+  projectQuestion(request) {
+    const result = this.#call("question", "project", { question_locator: requiredText(request.question_locator, "question_locator") }, "question_owner_unavailable");
+    return clone(requiredObject(result, "question result"));
+  }
+  submitAnswer(request) {
+    const answer = requiredObject(request.answer, "answer");
+    const result = this.#call("question", "submitAnswer", {
+      question_locator: requiredText(request.question_locator, "question_locator"),
+      answer: { id: requiredText(answer.id, "answer.id"), body: requiredText(answer.body, "answer.body") },
+    }, "question_owner_unavailable");
+    if (result?.disposition === "refused") throw new StewardFailure(requiredText(result.code, "answer refusal code"), "The requesting owner refused the Answer submission.");
+    return clone(requiredObject(result, "answer result"));
+  }
+  authorize(request) {
+    const endpoint = this.#endpoint("directive", "standing_directive_unavailable");
+    if (typeof endpoint.authorize !== "function") throw new StewardFailure("standing_directive_unavailable", "The required owner endpoint is unavailable.");
+    const candidate = this.#envelope(request.envelope);
+    const result = endpoint.authorize({ authorization: clone(candidate.authority), envelope: clone(candidate) });
+    if (result?.disposition === "guidance") throw new StewardFailure("guidance_not_authorization", "Guidance does not authorize an effect.");
+    if (result?.disposition !== "authorized") throw new StewardFailure(requiredText(result?.code ?? "authority_unavailable", "authority refusal code"), "The authorization owner did not authorize this envelope.");
+    if (JSON.stringify(canonical(result.authorization?.envelope)) !== JSON.stringify(canonical(candidate))) throw new StewardFailure("authority_envelope_mismatch", "The authorization does not match the complete cumulative envelope.");
+    return { authorization: clone(result.authorization) };
+  }
+  prepareAdmission(request) {
+    const candidate = this.#envelope(request.envelope);
+    const atlas = requiredObject(request.atlas, "atlas");
+    const requestedOutcome = requiredObject(request.requested_outcome, "requested_outcome");
+    const permittedLimitations = requiredArray(requestedOutcome.permitted_limitations, "requested_outcome.permitted_limitations").map((item) => requiredText(item, "requested_outcome.permitted_limitation"));
+    const claims = requiredArray(requestedOutcome.claims ?? [], "requested_outcome.claims").map((item) => requiredText(item, "requested_outcome.claim"));
+    const atlasBinding = { map_id: requiredText(atlas.map_id, "atlas.map_id"), decision_id: requiredText(atlas.decision_id, "atlas.decision_id") };
+    if (JSON.stringify(atlasBinding) !== JSON.stringify(candidate.atlas)) throw new StewardFailure("atlas_binding_mismatch", "The Atlas handoff does not match the cumulative envelope.");
+    const handoff = this.#call("atlas", "readHandoff", { atlas: atlasBinding }, "atlas_handoff_unavailable");
+    if (handoff?.disposition === "HandoffRefusal") throw new StewardFailure("atlas_handoff_refused", "Atlas refused this delivery handoff.");
+    if (handoff?.current !== true) throw new StewardFailure("atlas_handoff_not_current", "Atlas handoff currentness is not established.");
+    if (!new Set(["HandoffReady", "HandoffWithLimitations"]).has(handoff.disposition)) throw new StewardFailure("atlas_handoff_invalid", "Atlas did not return an admissible handoff.");
+    const limitations = requiredArray(handoff.limitations ?? [], "handoff.limitations").map((item) => requiredText(item, "handoff.limitation"));
+    const forbiddenClaims = requiredArray(handoff.forbidden_claims ?? [], "handoff.forbidden_claims").map((item) => requiredText(item, "handoff.forbidden_claim"));
+    const requiredEffects = requiredArray(handoff.required_effects ?? [], "handoff.required_effects").map((item) => requiredText(item, "handoff.required_effect"));
+    if (requiredEffects.length && (requiredEffects.length !== candidate.effect_bindings.length || requiredEffects.some((effect) => !candidate.effect_bindings.some((binding) => binding.effect === effect)))) throw new StewardFailure("authority_effect_bindings_mismatch", "The cumulative envelope does not bind exactly the Atlas-required effects.");
+    if (limitations.some((item) => !permittedLimitations.includes(item))) throw new StewardFailure("atlas_limitation_incompatible", "The requested outcome is incompatible with an Atlas limitation.");
+    if (claims.some((item) => forbiddenClaims.includes(item))) throw new StewardFailure("atlas_forbidden_claim", "The requested outcome would make a forbidden Atlas claim.");
+    const authorization = this.authorize({ envelope: candidate });
+    return { envelope: candidate, envelope_digest: portfolioDigest(candidate), atlas_handoff: clone(handoff), authorization };
+  }
+  submitAdmission(request) {
+    const endpoint = this.#endpoint("softwareImplementation", "software_implementation_unavailable");
+    const candidate = this.#envelope(request.envelope);
+    if (requiredText(request.envelope_digest, "envelope_digest") !== portfolioDigest(candidate)) throw new StewardFailure("authority_envelope_digest_mismatch", "The admission envelope was changed after authorization.");
+    const admission = endpoint.admit({ envelope: clone(candidate), envelope_digest: request.envelope_digest });
+    if (!admission || typeof admission !== "object") throw new StewardFailure("software_implementation_invalid", "Software Implementation returned no admission result.");
+    if (admission.disposition === "admitted" && JSON.stringify(admission.authorized_routine_mechanics) !== JSON.stringify(candidate.routine_mechanics)) throw new StewardFailure("software_implementation_envelope_mismatch", "The admitted routine mechanics do not match the authorized envelope.");
+    return { admission: clone(admission) };
+  }
+  recoverAdmission(request) {
+    const result = this.#call("softwareImplementation", "recover", { correlation_id: requiredText(request.correlation_id, "correlation_id") }, "software_implementation_unavailable");
+    return { recovery: clone(requiredObject(result, "recovery result")) };
+  }
+  projectAdmission(request) {
+    const admission = requiredObject(request.admission, "admission");
+    const disposition = requiredText(admission.disposition, "admission.disposition");
+    const condition = disposition === "refused" ? "blocked" : disposition === "unknown" ? "unknown" : disposition === "admitted" ? "current" : "observation-limited";
+    return { observation: {
+      owner: { kind: "software-implementation", id: "software-implementation:current" },
+      artifact: { id: requiredText(admission.correlation_id, "admission.correlation_id"), revision: requiredText(admission.currentness ?? "unknown", "admission.currentness") },
+      condition,
+      blocker: admission.blocker == null ? null : clone(requiredObject(admission.blocker, "admission.blocker")),
+      limitations: condition === "observation-limited" ? ["No owner observation is available."] : [],
+    } };
+  }
+  #artifact(value) {
+    const artifact = requiredObject(value, "artifact");
+    return { id: requiredText(artifact.id, "artifact.id"), revision: requiredText(artifact.revision, "artifact.revision") };
+  }
+  #endpoint(owner, unavailableCode) {
+    const endpoint = this.owners[owner];
+    if (!endpoint || typeof endpoint !== "object") throw new StewardFailure(unavailableCode, "The required owner endpoint is unavailable.");
+    return endpoint;
+  }
+  #call(owner, method, input, unavailableCode) {
+    const endpoint = this.#endpoint(owner, unavailableCode);
+    if (typeof endpoint[method] !== "function") throw new StewardFailure(unavailableCode, "The required owner endpoint is unavailable.");
+    return endpoint[method](clone(input));
+  }
+  #envelope(value) {
+    const envelope = requiredObject(value, "envelope");
+    const effects = requiredArray(envelope.effect_bindings, "envelope.effect_bindings");
+    if (!effects.length) throw new StewardFailure("authority_envelope_invalid", "The cumulative envelope must bind every effect.");
+    if (!envelope.target || typeof envelope.target !== "object" || Array.isArray(envelope.target)) throw new StewardFailure("authority_envelope_invalid", "The cumulative envelope must name its exact target.");
+    const target = envelope.target;
+    const spaceScope = requiredObject(envelope.space_scope, "envelope.space_scope");
+    const scopeKind = requiredText(spaceScope.kind, "envelope.space_scope.kind");
+    if (scopeKind === "space") requiredText(spaceScope.space_id, "envelope.space_scope.space_id");
+    else if (scopeKind !== "cross-space") throw new StewardFailure("authority_envelope_invalid", "The envelope Space scope must be Space or cross-Space.");
+    const monitoringScope = requiredObject(envelope.monitoring_scope, "envelope.monitoring_scope");
+    const lifetime = requiredObject(envelope.lifetime, "envelope.lifetime");
+    const delivery = requiredObject(envelope.delivery, "envelope.delivery");
+    return {
+      outcome: requiredText(envelope.outcome, "envelope.outcome"),
+      action: requiredText(envelope.action, "envelope.action"),
+      target: { kind: requiredText(target.kind, "envelope.target.kind"), id: requiredText(target.id, "envelope.target.id") },
+      space_scope: clone(spaceScope),
+      matter_id: requiredText(envelope.matter_id, "envelope.matter_id"),
+      consequences: requiredArray(envelope.consequences, "envelope.consequences").map((item) => requiredText(item, "envelope.consequence")),
+      monitoring_scope: { kind: requiredText(monitoringScope.kind, "envelope.monitoring_scope.kind"), id: requiredText(monitoringScope.id, "envelope.monitoring_scope.id") },
+      lifetime: { kind: requiredText(lifetime.kind, "envelope.lifetime.kind"), expires_at: lifetime.expires_at == null ? null : requiredText(lifetime.expires_at, "envelope.lifetime.expires_at") },
+      repository: requiredText(envelope.repository, "envelope.repository"),
+      path: requiredText(envelope.path, "envelope.path"),
+      base: requiredText(envelope.base, "envelope.base"),
+      delivery_shape: requiredText(envelope.delivery_shape, "envelope.delivery_shape"),
+      delivery: { branch: requiredText(delivery.branch, "envelope.delivery.branch"), worktree: requiredText(delivery.worktree, "envelope.delivery.worktree"), pull_request_base: requiredText(delivery.pull_request_base, "envelope.delivery.pull_request_base") },
+      routine_mechanics: requiredArray(envelope.routine_mechanics, "envelope.routine_mechanics").map((item) => requiredText(item, "envelope.routine_mechanic")),
+      absent_operations: requiredArray(envelope.absent_operations, "envelope.absent_operations").map((item) => requiredText(item, "envelope.absent_operation")),
+      invalidators: requiredArray(envelope.invalidators, "envelope.invalidators").map((item) => requiredText(item, "envelope.invalidator")),
+      atlas: (() => { const atlas = requiredObject(envelope.atlas, "envelope.atlas"); return { map_id: requiredText(atlas.map_id, "envelope.atlas.map_id"), decision_id: requiredText(atlas.decision_id, "envelope.atlas.decision_id") }; })(),
+      authority: (() => { const authority = requiredObject(envelope.authority, "envelope.authority"); return { kind: requiredText(authority.kind, "envelope.authority.kind"), id: requiredText(authority.id, "envelope.authority.id") }; })(),
+      effect_bindings: effects.map((effect) => { const binding = requiredObject(effect, "envelope.effect_binding"); return { effect: requiredText(binding.effect, "envelope.effect_binding.effect"), binding: requiredText(binding.binding, "envelope.effect_binding.binding") }; }),
+    };
+  }
+}
+
 export class CustodyService {
   constructor(store) { this.store = store; }
   invoke(operation, request) {
@@ -427,28 +573,55 @@ export class CustodyService {
       "matters.answers.submit": () => this.store.submitAnswer(request),
       "matters.questions.close": () => this.store.closeQuestion(request),
     };
-    if (operation === "capabilities") return { protocol: resultSchema, version: 1, groups: ["identity", "spaces", "intakes", "matters", "portfolio", "orientation", "acknowledgement"] };
+    if (operation === "capabilities") return { protocol: resultSchema, version: 1, groups: ["identity", "spaces", "intakes", "matters", "portfolio", "orientation", "acknowledgement", "owner-boundaries", "implementation-admission"] };
     if (!actions[operation]) throw new StewardFailure("operation_unavailable", "This capability is unavailable in the F-007 Steward facade.");
     return actions[operation]();
   }
 }
 
+export function createStewardFacade(databasePath, owners = {}) {
+  const store = new StewardStore(databasePath);
+  const portfolio = new PortfolioService(store);
+  const custody = new CustodyService(store);
+  const boundary = new OwnerBoundaryService(owners);
+  return {
+    invoke(request) {
+      const operation = request?.operation;
+      try {
+        const actions = {
+          "portfolio.compose": () => portfolio.compose(request),
+          "portfolio.acknowledge": () => portfolio.acknowledge(request),
+          "portfolio.baselines.read": () => portfolio.baselines(),
+          "owner.case.orient": () => boundary.orient("case", request),
+          "owner.frame.orient": () => boundary.orient("frame", request),
+          "owner.blueprint.orient": () => boundary.orient("blueprint", request),
+          "owner.prototype.orient": () => boundary.orient("prototype", request),
+          "owner.rfc.orient": () => boundary.orient("rfc", request),
+          "owner.atlas.orient": () => boundary.orient("atlas", request),
+          "owner.bindings.create": () => boundary.createBinding(request),
+          "owner.bindings.focus": () => boundary.focusBinding(request),
+          "owner.bindings.resolve": () => boundary.resolveBinding(request),
+          "owner.questions.project": () => boundary.projectQuestion(request),
+          "owner.answers.submit": () => boundary.submitAnswer(request),
+          "owner.directives.authorize": () => boundary.authorize(request),
+          "implementation.admission.prepare": () => boundary.prepareAdmission(request),
+          "implementation.admission.submit": () => boundary.submitAdmission(request),
+          "implementation.admission.recover": () => boundary.recoverAdmission(request),
+          "implementation.portfolio.project": () => boundary.projectAdmission(request),
+        };
+        const name = requiredText(operation, "operation");
+        if (name === "owner.questions.close" || name === "implementation.admission.resume") throw new StewardFailure("operation_unavailable", "This owner-only operation is unavailable through Steward.");
+        const result = actions[name] ? actions[name]() : custody.invoke(name, request);
+        return { exitCode: 0, envelope: success(operation, result) };
+      } catch (error) {
+        const code = error instanceof StewardFailure ? error.code : "internal_failure";
+        const message = error instanceof StewardFailure ? error.message : "The Steward operation did not settle safely.";
+        return { exitCode: 2, envelope: failure(typeof operation === "string" ? operation : "unknown", code, message) };
+      }
+    },
+  };
+}
+
 export function invokeFacade(databasePath, request) {
-  const operation = request?.operation;
-  try {
-    const store = new StewardStore(databasePath);
-    const portfolio = new PortfolioService(store);
-    const actions = {
-      "portfolio.compose": () => portfolio.compose(request),
-      "portfolio.acknowledge": () => portfolio.acknowledge(request),
-      "portfolio.baselines.read": () => portfolio.baselines(),
-    };
-    const name = requiredText(operation, "operation");
-    const result = actions[name] ? actions[name]() : new CustodyService(store).invoke(name, request);
-    return { exitCode: 0, envelope: success(operation, result) };
-  } catch (error) {
-    const code = error instanceof StewardFailure ? error.code : "internal_failure";
-    const message = error instanceof StewardFailure ? error.message : "The Steward operation did not settle safely.";
-    return { exitCode: 2, envelope: failure(typeof operation === "string" ? operation : "unknown", code, message) };
-  }
+  return createStewardFacade(databasePath).invoke(request);
 }
