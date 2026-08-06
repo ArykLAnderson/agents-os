@@ -26,22 +26,43 @@ const envelope = {
   effect_bindings: [{ effect: "local-test", binding: "approval:one" }],
 };
 
-function conformers({ handoff = { disposition: "HandoffWithLimitations", current: true, limitations: ["endpoint-unavailable"], forbidden_claims: ["real-endpoint-integration"], required_effects: ["local-test"] }, authorization = "authorized", admission = "admitted", recovery = "unknown" } = {}) {
+function validHandoff(overrides = {}) {
+  return {
+    disposition: "HandoffWithLimitations",
+    current: true,
+    map_id: "FM-003",
+    decision_id: "D",
+    scope: {
+      features: [{ id: "F-009", owner: "owner:f-009", outcome: "Exact owner boundaries" }],
+      work_items: [{ id: "WI-038", feature_id: "F-009", owner: "owner:wi-038", outcome: "Conforming owner adapters" }],
+    },
+    order: { dependencies: [{ consumer: "WI-038", prerequisite: "F-009" }], convergence: ["F-009"] },
+    obligations: ["exact owner contracts"],
+    limitations: ["endpoint-unavailable"],
+    forbidden_claims: ["real-endpoint-integration"],
+    required_effects: ["local-test"],
+    authority_boundary: { implementation: "present", external_effects: "local-test-only" },
+    fresh_reread: { status: "complete_consistent", observed_at: "2026-08-06T00:00:00.000Z" },
+    ...overrides,
+  };
+}
+
+function conformers({ handoff = validHandoff(), authorization = "authorized", admission = "admitted", recovery = "unknown" } = {}) {
   const answers = new Map();
   const bindings = new Map([
     ["binding:one", { id: "binding:one", focused: false }],
     ["binding:two", { id: "binding:two", focused: false }],
   ]);
   const calls = { directive: 0, admit: 0, recover: 0 };
-  const orientation = (kind) => ({ orient: ({ artifact }) => ({ artifact: { ...artifact }, status: "stale", readiness: "needs-evidence", currentness: "stale", open_questions: [`question:${kind}`], decisions: [`decision:${kind}`], blockers: [`blocker:${kind}`], next_movement: `continue-${kind}`, missing_evidence: [`missing:${kind}`], conflicting_evidence: [] }) });
+  const commonOrientation = (artifact, condition = "stale") => ({ artifact: { ...artifact }, represented_revision: artifact.revision, currentness: `${artifact.id}:currentness`, condition, observed_at: "2026-08-06T00:00:00.000Z", evidence: [`evidence:${artifact.id}`], limitations: ["synthetic"] });
   const owners = {
-    case: orientation("case"),
-    frame: orientation("frame"),
-    blueprint: orientation("blueprint"),
-    prototype: { orient: ({ artifact }) => ({ artifact: { ...artifact }, question: "Does the boundary hold?", observations: ["observation:one"], verdict: "inconclusive", evidence: ["evidence:one"], limitations: ["synthetic"], locator: "prototype:one" }) },
-    rfc: orientation("rfc"),
+    case: { orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "active", knowledge: ["knowledge:one"], sources: ["source:one"] }) },
+    frame: { orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "active", outcome: "Preserve the boundary", open_questions: ["question:frame"], next_movement: "continue-frame" }) },
+    blueprint: { orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "stale", readiness: "needs-evidence", open_questions: ["question:blueprint"], decisions: ["decision:blueprint"], blockers: ["blocker:blueprint"], next_movement: "continue-blueprint", missing_evidence: ["missing:blueprint"], conflicting_evidence: [] }) },
+    prototype: { orient: ({ artifact }) => ({ ...commonOrientation(artifact, "complete"), question: "Does the boundary hold?", observations: ["observation:one"], verdict: "inconclusive", locator: "prototype:one" }) },
+    rfc: { orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "materialized", readiness: "needs-evidence", source: { ...artifact } }) },
     atlas: {
-      orient: orientation("atlas").orient,
+      orient: ({ artifact }) => ({ ...commonOrientation(artifact), status: "current", handoff: { disposition: "HandoffReady" }, dependencies: ["WI-038→F-009"], proof: ["focused validation"] }),
       readHandoff: () => structuredClone(handoff),
     },
     interactionBinding: {
@@ -60,7 +81,7 @@ function conformers({ handoff = { disposition: "HandoffWithLimitations", current
       },
     },
     question: {
-      project: ({ question_locator }) => ({ question: { locator: question_locator, condition: "open", owner: { kind: "frame", id: "frame:one" } } }),
+      project: ({ question_locator }) => ({ question: { locator: question_locator, owner: { kind: "frame", id: "frame:one" }, represented_revision: "question-revision:one", currentness: "question-currentness:one", condition: "open", observed_at: "2026-08-06T00:00:00.000Z", evidence: ["question-receipt:one"], limitations: [] } }),
       submitAnswer: ({ question_locator, answer }) => {
         const prior = answers.get(question_locator);
         if (prior && (prior.id !== answer.id || prior.body !== answer.body)) return { disposition: "refused", code: "answer_immutable_conflict" };
@@ -77,16 +98,17 @@ function conformers({ handoff = { disposition: "HandoffWithLimitations", current
       },
     },
     softwareImplementation: {
-      admit: ({ envelope: candidate }) => {
+      correlate: () => ({ correlation_id: admission === "unknown" ? "si:unknown" : admission === "refused" ? "si:refused" : "si:admitted" }),
+      admit: ({ envelope: candidate, correlation_id }) => {
         calls.admit += 1;
-        if (admission === "unknown") return { disposition: "unknown", correlation_id: "si:unknown" };
-        if (admission === "refused") return { disposition: "refused", correlation_id: "si:refused", blocker: { code: "base-stale", owner: "software-implementation" } };
-        return { disposition: "admitted", correlation_id: "si:admitted", authorized_routine_mechanics: candidate.routine_mechanics, currentness: "current" };
+        if (admission === "unknown") return { disposition: "unknown", correlation_id, currentness: "unknown", observed_at: "2026-08-06T00:00:00.000Z", limitations: ["owner-unconfirmed"] };
+        if (admission === "refused") return { disposition: "refused", correlation_id, currentness: "refusal:one", observed_at: "2026-08-06T00:00:00.000Z", blocker: { code: "base-stale", owner: "software-implementation" }, limitations: [] };
+        return { disposition: "admitted", correlation_id, authorized_routine_mechanics: candidate.routine_mechanics, currentness: "current", observed_at: "2026-08-06T00:00:00.000Z", limitations: [] };
       },
       recover: ({ correlation_id }) => {
         calls.recover += 1;
-        if (recovery === "refused") return { disposition: "refused", correlation_id, blocker: { code: "base-stale", owner: "software-implementation" } };
-        return { disposition: "unknown", correlation_id, currentness: "unknown" };
+        if (recovery === "refused") return { disposition: "refused", correlation_id, currentness: "refusal:one", observed_at: "2026-08-06T00:00:01.000Z", blocker: { code: "base-stale", owner: "software-implementation" }, limitations: [] };
+        return { disposition: "unknown", correlation_id, currentness: "unknown", observed_at: "2026-08-06T00:00:01.000Z", limitations: ["owner-unconfirmed"] };
       },
     },
   };
@@ -104,9 +126,12 @@ test("OwnerBoundaryService preserves exact artifact orientation, binding-local f
   for (const kind of ["case", "frame", "blueprint", "rfc", "atlas"]) {
     const result = invoke(facade, `owner.${kind}.orient`, { artifact: { id: `${kind}:one`, revision: `${kind}-revision:one` } });
     assert.equal(result.status, "success");
-    assert.equal(result.result.orientation.status, "stale");
-    assert.deepEqual(result.result.orientation.blockers, [`blocker:${kind}`]);
+    assert.equal(result.result.orientation.represented_revision, `${kind}-revision:one`);
+    assert.equal(result.result.orientation.currentness, `${kind}:one:currentness`);
+    assert.deepEqual(result.result.orientation.limitations, ["synthetic"]);
   }
+  const blueprint = invoke(facade, "owner.blueprint.orient", { artifact: { id: "blueprint:one", revision: "blueprint-revision:one" } });
+  assert.deepEqual(blueprint.result.orientation.blockers, ["blocker:blueprint"]);
   const prototype = invoke(facade, "owner.prototype.orient", { artifact: { id: "prototype:one", revision: "prototype-revision:one" } });
   assert.equal(prototype.result.orientation.verdict, "inconclusive");
   assert.deepEqual(prototype.result.orientation.limitations, ["synthetic"]);
@@ -138,9 +163,9 @@ test("OwnerBoundaryService permits only legal Atlas handoffs with a complete exa
   assert.equal(refusal.failure.code, "atlas_handoff_refused");
   assert.equal(refused.calls.directive, 0);
 
-  const ready = conformers({ handoff: { disposition: "HandoffReady", current: true, limitations: [], forbidden_claims: [], required_effects: ["local-test"] } });
+  const ready = conformers({ handoff: validHandoff({ disposition: "HandoffReady", limitations: [], forbidden_claims: [] }) });
   assert.equal(invoke(ready.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: [], claims: [] }, envelope }).status, "success");
-  const stale = conformers({ handoff: { disposition: "HandoffReady", current: false, limitations: [], forbidden_claims: [], required_effects: ["local-test"] } });
+  const stale = conformers({ handoff: validHandoff({ disposition: "HandoffReady", current: false, limitations: [], forbidden_claims: [] }) });
   assert.equal(invoke(stale.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: [], claims: [] }, envelope }).failure.code, "atlas_handoff_not_current");
 
   const incompatible = conformers();
@@ -164,7 +189,7 @@ test("OwnerBoundaryService permits only legal Atlas handoffs with a complete exa
   assert.equal(authorized.calls.directive, 1);
 
   const omitted = invoke(authorized.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope: { ...envelope, effect_bindings: [] } });
-  assert.equal(omitted.failure.code, "authority_envelope_invalid");
+  assert.equal(omitted.failure.code, "authority_effect_bindings_mismatch");
   const incomplete = invoke(authorized.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope: { ...envelope, target: undefined } });
   assert.equal(incomplete.failure.code, "authority_envelope_invalid");
   const extraEffect = invoke(authorized.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope: { ...envelope, effect_bindings: [...envelope.effect_bindings, { effect: "deploy", binding: "approval:one" }] } });
@@ -207,7 +232,7 @@ test("OwnerBoundaryService delegates admission and recovery only to Software Imp
   const blocked = conformers({ admission: "refused" });
   const blockedPrepared = invoke(blocked.facade, "implementation.admission.prepare", { atlas: { map_id: "FM-003", decision_id: "D" }, requested_outcome: { permitted_limitations: ["endpoint-unavailable"], forbidden_claims: [] }, envelope });
   const blocker = invoke(blocked.facade, "implementation.admission.submit", blockedPrepared.result);
-  const projection = invoke(blocked.facade, "implementation.portfolio.project", { admission: blocker.result.admission });
+  const projection = invoke(blocked.facade, "implementation.portfolio.project", { matter_id: envelope.matter_id, admission: blocker.result.admission });
   assert.equal(projection.result.observation.owner.kind, "software-implementation");
   assert.equal(projection.result.observation.condition, "blocked");
   const resume = invoke(blocked.facade, "implementation.admission.resume", { correlation_id: "si:refused" });

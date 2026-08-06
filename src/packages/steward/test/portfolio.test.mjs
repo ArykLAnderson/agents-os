@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { createStewardFacade } from "../lib/steward.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const bin = path.join(root, "bin", "steward.mjs");
@@ -109,13 +110,16 @@ test("Portfolio composes reproducible complete active and retired Space manifest
 
 test("Portfolio preserves evidence-cited bands, independent axes, ties, indeterminacy, return limits, and Search/Namespace context", async (t) => {
   const { store, alpha, beta, matters } = await portfolioFixture(t);
-  const observations = matters.map((matter, index) => observation(`attention:${index}`, matter.id, index === 3 ? "satisfied" : "current", `2026-08-0${index + 1}T00:00:00.000Z`));
   const attention = ["urgent", "next-conversation", "briefing", "quiet"].map((band, index) => ({
     matter_id: matters[index].id,
     band,
     evidence_ids: [`attention:${index}`],
     axes: { human_needed: index % 2 === 0, independently_progressing: index < 2, observation_limited: index === 2 },
     smallest_action: { text: `Review intent ${index}`, evidence_id: `attention:${index}` },
+  }));
+  const observations = matters.map((matter, index) => observation(`attention:${index}`, matter.id, index === 3 ? "satisfied" : "current", `2026-08-0${index + 1}T00:00:00.000Z`, {
+    ...(index === 3 ? { event_id: "implementation-result" } : {}),
+    attention_support: { bands: index === 1 ? [attention[index].band, "urgent"] : [attention[index].band], axes: attention[index].axes, actions: [attention[index].smallest_action.text] },
   }));
   const composed = await invoke(store, "portfolio.compose", {
     scope: { kind: "space", space_id: "space:alpha" },
@@ -177,30 +181,36 @@ test("Portfolio acknowledgement re-observes identical scope, CASes only that bas
   const spaceRequest = { scope: { kind: "space", space_id: "space:alpha" }, observations };
   const space = await invoke(store, "portfolio.compose", spaceRequest);
 
-  const acknowledged = await invoke(store, "portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: globalRequest, expected_baseline_revision: 0 });
-  assert.equal(acknowledged.code, 0);
-  assert.equal(acknowledged.body.result.baseline.scope.kind, "global");
-  assert.equal(acknowledged.body.result.baseline.revision, 1);
-  const replay = await invoke(store, "portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: globalRequest, expected_baseline_revision: 0 });
-  assert.equal(replay.code, 0);
-  assert.equal(replay.body.result.replayed, true);
+  const unavailable = await invoke(store, "portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: globalRequest, expected_baseline_revision: 0 });
+  assert.equal(unavailable.code, 2);
+  assert.equal(unavailable.body.failure.code, "view_reobservation_unavailable");
+  const ownerFacade = createStewardFacade(store, { frame: { observe: ({ observation: represented }) => structuredClone(represented) } });
+  const local = (operation, request) => ownerFacade.invoke({ operation, ...request }).envelope;
+  const acknowledged = local("portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: globalRequest, expected_baseline_revision: 0 });
+  assert.equal(acknowledged.status, "success");
+  assert.equal(acknowledged.result.baseline.scope.kind, "global");
+  assert.equal(acknowledged.result.baseline.revision, 1);
+  assert.deepEqual(acknowledged.result.baseline.manifest, global.body.result.view.manifest);
+  const replay = local("portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: globalRequest, expected_baseline_revision: 0 });
+  assert.equal(replay.status, "success");
+  assert.equal(replay.result.replayed, true);
 
-  const spaceAcknowledged = await invoke(store, "portfolio.acknowledge", { view_id: space.body.result.view.id, view_request: spaceRequest, expected_baseline_revision: 0 });
-  assert.equal(spaceAcknowledged.code, 0);
-  assert.equal(spaceAcknowledged.body.result.baseline.scope.space_id, "space:alpha");
+  const spaceAcknowledged = local("portfolio.acknowledge", { view_id: space.body.result.view.id, view_request: spaceRequest, expected_baseline_revision: 0 });
+  assert.equal(spaceAcknowledged.status, "success");
+  assert.equal(spaceAcknowledged.result.baseline.scope.space_id, "space:alpha");
   const baselines = await invoke(store, "portfolio.baselines.read");
   assert.equal(baselines.code, 0);
   assert.equal(baselines.body.result.global.view_id, global.body.result.view.id);
   assert.equal(baselines.body.result.spaces["space:alpha"].view_id, space.body.result.view.id);
 
-  const changedSources = await invoke(store, "portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: { ...globalRequest, observations: observations.map((item) => item.id === "ack:0" ? { ...item, condition: "blocked" } : item) }, expected_baseline_revision: 1 });
-  assert.equal(changedSources.code, 2);
-  assert.equal(changedSources.body.failure.code, "view_not_reproducible");
+  const changedSources = local("portfolio.acknowledge", { view_id: global.body.result.view.id, view_request: { ...globalRequest, observations: observations.map((item) => item.id === "ack:0" ? { ...item, condition: "blocked" } : item) }, expected_baseline_revision: 1 });
+  assert.equal(changedSources.status, "refused");
+  assert.equal(changedSources.failure.code, "view_not_reproducible");
   const stillStored = await invoke(store, "portfolio.baselines.read");
   assert.equal(stillStored.body.result.global.view_id, global.body.result.view.id);
 
   const alternative = await invoke(store, "portfolio.compose", { ...globalRequest, observations: observations.map((item) => item.id === "ack:1" ? { ...item, condition: "blocked" } : item) });
-  const staleCas = await invoke(store, "portfolio.acknowledge", { view_id: alternative.body.result.view.id, view_request: { ...globalRequest, observations: observations.map((item) => item.id === "ack:1" ? { ...item, condition: "blocked" } : item) }, expected_baseline_revision: 0 });
-  assert.equal(staleCas.code, 2);
-  assert.equal(staleCas.body.failure.code, "baseline_revision_conflict");
+  const staleCas = local("portfolio.acknowledge", { view_id: alternative.body.result.view.id, view_request: { ...globalRequest, observations: observations.map((item) => item.id === "ack:1" ? { ...item, condition: "blocked" } : item) }, expected_baseline_revision: 0 });
+  assert.equal(staleCas.status, "refused");
+  assert.equal(staleCas.failure.code, "baseline_revision_conflict");
 });
