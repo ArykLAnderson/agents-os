@@ -12,7 +12,10 @@
     "identity",
     "spaces",
     "intakes",
-    "matters"
+    "matters",
+    "portfolio",
+    "orientation",
+    "acknowledgement"
   ],
   "limitations": [
     "interaction_binding_unavailable",

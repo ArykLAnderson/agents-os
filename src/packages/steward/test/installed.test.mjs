@@ -31,7 +31,15 @@ test("the packed Steward facade installs and serves custody from an unrelated cw
   const identity = await invoke({ operation: "identity.resolve" });
   assert.equal(identity.code, 0);
   const capabilities = await invoke({ operation: "capabilities" });
-  assert.deepEqual(capabilities.body.result.groups, ["identity", "spaces", "intakes", "matters"]);
+  assert.deepEqual(capabilities.body.result.groups, ["identity", "spaces", "intakes", "matters", "portfolio", "orientation", "acknowledgement"]);
+  const space = await invoke({ operation: "spaces.create", expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:installed", name: "Installed" } });
+  const capture = await invoke({ operation: "intakes.capture", replay_key: "installed:portfolio", content: "Verify installed orientation", provenance: { source: "consumer" }, space_id: "space:installed", relevance_reason: "Installed consumer proof", owner_references: [{ kind: "frame", id: "frame:installed" }] });
+  const viewRequest = { scope: { kind: "global" }, observations: [{ id: "observation:installed", matter_id: capture.body.result.matter.id, owner: { kind: "frame", id: "frame:installed" }, artifact: { id: "frame:installed", revision: "frame-revision:1" }, represented_revision: "frame-revision:1", currentness: "current", observed_at: "2026-08-06T00:00:00.000Z", condition: "current", limitations: [] }] };
+  const portfolio = await invoke({ operation: "portfolio.compose", ...viewRequest });
+  assert.equal(portfolio.code, 0);
+  const acknowledgement = await invoke({ operation: "portfolio.acknowledge", view_id: portfolio.body.result.view.id, view_request: viewRequest, expected_baseline_revision: 0 });
+  assert.equal(acknowledgement.code, 0);
+  assert.equal(acknowledgement.body.result.baseline.view_id, portfolio.body.result.view.id);
   const packageJson = JSON.parse(await readFile(path.join(sandbox, "node_modules", "@agents-os", "steward", "package.json"), "utf8"));
   assert.equal(packageJson.name, "@agents-os/steward");
 });

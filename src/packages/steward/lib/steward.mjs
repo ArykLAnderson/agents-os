@@ -8,6 +8,8 @@ const clone = (value) => structuredClone(value);
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const now = () => new Date().toISOString();
 const transactionWaiter = new Int32Array(new SharedArrayBuffer(4));
+const noWrite = Symbol("steward-no-write");
+const withoutWrite = (result) => ({ [noWrite]: true, result });
 const success = (operation, result) => ({ schema: resultSchema, status: "success", operation, result: clone(result) });
 const failure = (operation, code, message) => ({ schema: resultSchema, status: "refused", operation, failure: { code, message } });
 
@@ -26,6 +28,16 @@ function requiredObject(value, name) {
 function exactRevision(value, expected, code) {
   if (!Number.isInteger(value) || value !== expected) throw new StewardFailure(code, "The supplied revision is no longer current.");
 }
+function requiredArray(value, name) {
+  if (!Array.isArray(value)) throw new StewardFailure("request_invalid", `${name} must be an array.`);
+  return value;
+}
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+  return value;
+}
+const portfolioDigest = (value) => createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
 function defaultState() {
   return { schema, revision: 0, singleton: null, directory: { revision: 0, spaces: {} }, intakes: {}, replay: {}, matters: {}, baselines: {}, observations: {} };
 }
@@ -51,6 +63,7 @@ export class StewardStore {
       const before = this.read();
       const draft = clone(before);
       const result = work(draft);
+      if (result?.[noWrite]) return clone(result.result);
       draft.revision += 1;
       const temporary = `${this.databasePath}.${process.pid}.${randomUUID()}.tmp`;
       try {
@@ -241,6 +254,159 @@ export class StewardStore {
   }
 }
 
+export class PortfolioService {
+  constructor(store) { this.store = store; }
+  compose(request) { return { view: this.#compose(this.store.read(), request) }; }
+  baselines() {
+    const baselines = this.store.read().baselines ?? {};
+    return { global: baselines.global ?? null, spaces: baselines.spaces ?? {} };
+  }
+  acknowledge(request) {
+    const viewId = requiredText(request.view_id, "view_id");
+    const viewRequest = requiredObject(request.view_request, "view_request");
+    return this.store.transact((state) => {
+      const view = this.#compose(state, viewRequest);
+      if (view.id !== viewId) throw new StewardFailure("view_not_reproducible", "The represented sources no longer reproduce the acknowledged view.");
+      const baselines = state.baselines ??= {};
+      const scope = view.scope.kind === "global" ? baselines : (baselines.spaces ??= {});
+      const key = view.scope.kind === "global" ? "global" : view.scope.space_id;
+      const prior = scope[key] ?? null;
+      if (prior?.view_id === view.id) return withoutWrite({ baseline: prior, replayed: true, view });
+      exactRevision(request.expected_baseline_revision, prior?.revision ?? 0, "baseline_revision_conflict");
+      const baseline = { scope: clone(view.scope), revision: (prior?.revision ?? 0) + 1, view_id: view.id, manifest_id: view.manifest.id, acknowledged_at: now() };
+      scope[key] = baseline;
+      return { baseline, replayed: false, view };
+    });
+  }
+  #compose(state, request) {
+    const scope = this.#scope(state, requiredObject(request.scope, "scope"));
+    const spaces = scope.kind === "global" ? Object.values(state.directory.spaces) : [this.#space(state, scope.space_id)];
+    const manifests = spaces.sort((left, right) => left.id.localeCompare(right.id)).map((space) => ({
+      id: space.id,
+      lifecycle: space.lifecycle,
+      revision: space.revision,
+      matters: Object.values(state.matters).filter((matter) => matter.home_space_id === space.id && matter.relevant).sort((left, right) => left.id.localeCompare(right.id)).map((matter) => ({ ...clone(matter), intake: state.intakes[matter.intake_id] ? { id: state.intakes[matter.intake_id].id, provenance: clone(state.intakes[matter.intake_id].provenance), captured_at: state.intakes[matter.intake_id].captured_at } : null })),
+    }));
+    const matters = manifests.flatMap((space) => space.matters);
+    const observations = this.#observations(request.observations ?? [], matters);
+    const coverage = this.#coverage(matters, observations);
+    const returns = this.#returns(matters, observations, request.as_of);
+    const namespace = this.#namespace(state, scope, request.namespace_context);
+    const search = this.#search(request.search);
+    const manifest = {
+      id: "manifest:" + portfolioDigest({ scope, directory_revision: scope.kind === "global" ? state.directory.revision : null, spaces: manifests, observations, coverage }),
+      directory: scope.kind === "global" ? { revision: state.directory.revision } : null,
+      spaces: manifests,
+      observations,
+      coverage,
+      mixed_age: new Set(observations.map((item) => item.observed_at)).size > 1,
+    };
+    const orientation = this.#orientation(request.attention ?? [], matters, observations, returns);
+    const identity = { scope, manifest, orientation, returns, namespace, search };
+    return { id: "view:" + portfolioDigest(identity), scope, manifest, coverage, orientation, returns, namespace, search };
+  }
+  #scope(state, input) {
+    const kind = requiredText(input.kind, "scope.kind");
+    if (kind === "global") return { kind };
+    if (kind === "space") return { kind, space_id: this.#space(state, input.space_id).id };
+    throw new StewardFailure("scope_invalid", "scope.kind must be global or space.");
+  }
+  #space(state, id) {
+    const space = state.directory.spaces[requiredText(id, "space_id")];
+    if (!space) throw new StewardFailure("space_not_found", "The Space is not available.");
+    return space;
+  }
+  #observations(input, matters) {
+    const visible = new Set(matters.map((matter) => matter.id));
+    const seen = new Set();
+    return requiredArray(input, "observations").map((item) => {
+      const observation = requiredObject(item, "observation");
+      const id = requiredText(observation.id, "observation.id");
+      if (seen.has(id)) throw new StewardFailure("observation_id_conflict", "Observation identities must be unique.");
+      seen.add(id);
+      const matterId = requiredText(observation.matter_id, "observation.matter_id");
+      const owner = requiredObject(observation.owner, "observation.owner");
+      const artifact = requiredObject(observation.artifact, "observation.artifact");
+      const normalized = { id, matter_id: matterId, owner: { kind: requiredText(owner.kind, "observation.owner.kind"), id: requiredText(owner.id, "observation.owner.id") }, artifact: { id: requiredText(artifact.id, "observation.artifact.id"), revision: requiredText(artifact.revision, "observation.artifact.revision") }, represented_revision: requiredText(observation.represented_revision, "observation.represented_revision"), currentness: requiredText(observation.currentness, "observation.currentness"), observed_at: requiredText(observation.observed_at, "observation.observed_at"), condition: requiredText(observation.condition, "observation.condition"), limitations: clone(requiredArray(observation.limitations ?? [], "observation.limitations")) };
+      return visible.has(matterId) ? normalized : null;
+    }).filter(Boolean).sort((left, right) => left.id.localeCompare(right.id));
+  }
+  #coverage(matters, observations) {
+    const gaps = [];
+    for (const matter of matters) if (!observations.some((item) => item.matter_id === matter.id)) gaps.push({ code: "owner_observation_missing", matter_id: matter.id });
+    const groups = new Map();
+    for (const item of observations) {
+      const key = [item.matter_id, item.owner.kind, item.owner.id, item.artifact.id].join("|");
+      const group = groups.get(key) ?? []; group.push(item); groups.set(key, group);
+    }
+    for (const group of groups.values()) if (new Set(group.map((item) => item.condition)).size > 1) gaps.push({ code: "observation_conflicting", matter_id: group[0].matter_id, observation_ids: group.map((item) => item.id) });
+    for (const item of observations) if (["unavailable", "partial", "stale", "unknown", "conflicting"].includes(item.condition) || item.limitations.length) gaps.push({ code: "observation_limited", matter_id: item.matter_id, observation_id: item.id, condition: item.condition, limitations: item.limitations });
+    return { gaps };
+  }
+  #returns(matters, observations, asOf = now()) {
+    const at = new Date(typeof asOf === "string" ? asOf : now()).getTime();
+    return matters.map((matter) => {
+      const condition = matter.return_condition ?? { kind: "none" };
+      if (matter.lifecycle !== "deferred") return { matter_id: matter.id, status: "not_deferred", eligible: true, condition };
+      if (["time", "next_review"].includes(condition.kind)) return { matter_id: matter.id, status: new Date(condition.value).getTime() <= at ? "satisfied" : "pending", eligible: new Date(condition.value).getTime() <= at, condition };
+      if (condition.kind === "owner_event") {
+        const related = observations.filter((item) => item.matter_id === matter.id);
+        if (related.some((item) => item.condition === "satisfied")) return { matter_id: matter.id, status: "satisfied", eligible: true, condition };
+        if (!related.length || related.some((item) => ["unavailable", "unknown", "partial", "stale"].includes(item.condition))) return { matter_id: matter.id, status: "uncheckable", eligible: true, condition, limitations: related.flatMap((item) => item.limitations) };
+      }
+      return { matter_id: matter.id, status: "pending", eligible: false, condition };
+    });
+  }
+  #orientation(input, matters, observations, returns) {
+    const byId = new Map(observations.map((item) => [item.id, item]));
+    const matterIds = new Set(matters.map((matter) => matter.id));
+    const matterById = new Map(matters.map((matter) => [matter.id, matter]));
+    const recommended = requiredArray(input, "attention").map((item) => {
+      const recommendation = requiredObject(item, "attention item");
+      const matterId = requiredText(recommendation.matter_id, "attention.matter_id");
+      if (!matterIds.has(matterId)) throw new StewardFailure("attention_matter_unavailable", "Attention must cite a Matter in the represented manifest.");
+      const band = requiredText(recommendation.band, "attention.band");
+      if (!new Set(["urgent", "next-conversation", "briefing", "quiet"]).has(band)) throw new StewardFailure("attention_band_invalid", "Attention bands are limited to the accepted advisory vocabulary.");
+      const evidenceIds = requiredArray(recommendation.evidence_ids, "attention.evidence_ids").map((id) => requiredText(id, "attention.evidence_id"));
+      if (!evidenceIds.length || evidenceIds.some((id) => !byId.has(id))) throw new StewardFailure("attention_evidence_required", "Every attention recommendation requires represented attributable evidence.");
+      const axes = requiredObject(recommendation.axes, "attention.axes");
+      for (const axis of ["human_needed", "independently_progressing", "observation_limited"]) if (typeof axes[axis] !== "boolean") throw new StewardFailure("attention_axes_invalid", "Each independent attention axis must be explicit.");
+      const smallest = requiredObject(recommendation.smallest_action, "attention.smallest_action");
+      const evidenceId = requiredText(smallest.evidence_id, "attention.smallest_action.evidence_id");
+      if (!evidenceIds.includes(evidenceId)) throw new StewardFailure("attention_action_uncited", "The smallest action must cite its recommendation evidence.");
+      const returnState = returns.find((item) => item.matter_id === matterId);
+      return { matter_id: matterId, band, evidence_ids: evidenceIds, axes: clone(axes), explanation: { matter_id: matterId, provenance: clone(matterById.get(matterId).intake?.provenance ?? null), return: returnState, observations: evidenceIds.map((id) => ({ id, owner: clone(byId.get(id).owner), artifact: clone(byId.get(id).artifact), condition: byId.get(id).condition, limitations: clone(byId.get(id).limitations) })) }, smallest_action: { text: requiredText(smallest.text, "attention.smallest_action.text"), evidence_id: evidenceId }, return: returnState };
+    });
+    const recommendedIds = new Set(recommended.map((item) => item.matter_id));
+    return { recommendations: recommended, indeterminate: matters.filter((matter) => !recommendedIds.has(matter.id)).map((matter) => ({ matter_id: matter.id, return: returns.find((item) => item.matter_id === matter.id), limitation: "No represented evidence distinguishes an advisory attention characterization." })) };
+  }
+  #namespace(state, scope, input) {
+    if (input == null) return null;
+    const context = requiredObject(input, "namespace_context");
+    const namespaceId = requiredText(context.namespace_id, "namespace_context.namespace_id");
+    if (namespaceId === "namespace:root") throw new StewardFailure("root_namespace_forbidden", "namespace:root cannot control Portfolio context.");
+    if (!namespaceId.startsWith("namespace:")) throw new StewardFailure("namespace_id_invalid", "Namespace context requires a semantic Namespace ID.");
+    const candidates = scope.kind === "global" ? Object.values(state.directory.spaces) : [this.#space(state, scope.space_id)];
+    const associations = candidates.map((space) => {
+      const association = space.associations[namespaceId] ?? space.retired_associations[namespaceId] ?? null;
+      return association ? { ...clone(association), status: space.associations[namespaceId] ? "active" : "retired", space_id: space.id } : null;
+    }).filter(Boolean).sort((left, right) => left.space_id.localeCompare(right.space_id));
+    const activeDescendantChoices = new Set(associations.filter((item) => item.status === "active").map((item) => item.include_descendants));
+    const conflicting = activeDescendantChoices.size > 1;
+    return { namespace_id: namespaceId, mode: requiredText(context.mode, "namespace_context.mode"), association: associations[0] ?? null, associations, conflicting, limitations: ["Namespace is organizational context only; it does not control identity, visibility, authority, or Portfolio coverage.", ...(conflicting ? ["Contradictory Namespace associations are shown as context and do not select an authority, coverage, or identity result."] : [])] };
+  }
+  #search(input) {
+    if (input == null) return null;
+    const search = requiredObject(input, "search");
+    const results = requiredArray(search.results, "search.results").map((item) => {
+      const result = requiredObject(item, "search.result");
+      return { id: requiredText(result.id, "search.result.id"), provenance: clone(requiredObject(result.provenance, "search.result.provenance")), represented_revision: requiredText(result.represented_revision, "search.result.represented_revision"), condition: requiredText(result.condition, "search.result.condition") };
+    });
+    const continuation = requiredObject(search.continuation, "search.continuation");
+    return { results, continuation: { cursor: requiredText(continuation.cursor, "search.continuation.cursor"), limitations: clone(requiredArray(continuation.limitations ?? [], "search.continuation.limitations")) }, completeness: "not_established" };
+  }
+}
+
 export class CustodyService {
   constructor(store) { this.store = store; }
   invoke(operation, request) {
@@ -260,7 +426,7 @@ export class CustodyService {
       "matters.answers.submit": () => this.store.submitAnswer(request),
       "matters.questions.close": () => this.store.closeQuestion(request),
     };
-    if (operation === "capabilities") return { protocol: resultSchema, version: 1, groups: ["identity", "spaces", "intakes", "matters"] };
+    if (operation === "capabilities") return { protocol: resultSchema, version: 1, groups: ["identity", "spaces", "intakes", "matters", "portfolio", "orientation", "acknowledgement"] };
     if (!actions[operation]) throw new StewardFailure("operation_unavailable", "This capability is unavailable in the F-007 Steward facade.");
     return actions[operation]();
   }
@@ -269,7 +435,15 @@ export class CustodyService {
 export function invokeFacade(databasePath, request) {
   const operation = request?.operation;
   try {
-    const result = new CustodyService(new StewardStore(databasePath)).invoke(requiredText(operation, "operation"), request);
+    const store = new StewardStore(databasePath);
+    const portfolio = new PortfolioService(store);
+    const actions = {
+      "portfolio.compose": () => portfolio.compose(request),
+      "portfolio.acknowledge": () => portfolio.acknowledge(request),
+      "portfolio.baselines.read": () => portfolio.baselines(),
+    };
+    const name = requiredText(operation, "operation");
+    const result = actions[name] ? actions[name]() : new CustodyService(store).invoke(name, request);
     return { exitCode: 0, envelope: success(operation, result) };
   } catch (error) {
     const code = error instanceof StewardFailure ? error.code : "internal_failure";
