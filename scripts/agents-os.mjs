@@ -42,6 +42,12 @@ function resolveTier(value, target) {
   return models.adapters[target][tier] || tier;
 }
 
+function resolveOpenCodeModel(value) {
+  const resolved = resolveTier(value, "opencode");
+  const match = resolved.match(/^(.*):(none|low|medium|high|xhigh)$/);
+  return match ? { model: match[1], variant: match[2] } : { model: resolved };
+}
+
 function runtimeContext(target) {
   return `## Adapter Runtime Context\n\nThis agent was generated for ${target} from the ${config.scope} Agent OS source root. Before following legacy harness-specific path references, read this adapter's generated memory bundle at ./memory/MEMORY_BUNDLE.md when available. Treat references to old harness config directories as provenance from the original system unless this generated adapter explicitly installs files there.`;
 }
@@ -82,10 +88,12 @@ function renderAgent(text, target) {
   const tools = declaredTools(data, blocksWriting);
   let lines;
   if (target === "opencode") {
+    const resolved = resolveOpenCodeModel(data.model);
     lines = [
       ["description", quote(data.description || "")],
       ["mode", "subagent"],
-      ["model", quote(resolveTier(data.model, target))],
+      ["model", quote(resolved.model)],
+      ...(resolved.variant ? [["variant", quote(resolved.variant)]] : []),
       ["temperature", "0.3"],
       ["tools", ""],
       ...renderOpenCodeTools(tools, blocksWriting),
