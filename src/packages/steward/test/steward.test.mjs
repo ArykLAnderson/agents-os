@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,14 +8,26 @@ import test from "node:test";
 const root = path.resolve(import.meta.dirname, "..");
 const bin = path.join(root, "bin", "steward.mjs");
 
-async function invoke(store, operation, request = {}) {
+async function invoke(store, operation, request = {}, environment = {}) {
   return await new Promise((resolve, reject) => {
-    const child = execFile(process.execPath, [bin], { env: { ...process.env, STEWARD_STORE: store } }, (error, stdout, stderr) => {
+    const child = execFile(process.execPath, [bin], { env: { ...process.env, STEWARD_STORE: store, ...environment } }, (error, stdout, stderr) => {
       if (error && error.code !== 0 && !stdout) return reject(error);
       resolve({ code: error?.code ?? 0, body: JSON.parse(stdout), stderr });
     });
     child.stdin.end(`${JSON.stringify({ operation, ...request })}\n`);
   });
+}
+
+async function waitForFile(file) {
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try { await readFile(file); return; }
+    catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      if (Date.now() >= deadline) throw new Error(`Timed out waiting for ${file}`);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  }
 }
 
 async function fixture(t) {
@@ -67,6 +79,70 @@ test("concurrent Space creation preserves the directory or returns a typed revis
   const manifest = await invoke(store, "spaces.manifest", { space_id: successful[0].body.result.space.id });
   assert.equal(manifest.code, 0);
   assert.equal(manifest.body.result.space.id, successful[0].body.result.space.id);
+});
+
+test("an earlier transaction claim is visible before a later process can publish stale state", async (t) => {
+  const store = await fixture(t);
+  const markerDirectory = path.join(path.dirname(store), "barrier");
+  const control = path.join(path.dirname(store), "transaction-barrier.mjs");
+  await writeFile(control, `
+import fs from "node:fs";
+import path from "node:path";
+import { syncBuiltinESMExports } from "node:module";
+const role = process.env.LOCK_TEST_ROLE;
+const store = path.resolve(process.env.STEWARD_STORE);
+const markers = process.env.LOCK_TEST_MARKERS;
+const originalWrite = fs.writeFileSync.bind(fs);
+const originalRename = fs.renameSync.bind(fs);
+const originalExists = fs.existsSync.bind(fs);
+const waiter = new Int32Array(new SharedArrayBuffer(4));
+const mark = (name) => originalWrite(path.join(markers, name), "ready\\n", { flag: "w" });
+const wait = (name) => {
+  const target = path.join(markers, name);
+  const deadline = Date.now() + 5_000;
+  while (!originalExists(target)) {
+    if (Date.now() >= deadline) throw new Error(\`Timed out waiting for \${name}\`);
+    Atomics.wait(waiter, 0, 0, 5);
+  }
+};
+fs.mkdirSync(markers, { recursive: true });
+fs.writeFileSync = function (target, ...args) {
+  const destination = String(target);
+  const result = originalWrite(target, ...args);
+  if (role === "a" && destination.endsWith(".pending")) { mark("a-ready"); wait("b-before-publish"); }
+  if (destination.endsWith(".claim")) {
+    if (role === "a") { mark("a-ready"); wait("b-claim-published"); }
+    if (role === "b") mark("b-claim-published");
+  }
+  return result;
+};
+fs.renameSync = function (source, target, ...args) {
+  const destination = path.resolve(String(target));
+  if (role === "b" && destination === store && String(source).endsWith(".tmp")) {
+    mark("b-before-publish");
+    wait("a-published");
+  }
+  const result = originalRename(source, target, ...args);
+  if (role === "a" && destination === store && String(source).endsWith(".tmp")) mark("a-published");
+  return result;
+};
+syncBuiltinESMExports();
+`);
+  const identity = await invoke(store, "identity.resolve");
+  const request = (id) => ({ expected_directory_revision: identity.body.result.directory.revision, space: { id: `space:${id}`, name: id.toUpperCase() } });
+  const environment = { NODE_OPTIONS: `--import=${control}`, LOCK_TEST_MARKERS: markerDirectory };
+  const first = invoke(store, "spaces.create", request("a"), { ...environment, LOCK_TEST_ROLE: "a" });
+  await waitForFile(path.join(markerDirectory, "a-ready"));
+  const second = invoke(store, "spaces.create", request("b"), { ...environment, LOCK_TEST_ROLE: "b" });
+  const attempts = await Promise.all([first, second]);
+
+  const successful = attempts.filter((attempt) => attempt.code === 0);
+  const conflicts = attempts.filter((attempt) => attempt.code === 2 && attempt.body.failure.code === "directory_revision_conflict");
+  assert.equal(successful.length, 1);
+  assert.equal(conflicts.length, 1);
+  const persisted = JSON.parse(await readFile(store, "utf8"));
+  assert.equal(persisted.directory.revision, 1);
+  assert.deepEqual(Object.keys(persisted.directory.spaces), [successful[0].body.result.space.id]);
 });
 
 test("the facade rejects stale writes, bad deferrals, root associations, and retired placement without partial mutation", async (t) => {
@@ -147,7 +223,7 @@ test("direct Intake capture CASes the Space revision before changing its manifes
   assert.deepEqual(manifest.body.result.matters.map((matter) => matter.id), [captured.body.result.matter.id]);
 });
 
-test("unplaced Intakes can be placed later while default Question closure refuses without its owner endpoint", async (t) => {
+test("Question Answer submission and closure leave Matter unchanged without its owner endpoint", async (t) => {
   const store = await fixture(t);
   const identity = await invoke(store, "identity.resolve");
   const space = await invoke(store, "spaces.create", { expected_directory_revision: identity.body.result.directory.revision, space: { id: "space:docs", name: "Docs" } });
@@ -160,12 +236,17 @@ test("unplaced Intakes can be placed later while default Question closure refuse
 
   const linked = await invoke(store, "matters.questions.link", { matter_id: matter.id, expected_revision: matter.revision, question: { owner: { kind: "blueprint", id: "blueprint:one" }, locator: "question:one", revision: "question-revision:one" } });
   assert.equal(linked.code, 0);
-  const answer = await invoke(store, "matters.answers.submit", { matter_id: matter.id, expected_revision: linked.body.result.matter.revision, answer: { id: "answer:one", body: "Use the space successor" } });
-  assert.equal(answer.code, 0);
-  const closedBySteward = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: answer.body.result.matter.revision, owner: { kind: "steward", id: "steward:global" }, result_locator: "result:one" });
+  const before = linked.body.result.matter;
+  const answer = await invoke(store, "matters.answers.submit", { matter_id: matter.id, expected_revision: before.revision, answer: { id: "answer:one", body: "Use the space successor" } });
+  assert.equal(answer.code, 2);
+  assert.equal(answer.body.failure.code, "question_owner_unavailable");
+  const after = await invoke(store, "matters.read", { matter_id: matter.id });
+  assert.deepEqual(after.body.result.matter, before);
+  assert.equal(JSON.stringify(after.body).includes("Use the space successor"), false);
+  const closedBySteward = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: before.revision, owner: { kind: "steward", id: "steward:global" }, result_locator: "result:one" });
   assert.equal(closedBySteward.code, 2);
   assert.equal(closedBySteward.body.failure.code, "question_owner_unavailable");
-  const spoofedOwner = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: answer.body.result.matter.revision, owner: { kind: "blueprint", id: "blueprint:one" }, disposition: "resolved", result_locator: "result:one" });
+  const spoofedOwner = await invoke(store, "matters.questions.close", { matter_id: matter.id, expected_revision: before.revision, owner: { kind: "blueprint", id: "blueprint:one" }, disposition: "resolved", result_locator: "result:one" });
   assert.equal(spoofedOwner.code, 2);
   assert.equal(spoofedOwner.body.failure.code, "question_owner_unavailable");
 });
