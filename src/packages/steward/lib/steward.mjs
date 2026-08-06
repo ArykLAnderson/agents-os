@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const schema = "steward-store@1";
@@ -97,45 +97,43 @@ export class StewardStore {
   }
   #acquireTransactionLock() {
     const lockPath = `${this.databasePath}.lock`;
-    try { mkdirSync(lockPath, { recursive: true, mode: 0o700 }); }
-    catch { throw new StewardFailure("store_unavailable", "The Steward transaction lock cannot be prepared safely."); }
     const token = randomUUID();
-    const createdNs = process.hrtime.bigint().toString().padStart(24, "0");
-    const claimName = `${createdNs}-${process.pid}-${token}.claim`;
-    const claimPath = path.join(lockPath, claimName);
-    try {
-      writeFileSync(claimPath, `${JSON.stringify({ pid: process.pid, token, created_ns: createdNs })}\n`, { flag: "wx", mode: 0o600 });
-    } catch {
-      throw new StewardFailure("store_unavailable", "The Steward transaction claim cannot be published safely.");
-    }
+    const owner = JSON.stringify({ pid: process.pid, token });
     const deadline = Date.now() + 60_000;
     while (true) {
-      let claims;
-      try { claims = readdirSync(lockPath).filter((name) => name.endsWith(".claim")).sort(); }
-      catch { try { unlinkSync(claimPath); } catch { /* best effort */ } throw new StewardFailure("store_unavailable", "The Steward transaction lock cannot be inspected safely."); }
-      for (const name of claims) {
-        const candidatePath = path.join(lockPath, name);
-        const match = /^\d{24}-(\d+)-[0-9a-f-]+\.claim$/i.exec(name);
-        const candidatePid = match ? Number(match[1]) : null;
-        if (!Number.isInteger(candidatePid) || candidatePid <= 0) continue;
-        let alive = true;
-        try { process.kill(candidatePid, 0); }
-        catch (error) { alive = error?.code === "EPERM"; }
-        if (!alive) try { unlinkSync(candidatePath); } catch { /* another waiter may have removed this exact unique claim */ }
-      }
       try {
-        const current = readdirSync(lockPath).filter((name) => name.endsWith(".claim")).sort();
-        if (current[0] === claimName) {
-          return () => { try { unlinkSync(claimPath); } catch { /* this process's unique claim only */ } };
-        }
-      } catch { /* retry until the bounded deadline */ }
-      if (Date.now() >= deadline) {
-        try { unlinkSync(claimPath); } catch { /* best effort */ }
-        throw new StewardFailure("store_transaction_conflict", "The Steward store is busy; retry the operation.");
+        writeFileSync(lockPath, `${owner}\n`, { flag: "wx", mode: 0o600 });
+        return () => {
+          try {
+            if (readFileSync(lockPath, "utf8") === `${owner}\n`) unlinkSync(lockPath);
+          } catch { /* a recovered stale lock must not be removed by its former owner */ }
+        };
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw new StewardFailure("store_unavailable", "The Steward transaction lock cannot be prepared safely.");
       }
+      let holder;
+      try { holder = JSON.parse(readFileSync(lockPath, "utf8")); }
+      catch (error) {
+        if (error?.code === "ENOENT") continue;
+        holder = null;
+      }
+      const holderPid = holder?.pid;
+      if (Number.isInteger(holderPid) && holderPid > 0) {
+        let alive = true;
+        try { process.kill(holderPid, 0); }
+        catch (error) { alive = error?.code === "EPERM"; }
+        if (!alive) {
+          try {
+            if (readFileSync(lockPath, "utf8") === `${JSON.stringify(holder)}\n`) unlinkSync(lockPath);
+          } catch { /* another waiter may have recovered this exact stale lock */ }
+          continue;
+        }
+      }
+      if (Date.now() >= deadline) throw new StewardFailure("store_transaction_conflict", "The Steward store is busy; retry the operation.");
       Atomics.wait(transactionWaiter, 0, 0, 10);
     }
   }
+
   resolve() {
     return this.transact((state) => {
       if (!state.singleton) state.singleton = { id: "steward:global", revision: 1, created_at: now() };
