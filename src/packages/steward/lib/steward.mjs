@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const schema = "steward-store@1";
@@ -7,6 +7,7 @@ const resultSchema = "steward-result@1";
 const clone = (value) => structuredClone(value);
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const now = () => new Date().toISOString();
+const transactionWaiter = new Int32Array(new SharedArrayBuffer(4));
 const success = (operation, result) => ({ schema: resultSchema, status: "success", operation, result: clone(result) });
 const failure = (operation, code, message) => ({ schema: resultSchema, status: "refused", operation, failure: { code, message } });
 
@@ -44,19 +45,41 @@ export class StewardStore {
     } catch { throw new StewardFailure("store_corrupt", "The Steward store cannot be read safely."); }
   }
   transact(work) {
-    const before = this.read();
-    const draft = clone(before);
-    const result = work(draft);
-    draft.revision += 1;
     mkdirSync(path.dirname(this.databasePath), { recursive: true });
-    const temporary = `${this.databasePath}.${process.pid}.${randomUUID()}.tmp`;
+    const release = this.#acquireTransactionLock();
     try {
-      writeFileSync(temporary, `${JSON.stringify(draft)}\n`, { mode: 0o600 });
-      renameSync(temporary, this.databasePath);
+      const before = this.read();
+      const draft = clone(before);
+      const result = work(draft);
+      draft.revision += 1;
+      const temporary = `${this.databasePath}.${process.pid}.${randomUUID()}.tmp`;
+      try {
+        writeFileSync(temporary, `${JSON.stringify(draft)}\n`, { mode: 0o600 });
+        renameSync(temporary, this.databasePath);
+      } finally {
+        if (existsSync(temporary)) try { writeFileSync(temporary, ""); } catch { /* owned temp is best effort */ }
+      }
+      return clone(result);
     } finally {
-      if (existsSync(temporary)) try { writeFileSync(temporary, ""); } catch { /* owned temp is best effort */ }
+      release();
     }
-    return clone(result);
+  }
+  #acquireTransactionLock() {
+    const lockPath = `${this.databasePath}.lock`;
+    const deadline = Date.now() + 60_000;
+    while (true) {
+      try {
+        const descriptor = openSync(lockPath, "wx", 0o600);
+        return () => {
+          closeSync(descriptor);
+          try { unlinkSync(lockPath); } catch { /* lock cleanup is best effort */ }
+        };
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw new StewardFailure("store_unavailable", "The Steward store cannot be written safely.");
+        if (Date.now() >= deadline) throw new StewardFailure("store_transaction_conflict", "The Steward store is busy; retry the operation.");
+        Atomics.wait(transactionWaiter, 0, 0, 10);
+      }
+    }
   }
   resolve() {
     return this.transact((state) => {
