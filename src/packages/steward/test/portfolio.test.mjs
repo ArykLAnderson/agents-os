@@ -152,6 +152,14 @@ test("Portfolio preserves evidence-cited bands, independent axes, ties, indeterm
   assert.equal(uncheckable.code, 0);
   assert.equal(uncheckable.body.result.view.returns.find((item) => item.matter_id === matters[3].id).status, "uncheckable");
 
+  const misattributedEvidence = await invoke(store, "portfolio.compose", {
+    scope: { kind: "global" },
+    observations,
+    attention: [{ ...attention[0], evidence_ids: ["attention:1"], smallest_action: { text: "Review intent 0", evidence_id: "attention:1" } }],
+  });
+  assert.equal(misattributedEvidence.code, 2);
+  assert.equal(misattributedEvidence.body.failure.code, "attention_evidence_matter_mismatch");
+
   const root = await invoke(store, "portfolio.compose", { scope: { kind: "space", space_id: "space:alpha" }, observations, namespace_context: { namespace_id: "namespace:root", mode: "filter" } });
   assert.equal(root.code, 2);
   assert.equal(root.body.failure.code, "root_namespace_forbidden");
