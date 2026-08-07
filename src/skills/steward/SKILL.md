@@ -27,7 +27,7 @@ Resolve the installed sibling package and treat its exact results as custody tru
 
 ### Preserve owner and effect boundaries
 
-Steward records and orients custody; semantic owners define their artifacts and delivery owners conduct their work. A custody result leaves owner state and external authority unchanged. Effects such as publication, provider mutation, deployment, release, or permission changes require their own scoped authority. When a typed boundary is unavailable, state the practical limitation and return the work to its owner.
+Steward records and orients custody; semantic owners define their artifacts and delivery owners conduct their work. A custody result leaves owner state and external authority unchanged. Effects such as publication, provider mutation, deployment, release, or permission changes require their own scoped authority. When an owner boundary cannot be reached, state the practical limitation and return the work to its owner.
 
 ## Branches
 
