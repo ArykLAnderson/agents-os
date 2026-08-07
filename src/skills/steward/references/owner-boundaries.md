@@ -1,6 +1,8 @@
 # Steward owner boundaries
 
-Load only the section needed for semantic orientation, explicit interaction-binding requests, owner-bound Questions/Answers, Directives, or implementation admission. All calls use the installed executable and result envelope from [Package Protocol](protocol.md#resolve-and-invoke).
+Load only the section needed for semantic orientation, explicit interaction-binding requests, owner-bound Questions/Answers, Directives, or Steward implementation admission. Do not load implementation admission merely because the surrounding conversation is implementing or fixing Steward. All calls use the installed executable and result envelope from [Package Protocol](protocol.md#resolve-and-invoke).
+
+Everything below is private owner protocol. Preserve exact artifact identities, revisions, request shapes, operation names, typed results, digests, correlations, and evidence internally. In ordinary conversation, report the owner-supported meaning or the practical blocker and next step; expose protocol detail only under the main skill's narrow disclosure exceptions.
 
 ## Semantic orientation and bindings
 
@@ -40,7 +42,7 @@ It then carries owner-defined fields rather than a generic workflow status:
 
 Preserve those meanings and limitations verbatim. Do not turn one owner's `status`, `readiness`, or `condition` into another owner's lifecycle, progress percentage, completion, acceptance, or authorization.
 
-The generated installed package currently has no real artifact owner endpoints. Expect typed failures such as `frame_orientation_unavailable` or `blueprint_orientation_unavailable`; report them and return the Architect to the supplied durable artifact and dedicated Frame/Blueprint capability. Do not fabricate the successful shape.
+The generated installed package currently has no real artifact owner endpoints. Expect typed failures such as `frame_orientation_unavailable` or `blueprint_orientation_unavailable`; preserve the exact result internally, tell the Architect that the named owner could not be reached, and return them to the supplied durable artifact and dedicated Frame/Blueprint capability. Do not make the raw code the ordinary response, and do not fabricate the successful shape.
 
 ### Relay one explicit binding request
 
@@ -65,7 +67,7 @@ Cross-Space focus is `{ "kind": "cross-space" }`. Existing bindings may be addre
 {"operation":"owner.bindings.focus","binding_id":"binding:exact-id"}
 ```
 
-Create, resolve, and focus are distinct; do not infer one from another. They change binding-owner state only and cannot start, continue, accept, or complete Frame/Blueprint work. The installed package returns `interaction_binding_unavailable`; preserve it. There is no direct session switching or backend navigation fallback.
+Create, resolve, and focus are distinct; do not infer one from another. They change binding-owner state only and cannot start, continue, accept, or complete Frame/Blueprint work. The installed package returns `interaction_binding_unavailable`; preserve it internally and explain simply that the dedicated interaction could not be opened. There is no direct session switching or backend navigation fallback.
 
 ## Questions, Answers, and Decisions
 
@@ -191,7 +193,7 @@ Do not copy the example's values. Build values only from the exact accepted hand
 
 Use the full exact envelope above. Preparation asks the Atlas owner for a complete current handoff and the Directive owner for exact authorization. It returns the normalized `envelope`, `envelope_digest`, `atlas_handoff`, and `authorization` only if both owners admit their portions.
 
-The default generated package contains no owner conformers. It therefore returns a typed owner unavailability (currently `atlas_handoff_unavailable` before Directive evaluation). The capabilities manifest also declares `standing_directive_unavailable` and `software_implementation_unavailable`. This is a truthful terminal boundary, not permission to call source internals or Software Implementation directly.
+The default generated package contains no owner conformers. It therefore returns a typed owner unavailability (currently `atlas_handoff_unavailable` before Directive evaluation). The capabilities manifest also declares `standing_directive_unavailable` and `software_implementation_unavailable`. Preserve those exact results internally. Tell the user which owner boundary could not be reached and that no admission occurred; show raw codes only for requested audit or necessary recovery. This is a truthful terminal boundary, not permission to call source internals or Software Implementation directly.
 
 ### Submit only after successful prepare
 
