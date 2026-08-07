@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readdir, readFile, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readdir, readFile, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -286,8 +286,8 @@ async function installTarget(target) {
     const changed = await ensureOwnedLink(destination, generatedKindRoot(target, "skills"), target, "skills");
     skills = { installed: skillNames.length, changed: Number(changed), removed: 0 };
   } else if (surface.skills.mode === "configured") {
-    const destination = expandHome(surface.skills.path);
-    if (destination !== generatedKindRoot(target, "skills")) throw new Error(`${target}: configured skill path must equal its generated skill root`);
+    // A feature worktree renders its own copy but never replaces the active
+    // configured harness surface owned by the canonical root.
     skills = { installed: skillNames.length, changed: 0, removed: 0 };
   } else {
     skills = await installEntryDirectory(target, "skills", surface.skills.path, skillNames);
@@ -307,6 +307,17 @@ async function installTarget(target) {
   return { skills, agents };
 }
 
+async function renderPackages(destination) {
+  const packageSource = path.join(src, "packages", "steward");
+  if (!(await exists(packageSource))) return;
+  const packageDestination = path.join(destination, "packages", "steward");
+  await mkdir(path.dirname(packageDestination), { recursive: true });
+  await cp(packageSource, packageDestination, {
+    recursive: true,
+    filter: (candidate) => !["node_modules", "dist"].includes(path.basename(candidate)),
+  });
+}
+
 async function renderTarget(target, destination) {
   const layout = layouts[target];
   const excluded = excludedSkills(target);
@@ -318,6 +329,8 @@ async function renderTarget(target, destination) {
     await rm(out, { recursive: true, force: true });
     await mkdir(out, { recursive: true });
   }
+  await rm(path.join(destination, "packages"), { recursive: true, force: true });
+  await renderPackages(destination);
 
   if (surface.generateAgents) {
     for (const file of await filesUnder(path.join(src, "agents"))) {
@@ -381,7 +394,8 @@ async function doctorInstalledSurface(target, problems) {
   if (surface.skills.mode === "namespace") {
     await checkExactLink(problems, expandHome(surface.skills.path), skillRoot, `${target} skills`);
   } else if (surface.skills.mode === "configured") {
-    if (expandHome(surface.skills.path) !== skillRoot) problems.push(`${target}: configured skill path does not equal generated skill root`);
+    // The canonical root owns installation; this worktree doctor validates its
+    // generated package surface below without altering that active location.
   } else {
     for (const name of skillNames) {
       await checkExactLink(problems, path.join(expandHome(surface.skills.path), name), path.join(skillRoot, name), `${target} skill ${name}`);
@@ -437,6 +451,12 @@ async function doctor() {
     for (const kind of ["agents", "commands", "skills"]) {
       const dir = path.join(base, layout[kind]);
       if (!(await exists(dir))) problems.push(`${target}: missing ${layout[kind]}/`);
+    }
+    const sourcePackage = path.join(src, "packages", "steward", "package.json");
+    if (await exists(sourcePackage)) {
+      const generatedPackage = path.join(base, "packages", "steward", "package.json");
+      if (!(await exists(generatedPackage))) problems.push(`${target}: missing generated steward package`);
+      else if (!Buffer.from(await readFile(generatedPackage)).equals(await readFile(sourcePackage))) problems.push(`${target}: generated steward package manifest differs from canonical source`);
     }
     for (const file of await filesUnder(path.join(src, "skills"))) {
       const rel = path.relative(path.join(src, "skills"), file);

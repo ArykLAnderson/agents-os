@@ -1,0 +1,24 @@
+{
+  "name": "@agents-os/steward",
+  "version": "1.0.0",
+  "description": "Durable Global Steward custody facade",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "steward": "bin/steward.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "manifest.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "lint": "node --check bin/steward.mjs && node --check lib/*.mjs",
+    "build": "node build/package-assembly.mjs",
+    "test:installed": "node --test test/installed.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
