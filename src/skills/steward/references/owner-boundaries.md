@@ -1,6 +1,6 @@
 # Steward owner boundaries
 
-Load only the section needed for semantic orientation, explicit interaction-binding requests, owner-bound Questions/Answers, Directives, or implementation admission. All calls use the installed executable and result envelope from [Package Protocol](protocol.md#resolve-and-invoke).
+Load the section matching the requested owner outcome: semantic orientation, an interaction binding, an owner-bound Question or Answer, Directive evaluation, or implementation admission. All calls use the installed executable and result envelope from [Package Protocol](protocol.md#resolve-and-invoke).
 
 ## Semantic orientation and bindings
 
@@ -15,7 +15,7 @@ Requests are:
 }
 ```
 
-Replace `frame` with `case`, `blueprint`, `prototype`, `rfc`, or `atlas`. Supply both exact stable identity and exact owner revision; never use `latest` or an unrevisioned chat summary.
+Replace `frame` with `case`, `blueprint`, `prototype`, `rfc`, or `atlas`. Supply the exact stable identity and exact owner revision.
 
 A successful owner result preserves common fields:
 
@@ -38,9 +38,9 @@ It then carries owner-defined fields rather than a generic workflow status:
 - RFC: `status`, `readiness`, exact `source` artifact.
 - Atlas: `status`, `handoff`, `dependencies[]`, `proof[]`.
 
-Preserve those meanings and limitations verbatim. Do not turn one owner's `status`, `readiness`, or `condition` into another owner's lifecycle, progress percentage, completion, acceptance, or authorization.
+Preserve those owner-defined meanings and limitations verbatim.
 
-The generated installed package currently has no real artifact owner endpoints. Expect typed failures such as `frame_orientation_unavailable` or `blueprint_orientation_unavailable`; report them and return the Architect to the supplied durable artifact and dedicated Frame/Blueprint capability. Do not fabricate the successful shape.
+The generated installed package currently has no real artifact-owner endpoints. User-facing response: the missing owner view and the supplied artifact and owner to resume with. Working state: the refusal envelope and identifier.
 
 ### Relay one explicit binding request
 
@@ -65,7 +65,7 @@ Cross-Space focus is `{ "kind": "cross-space" }`. Existing bindings may be addre
 {"operation":"owner.bindings.focus","binding_id":"binding:exact-id"}
 ```
 
-Create, resolve, and focus are distinct; do not infer one from another. They change binding-owner state only and cannot start, continue, accept, or complete Frame/Blueprint work. The installed package returns `interaction_binding_unavailable`; preserve it. There is no direct session switching or backend navigation fallback.
+Create, resolve, and focus are distinct owner actions. They change binding-owner state while Frame or Blueprint retains its semantic work. When the dedicated interaction cannot open, user-facing response: the unavailable focus and the exact artifact owner to resume with. Working state: the refusal envelope and identifier.
 
 ## Questions, Answers, and Decisions
 
@@ -104,19 +104,19 @@ Submit one immutable Answer through the linked Question owner:
 }
 ```
 
-Steward relays the linked Question's exact owner, locator, and revision. It retains only the Answer ID and attributable owner result, not Answer body content. A repeated exact Answer may replay; changed content or identity must not overwrite it.
+Steward relays the linked Question's exact owner, locator, and revision. It retains the Answer ID and attributable owner result while the owner retains immutable Answer content. An exact replay returns the original result; changed content or identity remains a distinct request.
 
-Question closure is owner-only. `owner.questions.close` is unavailable by design. `matters.questions.close` may merely reconcile an exact terminal `resolved`, `superseded`, or `withdrawn` result from the linked requesting owner; absent that endpoint it returns `question_owner_unavailable`. Chat text, Answer submission, deferral, acknowledgement, recommendation, binding focus, or unrelated completion cannot close the Question. Steward has no Decision mutation operation; preserve the owner's Decision locator and condition.
+The requesting owner closes a Question. `matters.questions.close` reconciles an exact terminal `resolved`, `superseded`, or `withdrawn` owner result. When closure cannot be obtained, user-facing response: the Question remains with its owner and its next owner movement. Working state: its Decision locator, condition, and refusal envelope.
 
 ## Directive evaluation
 
-Do not call Directive authorization for orientation or Guidance. `owner.directives.authorize` accepts only the complete cumulative implementation envelope shown below. Guidance returns `guidance_not_authorization`; stale, expired, revoked, unavailable, conflicting, or mismatched authority blocks a new admission.
+Call `owner.directives.authorize` for a complete cumulative implementation envelope. Guidance returns `guidance_not_authorization`; admission requires current, applicable, matching authority.
 
-The installed package has no real Standing Directive owner and returns `standing_directive_unavailable`. Preserve that result; do not use user role, prior chat, an index hit, or an old grant as a substitute.
+The installed package has no real Standing Directive owner. User-facing response: current authority cannot be determined here and the admission request returns to that owner. Working state: the refusal envelope and identifier.
 
 ## Implementation admission
 
-Implementation admission is a strict two-call boundary: successful prepare, then submission of the exact returned envelope and digest. Never call submission from a hand-built digest, and never call the unavailable `implementation.admission.resume` operation.
+Implementation admission is a strict two-call boundary: successful prepare, then submission of that prepare result's exact envelope and digest.
 
 ### Preconditions before package submission
 
@@ -128,7 +128,7 @@ Require all of these from exact current owners:
 4. one exact current ordinary approval or applicable Standing Grant for that same envelope; and
 5. requested claims compatible with every handoff limitation.
 
-`HandoffRefusal`, stale or unverifiable currentness, incomplete ownership/dependencies, an unsupported limitation, a forbidden claim, omitted or extra required effect, ambiguous target, or unavailable authority blocks before Software Implementation submission.
+Continue to Software Implementation submission only while every precondition remains satisfied; otherwise return the exact owner-supported blocker.
 
 ### Exact cumulative envelope
 
@@ -168,9 +168,9 @@ Require all of these from exact current owners:
 }
 ```
 
-Envelope keys are closed. `target` is exactly `{kind,id}`. `space_scope.kind` is `space` with `space_id`, or `cross-space`. `monitoring_scope` is exactly `{kind,id}`. `lifetime` is exactly `{kind,expires_at}`. `delivery` is exactly `{branch,worktree,pull_request_base}`. `atlas` and `authority` are exact two-field objects. Every `effect_bindings` entry is exactly `{effect,binding}`, with no duplicate effect. Use `[]` only when the Atlas handoff requires no external/live effects.
+Envelope keys are closed. `target` is exactly `{kind,id}`. `space_scope.kind` is `space` with `space_id`, or `cross-space`. `monitoring_scope` is exactly `{kind,id}`. `lifetime` is exactly `{kind,expires_at}`. `delivery` is exactly `{branch,worktree,pull_request_base}`. `atlas` and `authority` are exact two-field objects. Every `effect_bindings` entry is exactly `{effect,binding}`, with no duplicate effect. Use `[]` when the Atlas handoff requires no external/live effects.
 
-Do not copy the example's values. Build values only from the exact accepted handoff, current repository/worktree, current authority, and explicit requested consequences.
+Build every value from the exact accepted handoff, current repository and worktree, current authority, and explicit requested consequences.
 
 ### Prepare
 
@@ -191,7 +191,7 @@ Do not copy the example's values. Build values only from the exact accepted hand
 
 Use the full exact envelope above. Preparation asks the Atlas owner for a complete current handoff and the Directive owner for exact authorization. It returns the normalized `envelope`, `envelope_digest`, `atlas_handoff`, and `authorization` only if both owners admit their portions.
 
-The default generated package contains no owner conformers. It therefore returns a typed owner unavailability (currently `atlas_handoff_unavailable` before Directive evaluation). The capabilities manifest also declares `standing_directive_unavailable` and `software_implementation_unavailable`. This is a truthful terminal boundary, not permission to call source internals or Software Implementation directly.
+The default generated package contains no owner conformers. When preparation cannot obtain a current handoff or authorization, user-facing response: the missing owner result and the owner to resume with. Working state: the refusal envelope and identifier.
 
 ### Submit only after successful prepare
 
@@ -205,13 +205,13 @@ Pass exactly the successful `result.envelope` and `result.envelope_digest`:
 }
 ```
 
-Do not add the prepare-only `atlas`, `requested_outcome`, `atlas_handoff`, or `authorization` fields. The installed package currently returns `software_implementation_unavailable` when this endpoint is absent.
+The submit request contains exactly `operation`, the returned `envelope`, and the returned `envelope_digest`. When submission cannot reach Software Implementation, user-facing response: delivery cannot advance here and it returns to Software Implementation. Working state: the refusal envelope and identifier.
 
-A successful owner response has `admission.disposition` of `admitted`, `refused`, or `unknown`, plus exact `correlation_id`, `currentness`, `observed_at`, and `limitations`. `admitted` must echo the exact authorized routine mechanics. Steward still does not coordinate the work.
+A successful owner response has `admission.disposition` of `admitted`, `refused`, or `unknown`, plus exact `correlation_id`, `currentness`, `observed_at`, and `limitations`. `admitted` echoes the exact authorized routine mechanics; delivery coordination remains with Software Implementation.
 
 ### Unknown recovery and Portfolio projection
 
-If submission returns an exact `unknown` admission, do not submit it again. Recovery is only:
+If submission returns an exact `unknown` admission, recover by its exact owner correlation:
 
 ```json
 {
@@ -220,7 +220,7 @@ If submission returns an exact `unknown` admission, do not submit it again. Reco
 }
 ```
 
-If the owner endpoint remains absent or recovery remains unknown, preserve the limitation. Unknown does not decide whether one-use approval was consumed.
+Retain the unknown result and correlation until recovery reaches an exact owner disposition; one-use approval consumption remains unknown in the meantime.
 
 Project an exact owner admission/blocker onto one Matter without copying delivery state:
 
@@ -242,4 +242,4 @@ Project an exact owner admission/blocker onto one Matter without copying deliver
 }
 ```
 
-Use only the exact owner response. The resulting observation may be included in a later Portfolio composition. It permits no old-delivery resume, retry, worker allocation, or local completion claim.
+Project only the exact owner response. The result is a custody observation for later Portfolio composition; any delivery action returns to its owner and current authority.
