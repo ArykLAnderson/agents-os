@@ -1,6 +1,6 @@
 # Steward package protocol
 
-Load this reference only after the main skill has classified the request as custody, Portfolio, or exact owner-boundary work. It defines private invocation mechanics, not user-facing vocabulary or a response template. Execute these mechanics without progress narration. Keep requests, envelopes, operation names, stable identities, revisions, replay material, manifests, and raw failures solely as internal package-call state—not as implementation-report or status-summary metadata—unless the main skill's narrow disclosure exceptions apply. Owner-specific orientation, binding, Question, Directive, and implementation requests are in [Owner Boundaries](owner-boundaries.md).
+Load this reference for a selected Custody or Portfolio branch. Owner-specific orientation, binding, Question, Directive, and implementation requests are in [Owner Boundaries](owner-boundaries.md).
 
 ## Resolve and invoke
 
@@ -15,9 +15,9 @@ printf '%s\n' '{"operation":"capabilities"}' | node "$STEWARD"
 printf '%s\n' '{"operation":"identity.resolve"}' | node "$STEWARD"
 ```
 
-Resolve the physical directory with `pwd -P` because Codex and OpenCode may expose the skill through a symlink. Do not search `src/`, import `lib/steward.mjs`, use a canonical checkout, or guess a provider path. Run from any cwd. The package uses `STEWARD_STORE` when explicitly set; otherwise it resolves `${XDG_DATA_HOME:-$HOME/.local/share}/agents-os/steward.json`. Do not change that selection during an ordinary invocation.
+Resolve the physical directory with `pwd -P` because Codex and OpenCode may expose the skill through a symlink. Invoke the installed sibling executable from any cwd. The package uses `STEWARD_STORE` when explicitly set; otherwise it resolves `${XDG_DATA_HOME:-$HOME/.local/share}/agents-os/steward.json`. Keep that store selection stable for the invocation.
 
-Input is exactly one JSON object on standard input. Output is exactly one JSON object. Capture and parse this output as internal working state; do not paste it into an ordinary reply:
+Input is exactly one JSON object on standard input. Output is exactly one JSON object:
 
 ```json
 {
@@ -39,9 +39,7 @@ or:
 }
 ```
 
-Exit `0` means `success`; exit `2` means a typed refusal. Parse the envelope before making a claim. Never rewrite a refusal as success, absence, completion, or safe retry. `capabilities.result` must report protocol `steward-result@1`, version `1`, and the installed groups before further use. Retain the exact machine result internally, then translate it into the meaningful human outcome, blocker, conflict, or recovery step. A typed code is not the default wording for the user.
-
-For a new capture replay key or other new caller-owned identifier, use `/usr/bin/uuidgen`; retain the exact resulting value with the request. Do not generate an ID ad hoc in model text.
+Exit `0` means `success`; exit `2` means a typed refusal. Parse the envelope and preserve its status exactly. `capabilities.result` must report protocol `steward-result@1`, version `1`, and the installed groups before further use.
 
 ## Custody requests
 
@@ -63,7 +61,7 @@ The result returns `steward` and `directory`. `directory.spaces` is the exact cu
 }
 ```
 
-Only create when the Architect explicitly selected the durable Space. Space IDs begin with `space:`. A stale directory returns `directory_revision_conflict`; reread and do not silently rename or redirect.
+Create the durable Space selected by the Architect. Space IDs begin with `space:`. On `directory_revision_conflict`, reread the directory and preserve the selected identity.
 
 ### Capture Intake, optionally with one Matter
 
@@ -88,9 +86,9 @@ With an explicit active home Space:
 }
 ```
 
-Without an explicit home Space, omit `space_id`, `expected_space_revision`, `relevance_reason`, `owner_references`, and `return_condition`. The result then has an immutable Intake and `matter: null`. Do not invent owner references; each is exactly `{kind,id}` and carries no copied owner state.
+Without an explicit home Space, omit `space_id`, `expected_space_revision`, `relevance_reason`, `owner_references`, and `return_condition`. The result then has an immutable Intake and `matter: null`. Include only exact supplied owner references, each as `{kind,id}` without copied owner state.
 
-An unchanged replay key returns the original result with `replayed: true`; changed immutable content returns `intake_replay_conflict`. Do not retry changed content under the old key.
+An unchanged replay key returns the original result with `replayed: true`; changed immutable content returns `intake_replay_conflict` and requires a new caller-owned replay identity.
 
 ### Place a previously unplaced Intake
 
@@ -120,7 +118,7 @@ Placement is idempotent for an Intake already linked to a Matter. A retired Spac
 {"operation":"spaces.manifest","space_id":"space:agent-os"}
 ```
 
-A Space manifest includes every still-relevant Matter under that Space, including under a retired Space. Keep the returned revisions internally for any mutation, but reread immediately before mutating. Confirm the resulting human consequence rather than announcing the revision or manifest identity.
+A Space manifest includes every still-relevant Matter under that Space, including under a retired Space. Retain returned revisions and reread immediately before mutation.
 
 ### Transition a Matter
 
@@ -197,7 +195,7 @@ Optional owner-returned fields are `event_id`, `blocker`, and:
 }
 ```
 
-Never author this shape from inference. It must preserve an actual exact owner result. If no callable owner produced it, omit it and retain the resulting coverage gap.
+Build this shape from an exact callable-owner result. Without one, omit the observation and retain the resulting coverage gap.
 
 An evidence-supported attention input is:
 
@@ -218,7 +216,7 @@ An evidence-supported attention input is:
 }
 ```
 
-The package accepts only `urgent`, `next-conversation`, `briefing`, or `quiet`, and only when cited `attention_support` exactly supports that band, every true axis, and the action. Omit attention rather than infer it.
+The package accepts `urgent`, `next-conversation`, `briefing`, or `quiet` when cited `attention_support` exactly supports that band, every true axis, and the action. Unsupported attention remains omitted.
 
 Full request shape:
 
@@ -250,11 +248,11 @@ Full request shape:
 }
 ```
 
-Namespace mode is `filter` or `rank`; it cannot affect identity, visibility, authority, or Portfolio coverage. Search remains `not_established` for completeness.
+Namespace mode is `filter` or `rank` and affects search ordering or filtering while identity, visibility, authority, and Portfolio coverage remain unchanged. Search completeness remains `not_established`.
 
 ### Read and render the result conservatively
 
-The fields below determine what may be said; they are not a checklist to print. Render the supported meaning in concise ordinary language, retain evidence locators and view machinery internally, and mention a technical field only under the main skill's disclosure exceptions.
+The fields below bound the meaning supported by the result:
 
 Use:
 
@@ -265,7 +263,7 @@ Use:
 - `result.view.orientation.indeterminate[]` for Matters without support;
 - `result.comparison.status` for `no_baseline`, `unchanged`, `changed`, or `incomparable` and its exact limitations.
 
-Do not describe a Matter omitted from a requested Space scope as globally absent. Do not convert a coverage gap into no blocker, no change, current, or complete.
+Scope absence applies only within the requested scope. A coverage gap remains an explicit limit on blocker, change, currentness, and completion claims.
 
 ### Read and acknowledge baselines
 
@@ -288,4 +286,4 @@ After the Architect explicitly acknowledges the exact rendered view, replay the 
 }
 ```
 
-Acknowledgement requires every represented owner observation to be re-observed identically. The default installed package currently has no owner endpoints, so a view with observations may be unavailable to acknowledge. Explain that the acknowledged baseline did not change and what the user can do next; keep the raw refusal code private unless it is needed for recovery or requested for audit. Do not strip observations to force acknowledgement. A non-reproducible view, baseline conflict, or another refusal leaves the baseline unchanged. A successful identical replay may return `replayed: true`, which is also internal plumbing by default.
+Acknowledgement requires every represented owner observation to be re-observed identically. The default installed package currently has no owner endpoints, so a view with observations may be unavailable to acknowledge. A non-reproducible view, baseline conflict, or refusal leaves the baseline unchanged and intact; a successful identical replay may return `replayed: true`.
