@@ -18,6 +18,21 @@ Compare the admitted boundary and inherited architecture with the current Case. 
 
 Group additions by the premise that caused them and inspect the whole dependency chain. Several individually plausible claims may still form one unjustified cumulative redesign.
 
+## Interrogate Contract Burden
+
+During architecture selection, interrogate every material consumer seam identified by Blueprint; during this deletion pass, repeat the interrogation for every seam added or expanded afterward. Inspect the callable/projection shape field by field and handoff by handoff for each distinct immediate consumer; several consumers may share one answer only when they demonstrably use the same projection. Assign every material choice to its caller, receiving owner, or composition authority, keeping caller-owned intent, constraints, locators, and necessary evidence explicit while moving owner-resolved policy, derivation, context assembly, sequencing, and other machinery behind the seam. Challenge:
+
+- derivable context, policy, sequencing, projections, or other owner-resolved machinery transferred to a caller;
+- inputs with no named role—behavior control, locator, evidence/provenance, observational metadata, or a named combination—observable effect, source, or immediate consumer;
+- behavior controls that do not state whether they are required or omittable and, when omittable, the deterministic default, supported overrides, and precedence—or establish why those semantics are inapplicable;
+- metadata that silently controls behavior;
+- speculative fields, generic option bags, and source aggregates carried for hypothetical or later consumers;
+- accidental DTOs, translation layers, injection seams, or physical boundaries that merely restate a logical distinction;
+- identity coupled to mutable labels, presentation values used as durable keys, and unstated scope or lifetime; and
+- evidence, provenance, metadata, replay material, or rich context that continues beyond its last legitimate consumer.
+
+Ask whether removing a field would suppress a caller-owned choice or necessary evidence, or instead let the receiving owner resolve its own machinery. Prefer relocation behind the seam when pure deletion would only move work ambiguously. When consequential, distinguish identity from label and state scope and lifetime. Separate composition-selected collaborators from invocation data and internally owned machinery. For each retained projection name its immediate consumer, canonical owner/source meaning, retained and excluded information, intentional information stop, and reconciliation rule when derived. Keep logical authority distinctions without multiplying modules, services, DTOs, registries, or seams absent another concrete benefit. Do not optimize for field count: frozen evidence, execution identity, replay, audit, reproducibility, and genuinely consumer-owned multi-decision commands may justify richness.
+
 ## Kill Or Justify Each Addition
 
 For every addition require either exact accepted behavioral/architecture authority or concrete decision-relevant evidence of necessity. Ask:
@@ -30,6 +45,9 @@ For every addition require either exact accepted behavioral/architecture authori
 6. Can unsupported optional behavior be locally inapplicable rather than a request-wide failure?
 7. Is a consumer-visible failure actionable by that consumer, or does it merely expose internal configuration or assurance state?
 8. If this item is deleted, where does necessary complexity reappear? If nowhere material, delete it.
+9. If an input is removed from the caller, can its receiving owner resolve it from authority and information already behind the seam?
+10. Does this handoff give one immediate consumer its sufficient projection, or transport a source aggregate or the union of downstream concerns?
+11. Does a logical authority distinction require a physical seam here, and what concrete benefit beyond inspectability justifies it?
 
 Reviewer preference, generic best practice, severity labels, consensus, speculative security posture, unknown possibility, and final-product completeness are not authority or evidence. A security claim without a concrete actor, controlled input/capability, protected asset, path, and consequence cannot justify a current mechanism.
 
