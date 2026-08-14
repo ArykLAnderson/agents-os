@@ -43,7 +43,7 @@ A cold reader can locate the design inside the product journey and relevant glob
 
 ### Teach the decisive move
 
-The reader can explain the architecture's central distinction, invariant, or authority move in plain language before naming modules. Show the selected shape and old/current → selected change on one screen. Introduce owners, state, contracts, operations, and recovery as consequences of that move, including what each owner deliberately does not own.
+The reader can explain the architecture's central distinction, invariant, or authority move in plain language before naming modules. Show the selected shape and old/current → selected change on one screen. Introduce owners, state, contracts, operations, and recovery as consequences of that move, including what each owner deliberately does not own. When a callable seam or consequential handoff is architecturally decisive, make its consumer shape inspectable in the main narrative: what the consumer supplies and owns, what the receiver resolves behind the seam, what the Contract effects or returns, and what information stops there. Do not relegate that meaning entirely to a schema appendix.
 
 ### Follow one complete instance
 
