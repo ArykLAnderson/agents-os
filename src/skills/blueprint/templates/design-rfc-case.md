@@ -25,6 +25,8 @@ Each claim contains:
 
 Do not encode task order, file layout, temporary prototype mechanics, raw transcripts, review wishlists, or implementation detail that does not select responsibility, contract, authority, invariant, failure semantics, or route.
 
+For every material consumer seam defined by Blueprint, use linked atomic `consumer-contract`, responsibility, invariant, and limitation claims—not one oversized form—to make the result of consumer-seam interrogation inspectable. Establish, where applicable: each distinct immediate consumer and callable/projection shape; caller-provided choices versus owner-resolved machinery; each material input's role, observable effect, and source; whether each behavior control is required or omittable and, when omittable, its deterministic default, supported overrides, and precedence—or why those semantics are inapplicable; identity versus label, scope, and lifetime; canonical owner/source meaning and derived-projection reconciliation; information retained, excluded, and stopped; composition-selected collaborators; and the evidence or consumer authority that justifies a rich Contract. Do not invent fields, DTOs, or seams to complete this account.
+
 ## External boundary references
 
 Link the accepted Frame claims; do not duplicate their prose.
@@ -76,7 +78,7 @@ Materialize the Production Design RFC only when:
 
 - all consequential claims are selected;
 - evidence-dependent claims are supported within explicit limits;
-- owners, consumers, contracts, state/authority, failures, and route are closed;
+- owners, consumers, contracts, state/authority, failures, and route are closed, and every material consumer seam has passed consumer-seam interrogation;
 - a fresh-worker walkthrough identifies no architecture invention;
 - applicable advisory findings are reconciled;
 - the current Requirement-Killer reconciliation has dispositioned every post-admission addition through its Design and Route applications, no unresolved human decision is hidden in a selected claim, and required walkthrough reruns show no unresolved architecture invention; and
