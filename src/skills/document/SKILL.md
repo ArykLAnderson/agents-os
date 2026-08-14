@@ -11,6 +11,8 @@ Produce an accepted durable semantic artifact from Case-backed meaning. Document
 
 Use an explicit user-provided Casebook workspace root when present; otherwise use `.casebook/` in the current project. Create or resume `documents/<document-id>/document.md` beneath it using [references/session.md](references/session.md). Establish intent, audience, reader action, genre, semantic artifact boundary, requested realization surfaces, publication boundary, and pinned Case states.
 
+Treat scale as craft judgment within that orientation. Compose directly when one coherent reader journey is evident. Use optional model-first working aids when direct prose would collapse important conceptual layers. Reconsider naturally when drafting exposes repetition, unstable structure, conflicting levels, coverage-driven prose, or an incoherent journey. Consider a document family only for genuinely independent, useful reader journeys that the medium, authorial intent, review topology, publication boundary, and maintenance boundary can sustain; otherwise preserve one authored journey. In edge cases, try the cheaper path or a small disposable model and deepen the method only when it materially improves the reader journey.
+
 Document may perform bounded Case intake when supplied sources have clear purpose and interpretation. Enter Frame when meaning requires material discovery, interpretation, trade-offs, or human judgment; reconcile the Cases, then resume this session.
 
 ## Refine

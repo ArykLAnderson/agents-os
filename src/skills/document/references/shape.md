@@ -1,6 +1,8 @@
 # Shape
 
-Arrange the semantic basis into one primary reader journey. Choose by reader need:
+Arrange the semantic basis into one primary reader journey. For complex material, model first when that helps the writer hold the whole subject: optional topic, thesis or architecture, document, and section-contract models may group, order, and compress meaning before prose. These are disposable editorial working aids, not required artifacts or semantic authority; Cases, Frames, Blueprints, and other governing sources retain their meaning and status.
+
+Choose the journey by reader need:
 
 - **Decision brief:** lead from decision and stakes through constraints, recommendation, alternatives, consequences, and action.
 - **Evidence synthesis:** lead from question and method through evidence clusters, convergence, contradiction, limitations, and implications.
