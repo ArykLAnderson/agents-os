@@ -64,8 +64,6 @@ async function scopeClause(binary, storePath, scope, request) {
     namespace = row.namespace_id;
   } else {
     namespace = id(namespace, "namespace_id", "namespace");
-    const row = (await queryJson(binary, storePath, `SELECT lifecycle FROM context_namespace_current WHERE namespace_id=${sql(namespace)};`))[0];
-    if (!row || row.lifecycle !== "active") throw new QueryError("context_stale", "The requested Namespace is unavailable or retired.", { failureClass: "context_stale", retryDisposition: RETRY_DISPOSITIONS.AFTER_RECONCILE });
   }
   // Chat-default and global remain globally inclusive. The Namespace is a
   // disclosed ranking origin, never an implicit narrowing or admission grant.

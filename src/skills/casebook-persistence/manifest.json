@@ -49,7 +49,7 @@
   },
   "content_digest": {
     "algorithm": "sha256",
-    "sha256": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
+    "sha256": "b6cb90ff58875ba8e2c79ea0e3e9186c79d0738c18644e4e5ef17ee5ee56496f"
   },
   "entrypoints": [
     {
@@ -982,13 +982,13 @@
       "id": "sqlite-placement-generation",
       "path": "variants/sqlite/lib/placement/index.mjs",
       "kind": "module",
-      "sha256": "fda5ab4b1f995868c4ef8a673d9d6e2cccd9093bfecd47a2141064bd2978e008"
+      "sha256": "c2185fd12325599aea70caf6dc49559aa8ef185b3ee7aca1743a30e16fbf5c54"
     },
     {
       "id": "sqlite-organizational-query",
       "path": "variants/sqlite/lib/query/search.mjs",
       "kind": "module",
-      "sha256": "b7db6003de10d07b6d2aa0a8d9ee30434b4d9d77fcc9fadb7cdc5d6c78f8b19a"
+      "sha256": "2204a001cdd68033b8a41c40a11305837aad5076591141c93b047851f9a8092d"
     },
     {
       "id": "sqlite-graph-query",
@@ -1036,7 +1036,7 @@
       "id": "sqlite-owner-neutral-substrate",
       "path": "variants/sqlite/lib/substrate/mechanical-successor.mjs",
       "kind": "module",
-      "sha256": "38da2bc59fad237212405933a4902ebee6c610cbd63655ae14e16b499b0dc560"
+      "sha256": "4332e2652c89d1f024f00d80446e95123cb3137cd0cb41ac116c1befdee57d10"
     },
     {
       "id": "sqlite-successor-schema",

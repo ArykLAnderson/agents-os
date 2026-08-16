@@ -21,15 +21,6 @@ async function runtime() {
   ]);
   return { describeTarget, recentOperations, invokeSuccessorCaseOperation, invokeSuccessorFrameOperation, invokeSuccessorMechanicalOperation, invokeContextOperation, organizationalSearch };
 }
-async function resolveNamespace(provider, request, base, value) {
-  const path = value.slice("namespace:".length).split("/");
-  const context = { ...base, operation: "namespace.resolve", path };
-  const { canonicalContextRequestDigest } = await import("./runtime/casebook-persistence/variants/sqlite/lib/context/index.mjs");
-  context.request_digest = canonicalContextRequestDigest(base.store_id, context);
-  const result = await provider.invokeContextOperation(context);
-  if (!result?.ok || result.result.status !== "found") return failure(result?.result?.status === "ambiguous" ? "namespace_ambiguous" : "namespace_unavailable", "The requested semantic Namespace is unavailable or ambiguous.");
-  return result.result.namespace.id;
-}
 function common(request) {
   const target = request.target;
   return { protocol, request_version: 1, store_id: target.store_id, admission_slot_id: target.admission_slot_id, admission: { kind: "sqlite_profile", binding: { selection_id: target.profile_selection_id, selection_revision_id: target.profile_selection_revision_id, profile_id: target.profile_id, profile_revision_id: target.profile_revision_id, activation_fence: target.activation_fence } }, configuration: config(request.store) };
@@ -38,8 +29,9 @@ async function dispatch(request) {
   const provider = await runtime();
   if (request.operation === "target.describe") return provider.describeTarget({ protocol, operation: "target.describe", request_version: 1, configuration: config(request.store) });
   const base = common(request), flags = request.flags ?? {};
-  const selectedNamespace = flags.namespace_id ? await resolveNamespace(provider, request, base, flags.namespace_id) : null;
-  if (selectedNamespace?.ok === false) return selectedNamespace;
+  // The CLI has already normalized this selector. Namespaces are organizational
+  // tags, so ordinary operations do not require Context Namespace admission.
+  const selectedNamespace = flags.namespace_id ?? null;
   const placement = selectedNamespace ? { placement: { namespace_id: selectedNamespace } } : {};
   if (request.operation === "case.create" || request.operation === "case.commit_revision") return provider.invokeSuccessorCaseOperation({ ...base, operation: request.operation, operation_id: request.operation_id ?? `operation:${randomUUID().toLowerCase()}`, expected_revision: request.operation === "case.create" ? 0 : Number(flags.expected_revision), commit_basis: flags.commit_basis, provenance, case: request.aggregate, ...placement });
   if (request.operation === "case.delete") {
