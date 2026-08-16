@@ -61,10 +61,11 @@ function normalizeReadIdentities(operation, flags) {
 }
 function canonicalNamespace(value, field = "namespace") {
   if (typeof value !== "string" || !value.trim() || value.length > 1024) throw Error(`${field}_invalid`);
-  const raw = value.normalize("NFKC").trim(), pathValue = raw.startsWith("namespace:") ? raw.slice("namespace:".length) : raw;
-  const parts = pathValue.split("/").map((part) => part.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/[\s_]+/g, "-"));
+  const raw = value.normalize("NFKC");
+  if (raw !== value || raw !== raw.trim() || !raw.startsWith("namespace:")) throw Error(`${field}_invalid`);
+  const parts = raw.slice("namespace:".length).split("/");
   if (parts.length < 1 || parts.length > 8 || parts.some((part) => !NAMESPACE_SEGMENT.test(part) || NAMESPACE_UUID_SEGMENT.test(part))) throw Error(`${field}_invalid`);
-  return `namespace:${parts.join("/")}`;
+  return raw;
 }
 function duplicateFreeJson(text) {
  try {
