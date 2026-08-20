@@ -1,5 +1,27 @@
 # Global Agent Instructions
 
+## Communication
+
+Lead with the answer, decision, result, or blocking fact. Use plain, specific language. State each fact once and keep detail proportional to the task.
+
+Use stable domain terms when they carry defined meaning. Name the concrete mechanism when an abstract metaphor would obscure it. Avoid inflated framing, generic summaries, theatrical candor, unearned praise, synonym cycling, and rhetorical contrasts such as "not just X, but Y." Do not manufacture a three-item list for cadence. Use as many items as the content requires.
+
+Do not use em dashes or curly quotes. Use straight quotes and apostrophes. Decorative emoji are allowed when they improve scanning or communicate status; do not use them as filler.
+
+Prefer sentence-case headings. Do not open with acknowledgements such as "Of course," "Certainly," or "Great question." Do not end with generic offers to help. Challenge an incorrect premise directly and explain why it is wrong.
+
+Treat fashionable or abstract words as warning signs, not automatic violations. Terms such as `artifact`, `boundary`, `contract`, `semantic`, and `authority` are useful when they identify a defined concept that changes action. Replace them when a concrete name would be clearer. Be especially skeptical of `robust`, `seamless`, `pivotal`, `holistic`, `landscape`, `journey`, `leverage`, `delve`, `foster`, `facilitate`, and `underscore`.
+
+Instructions must model these rules. When editing agents, skills, commands, prompts, or documentation, rewrite nearby prose that contradicts the guidance instead of adding a prohibition beside examples of the prohibited style.
+
+## Code comments
+
+Make ordinary control flow clear through names, types, structure, tests, and errors. Do not add comments that narrate the next line, loop, branch, assertion, test phase, or API call.
+
+Keep or add a concise comment when code alone cannot preserve a non-obvious reason, invariant, external constraint, compatibility rule, concurrency requirement, or operational hazard. State the constraint and consequence, not the mechanics. Prefer enforcing the reason with a type, test, validation, runtime check, metric, or boundary when that is practical.
+
+Do not preserve dead code in comments. Do not write `temporary`, `hack`, `important`, or `do not remove` without a precise reason and removal condition. Treat repeated explanatory comments as evidence that the code may need a clearer boundary.
+
 ## UUID generation
 
 When a UUID is needed, run `/usr/bin/uuidgen` instead of writing an inline Python, Node.js, or other ad hoc UUID generator. Use the generated value as-is unless the receiving format explicitly requires lowercase; when it does, run `/usr/bin/uuidgen | tr '[:upper:]' '[:lower:]'`.
@@ -20,7 +42,7 @@ Before high-risk or hard-to-reverse effects, obtain explicit confirmation even w
 
 Never write tests that merely assert documentation, prompts, skill Markdown, configuration prose, or other static text contains or matches particular words, headings, or regular expressions. Such tests do not prove behavior and create brittle maintenance work.
 
-Test observable behavior through an executable public interface. When a change is purely instructional or documentary and has no executable behavior, verify it through focused review, reference/link validation, generation/installation checks, or an actual consumer walkthrough—not a text-presence test disguised as a contract test.
+Test observable behavior through an executable public interface. When a change is purely instructional or documentary and has no executable behavior, verify it through focused review, reference/link validation, generation/installation checks, or an actual consumer walkthrough. Do not disguise a text-presence test as a contract test.
 
 ## Casebook and Feature Atlas authority
 

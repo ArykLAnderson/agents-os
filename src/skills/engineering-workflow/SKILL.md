@@ -8,11 +8,15 @@ user-invocable: false
 
 Choose the smallest workflow that matches the current uncertainty. This skill routes work; it does not perform the detailed workflow itself.
 
+Use [references/keywords.md](references/keywords.md) for compact routing language. Keywords improve recall but do not bypass the owning skill's admission or authority rules.
+
 ## Entry Routing
 
 - Broken, failing, intermittent, or slow behavior → `diagnosing-bugs`.
 - Ordinary in-progress merge/rebase conflicts → `resolving-merge-conflicts`.
 - Independent verification of one implemented task or integrated convergence boundary → `focused-validator` directly; verification intent takes precedence over implementation-shaped inputs.
+- Non-local impact or safety analysis of a bounded change → `blast-radius`.
+- Bounded observation of CI, a pull request, deployment, job, queue, test environment, migration, or other asynchronous state → `watch`.
 - Every complete current `HandoffReady` or admissible `HandoffWithLimitations` from Feature Atlas → `software-implementation` in explicit `atlas` mode, even for one Work Item; Coding Worker consumes a Task Contract, never an Atlas handoff directly. Its Delivery Contract must preserve the exact Atlas/Map/current Decision and Blueprint/Feature/Leg/Work Item/local-label bindings, prerequisites, convergence, transition/cleanup, imported proof order, evidence/invalidators, typed limitations, publication integrity, and separate implementation/effect/PR/merge/deployment/landing authorities.
 - An authorized request to implement a named current Atlas handoff supplies bounded local implementation intent. If it explicitly requests stacked draft PRs, normalize that request once into an Execution Authorization Envelope covering scoped worktrees, owned branches, commits, non-force pushes, and matching draft PR upserts unless limited. Do not ask again for those mechanics; merge, deployment, release, landing, force push, protected-branch mutation, and changed stack topology remain separate.
 - Summary-only, historical, conflicted, incomplete, unverifiable, `HandoffRefusal`, or authority-omitting Atlas input → stop fail-closed. Legacy Route packages, ticket graphs, or keystones are evidence/fixtures, not current planning authority; use `ad_hoc` only under separately explicit scope/authority and never present it as Atlas realization.

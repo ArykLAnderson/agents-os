@@ -1,165 +1,50 @@
 ---
 name: humanize-writing
-description: Rewrite or edit drafts to remove generic AI voice and restore a more human, specific voice. TRIGGER when the user says "this sounds like AI", "make this sound more human", "remove the AI voice", "less corporate", "less generic", "rewrite in my voice", "make this less polished", or shares a draft that feels robotic. Also triggers on explicit /humanize-writing invocation.
+description: Rewrite existing prose to remove generic AI voice and recover a specific human voice. Trigger when the user asks to unslop, de-slop, humanize, remove AI tells, sound less corporate or generic, rewrite in their voice, or make a draft less polished and robotic.
 user-invocable: true
 argument-hint: "[draft, doc path, or brief]"
 ---
 
-# Humanize Writing
+# Humanize writing
 
-Rewrite or edit prose that sounds generic, frictionless, corporate, or obviously AI-generated.
+Edit existing prose without changing its claims, uncertainty, scope, commitments, or intended audience.
 
-## When to Use This vs. Other Skills
+## Inputs
 
-- **`/note`** — quick capture, not editorial refinement
-- **`/research`** — structured synthesis from a source
-- **`document`** — formal, Case-backed document development
-- **`/humanize-writing`** (this) — improve voice, rhythm, specificity, and naturalness in existing prose
+Read the draft and identify its audience and purpose. Use a sample of the user's writing when one exists. Otherwise use the requested traits or make a neutral cleanup pass. Do not invent a persona, experience, fact, or opinion.
 
-## Core Principle
+Ask a question only when a missing audience, purpose, or authority decision would materially change the result. A missing voice sample does not block a neutral pass.
 
-Do not merely paraphrase.
+## Audit
 
-First remove AI-patterned prose. Then restore specificity, rhythm, and actual voice.
+Use [references/ai-tells-checklist.md](references/ai-tells-checklist.md). Look for:
 
-## Inputs To Gather
-
-Before doing a full rewrite, identify:
-
-- **Draft** — pasted text or file path
-- **Audience** — who this is for
-- **Goal** — what the piece should do
-- **Voice anchor** — one of:
-  - a sample of the user's writing
-  - a writer/reference they like
-  - 3-5 voice traits
-
-If the user has no voice sample yet, do **not** block use of the skill. Proceed with best-effort humanization and include a gentle reminder at the end that adding a short voice sample later will help future rewrites sound more like them.
-
-## Modes
-
-### 1. Detect
-
-Audit the draft for AI tells before editing.
-
-Common categories:
-- filler openings and throat-clearing
-- vague authority or abstract claims
+- throat-clearing before the useful point
+- vague authority, unsupported confidence, or abstract claims
 - hype adjectives and inflated verbs
-- false-insight sentence structures
-- over-signposting and generic transitions
-- uniform sentence rhythm
-- uniform paragraph structure
-- overuse of em dashes
-- generic abstractions instead of concrete nouns
+- theatrical insight or honesty framing
+- generic transitions and repeated conclusions
+- uniform sentence and paragraph rhythm
+- em dashes, curly quotes, and ornamental punctuation
+- forced three-part lists and false "from X to Y" ranges
+- synonym cycling for one concept
+- abstractions where a concrete noun or mechanism is available
+- praise, agreement, or validation without reasoning
 
-Load and use [references/ai-tells-checklist.md](references/ai-tells-checklist.md) when auditing or rewriting.
+Decorative emoji are allowed when they improve scanning or communicate status. Remove them only when they are filler or conflict with the intended channel.
 
-### 2. Humanize
+## Rewrite
 
-Rewrite to remove AI patterns.
+Start with the useful point. State each fact once. Use straight quotes and apostrophes. Do not use em dashes. Do not manufacture a three-item list for rhythm.
 
-Apply these rules:
-- cut throat-clearing and generic setup
-- replace vague claims with specifics, examples, names, or numbers when available
-- vary sentence length and paragraph shape
-- use contractions when appropriate for the target tone
-- prefer direct verbs over inflated verbs
-- remove buzzwords and figurative business clichés
-- end on substance, not a generic summary paragraph
+Replace vague claims with available specifics, examples, names, or numbers. Prefer direct verbs and concrete nouns. Use contractions when they fit the voice. Vary sentence length without making the prose choppy. End on substance instead of restating the piece.
 
-### 3. Voice Injection
+Keep defined technical and domain terms. Question a suspect word by asking whether it identifies a real distinction or merely decorates an ordinary idea. Do not replace one accepted term with several synonyms.
 
-After the draft no longer sounds generic, align it to the user's intended voice.
+Preserve useful irregularity. A slightly uneven sentence can sound more human than a polished generic sentence. Do not add deliberate errors or fake informality.
 
-Adjust for:
-- formality
-- warmth
-- sharpness/opinionation
-- humor or dryness
-- cadence
-- jargon tolerance
-- amount of polish vs. natural roughness
+## Return
 
-If no real voice anchor exists yet, do a neutral humanizing pass instead of guessing a false persona.
+Default to the revised draft with little or no commentary. If the user asks for analysis, return either a short audit or representative before-and-after edits. Explain only changes that help the user judge the result.
 
-## Default Rewrite Heuristics
-
-Strongly question words and phrases like:
-
-- delve
-- leverage
-- robust
-- comprehensive
-- seamless
-- pivotal
-- landscape
-- foster
-- facilitate
-- underscore
-- navigate (figurative)
-- it is important to note
-- it is worth noting
-- in conclusion
-- when it comes to
-- at the end of the day
-- not only X, but also Y
-- it's not just X, it's Y
-
-Do not remove them mechanically if they are genuinely the best choice, but assume they are guilty until proven useful.
-
-## Process
-
-1. Read the draft.
-2. Determine audience, goal, and whether a voice anchor exists.
-3. If key context is missing, ask only for the minimum needed.
-4. Audit the draft against [references/ai-tells-checklist.md](references/ai-tells-checklist.md).
-5. Decide whether this needs:
-   - light line edits
-   - a full rewrite
-   - rewrite plus voice injection
-6. Produce one of:
-   - an annotated AI-voice audit
-   - a revised draft
-   - a before/after comparison of representative edits
-7. Briefly explain the main changes when useful.
-8. If no voice sample exists yet, end with a short, gentle reminder to add one later for better personalization.
-
-## Output Options
-
-### AI Voice Audit
-- top patterns found
-- why they weaken the draft
-- whether line edits or a full rewrite is warranted
-
-### Humanized Draft
-- revised full text
-- minimal explanation unless the user asks for commentary
-
-### Before/After Notes
-- 3-7 representative edits
-- what changed and why
-
-## Escalation Rules
-
-Pause and ask instead of guessing when:
-- no draft is provided
-- the audience or goal is materially unclear
-- the user wants "my voice" but no sample or usable proxy exists
-- the text needs factual support the model cannot invent
-
-## Guidelines
-
-- Specificity beats polish.
-- Voice beats smoothness.
-- Concrete nouns beat abstractions.
-- A slightly uneven human sentence is often better than a perfect generic one.
-- Do not invent experiences, data, or opinions the user did not imply.
-
-## Confirmation
-
-Report in 1-3 lines:
-- what you changed
-- whether you used a voice anchor
-- whether this was a light edit or a full rewrite
-- if relevant, a gentle reminder that a short voice sample can improve future passes
+Before returning, ask: "Which sentence still sounds generated, and what concrete change would fix it?" Make that change when it preserves meaning.
