@@ -41,11 +41,12 @@ Evaluate:
 - **scope:** the change is bounded and excludes unjustified work;
 - **correctness:** observable behavior and meaningful failures satisfy the Contract;
 - **code quality:** the declared boundary hides complexity and remains maintainable;
+- **comments:** changed comments satisfy the global `Code comments` instructions;
 - **test quality:** tests prove public behavior and useful failures without freezing implementation details;
 - **fidelity:** implementation preserves the ask, accepted design, exclusions, and consumer need;
 - **evidence:** claims match commands or observations from the candidate state.
 
-Apply code and test quality at the declared interface. Do not widen them into a general architecture or style review.
+Apply code and test quality at the declared interface. Do not widen them into a general architecture or style review. Report a comment finding only when it materially harms correctness, maintenance, or verification at that interface.
 
 Reject tests coupled to private functions, call sequences, internal object shape, incidental files, or implementation ordering. A narrow unit test is acceptable only when it protects valuable algorithmic behavior rather than freezing an implementation.
 

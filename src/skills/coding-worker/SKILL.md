@@ -47,6 +47,8 @@ Proceed when the batch would remain valid under a sound internal redesign and fa
 
 Implement until the declared interface behavior passes. Own necessary bounded refactoring and local implementation choices while preserving accepted architecture, dependencies, compatibility, scope, and effect limits. Never grant yourself broader authority.
 
+Apply the `Code comments` section of the global instructions to every comment added or changed within the task scope.
+
 Proceed when the task is coherent at its deep boundary and every in-scope observable outcome is implemented or exactly blocked.
 
 ### 4. Prove the handoff
@@ -72,7 +74,7 @@ Worktree/branch: <identity; no persisted commit hash required>
 Deep module/interface: <what changed and why this boundary is coherent>
 Assumptions/refactoring: <material local decisions or none>
 Behavioral tests: <added/changed tests and observable behaviors>
-Commands: <command — result, for every command actually run>
+Commands: <command: result, for every command actually run>
 Focused validation: <exact interface, scenarios, and commands to rerun>
 Residual limitations: <bounded limitations or none>
 Commit disposition: <committed under granted authority | left uncommitted>
