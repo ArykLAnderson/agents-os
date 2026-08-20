@@ -1,7 +1,7 @@
 ---
 name: watch
-description: Observe one changing external or local subject until a declared predicate or stop condition. Use for CI, pull requests, deployments, jobs, queues, test environments, migrations, or other asynchronous state when the user asks to watch, monitor, wait, poll, or stay with the work until a result.
-user-invocable: true
+description: Watch CI, pull requests, deployments, jobs, or other changing state when asked to monitor, wait, or poll until a result.
+user-invocable: false
 argument-hint: "[subject and terminal condition]"
 ---
 
@@ -15,24 +15,21 @@ Before waiting, establish:
 
 - subject and provider
 - baseline identity such as commit SHA, run ID, deployment revision, job ID, or environment
-- observable terminal predicate
+- success and failure predicates
 - read-only event source or poll command
-- initial interval, maximum interval, and deadline when one is needed
+- initial interval, maximum interval, and deadline
 - wake reasons that require action by the owning workflow or user
 - re-arm condition after a state-changing action
-- stop conditions
 
-If the request is only for current state, check once. If no terminal predicate can be inferred, ask one bounded question instead of starting an open-ended watch.
+Use single-check mode when the request asks only for current state. Obtain one bounded decision when a result or deadline cannot be inferred.
 
 ## Observe
 
-Use provider events when a supported event source exists. Otherwise poll with bounded backoff. Do not use an unbounded watch command or create competing sleep loops.
+Use one provider event stream when available. Otherwise use one bounded-backoff polling loop.
 
-Continue until the predicate is met, the deadline expires, the subject identity changes, observation becomes unauthorized, a technical blocker prevents further observation, or the user stops the watch. A pending state is not a reason to return early when continued observation remains possible within the contract.
+Continue until a result predicate is met, the deadline expires, identity changes, observation is blocked, or the user stops the watch.
 
 Bind every observation to the exact subject identity. After a push, retry, redeploy, or other state-changing action by an authorized owner, invalidate the old observation and re-arm against the new identity.
-
-Do not mutate the subject. When a wake condition calls for a mutation, return control to the owning workflow unless that exact action is separately authorized and owned there.
 
 ## Return
 

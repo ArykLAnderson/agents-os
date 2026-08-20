@@ -3,7 +3,7 @@ name: codebase-design
 description: Shared vocabulary for designing deep modules. Use when designing or improving an interface, choosing a seam, or making code more testable and AI-navigable.
 ---
 
-# Codebase Design
+# Codebase design
 
 Design deep modules: substantial behavior behind a small interface, placed at a clean seam and testable through that interface.
 
@@ -24,9 +24,9 @@ Design deep modules: substantial behavior behind a small interface, placed at a 
 - **Projection:** the meaning selected from a canonical owner/source for one immediate consumer, including what is retained, excluded, intentionally stopped before later consumers, and how derived representations reconcile.
 - **Composition authority:** the owner that selects and connects collaborators and governs their shared policy or lifetime outside an invocation; it does not turn invocation data or a module's own machinery into caller choices.
 
-Use these terms consistently. Prefer `seam` for a code-level change point and `Contract` when the promise is broader than an interface signature. Use `boundary` when trust, authority, process, deployment, or lifecycle—not only a code seam—is material.
+Use these terms consistently. Prefer `seam` for a code-level change point and `Contract` when the promise is broader than an interface signature. Use `boundary` when trust, authority, process, deployment, or lifecycle is material beyond a code seam.
 
-## Diagnostic Lenses
+## Diagnostic lenses
 
 Use `Secrets`, `Contract`, `Depth`, `Unity`, `Ownership`, and `Projection` as interacting questions, not a scorecard:
 
@@ -51,6 +51,7 @@ A lens may expose tension another lens resolves: a slightly larger Contract can 
 - Do not create speculative seams. One adapter is hypothetical variation; two adapters demonstrate real variation.
 - Prefer the highest seam that captures the real behavior. Fewer, deeper seams are usually better than many shallow ones.
 - Give each material state, mutation, Contract, and schema one canonical owner and definition. Mark mirrors, caches, adapters, and projections as derived and state how they reconcile.
+- For a repeatable operation with uncertain effects, make its idempotency boundary part of the owning Contract: stable identity, duplicate outcome, and when another effect may occur.
 - When the correct shape is unclear, design the Contract at least twice and compare the diagnostic lenses plus migration cost.
 
 This skill owns the vocabulary. Workflow skills such as `frame`, `blueprint`, `improve-architecture`, `diagnosing-bugs`, `coding-worker`, and `software-implementation` decide when and how to apply it.

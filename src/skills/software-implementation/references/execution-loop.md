@@ -1,14 +1,18 @@
-# Execution Loop
+# Execution loop
 
-## Revalidate And Form The Frontier
+## Revalidate and form the frontier
 
 In Atlas mode, run the Atlas Currentness Check before computing each frontier. Stop or preserve only the exact admitted limitation boundary; never select work from a successor Decision automatically.
 
-For every `todo` task or pending imported proof gate, confirm all accepted direct prerequisites and proof barriers are satisfied in the named starting baseline/evidence state. A ready parallel writer wave contains only tasks whose deep-module and file ownership do not overlap. An effectful proof gate is its own frontier node and requires its exact authority/Effect Binding; downstream work stays blocked until the accepted gate condition passes. This permits an accepted sequence such as WI-014 → bounded-live proof → WI-015.
+For every `todo` task or pending imported proof gate, confirm all accepted direct prerequisites and proof barriers are satisfied in the named starting baseline and evidence state. A prerequisite is satisfied only when its required change is present in that baseline and its allocated proof is current. Completed code without required proof does not unblock dependent work.
+
+A ready parallel writer wave has no overlapping deep-module, file, or mutable-resource ownership. Before dispatch, record each shared resource's isolation or serialization, owner, cleanup, and required Effect Binding in the Task or Delivery Contract. Serialize work that cannot be isolated within current authority.
+
+An effectful proof gate is its own frontier node and requires its exact authority and Effect Binding. Downstream work stays blocked until the accepted gate condition passes. This permits an accepted sequence such as WI-014, bounded-live proof, then WI-015.
 
 Delegate Workspace Operator setup only when a writer task is ready to dispatch. Dependent worktrees created before prerequisites integrate are stale by construction.
 
-## Dispatch Writers
+## Dispatch writers
 
 Send each Coding Worker:
 
@@ -21,7 +25,7 @@ Send each Coding Worker:
 
 One worker owns one worktree. Children execute; they do not coordinate. Await correlated, compact result envelopes and update only map state/locators. An `effect_blocked` result preserves completed local work and blocks only the named external action and its dependents.
 
-## Task Verification
+## Task verification
 
 A worker reaches `verify` only after reporting successful applicable build, lint, test, and task behavioral checks required by its admitted proof obligation. When the admitted allocation requires task-scope independent validation, launch Focused Validator against a dedicated verification checkout and state the truthful enforcement tier. When it requires writer-owned focused proof only, preserve that exact evidence and do not add a generic independent task gate; the task advances to its next accepted integration/proof node.
 
@@ -29,7 +33,7 @@ On `authority_blocked`, preserve unaffected observations as non-certifying and k
 
 A `material_contradiction` requires concrete evidence. Route it to accepted design authority; do not treat reviewer preference as a contradiction. In Atlas mode, a proposed identity, dependency, convergence, limitation, or proof change requires owning Atlas/Blueprint authority and normally a current successor handoff.
 
-## Integrate A Wave
+## Integrate a wave
 
 A passing `direct_task` uses its validated task branch as the delivery candidate and skips integration unless its admitted proof allocation explicitly requires it. For `coordinated_change`, after every task in a writer wave passes, delegate one Integration Worker as the sole writer for the applicable integration destination. In `single_pr`, this is the global integration worktree. In `stacked_feature_prs`, integrate each Work Item into its owning Feature worktree/branch; a Feature branch starts from the declared base or predecessor Feature branch and is the candidate for that Feature's draft PR. Supply validated branches, accepted dependency order, accepted seam behavior, convergence checks, permitted repairs, and the inherited envelope boundary.
 
@@ -41,7 +45,7 @@ Then launch Focused Validator in `convergence` scope when the admitted allocatio
 
 Re-run the affected accepted convergence validation after repair. Only its passing result advances the named integration baseline or owning Feature branch. Cross-Feature Map convergence remains Map-owned proof; any code needed for it stays on the accepted owning Feature branch.
 
-## Execute Imported Proof Gates
+## Execute imported proof gates
 
 When an imported Atlas proof node becomes ready:
 

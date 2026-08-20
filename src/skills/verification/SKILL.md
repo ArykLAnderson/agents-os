@@ -1,12 +1,12 @@
 ---
 name: verification
-description: Evidence discipline for claims about source, implementation, behavior, authority, and completion. Loaded by implementation, diagnosis, TDD, validation, and any workflow that asserts a result.
+description: Evidence required before asserting a result. Loaded by implementation, diagnosis, TDD, validation, and completion claims.
 user_invocable: false
 ---
 
 # Verification
 
-Match each material claim to current evidence. Use [references/claim-status.md](references/claim-status.md) to distinguish direct observation, inference, implementation state, behavioral verification, accepted authority, blockage, and invalidated evidence.
+Match each material claim to current evidence. Use [references/claim-status.md](references/claim-status.md) only when evidence support could be mistaken.
 
 ## Verify behavior
 
@@ -32,6 +32,4 @@ A source read can support an `observed` claim about source. It cannot support a 
 
 ## Evidence limits
 
-When the available proof is partial, stale, prohibited, or unavailable, label the claim `inferred`, `blocked`, or `invalidated`. State the exact gap. Do not convert missing proof into optimistic language.
-
-Avoid phrases such as "should work," "probably passes," "looks right," or "I believe this is correct." Report what was observed and what that evidence establishes.
+State the exact gap when proof is partial, stale, prohibited, or unavailable. Use `inferred` only for a reasoned conclusion, `blocked` only for a named missing condition, and `invalidated` only when a material change or contradiction supersedes prior evidence.

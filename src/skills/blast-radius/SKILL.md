@@ -1,7 +1,7 @@
 ---
 name: blast-radius
-description: Inspect the non-local impact of a bounded change and try to prove the safety fact on which the change depends. Use when asked what a change could break, whether a small diff is safe, or when compatibility, data, lifecycle, ordering, concurrency, persistence, dependency, or external-consumer risk is material.
-user-invocable: true
+description: Blast radius investigation when asked what a change could break, whether a diff is safe, or when compatibility, data, lifecycle, or consumer risk is material.
+user-invocable: false
 argument-hint: "[diff, branch, proposal, or change question]"
 ---
 
@@ -27,15 +27,15 @@ Do not return a caller inventory as the conclusion.
 
 ## Find the safety fact
 
-State one fact, or at most two facts, that must be true for the change to be safe. Choose the fact with the highest combination of impact and uncertainty.
+State one fact, or at most two facts, that must be true for the change to be safe. Choose the facts with the highest combination of impact and uncertainty. Report other material assumptions as residual uncertainty.
 
 Trace each fact through source and immediate consumers. Then find the smallest discriminating proof. Prefer an executable public-interface check over argument from code shape.
 
 External calls, credential use, remote mutation, resource creation, spending, or production-like effects require their own authority. If the required proof crosses that boundary, report `authority_blocked` and preserve the source findings.
 
-## Evidence levels
+## Evidence depth
 
-Classify each safety fact as:
+Classify how far each safety fact was investigated:
 
 - `asserted`: stated but not traced
 - `source-traced`: supported by current source and consumer inspection
@@ -43,7 +43,7 @@ Classify each safety fact as:
 - `executed`: exercised against the identified candidate through a relevant interface
 - `live-observed`: observed in the environment where the risk exists
 
-Do not call a change safe from `asserted` evidence. Use `executed` for a material safety claim when a focused local proof is practical. State the evidence ceiling when it is not.
+Use `verification` to distinguish observation, inference, and verified behavior. Investigation depth does not promote a claim beyond its evidence support. State the evidence limit for each assumption.
 
 ## Return
 
@@ -51,10 +51,10 @@ Report:
 
 - candidate identity and behavior change
 - safety-critical fact
-- evidence level and exact proof
+- investigation depth, evidence support, and exact proof for each safety fact and material assumption
 - confirmed risks with mechanisms and affected consumers
 - cleared risks with the evidence that cleared them
 - residual uncertainty and whether it blocks the requested decision
 - the smallest next proof when the current result is insufficient
 
-Use `safe_with_evidence`, `risks_found`, `unproven`, or `authority_blocked` as the result. This result is evidence for an owning workflow. It is not a Focused Validator verdict.
+Return `risks_found`, `bounded_proof`, `unproven`, or `authority_blocked`. A bounded proof states only the assumptions exercised and the residual uncertainty.

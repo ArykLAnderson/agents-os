@@ -5,7 +5,7 @@ user-invocable: true
 argument-hint: "[problem or failing behavior]"
 ---
 
-# Diagnosing Bugs
+# Diagnosing bugs
 
 A discipline for hard bugs. Read the relevant domain glossary and ADRs first. Skip a phase only with an explicit reason.
 
