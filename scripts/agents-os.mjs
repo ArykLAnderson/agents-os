@@ -239,6 +239,7 @@ async function removeStaleOwnedLinks(directory, desiredNames, target, kind) {
 }
 
 async function topLevelDirectories(directory) {
+  if (!(await exists(directory))) return [];
   return (await readdir(directory, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 }
 
@@ -409,7 +410,8 @@ async function doctorInstalledSurface(target, problems) {
   }
 
   if (surface.agents) {
-    const generatedNames = (await readdir(generatedKindRoot(target, "agents"), { withFileTypes: true }))
+    const agentRoot = generatedKindRoot(target, "agents");
+    const generatedNames = (await exists(agentRoot) ? await readdir(agentRoot, { withFileTypes: true }) : [])
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
       .map((entry) => entry.name)
       .sort();
@@ -417,6 +419,10 @@ async function doctorInstalledSurface(target, problems) {
     for (const name of names) {
       const installed = path.join(expandHome(surface.agents.path), name);
       const generated = path.join(generatedKindRoot(target, "agents"), name);
+      if (!(await exists(generated))) {
+        problems.push(`${target} agent ${name}: missing generated source at ${generated}`);
+        continue;
+      }
       if (surface.agents.mode === "copy") {
         if (!(await exists(installed))) problems.push(`${target} agent ${name}: missing installed copy at ${installed}`);
         else if (!Buffer.from(await readFile(installed)).equals(await readFile(generated))) problems.push(`${target} agent ${name}: installed copy differs from generated source`);
@@ -445,30 +451,34 @@ async function doctor() {
       if (installPath) {
         const installed = expandHome(installPath);
         if (!(await exists(installed))) problems.push(`${target}: missing installed global instructions at ${installPath}`);
-        else if ((await readFile(installed, "utf8")) !== (await readFile(generated, "utf8"))) problems.push(`${target}: installed global instructions differ from generated AGENTS.md`);
+        else if (await exists(generated) && (await readFile(installed, "utf8")) !== (await readFile(generated, "utf8"))) problems.push(`${target}: installed global instructions differ from generated AGENTS.md`);
       }
     }
     for (const kind of ["agents", "commands", "skills"]) {
       const dir = path.join(base, layout[kind]);
       if (!(await exists(dir))) problems.push(`${target}: missing ${layout[kind]}/`);
     }
+    const generatedSkills = path.join(base, layout.skills);
+    const hasGeneratedSkills = await exists(generatedSkills);
     const sourcePackage = path.join(src, "packages", "steward", "package.json");
     if (await exists(sourcePackage)) {
       const generatedPackage = path.join(base, "packages", "steward", "package.json");
       if (!(await exists(generatedPackage))) problems.push(`${target}: missing generated steward package`);
       else if (!Buffer.from(await readFile(generatedPackage)).equals(await readFile(sourcePackage))) problems.push(`${target}: generated steward package manifest differs from canonical source`);
     }
-    for (const file of await filesUnder(path.join(src, "skills"))) {
-      const rel = path.relative(path.join(src, "skills"), file);
-      if (excluded.has(skillName(rel))) continue;
-      const generated = path.join(base, layout.skills, rel);
-      if (!(await exists(generated))) problems.push(`${target}: missing skill file ${rel}`);
-      else if (path.basename(file) === "SKILL.md" && !(await readFile(generated, "utf8")).includes(header)) problems.push(`${target}: missing generated header in ${rel}`);
+    if (hasGeneratedSkills) {
+      for (const file of await filesUnder(path.join(src, "skills"))) {
+        const rel = path.relative(path.join(src, "skills"), file);
+        if (excluded.has(skillName(rel))) continue;
+        const generated = path.join(generatedSkills, rel);
+        if (!(await exists(generated))) problems.push(`${target}: missing skill file ${rel}`);
+        else if (path.basename(file) === "SKILL.md" && !(await readFile(generated, "utf8")).includes(header)) problems.push(`${target}: missing generated header in ${rel}`);
+      }
     }
     const allSourceNames = new Set((await readdir(path.join(src, "skills"), { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name));
     const sourceNames = new Set([...allSourceNames].filter((name) => !excluded.has(name)));
-    for (const entry of await readdir(path.join(base, layout.skills), { withFileTypes: true })) {
-      if (entry.isDirectory() && !sourceNames.has(entry.name)) problems.push(`${target}: stale generated skill ${entry.name}`);
+    for (const name of await topLevelDirectories(generatedSkills)) {
+      if (!sourceNames.has(name)) problems.push(`${target}: stale generated skill ${name}`);
     }
     for (const name of config.requiredPublicSkills) {
       if (!sourceNames.has(name)) problems.push(`${target}: required public skill ${name} is excluded or missing from source`);
