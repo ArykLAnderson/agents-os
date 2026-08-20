@@ -8,8 +8,6 @@ user-invocable: false
 
 Choose the smallest workflow that matches the current uncertainty. This skill routes work; it does not perform the detailed workflow itself.
 
-Use [references/keywords.md](references/keywords.md) for compact routing language. Keywords improve recall but do not bypass the owning skill's admission or authority rules.
-
 ## Entry Routing
 
 - Broken, failing, intermittent, or slow behavior → `diagnosing-bugs`.

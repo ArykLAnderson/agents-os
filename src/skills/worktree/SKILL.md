@@ -4,11 +4,11 @@ description: Discover Git repository topology and manage explicit persistent wor
 user-invocable: false
 ---
 
-# Persistent Worktree Lifecycle
+# Persistent worktree lifecycle
 
 Support ordinary repositories, bare repositories with sibling worktrees, and linked-worktree checkouts. Discover the actual topology before choosing paths; do not assume every project uses one directory layout.
 
-## Discover Topology
+## Discover topology
 
 From an existing checkout, inspect:
 
@@ -24,7 +24,7 @@ Resolve relative `--git-common-dir` output against the current checkout. `git wo
 
 Before reuse, inspect cleanliness, branch identity, ownership, and known writer activity. Unknown prior writer activity is unsafe: confirm cessation/cancellation or quarantine that worktree and allocate a fresh one from the last safe integrated baseline.
 
-## Allocate Explicit Persistent Worktrees
+## Allocate explicit persistent worktrees
 
 Use an absolute, stable path outside temporary harness-managed patch worktrees:
 
@@ -51,7 +51,7 @@ Inspect repository instructions and project manifests before installing anything
 
 Report the worktree path, branch, named baseline, topology, bootstrap commands/results, and effective validator enforcement tier when allocating a verification checkout.
 
-## Retire Safely
+## Retire safely
 
 1. Confirm the writer has stopped and inspect worktree cleanliness.
 2. Verify integration/retention disposition; do not discard unintegrated work.

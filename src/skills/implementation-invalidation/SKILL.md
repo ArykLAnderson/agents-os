@@ -1,59 +1,38 @@
 ---
 name: implementation-invalidation
-description: Reconcile implementation discoveries that conflict with accepted design or delivery authority without silent redesign.
+description: Reconcile implementation evidence that contradicts accepted design or delivery authority without silent redesign.
 ---
 
 # Implementation invalidation
 
 Implementation may discover facts. It does not gain authority to reinterpret an accepted boundary, design, or delivery plan.
 
-## Triage the discovery
+## Classify the contradiction
 
-First check readiness provenance. Production edits made before the governing design and current Atlas decision became dispatchable are a readiness violation even when the code appears correct. Freeze the work, preserve the observations, and treat the commits as implementation terrain. They gain no presumption of reuse.
+Capture the observed fact, candidate and environment, affected accepted claim, impact, and smallest reproducer.
 
-Capture the observed fact, environment and revision, affected design claim or delivery item, impact, and smallest reproducer. Use the operational statuses in [../verification/references/claim-status.md](../verification/references/claim-status.md) for the supporting statements.
+Use this skill for:
 
-Classify the discovery:
-
-- `conformance-repair`: implementation is wrong; repair it and rerun affected proof
-- `evidence-gap`: accepted meaning may remain valid, but required proof is missing
-- `realization-adjustment`: local order, estimate, or mechanics change without changing a design decision
 - `design-invalidation`: responsibility, contract, state, authority, failure behavior, compatibility, or route is wrong or missing
 - `boundary-invalidation`: externally meaningful behavior, quality, or scope is wrong or missing
 - `readiness-violation`: production work began before its governing readiness and dispatch conditions held
 
-Do not patch around a design or boundary invalidation.
+Normal conformance repair, missing proof, and local realization changes stay with their existing implementation, verification, or Atlas owners unless they expose one of these contradictions.
 
-## Propagate the correction
+Return design or boundary contradictions to their owning authority before implementation resumes.
 
-Use [references/correction-propagation.md](references/correction-propagation.md). Identify only the downstream claims and artifacts whose truth depends on the corrected fact.
+## Trace dependency
 
-A code repair invalidates proof that exercised changed behavior or relied on the corrected assumption. It does not invalidate unrelated evidence. An environment or test correction does not change accepted design unless the observed fact contradicts it. A design or boundary correction marks dependent implementation, proof, projections, and gates stale until the owning authority reconciles them.
+Trace dependency, not vocabulary. Change only claims and projections that depend on the contradictory fact. Retain the earlier evidence locator, name the invalidator, and rerun the smallest proof covering the changed dependency. Leave unrelated evidence current.
+
+Use [references/correction-record.md](references/correction-record.md) when the contradiction affects more than one claim or projection.
+
+Frame owns the external boundary. The Design/RFC Case owns design meaning. Atlas owns accepted delivery-plan state. Their governing acceptance processes record changes; workers and validators report the contradiction and affected evidence.
 
 ## Reconcile
 
-For a design or boundary invalidation:
+Preserve the contradictory fact and route it to Frame or the Design/RFC Case. The owner updates dependent accepted meaning and projections. Rerun affected proof and rematerialize accepted projections when their source meaning changed.
 
-1. Preserve the observation and its evidence.
-2. Mark dependent claims and projections stale, superseded, or `invalidated` as their owning systems require.
-3. Revise meaning in the owning Frame or Design/RFC Case.
-4. Repeat only evidence affected by the correction.
-5. Re-run the required review at the affected maturity.
-6. Rematerialize the RFC and then the accepted Atlas plan when their source meaning changed.
+A readiness violation returns to the production-transition route. Premature implementation is retained only through a separate salvage decision after readiness is restored.
 
-For a readiness violation, return to the unanswered prototype or production-transition gate before reconciliation. Keep earlier implementation only when the reconciled design explicitly retains it through a separate salvage decision.
-
-A review report, passing test, or worker consensus cannot create a new requirement. Tie every added gate, abstraction, or process to the observed failure and the prior mechanism it changes.
-
-## Completion
-
-Return the correction record and one result:
-
-- `conformed`
-- `evidence-completed`
-- `realization-updated`
-- `design-reconciled`
-- `frame-reopened`
-- `readiness-restored`
-
-"Implemented differently but works" is not a terminal result.
+Return the observed contradiction, owning handoff, affected evidence, and current limitation.
