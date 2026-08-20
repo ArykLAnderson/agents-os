@@ -47,6 +47,8 @@ Proceed when the batch would remain valid under a sound internal redesign and fa
 
 Implement until the declared interface behavior passes. Own necessary bounded refactoring and local implementation choices while preserving accepted architecture, dependencies, compatibility, scope, and effect limits. Never grant yourself broader authority.
 
+Add compatibility behavior only for a concrete existing need.
+
 Apply the `Code comments` section of the global instructions to every comment added or changed within the task scope.
 
 Proceed when the task is coherent at its deep boundary and every in-scope observable outcome is implemented or exactly blocked.

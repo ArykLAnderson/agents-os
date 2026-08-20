@@ -21,7 +21,7 @@ Run the loop and confirm it catches the user's exact failure. Remove inputs, cal
 
 ## 3. Hypothesize
 
-Produce 3–5 ranked, falsifiable hypotheses. Each must state a prediction. Show the ranking to the user, then proceed unless their knowledge changes it.
+Maintain a ranked set of falsifiable hypotheses. Each must predict an observation that distinguishes it from the alternatives. Keep only the credible hypotheses needed for the next observation, update the ranking as evidence arrives, and remove disproven hypotheses. Show the ranking to the user before testing. Do not add hypotheses to meet a count.
 
 ## 4. Instrument and test
 
