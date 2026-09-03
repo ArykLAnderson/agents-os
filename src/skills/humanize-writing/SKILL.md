@@ -1,6 +1,6 @@
 ---
 name: humanize-writing
-description: Rewrite supplied prose in a specific, natural voice without changing meaning.
+description: Draft or revise prose intended for other people in a specific, natural voice without changing meaning. Use for externally or team-facing writing such as messages, emails, documents, proposals, PR descriptions, and announcements; load alongside any domain-specific writing skill. Do not use for private notes, code, or generated data.
 user-invocable: true
 argument-hint: "[draft, doc path, or brief]"
 ---
