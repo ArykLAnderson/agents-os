@@ -11,6 +11,8 @@ const config = JSON.parse(await readFile(path.join(root, "config/targets.json"),
 const models = JSON.parse(await readFile(path.join(root, "config/models.json"), "utf8"));
 const header = config.generatedHeader;
 const home = process.env.HOME;
+const localConfigPath = process.env.AGENTS_OS_LOCAL_CONFIG || path.join(process.env.XDG_CONFIG_HOME || path.join(home, ".config"), "agents-os", "targets.json");
+const localConfig = await readLocalConfig(localConfigPath);
 const layouts = {
   pi: { agents: "agents", commands: "commands", skills: "skills" },
   codex: { agents: "agents", commands: "commands", skills: "skills" },
@@ -34,6 +36,24 @@ function unquote(value) {
 
 function quote(value) {
   return JSON.stringify(unquote(value));
+}
+
+async function readLocalConfig(file) {
+  if (!(await exists(file))) return {};
+  const parsed = JSON.parse(await readFile(file, "utf8"));
+  const allowed = new Set(["skillExcludes"]);
+  const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
+  if (unknown.length) throw new Error(`Unsupported local config fields in ${file}: ${unknown.join(", ")}`);
+  if (parsed.skillExcludes != null && (typeof parsed.skillExcludes !== "object" || Array.isArray(parsed.skillExcludes))) {
+    throw new Error(`skillExcludes in ${file} must be an object keyed by target`);
+  }
+  for (const [target, names] of Object.entries(parsed.skillExcludes || {})) {
+    if (!config.targets.includes(target)) throw new Error(`Unknown target in ${file}: ${target}`);
+    if (!Array.isArray(names) || names.some((name) => typeof name !== "string" || !name)) {
+      throw new Error(`skillExcludes.${target} in ${file} must be an array of non-empty skill names`);
+    }
+  }
+  return parsed;
 }
 
 function resolveTier(value, target) {
@@ -148,7 +168,10 @@ async function filesUnder(dir) {
 }
 
 function excludedSkills(target) {
-  return new Set(config.skillExcludes?.[target] || []);
+  return new Set([
+    ...(config.skillExcludes?.[target] || []),
+    ...(localConfig.skillExcludes?.[target] || []),
+  ]);
 }
 
 function skillName(rel) {
