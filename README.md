@@ -15,3 +15,18 @@ Run from the Agent OS root:
 node scripts/agents-os.mjs sync
 node scripts/agents-os.mjs doctor
 ```
+
+User-local target exclusions live outside the repository at
+`~/.config/agents-os/targets.json` (or `$XDG_CONFIG_HOME/agents-os/targets.json`):
+
+```json
+{
+  "skillExcludes": {
+    "opencode": ["youtube-transcript"]
+  }
+}
+```
+
+`AGENTS_OS_LOCAL_CONFIG` may point to a different file. Local configuration only
+adds skill exclusions; repository configuration remains authoritative for targets,
+adapter paths, and required public skills.
