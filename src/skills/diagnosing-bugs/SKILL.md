@@ -33,7 +33,7 @@ If repeated local fixes move the problem or require special cases across callers
 
 Use `codebase-design` to identify the highest seam that reproduces the real bug pattern. Turn the minimized reproduction into a failing regression test there, watch it fail, apply the smallest root-cause fix, watch it pass, and rerun the original loop.
 
-If no correct seam exists, record that architectural finding rather than adding a misleading shallow test. After the bug is fixed, hand the finding to `improve-architecture`.
+If no correct seam exists, record that architectural finding rather than adding a misleading shallow test. After the bug is fixed, hand the finding to `codebase-design`.
 
 ## 6. Close out
 
