@@ -54,4 +54,4 @@ A lens may expose tension another lens resolves: a slightly larger Contract can 
 - For a repeatable operation with uncertain effects, make its idempotency boundary part of the owning Contract: stable identity, duplicate outcome, and when another effect may occur.
 - When the correct shape is unclear, design the Contract at least twice and compare the diagnostic lenses plus migration cost.
 
-This skill owns the vocabulary. Workflow skills such as `frame`, `blueprint`, `improve-architecture`, `diagnosing-bugs`, `coding-worker`, and `software-implementation` decide when and how to apply it.
+This skill owns the vocabulary. Workflow skills such as `frame`, `blueprint`, `diagnosing-bugs`, `coding-worker`, and `software-implementation` decide when and how to apply it.
