@@ -37,10 +37,12 @@
       "deep": "litellm/openai/gpt-5.6-sol:high"
     },
     "claude": {
-      "default": "fast",
-      "smart": "claude-opus-4-6",
-      "fast": "claude-sonnet-4-6",
-      "cheap": "claude-haiku-4-5"
+      "default": "normal",
+      "cheap": "haiku",
+      "fast": "sonnet",
+      "normal": "sonnet",
+      "smart": "opus",
+      "deep": "opus"
     }
   }
 }
