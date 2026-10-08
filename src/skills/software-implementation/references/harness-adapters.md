@@ -33,5 +33,6 @@ Read exactly the active target reference before dispatch:
 - [Pi](harnesses/pi.md)
 - [Codex](harnesses/codex.md)
 - [OpenCode](harnesses/opencode.md)
+- [Claude Code](harnesses/claude.md)
 
 Generated native profiles may optimize policy and discovery, but portable skills plus inline role binding remain sufficient when native named agents are unavailable. Generation, installation, and Doctor verification are separate package-realization work, not coordinator runtime behavior.
