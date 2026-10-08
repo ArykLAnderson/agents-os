@@ -152,6 +152,15 @@ function renderClaudeSkillFields(fields) {
   return [...visible, ["user-invocable", "false"]];
 }
 
+// Commands carry no frontmatter, and Claude Code falls back to the first line as the description.
+function renderClaudeCommand(text) {
+  const { fields } = splitFrontmatter(text);
+  if (fields.some(([key]) => key === "description")) return addHeader(text);
+  const firstLine = text.split("\n").find((line) => line.trim()) || "";
+  const description = firstLine.trim().replace(/[:.]$/, "");
+  return `---\ndescription: ${JSON.stringify(description)}\n---\n\n${header}\n\n${text}`;
+}
+
 function renderAgent(text, target) {
   const { fields, body } = splitFrontmatter(text);
   const data = Object.fromEntries(fields);
@@ -435,7 +444,8 @@ async function renderTarget(target, destination) {
     const rel = path.relative(path.join(src, "commands"), file);
     const out = path.join(destination, layout.commands, rel);
     await mkdir(path.dirname(out), { recursive: true });
-    await writeFile(out, `${header}\n\n${await readFile(file, "utf8")}`);
+    const text = await readFile(file, "utf8");
+    await writeFile(out, target === "claude" ? renderClaudeCommand(text) : `${header}\n\n${text}`);
   }
   for (const file of await filesUnder(path.join(src, "skills"))) {
     const rel = path.relative(path.join(src, "skills"), file);
