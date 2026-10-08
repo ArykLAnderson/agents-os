@@ -17,6 +17,28 @@ const layouts = {
   pi: { agents: "agents", commands: "commands", skills: "skills" },
   codex: { agents: "agents", commands: "commands", skills: "skills" },
   opencode: { agents: "agent", commands: "command", skills: "skills" },
+  claude: { agents: "agents", commands: "commands", skills: "skills" },
+};
+const claudeToolNames = {
+  read: "Read",
+  write: "Write",
+  edit: "Edit",
+  notebookedit: "NotebookEdit",
+  glob: "Glob",
+  find: "Glob",
+  ls: "Glob",
+  grep: "Grep",
+  bash: "Bash",
+  webfetch: "WebFetch",
+  websearch: "WebSearch",
+  agent: "Agent",
+  task: "Agent",
+  skill: "Skill",
+};
+// Portable skill keys that Claude Code ignores under their portable spelling.
+const claudeSkillKeyRenames = {
+  user_invocable: "user-invocable",
+  argument_hint: "argument-hint",
 };
 
 function splitFrontmatter(text) {
@@ -101,13 +123,44 @@ function renderOpenCodeTools(tools, blocksWriting) {
   return entries;
 }
 
+function renderClaudeToolList(value) {
+  const names = unquote(value)
+    .split(",")
+    .map((tool) => tool.trim())
+    .filter(Boolean)
+    .map((tool) => claudeToolNames[tool.toLowerCase()] || tool);
+  return [...new Set(names)].join(", ");
+}
+
+function renderClaudeAgentFields(fields, target) {
+  return fields.map(([key, value]) => {
+    if (key === "model") return [key, quote(resolveTier(value, target))];
+    if (key === "tools" || key === "disallowedTools") return [key, quote(renderClaudeToolList(value))];
+    if (key === "color") return [key, quote(unquote(value).toLowerCase())];
+    if (/^(\d+|true|false)$/.test(unquote(value))) return [key, unquote(value)];
+    return [key, quote(value)];
+  });
+}
+
+function renderClaudeSkillFields(fields) {
+  const renamed = fields.map(([key, value]) => [claudeSkillKeyRenames[key] || key, value]);
+  const hidden = renamed.find(([key]) => key === "hidden");
+  if (!hidden) return renamed;
+  const visible = renamed.filter(([key]) => key !== "hidden");
+  // Portable `hidden` removes a skill from the user's menu; Claude Code expresses that as user-invocable: false.
+  if (unquote(hidden[1]) !== "true" || visible.some(([key]) => key === "user-invocable")) return visible;
+  return [...visible, ["user-invocable", "false"]];
+}
+
 function renderAgent(text, target) {
   const { fields, body } = splitFrontmatter(text);
   const data = Object.fromEntries(fields);
   const blocksWriting = /Write|Edit|NotebookEdit/i.test(data.disallowedTools || "");
   const tools = declaredTools(data, blocksWriting);
   let lines;
-  if (target === "opencode") {
+  if (target === "claude") {
+    lines = renderClaudeAgentFields(fields, target);
+  } else if (target === "opencode") {
     const resolved = resolveOpenCodeModel(data.model);
     lines = [
       ["description", quote(data.description || "")],
@@ -130,15 +183,16 @@ function renderAgent(text, target) {
   return `---\n${yaml}\n---\n\n${header}\n\n${runtimeContext(target)}\n\n${body.trimStart()}`;
 }
 
-function addHeader(text) {
-  const { fields, body } = splitFrontmatter(text);
-  if (!fields.length) return `${header}\n\n${text}`;
+function addHeader(text, transformFields = (fields) => fields) {
+  const { fields: sourceFields, body } = splitFrontmatter(text);
+  if (!sourceFields.length) return `${header}\n\n${text}`;
+  const fields = transformFields(sourceFields);
   const yaml = fields.map(([key, value]) => value === "" ? `${key}:` : `${key}: ${value}`).join("\n");
   return `---\n${yaml}\n---\n\n${header}\n\n${body.trimStart()}`;
 }
 
 function renderSkill(text, target, rel) {
-  const rendered = addHeader(text);
+  const rendered = target === "claude" ? addHeader(text, renderClaudeSkillFields) : addHeader(text);
   if (rel.split(path.sep).join("/") !== "software-implementation/SKILL.md") return rendered;
   const adapter = `references/harnesses/${target}.md`;
   const binding = `## Generated Target Binding\n\nThis installed copy targets **${target}**. Bind dispatch through [the ${target} adapter](${adapter}); the portable Contracts remain authoritative and other harness references are comparative, not universal launch syntax.`;
@@ -319,16 +373,29 @@ async function installTarget(target) {
 
   let agents = { installed: 0, changed: 0, removed: 0 };
   if (surface.agents) {
-    const generatedAgentNames = (await readdir(generatedKindRoot(target, "agents"), { withFileTypes: true }))
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .map((entry) => entry.name)
-      .sort();
-    const names = surface.agents.files === "all" ? generatedAgentNames : surface.agents.files;
+    const names = await surfaceFileNames(target, "agents", surface.agents);
     agents = surface.agents.mode === "copy"
       ? await installCopiedFiles(target, "agents", surface.agents.path, names)
       : await installEntryDirectory(target, "agents", surface.agents.path, names);
   }
-  return { skills, agents };
+  let commands = { installed: 0, changed: 0, removed: 0 };
+  if (surface.commands) {
+    commands = await installEntryDirectory(target, "commands", surface.commands.path, await surfaceFileNames(target, "commands", surface.commands));
+  }
+  return { skills, agents, commands };
+}
+
+async function generatedMarkdownFiles(target, kind) {
+  const directory = generatedKindRoot(target, kind);
+  if (!(await exists(directory))) return [];
+  return (await readdir(directory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+async function surfaceFileNames(target, kind, surfaceKind) {
+  return surfaceKind.files === "all" ? generatedMarkdownFiles(target, kind) : surfaceKind.files;
 }
 
 async function renderPackages(destination) {
@@ -397,7 +464,10 @@ async function sync() {
   for (const target of config.targets) {
     await renderTarget(target, path.join(root, "adapters", target, "generated"));
     const result = await installTarget(target);
-    console.log(`synced ${target}; installed ${result.skills.installed} skills and ${result.agents.installed} agents; updated ${result.skills.changed + result.agents.changed}, removed ${result.skills.removed + result.agents.removed} stale links`);
+    const parts = [result.skills, result.agents, result.commands];
+    const changed = parts.reduce((sum, part) => sum + part.changed, 0);
+    const removed = parts.reduce((sum, part) => sum + part.removed, 0);
+    console.log(`synced ${target}; installed ${result.skills.installed} skills, ${result.agents.installed} agents, and ${result.commands.installed} commands; updated ${changed}, removed ${removed} stale links`);
   }
 }
 
@@ -433,12 +503,7 @@ async function doctorInstalledSurface(target, problems) {
   }
 
   if (surface.agents) {
-    const agentRoot = generatedKindRoot(target, "agents");
-    const generatedNames = (await exists(agentRoot) ? await readdir(agentRoot, { withFileTypes: true }) : [])
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .map((entry) => entry.name)
-      .sort();
-    const names = surface.agents.files === "all" ? generatedNames : surface.agents.files;
+    const names = await surfaceFileNames(target, "agents", surface.agents);
     for (const name of names) {
       const installed = path.join(expandHome(surface.agents.path), name);
       const generated = path.join(generatedKindRoot(target, "agents"), name);
@@ -452,6 +517,11 @@ async function doctorInstalledSurface(target, problems) {
       } else {
         await checkExactLink(problems, installed, generated, `${target} agent ${name}`);
       }
+    }
+  }
+  if (surface.commands) {
+    for (const name of await surfaceFileNames(target, "commands", surface.commands)) {
+      await checkExactLink(problems, path.join(expandHome(surface.commands.path), name), path.join(generatedKindRoot(target, "commands"), name), `${target} command ${name}`);
     }
   }
   for (const dependency of surface.dependencies) {
@@ -495,7 +565,14 @@ async function doctor() {
         if (excluded.has(skillName(rel))) continue;
         const generated = path.join(generatedSkills, rel);
         if (!(await exists(generated))) problems.push(`${target}: missing skill file ${rel}`);
-        else if (path.basename(file) === "SKILL.md" && !(await readFile(generated, "utf8")).includes(header)) problems.push(`${target}: missing generated header in ${rel}`);
+        else if (path.basename(file) === "SKILL.md") {
+          const text = await readFile(generated, "utf8");
+          if (!text.includes(header)) problems.push(`${target}: missing generated header in ${rel}`);
+          if (target === "claude") {
+            const untranslated = splitFrontmatter(text).fields.map(([key]) => key).filter((key) => key === "hidden" || key in claudeSkillKeyRenames);
+            if (untranslated.length) problems.push(`claude: untranslated portable frontmatter in ${rel}: ${untranslated.join(", ")}`);
+          }
+        }
       }
     }
     const allSourceNames = new Set((await readdir(path.join(src, "skills"), { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name));
@@ -518,6 +595,15 @@ async function doctor() {
         const text = (await readFile(validator, "utf8")).toLowerCase();
         if (!text.includes("bash")) problems.push(`${target}: focused-validator profile lacks Bash capability`);
         if (target === "pi" && !text.includes('tools: "read, bash, grep, find, ls"')) problems.push("pi: focused-validator profile lacks the expected non-writing tool allowlist");
+        if (target === "claude") {
+          const data = Object.fromEntries(splitFrontmatter(await readFile(validator, "utf8")).fields);
+          const allowed = unquote(data.tools || "").split(",").map((tool) => tool.trim());
+          const disallowed = unquote(data.disallowedTools || "").split(",").map((tool) => tool.trim());
+          if (!allowed.includes("Bash")) problems.push("claude: focused-validator must allow Bash");
+          for (const tool of ["Write", "Edit", "NotebookEdit"]) {
+            if (!disallowed.includes(tool)) problems.push(`claude: focused-validator must disallow ${tool}`);
+          }
+        }
         if (target === "opencode") {
           for (const capability of ["read", "glob", "grep", "bash", "skill"]) {
             if (!text.includes(`  ${capability}: true`)) problems.push(`opencode: focused-validator must enable ${capability}`);
@@ -534,7 +620,7 @@ async function doctor() {
     console.error(problems.map((problem) => `ERROR ${problem}`).join("\n"));
     process.exitCode = 1;
   } else {
-    console.log(`doctor: ok (${config.targets.join(", ")}); installed public skills discoverable; focused-validator profiles verified for pi/opencode; codex uses inline role binding`);
+    console.log(`doctor: ok (${config.targets.join(", ")}); installed public skills discoverable; focused-validator profiles verified for opencode/claude; codex and pi use inline role binding`);
   }
 }
 
