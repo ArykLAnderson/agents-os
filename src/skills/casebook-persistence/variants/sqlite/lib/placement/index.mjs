@@ -21,7 +21,7 @@ export class PlacementError extends Error {
 // seam adds exactly one owner-neutral placement family and uses one substrate
 // commit; it never creates a follow-up semantic owner revision.
 export const PLACEMENT_ADAPTER_CONTRACT = Object.freeze([
-  "commit", "readChatBinding", "readCurrent", "readReceipt", "readRevision", "resolveNamespace",
+  "commit", "readChatBinding", "readCurrent", "readReceipt", "readRevision",
 ]);
 
 function placement(value) {
@@ -72,7 +72,6 @@ export function createPlacementGenerationFoundation(adapter) {
     const owner = { id: identity(request.owner.id, "owner.id", request.owner.kind), kind: request.owner.kind };
     identity(request.revision_id, "revision_id", "owner-revision"); identity(request.event, "event", "event");
     if (!Number.isInteger(request.expected_revision) || request.expected_revision < 0 || current.revision_number !== request.expected_revision) throw new PlacementError("revision_conflict", "The exact current owner revision changed.");
-    if (!namespace || namespace.lifecycle !== "active" || !namespace.namespace_revision_id) throw new PlacementError("namespace_unavailable", "Placement requires exact active Context Namespace evidence.");
     const aggregateEnvelope = aggregate(request.aggregate);
     if (aggregateEnvelope.selections.some((item) => item?.family_id === selected.placement_family_id) || aggregateEnvelope.versions.some((item) => item?.family_id === selected.placement_family_id || item?.version_id === selected.placement_version_id)) throw new PlacementError("placement_family_collision", "Placement family/version must not collide with aggregate semantic material.");
     const placed = { namespace_id: selected.namespace_id, placement_family_id: selected.placement_family_id, placement_version_id: selected.placement_version_id };
@@ -87,8 +86,7 @@ export function createPlacementGenerationFoundation(adapter) {
     const aggregateDigest = successorDigest({ normalized: aggregateEnvelope.normalized, selections: aggregateEnvelope.selections, versions: aggregateEnvelope.versions });
     const projection = Object.freeze({ ...aggregateEnvelope.current_projection, _mechanical_placement: placed, _mechanical_query_digest: aggregateEnvelope.query.digest });
     const history = Object.freeze({ schema: "owner-placement-history@2", owner_id: owner.id, revision_id: request.revision_id, revision_number: current.revision_number + 1, placement: placed, placement_selection: selected.selection, placement_family_id: placed.placement_family_id, predecessor_version_id: selected.predecessor_version_id, commit_identity: request.revision_id });
-    const placement_guard = Object.freeze({ namespace_id: namespace.namespace_id, namespace_revision_id: namespace.namespace_revision_id, chat: selected.chat ? { chat_id: selected.chat.chat_id, chat_revision_id: selected.chat.chat_revision_id } : null });
-    return Object.freeze({ owner, expected_revision: request.expected_revision, revision_id: request.revision_id, operation_id: request.operation_id, event: request.event, placement_changed: placementChanged, query_changed: queryChanged, placement: placed, placement_selection: selected.selection, placement_content: placementContent, aggregate: { ...aggregateEnvelope, versions, selections }, aggregate_digest: aggregateDigest, current_projection: projection, placement_history: history, placement_guard, placement_request_digest: canonicalPlacementCommitRequestDigest({ ...request, owner, aggregate: aggregateEnvelope }, selected), commit_digest: successorDigest({ domain: "casebook-placement-generation@2", owner, expected_revision: request.expected_revision, placement: placed, aggregate_digest: aggregateDigest, query_digest: aggregateEnvelope.query.digest, revision_id: request.revision_id }) });
+    return Object.freeze({ owner, expected_revision: request.expected_revision, revision_id: request.revision_id, operation_id: request.operation_id, event: request.event, placement_changed: placementChanged, query_changed: queryChanged, placement: placed, placement_selection: selected.selection, placement_content: placementContent, aggregate: { ...aggregateEnvelope, versions, selections }, aggregate_digest: aggregateDigest, current_projection: projection, placement_history: history, placement_guard: null, placement_request_digest: canonicalPlacementCommitRequestDigest({ ...request, owner, aggregate: aggregateEnvelope }, selected), commit_digest: successorDigest({ domain: "casebook-placement-generation@2", owner, expected_revision: request.expected_revision, placement: placed, aggregate_digest: aggregateDigest, query_digest: aggregateEnvelope.query.digest, revision_id: request.revision_id }) });
   }
 
   async function commit(request) {
@@ -117,11 +115,9 @@ export function createPlacementGenerationFoundation(adapter) {
       if (replay.placement_request_digest === requestDigest) return replay;
       throw new PlacementError("idempotency_mismatch", "operation_id is settled for different canonical meaning.");
     }
-    const namespace = await adapter.resolveNamespace({ namespace_id: selected.namespace_id });
-    if (!namespace || namespace.lifecycle !== "active" || !namespace.namespace_revision_id) throw new PlacementError("context_stale", "Exact Context placement evidence is no longer active.");
     const current = await adapter.readCurrent({ owner });
     if (!current || !Number.isInteger(current.revision_number) || current.revision_number < 0) throw new PlacementError("placement_projection_invalid", "Adapter current owner projection is incomplete.");
-    const built = await envelope({ ...request, owner, aggregate: aggregateEnvelope }, current, selected, null, namespace);
+    const built = await envelope({ ...request, owner, aggregate: aggregateEnvelope }, current, selected, null, null);
     const settled = await adapter.commit(built);
     return { ...settled, placement_changed: built.placement_changed, query_changed: built.query_changed, placement: built.placement, placement_selection: built.placement_selection };
   }
@@ -151,9 +147,6 @@ export function createSuccessorSqlitePlacementAdapter(binding) {
     async readReceipt({ operation_id }) { const result = await read("substrate.get_receipt", { operation_id }); return result.status === "settled" ? { ...result.result, receipt: result.receipt, idempotent_replay: true } : null; },
     async readRevision({ owner, revision_id }) { const result = await read("substrate.read_owner_revision", { owner, revision_id }); if (result.status === "not_visible") return null; const h = result.placement_history ?? {}; return { revision_id: result.revision_id, revision_number: result.revision_number, placement: h.placement ?? null, placement_selection: h.placement_selection ?? null }; },
     async readChatBinding({ chat_id, chat_revision_id }) { const result = await context("chat.history", { chat_id }); const row = result.revisions?.find((value) => value.chat_revision_id === chat_revision_id); return row ? { namespace_id: row.namespace_id } : null; },
-    async resolveNamespace({ namespace_id }) { const result = await context("namespace.read", { namespace_id }); const row = result.revisions?.[0]; if (!row || row.lifecycle !== "active") return null;
-      return { namespace_id, namespace_revision_id: row.namespace_revision_id, lifecycle: row.lifecycle };
-    },
     async commit(envelope) {
       const raw = { envelope_version: 1, operation_id: envelope.operation_id, store_id: base.store_id, admission_slot_id: base.admission_slot_id, admission: base.admission, owner: envelope.owner, expected_revision: envelope.expected_revision,
         revision: { id: envelope.revision_id, number: envelope.expected_revision + 1, normalized: { ...envelope.aggregate.normalized, _mechanical_aggregate_digest: envelope.aggregate_digest }, versions: envelope.aggregate.versions, selections: envelope.aggregate.selections }, current_projection: envelope.current_projection, placement_history: envelope.placement_history, placement_guard: envelope.placement_guard, placement_request_digest: envelope.placement_request_digest, query: envelope.aggregate.query, generation_effects: { placement_changed: envelope.placement_changed, query_changed: envelope.query_changed }, event: { id: envelope.event, type: "placement.committed", payload: { owner_id: envelope.owner.id, revision_id: envelope.revision_id, placement: envelope.placement }, payload_digest: successorDigest({ owner_id: envelope.owner.id, revision_id: envelope.revision_id, placement: envelope.placement }) }, outbox: envelope.aggregate.outbox };

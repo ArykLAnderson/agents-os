@@ -132,6 +132,25 @@ test("extracted packaged CLI normalizes unambiguous bare read identities before 
     assert.equal(refusal.json.authority.status, "unresolved");
   }
 });
+test("extracted packaged CLI accepts arbitrary canonical namespace tags and refuses malformed selectors", { timeout: 120_000 }, async (t) => {
+  const bin = await packed(t);
+  const { workspace } = await initializedWorkspace(t, "wi033-namespace-tags-");
+  const namespace = "namespace:mercari/crm-platform";
+  const aggregate = caseAggregate(720, "Arbitrary Namespace Case", "arbitrary namespace phrase");
+
+  const created = await invoke(bin, workspace, ["create", "case", "--namespace", namespace, "--commit-basis", "arbitrary namespace", "--input", JSON.stringify(aggregate)]);
+  assert.equal(created.code, 0, created.stdout);
+  const searched = await invoke(bin, workspace, ["search", "--namespace", namespace, "--query", "arbitrary namespace phrase"]);
+  assert.equal(searched.code, 0, searched.stdout);
+  assert.equal(searched.json.result.items.length, 1);
+  assert.match(JSON.stringify(searched.json.result.items[0]), new RegExp(aggregate.id));
+
+  for (const selector of ["namespace:Mercari/crm-platform", "namespace:mercari//crm-platform", "namespace:mercari/crm_platform"]) {
+    const refused = await invoke(bin, workspace, ["search", "--namespace", selector, "--query", "arbitrary namespace phrase"]);
+    assert.equal(refused.code, 1, refused.stdout);
+    assert.equal(refused.json.failure.code, "namespace_invalid");
+  }
+});
 test("packaged CLI delete regression covers the candidate Case and Frame representation failures", { timeout: 120_000 }, async (t) => {
   const bin = await packed(t);
   const { workspace } = await initializedWorkspace(t, "wi033-delete-repro-");
