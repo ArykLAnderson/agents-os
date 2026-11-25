@@ -47,13 +47,13 @@
     "bridge": {
       "id": "casebook-persistence-bridge@1",
       "path": "bridge/persistence-bridge.mjs",
-      "sha256": "cddb7f27e9b798fabce14644b5384738f5cfc9f6e3bea6d1c45ce7aa45e32f4a"
+      "sha256": "11897ec91277b935ac4701af0e70b8445c69521a0d3340c27ac17534b7e446e5"
     },
     "provider": {
       "id": "casebook-persistence@0.19.0-successor",
       "manifest": "bridge/runtime/casebook-persistence/manifest.json",
-      "manifest_sha256": "bbe78493d6fd72313d7d5315d0e0b0b2ae92ab78d75fe281619eb70192f8c5a7",
-      "content_digest": "83db8b9168aa39e0c947adb35f75cf6176876b8aa92004c332feebec3c57401f"
+      "manifest_sha256": "2434ffbe9f77215c75e20cd823fb14e2aab0f6548a2c23d0b170d9a9e6a7ee2c",
+      "content_digest": "b6cb90ff58875ba8e2c79ea0e3e9186c79d0738c18644e4e5ef17ee5ee56496f"
     }
   }
 }
